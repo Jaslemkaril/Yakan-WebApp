@@ -168,9 +168,19 @@
                     $deliveryIcon = '✅';
                 } elseif (in_array($order->status, ['processing', 'in_production', 'production_complete'])) {
                     $showDeliveryBanner = true;
-                    $deliveryLabel = 'Preparing for Delivery';
-                    $deliveryDescription = 'Your custom order is being prepared and will be handed to our courier soon.';
-                    $deliveryIcon = '📦';
+                    if ($order->status === 'processing') {
+                        $deliveryLabel = 'Order in Production';
+                        $deliveryDescription = 'Your custom order is currently being processed.';
+                        $deliveryIcon = '⚙️';
+                    } elseif ($order->status === 'in_production') {
+                        $deliveryLabel = 'In Production';
+                        $deliveryDescription = 'Your custom order is being produced by our artisans.';
+                        $deliveryIcon = '👨‍🎨';
+                    } elseif ($order->status === 'production_complete') {
+                        $deliveryLabel = 'Preparing for Delivery';
+                        $deliveryDescription = 'Production completed! Your custom order is being prepared and will be handed to our courier soon.';
+                        $deliveryIcon = '📦';
+                    }
                 }
             } elseif ($deliveryType === 'pickup') {
                 if ($order->status === 'delivered') {

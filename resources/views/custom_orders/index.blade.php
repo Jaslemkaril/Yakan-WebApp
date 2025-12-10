@@ -120,7 +120,7 @@
                         <button data-status="price_quoted" class="filter-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-red-50">
                             Price Quoted
                         </button>
-                        <button data-status="processing" class="filter-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-red-50">
+                        <button data-status="in_production" class="filter-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-red-50">
                             In Production
                         </button>
                         <button data-status="completed" class="filter-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-red-50">
@@ -347,10 +347,12 @@
 
                                         $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
                                         $deliveryHint = null;
-                                        if ($deliveryType === 'delivery' && $order->status === 'completed') {
+                                        if ($deliveryType === 'delivery' && $order->status === 'delivered') {
                                             $deliveryHint = 'Out for Delivery';
-                                        } elseif ($deliveryType === 'pickup' && $order->status === 'completed') {
+                                        } elseif ($deliveryType === 'pickup' && $order->status === 'delivered') {
                                             $deliveryHint = 'Ready for Pickup';
+                                        } elseif ($order->status === 'completed') {
+                                            $deliveryHint = 'Order Received';
                                         }
                                     @endphp
                                     <div class="space-y-1">

@@ -38,20 +38,6 @@
             </div>
         </div>
 
-        @if($order->tracking_status === 'Out for Delivery')
-            <div class="mb-6 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-4 flex items-start gap-3">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center bg-blue-500 text-white flex-shrink-0">
-                    <span class="text-xl">🚛</span>
-                </div>
-                <div class="flex-1">
-                    <p class="text-sm font-semibold text-blue-900">Your order is out for delivery</p>
-                    @if($order->delivery_address)
-                        <p class="text-sm text-blue-800 mt-1">It's on the way to: <span class="font-medium">{{ $order->delivery_address }}</span></p>
-                    @endif
-                </div>
-            </div>
-        @endif
-
         <div class="grid lg:grid-cols-3 gap-8">
             <!-- Main Content -->
             <div class="lg:col-span-2 space-y-8">
@@ -70,7 +56,6 @@
                                     'processing' => ['bg-blue-100 text-blue-800', '⚙️', 'Processing'],
                                     'shipped' => ['bg-purple-100 text-purple-800', '🚚', 'Shipped'],
                                     'delivered' => ['bg-green-100 text-green-800', '✅', 'Delivered'],
-                                    'completed' => ['bg-green-100 text-green-800', '🎉', 'Order Received'],
                                     'cancelled' => ['bg-red-100 text-red-800', '❌', 'Cancelled'],
                                 ];
                                 $statusInfo = $statusConfig[$order->status] ?? ['bg-gray-100 text-gray-800', '📦', 'Unknown'];
@@ -104,67 +89,6 @@
                         </div>
                     </div>
                 </div>
-
-                @if(in_array($order->status, ['shipped', 'delivered']) && ($order->courier_name || $order->courier_tracking_url || $order->courier_contact || $order->estimated_delivery_date))
-                    <!-- Shipping Information -->
-                    <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-                        <div class="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-gray-200">
-                            <div class="flex items-center justify-between">
-                                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                                    </svg>
-                                    Shipping Information
-                                </h2>
-                                <span class="text-xs font-semibold px-3 py-1 rounded-full bg-blue-100 text-blue-800 uppercase tracking-wide">
-                                    {{ ucfirst($order->status) }}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="p-6 space-y-3 text-sm text-gray-700">
-                            @if($order->courier_name)
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">Courier</span>
-                                    <span class="font-semibold text-gray-900">{{ $order->courier_name }}</span>
-                                </div>
-                            @endif
-
-                            @if($order->tracking_number)
-                                <div class="flex justify-between items-center">
-                                    <span class="text-gray-600">Tracking Number</span>
-                                    <div class="text-right">
-                                        <span class="font-semibold text-gray-900">{{ $order->tracking_number }}</span>
-                                        <div>
-                                            <a href="{{ route('track-order.show', ['trackingNumber' => $order->tracking_number]) }}" class="text-xs text-blue-600 hover:text-blue-700 font-medium">View tracking details →</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
-
-                            @if($order->courier_tracking_url)
-                                <div class="flex justify-between items-center">
-                                    <span class="text-gray-600">Courier Tracking</span>
-                                    <a href="{{ $order->courier_tracking_url }}" target="_blank" class="text-xs text-blue-600 hover:text-blue-700 font-medium">Open courier tracking →</a>
-                                </div>
-                            @endif
-
-                            @if($order->courier_contact)
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">Courier Contact</span>
-                                    <span class="font-semibold text-gray-900">{{ $order->courier_contact }}</span>
-                                </div>
-                            @endif
-
-                            @if($order->estimated_delivery_date)
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">Estimated Delivery</span>
-                                    <span class="font-semibold text-gray-900">{{ \Carbon\Carbon::parse($order->estimated_delivery_date)->format('M d, Y') }}</span>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                @endif
 
                 <!-- Order Items -->
                 <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
@@ -223,59 +147,36 @@
                     </div>
                 </div>
 
-                <!-- Customer Notes Section -->
-                @if($order->customer_notes)
-                    <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-                        <div class="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-blue-200">
-                            <div class="flex items-center gap-2">
-                                <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
-                                </svg>
-                                <h2 class="text-xl font-bold text-gray-900">Your Order Notes</h2>
-                            </div>
-                        </div>
-                        <div class="p-6">
-                            <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
-                                <p class="text-gray-700 leading-relaxed">{{ $order->customer_notes }}</p>
-                            </div>
-                        </div>
-                    </div>
-                @endif
-
                 <!-- Payment Status Info -->
-                @if(
-                    ($order->payment_method === 'online' || $order->payment_method === 'bank_transfer')
-                    && $order->payment_status === 'pending'
-                    && !in_array($order->status, ['shipped', 'delivered'])
-                )
+                @if(($order->payment_method === 'online' || $order->payment_method === 'bank_transfer') && $order->payment_status !== 'paid')
                     <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-3xl p-6 border border-blue-200">
                         <div class="flex gap-4">
-                            <div class="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 bg-blue-600">
+                            <div class="w-12 h-12 bg-blue-500 rounded-2xl flex items-center justify-center flex-shrink-0">
                                 <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
                                 </svg>
                             </div>
                             <div class="flex-1">
-                                <h3 class="font-bold mb-3 text-lg text-blue-900">Complete Your Payment</h3>
+                                <h3 class="font-bold text-blue-900 mb-3 text-lg">Payment Verification</h3>
                                 <div class="bg-white/70 backdrop-blur-sm rounded-2xl p-4">
-                                    <p class="mb-3 text-blue-800">
+                                    <p class="text-blue-800 mb-3">
                                         @if($order->payment_method === 'online')
-                                            Please submit your GCash payment proof to start processing your order. Payment will be verified automatically!
+                                            Your GCash payment is being verified. We'll process your order once confirmed.
                                         @else
-                                            Please upload your bank transfer receipt to start processing your order. Payment will be verified automatically!
+                                            Your bank transfer payment is being verified. We'll process your order once confirmed.
                                         @endif
                                     </p>
                                     <div class="flex items-center justify-between">
                                         <div>
-                                            <p class="text-sm font-semibold text-blue-800">Verification time:</p>
-                                            <p class="font-bold text-blue-900">Instant (automated)</p>
+                                            <p class="text-sm text-blue-700 font-semibold">Expected verification time:</p>
+                                            <p class="text-blue-900 font-bold">5-10 minutes during business hours</p>
                                         </div>
                                         <div class="text-right">
                                             <span class="inline-flex items-center px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">
-                                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                                                <svg class="w-4 h-4 mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                                                 </svg>
-                                                Awaiting Payment
+                                                Verifying
                                             </span>
                                         </div>
                                     </div>
@@ -290,7 +191,7 @@
                     <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
                         <div class="flex items-center justify-between">
                             <h2 class="text-xl font-bold text-gray-900">Order Tracking</h2>
-                            <span class="text-sm text-gray-500">{{ $order->tracking_history ? count($order->tracking_history) : 1 }} updates</span>
+                            <span class="text-sm text-gray-500">{{ $order->tracking_history ? (is_array($order->tracking_history) ? count($order->tracking_history) : count(json_decode($order->tracking_history, true) ?? [])) : 1 }} updates</span>
                         </div>
                     </div>
                     
@@ -328,13 +229,11 @@
                             <div class="relative">
                                 @php
                                     $trackingConfig = [
-                                        'Order Placed'     => ['bg-yellow-500', '📝', 'Your order has been placed successfully'],
-                                        'Processing'       => ['bg-blue-500',   '⚙️', 'Your order is being prepared'],
-                                        'Packed'           => ['bg-indigo-500', '📦', 'Your order has been packed and is waiting for pickup'],
-                                        'Shipped'          => ['bg-purple-500', '🚚', 'Your order is on the way to your area'],
-                                        'Out for Delivery' => ['bg-orange-500', '🚛', 'Your order is out for delivery and will arrive soon'],
-                                        'Delivered'        => ['bg-green-500',  '✅', 'Your order has been delivered'],
-                                        'Cancelled'        => ['bg-red-500',    '❌', 'Your order has been cancelled'],
+                                        'Order Placed' => ['bg-yellow-500', '📝', 'Your order has been placed successfully'],
+                                        'Processing' => ['bg-blue-500', '⚙️', 'Your order is being prepared'],
+                                        'Shipped' => ['bg-purple-500', '🚚', 'Your order is on the way'],
+                                        'Delivered' => ['bg-green-500', '✅', 'Your order has been delivered'],
+                                        'Cancelled' => ['bg-red-500', '❌', 'Your order has been cancelled'],
                                     ];
                                 @endphp
                                 
@@ -398,10 +297,6 @@
                                     <span class="text-gray-900 font-semibold">{{ $order->created_at->format('h:i A') }}</span>
                                 </div>
                                 <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                                    <span class="text-gray-600 font-medium">Delivery Option</span>
-                                    <span class="text-gray-900 font-semibold">{{ $order->delivery_type === 'pickup' ? 'Store Pickup' : 'Delivery' }}</span>
-                                </div>
-                                <div class="flex justify-between items-center py-2 border-b border-gray-100">
                                     <span class="text-gray-600 font-medium">Payment Method</span>
                                     <span class="text-gray-900 font-semibold">
                                         @if($order->payment_method === 'online')
@@ -413,24 +308,10 @@
                                         @endif
                                     </span>
                                 </div>
-                                @php
-                                    $paymentStatusConfig = [
-                                        'paid' => ['bg' => 'bg-green-100 text-green-800', 'label' => 'Paid'],
-                                        'pending' => ['bg' => 'bg-yellow-100 text-yellow-800', 'label' => 'Pending Verification'],
-                                        'refunded' => ['bg' => 'bg-purple-100 text-purple-800', 'label' => 'Refunded'],
-                                    ];
-                                    $paymentStatus = $paymentStatusConfig[$order->payment_status] ?? ['bg' => 'bg-red-100 text-red-800', 'label' => 'Unpaid'];
-                                @endphp
-                                <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                                    <span class="text-gray-600 font-medium">Payment Status</span>
-                                    <span class="px-3 py-1 rounded-full text-sm font-bold {{ $paymentStatus['bg'] }}">
-                                        {{ $paymentStatus['label'] }}
-                                    </span>
-                                </div>
                                 <div class="flex justify-between items-center py-2">
-                                    <span class="text-gray-600 font-medium">Status</span>
-                                    <span class="px-3 py-1 {{ $statusInfo[0] }} rounded-full text-sm font-bold">
-                                        {{ $statusInfo[2] }}
+                                    <span class="text-gray-600 font-medium">Payment Status</span>
+                                    <span class="px-3 py-1 {{ $order->payment_status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' }} rounded-full text-sm font-bold">
+                                        {{ ucfirst($order->payment_status) }}
                                     </span>
                                 </div>
                             </div>
@@ -466,28 +347,7 @@
                             </a>
 
                             @if($order->status === 'delivered')
-                                <form action="{{ route('orders.confirm-received', $order->id) }}" method="POST">
-                                    @csrf
-                                    <button type="submit" class="block w-full text-center bg-green-600 text-white px-6 py-4 rounded-2xl hover:bg-green-700 transition-all duration-200 font-semibold mb-3">
-                                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                        </svg>
-                                        Confirm Order Received
-                                    </button>
-                                </form>
-                            @endif
-
-                            @if($order->status === 'completed')
-                                <div class="block w-full text-center bg-green-100 text-green-800 px-6 py-4 rounded-2xl border-2 border-green-200 font-semibold mb-3">
-                                    <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                    Order Received & Completed
-                                </div>
-                            @endif
-
-                            @if(in_array($order->status, ['delivered', 'completed']))
-                                <button onclick="showReorderModal()" class="block w-full text-center bg-blue-600 text-white px-6 py-4 rounded-2xl hover:bg-blue-700 transition-all duration-200 font-semibold">
+                                <button onclick="showReorderModal()" class="block w-full text-center bg-green-600 text-white px-6 py-4 rounded-2xl hover:bg-green-700 transition-all duration-200 font-semibold">
                                     <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                                     </svg>

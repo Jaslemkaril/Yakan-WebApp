@@ -32,7 +32,7 @@
                         @if($entity instanceof \App\Models\Product)
                             <a href="{{ route('products.show', $entity) }}">
                                 @if($entity->image)
-                                    <img src="{{ asset('storage/' . $entity->image) }}" alt="{{ $entity->name }}" class="w-full h-56 object-cover" />
+                                    <img src="{{ asset('uploads/products/' . $entity->image) }}" alt="{{ $entity->name }}" class="w-full h-56 object-cover" />
                                 @else
                                     <div class="w-full h-56 bg-gray-200 flex items-center justify-center">
                                         <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

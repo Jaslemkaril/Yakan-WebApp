@@ -21,30 +21,34 @@ class InventoryController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = Inventory::with('product')
+        // Get all products with their inventory (one inventory per product)
+        $query = Product::with(['inventory', 'category'])
             ->when($request->search, function ($q) use ($request) {
-                $q->whereHas('product', function ($subQuery) use ($request) {
-                    $subQuery->where('name', 'like', '%' . $request->search . '%');
-                });
+                $q->where('name', 'like', '%' . $request->search . '%');
             })
             ->when($request->status, function ($q) use ($request) {
                 if ($request->status === 'low_stock') {
-                    $q->whereRaw('quantity <= min_stock_level');
+                    $q->whereHas('inventory', function($inv) {
+                        $inv->whereRaw('quantity <= min_stock_level');
+                    });
                 } elseif ($request->status === 'overstock') {
-                    $q->whereRaw('quantity >= max_stock_level');
+                    $q->whereHas('inventory', function($inv) {
+                        $inv->whereRaw('quantity >= max_stock_level');
+                    });
                 } elseif ($request->status === 'normal') {
-                    $q->whereRaw('quantity > min_stock_level AND quantity < max_stock_level');
+                    $q->whereHas('inventory', function($inv) {
+                        $inv->whereRaw('quantity > min_stock_level AND quantity < max_stock_level');
+                    });
                 }
-            })
-            ->orderByRaw('CASE WHEN quantity <= min_stock_level THEN 0 ELSE 1 END')
-            ->orderBy('quantity', 'asc');
+            });
 
-        $inventories = $query->paginate(15);
+        $products = $query->paginate(15);
+        
         $lowStockCount = Inventory::whereRaw('quantity <= min_stock_level')->count();
         $totalProducts = Product::count();
-        $totalValue = Inventory::selectRaw('SUM(quantity * selling_price) as total')->value('total');
+        $totalValue = Inventory::selectRaw('SUM(quantity * selling_price) as total')->value('total') ?? 0;
 
-        return view('admin.inventory.index', compact('inventories', 'lowStockCount', 'totalProducts', 'totalValue'));
+        return view('admin.inventory.index', compact('products', 'lowStockCount', 'totalProducts', 'totalValue'));
     }
 
     /**

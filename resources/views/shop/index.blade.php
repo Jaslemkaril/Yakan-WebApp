@@ -13,7 +13,7 @@
 
         @foreach($products as $product)
             <div class="bg-white shadow rounded-lg p-4 hover:scale-105 transform transition">
-                <img src="{{ asset('storage/' . $product->image) }}" 
+                <img src="{{ asset('uploads/products/' . $product->image) }}" 
                      class="w-full h-48 object-cover rounded-md">
 
                 <h2 class="text-xl font-semibold mt-3">{{ $product->name }}</h2>

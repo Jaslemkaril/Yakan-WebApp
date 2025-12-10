@@ -18,7 +18,7 @@
         <div class="space-y-4">
             <div class="aspect-square bg-gray-100 rounded-2xl overflow-hidden shadow-lg">
                 @if($product->image)
-                    <img src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" 
+                    <img id="mainProductImage" src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" 
                          class="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                          onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200\'><div class=\'text-8xl opacity-20\'>📦</div></div>';">
                 @else
@@ -29,18 +29,36 @@
             </div>
             
             <!-- Thumbnail Gallery -->
-            <div class="flex gap-2">
-                <div class="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden cursor-pointer border-2 border-red-500">
+            <div class="flex gap-2 overflow-x-auto" id="thumbnailGallery">
+                @php
+                    // Decode all_images if it's a string
+                    $allImages = $product->all_images;
+                    if (is_string($allImages)) {
+                        $allImages = json_decode($allImages, true);
+                    }
+                    $allImages = $allImages ?? [];
+                    $hasMultipleImages = is_array($allImages) && count($allImages) > 0;
+                @endphp
+                
+                @if($hasMultipleImages)
+                    @foreach($allImages as $index => $img)
+                        <div class="thumbnail-item w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden cursor-pointer border-2 {{ $index === 0 ? 'border-red-500' : 'border-gray-300' }} hover:border-red-400 transition-colors"
+                             onclick="changeMainImage('{{ asset('uploads/products/' . $img['path']) }}', this)"
+                             data-color="{{ $img['color'] ?? '' }}">
+                            <img src="{{ asset('uploads/products/' . $img['path']) }}" alt="Thumbnail {{ $index + 1 }}" 
+                                 class="w-full h-full object-cover"
+                                 onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center\'><div class=\'text-2xl opacity-30\'>📦</div></div>';">
+                        </div>
+                    @endforeach
+                @else
                     @if($product->image)
-                        <img src="{{ asset('uploads/products/' . $product->image) }}" alt="Thumbnail" class="w-full h-full object-cover"
-                             onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center\'><div class=\'text-2xl opacity-30\'>📦</div></div>';">
-                    @else
-                        <div class="w-full h-full flex items-center justify-center">
-                            <div class="text-2xl opacity-30">📦</div>
+                        <div class="thumbnail-item w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden cursor-pointer border-2 border-red-500"
+                             onclick="changeMainImage('{{ asset('uploads/products/' . $product->image) }}', this)">
+                            <img src="{{ asset('uploads/products/' . $product->image) }}" alt="Thumbnail" class="w-full h-full object-cover"
+                                 onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center\'><div class=\'text-2xl opacity-30\'>📦</div></div>';">
                         </div>
                     @endif
-                </div>
-                <!-- Add more thumbnails if you have multiple images -->
+                @endif
             </div>
         </div>
 
@@ -113,67 +131,31 @@
                 </div>
             </div>
 
-            @if($product->available_colors && count($product->available_colors) > 0)
-            <!-- Color Selection -->
-            <div class="space-y-3">
-                <div class="flex items-center gap-2">
-                    <label class="text-sm font-semibold text-gray-700">Color:</label>
-                    <span id="selectedColorName" class="text-sm text-gray-600">Select a color</span>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    @foreach($product->available_colors as $color)
-                    <button type="button" onclick="selectColor('{{ $color }}', this)" 
-                            class="px-4 py-2 border-2 border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-red-500 hover:text-red-600 transition-all duration-200"
-                            data-color="{{ $color }}">
-                        {{ $color }}
+            <!-- Quantity Selection -->
+            <div class="flex items-center gap-4">
+                <label for="qty" class="text-sm font-semibold text-gray-700">Quantity:</label>
+                <div class="flex items-center border border-gray-300 rounded-lg">
+                    <button type="button" onclick="decrementQty()" class="px-3 py-2 hover:bg-gray-100 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                        </svg>
                     </button>
-                    @endforeach
-                </div>
-            </div>
-            @endif
-
-            @if($product->available_sizes && count($product->available_sizes) > 0)
-            <!-- Size Selection -->
-            <div class="space-y-3">
-                <div class="flex items-center gap-2">
-                    <label class="text-sm font-semibold text-gray-700">Size:</label>
-                    <span id="selectedSizeName" class="text-sm text-gray-600">Select a size</span>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    @foreach($product->available_sizes as $size)
-                    <button type="button" onclick="selectSize('{{ $size }}', this)" 
-                            class="px-6 py-2 border-2 border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-red-500 hover:text-red-600 transition-all duration-200"
-                            data-size="{{ $size }}">
-                        {{ $size }}
+                    <input id="qty" name="quantity" type="number" min="1" max="{{ $product->stock ?? 999 }}" value="1" 
+                           class="w-16 text-center border-0 focus:ring-0" readonly>
+                    <button type="button" onclick="incrementQty()" class="px-3 py-2 hover:bg-gray-100 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
                     </button>
-                    @endforeach
                 </div>
+                <span class="text-sm text-gray-500">({{ $product->stock ?? 0 }} available)</span>
             </div>
-            @endif
 
             <!-- Purchase Options -->
-            <div class="space-y-4">
-                <div class="flex items-center gap-4">
-                    <label for="qty" class="text-sm font-semibold text-gray-700">Quantity:</label>
-                    <div class="flex items-center border border-gray-300 rounded-lg">
-                        <button type="button" onclick="decrementQty()" class="px-3 py-2 hover:bg-gray-100 transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
-                            </svg>
-                        </button>
-                        <input id="qty" name="quantity" type="number" min="1" max="{{ $product->stock ?? 999 }}" value="1" 
-                               class="w-16 text-center border-0 focus:ring-0" readonly>
-                        <button type="button" onclick="incrementQty()" class="px-3 py-2 hover:bg-gray-100 transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <span class="text-sm text-gray-500">({{ $product->stock ?? 0 }} available)</span>
-                </div>
-
-                <!-- Action Buttons -->
+            <div class="space-y-3">
+                <!-- Buttons Container -->
                 <div class="flex flex-col sm:flex-row gap-3 items-stretch">
+                    <!-- Add to Cart -->
                     <form id="addToCartForm" method="POST" action="{{ route('cart.add', $product) }}" class="flex-1">
                         @csrf
                         <input type="hidden" name="quantity" id="cartQty" value="1">
@@ -193,38 +175,41 @@
                             </span>
                         </button>
                     </form>
-                    
-                    <button id="wishlistBtn" 
-                            class="flex-1 border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap"
-                            onclick="toggleWishlist('product', {{ $product->id }})"
+
+                <!-- Wishlist -->
+                <button id="wishlistBtn" 
+                        class="flex-1 border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap"
+                        onclick="toggleWishlist('product', {{ $product->id }})"
+                >
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                    </svg>
+                    <span id="wishlistBtnText" class="hidden sm:inline-block">Add to Wishlist</span>
+                    <span id="wishlistBtnTextMobile" class="sm:hidden">Wishlist</span>
+                </button>
+
+                <!-- Buy Now -->
+                <form id="buyNowForm" method="POST" action="{{ route('cart.add', $product) }}" class="flex-1">
+                    @csrf
+                    <input type="hidden" name="quantity" id="buyNowQty" value="1">
+                    <input type="hidden" name="buy_now" value="1">
+                    <button type="submit" 
+                            id="buyNowBtn"
+                            class="w-full h-full border-2 border-red-600 text-red-600 px-6 py-3 rounded-xl font-semibold hover:bg-red-50 hover:border-red-700 transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap"
+                            @if($product->stock == 0) disabled @endif
                     >
                         <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                         </svg>
-                        <span id="wishlistBtnText" class="hidden sm:inline-block">Add to Wishlist</span>
-                        <span id="wishlistBtnTextMobile" class="sm:hidden">Wishlist</span>
+                        <span id="buyNowBtnText">
+                            @if($product->stock > 0)
+                                Buy Now
+                            @else
+                                Out of Stock
+                            @endif
+                        </span>
                     </button>
-                    
-                    <form id="buyNowForm" method="POST" action="{{ route('cart.add', $product) }}" class="flex-1">
-                        @csrf
-                        <input type="hidden" name="quantity" id="buyNowQty" value="1">
-                        <input type="hidden" name="buy_now" value="1">
-                        <button type="submit" 
-                                class="w-full h-full border-2 border-red-600 text-red-600 px-6 py-3 rounded-xl font-semibold hover:bg-red-50 hover:border-red-700 transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap"
-                                @if($product->stock == 0) disabled @endif
-                        >
-                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
-                            </svg>
-                            <span>
-                                @if($product->stock > 0)
-                                    Buy Now
-                                @else
-                                    Out of Stock
-                                @endif
-                            </span>
-                        </button>
-                    </form>
+                </form>
                 </div>
             </div>
 
@@ -404,26 +389,6 @@ function showNotification(message, type = 'success') {
 document.addEventListener('DOMContentLoaded', function() {
     updateHiddenInputs();
     checkWishlistStatus();
-    
-    // Prevent double-click on forms and buttons
-    const forms = document.querySelectorAll('form');
-    forms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            const submitBtn = form.querySelector('button[type="submit"]');
-            if (submitBtn && submitBtn.disabled) {
-                e.preventDefault();
-                return false;
-            }
-            
-            // Disable button temporarily to prevent double submission
-            if (submitBtn && !submitBtn.disabled) {
-                submitBtn.disabled = true;
-                setTimeout(() => {
-                    submitBtn.disabled = false;
-                }, 2000);
-            }
-        });
-    });
 });
 
 // Global double-click prevention
@@ -434,44 +399,23 @@ document.addEventListener('dblclick', function(e) {
     }
 }, true);
 
-// Color selection
-let selectedColor = null;
-function selectColor(colorName, button) {
-    // Remove active state from all color buttons
-    document.querySelectorAll('[data-color]').forEach(btn => {
-        btn.classList.remove('bg-red-600', 'text-white', 'border-red-600');
-        btn.classList.add('border-gray-300', 'text-gray-700');
+// Change main product image
+function changeMainImage(imageSrc, thumbnailElement) {
+    const mainImage = document.getElementById('mainProductImage');
+    if (mainImage) {
+        mainImage.src = imageSrc;
+    }
+    
+    // Update thumbnail borders
+    document.querySelectorAll('.thumbnail-item').forEach(thumb => {
+        thumb.classList.remove('border-red-500');
+        thumb.classList.add('border-gray-300');
     });
     
-    // Add active state to selected button
-    button.classList.remove('border-gray-300', 'text-gray-700');
-    button.classList.add('bg-red-600', 'text-white', 'border-red-600');
-    
-    // Update selected color name
-    selectedColor = colorName;
-    document.getElementById('selectedColorName').textContent = colorName;
-    document.getElementById('selectedColorName').classList.add('text-red-600', 'font-semibold');
-    document.getElementById('selectedColorName').classList.remove('text-gray-600');
-}
-
-// Size selection
-let selectedSize = null;
-function selectSize(sizeName, button) {
-    // Remove active state from all size buttons
-    document.querySelectorAll('[data-size]').forEach(btn => {
-        btn.classList.remove('bg-red-600', 'text-white', 'border-red-600');
-        btn.classList.add('border-gray-300', 'text-gray-700');
-    });
-    
-    // Add active state to selected button
-    button.classList.remove('border-gray-300', 'text-gray-700');
-    button.classList.add('bg-red-600', 'text-white', 'border-red-600');
-    
-    // Update selected size name
-    selectedSize = sizeName;
-    document.getElementById('selectedSizeName').textContent = sizeName;
-    document.getElementById('selectedSizeName').classList.add('text-red-600', 'font-semibold');
-    document.getElementById('selectedSizeName').classList.remove('text-gray-600');
+    if (thumbnailElement) {
+        thumbnailElement.classList.remove('border-gray-300');
+        thumbnailElement.classList.add('border-red-500');
+    }
 }
 
 

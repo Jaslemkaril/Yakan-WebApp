@@ -289,6 +289,18 @@
                                        value="{{ old('delivery_landmark') }}"
                                        class="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all">
                             </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                                    <span class="text-red-500">*</span> Contact Number
+                                </label>
+                                <input type="tel" name="delivery_contact_number" form="checkout-form" required
+                                       placeholder="e.g., +63 9XX XXX XXXX or 0XX XXX XXXX"
+                                       value="{{ old('delivery_contact_number', auth()->user()->phone ?? '') }}"
+                                       pattern="[0-9+\-\s()]{10,}"
+                                       class="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all">
+                                <p class="text-xs text-gray-500 mt-1">We'll use this number to contact you about your delivery</p>
+                            </div>
                         </div>
                     </div>
 
@@ -500,7 +512,7 @@
                             </div>
                         </div>
 
-                        <button id="place-order-button" type="submit" form="checkout-form" formaction="{{ route('cart.checkout.process') }}" formmethod="post" class="block w-full bg-gradient-to-r from-red-600 to-red-700 text-white text-center px-6 py-4 rounded-xl hover:from-red-700 hover:to-red-800 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl font-semibold mb-3">
+                        <button id="place-order-button" type="button" class="block w-full bg-gradient-to-r from-red-600 to-red-700 text-white text-center px-6 py-4 rounded-xl hover:from-red-700 hover:to-red-800 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl font-semibold mb-3">
                             Place Order
                         </button>
                         
@@ -725,14 +737,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const placeOrderButton = document.getElementById('place-order-button');
 
     // Handle Place Order button click
-    if (paymentSection && placeOrderButton) {
+    if (placeOrderButton) {
         placeOrderButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            
             const deliveryType = document.querySelector('input[name="delivery_type"]:checked')?.value;
             
             // Show payment section if it's hidden
             if (paymentSection.classList.contains('hidden')) {
-                e.preventDefault();
-                
                 // Validate delivery fields based on delivery type
                 let isValid = true;
                 const errors = [];
@@ -762,12 +774,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Validate that a payment method is selected
                 const paymentMethod = document.querySelector('input[name="payment_method"]:checked');
                 if (!paymentMethod) {
-                    e.preventDefault();
                     alert('Please select a payment method');
                     return;
                 }
                 
-                // Form will submit normally
+                // Submit the form
                 if (checkoutForm) {
                     checkoutForm.submit();
                 }

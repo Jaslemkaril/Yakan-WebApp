@@ -60,11 +60,11 @@ class OrderController extends Controller
         // Calculate statistics
         $stats = [
             'total_orders' => Order::count(),
-            'pending_orders' => Order::where('status', 'pending')->count(),
-            'processing_orders' => Order::where('status', 'processing')->count(),
-            'shipped_orders' => Order::where('status', 'shipped')->count(),
-            'delivered_orders' => Order::where('status', 'delivered')->count(),
-            'cancelled_orders' => Order::where('status', 'cancelled')->count(),
+            'pending_orders' => Order::whereRaw('LOWER(status) = ?', ['pending'])->count(),
+            'processing_orders' => Order::whereRaw('LOWER(status) = ?', ['processing'])->count(),
+            'shipped_orders' => Order::whereRaw('LOWER(status) = ?', ['shipped'])->count(),
+            'delivered_orders' => Order::whereRaw('LOWER(status) = ?', ['delivered'])->count(),
+            'cancelled_orders' => Order::whereRaw('LOWER(status) = ?', ['cancelled'])->count(),
             'total_revenue' => Order::whereIn('payment_status', ['paid', 'completed'])->sum('total_amount'),
             'pending_revenue' => Order::where('payment_status', 'pending')->sum('total_amount'),
             'today_orders' => Order::whereDate('created_at', today())->count(),

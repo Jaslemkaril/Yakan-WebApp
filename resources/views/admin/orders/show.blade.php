@@ -279,6 +279,60 @@
         </div>
     </div>
 
+    <!-- Admin Activity Log -->
+    @php
+        $adminNotifications = \App\Models\Notification::where('user_id', auth()->id())
+            ->where('type', 'order')
+            ->where('data->order_id', $order->id)
+            ->latest()
+            ->limit(5)
+            ->get();
+    @endphp
+    @if($adminNotifications->count() > 0)
+    <div class="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center mb-6">
+            <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">Admin Activity Log</h3>
+                <p class="text-sm text-gray-500">Important order events and confirmations</p>
+            </div>
+        </div>
+
+        <div class="space-y-3">
+            @foreach($adminNotifications as $notification)
+                <div class="flex items-start p-4 bg-gradient-to-r {{ strpos($notification->title, 'Confirmed by Customer') !== false ? 'from-green-50 to-emerald-50 border-l-4 border-green-500' : 'from-blue-50 to-cyan-50 border-l-4 border-blue-500' }} rounded-lg">
+                    <div class="flex-shrink-0 mt-1">
+                        @if(strpos($notification->title, 'Confirmed by Customer') !== false)
+                            <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                        @else
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        @endif
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <p class="font-semibold {{ strpos($notification->title, 'Confirmed by Customer') !== false ? 'text-green-900' : 'text-blue-900' }}">
+                            {{ $notification->title }}
+                        </p>
+                        <p class="text-sm {{ strpos($notification->title, 'Confirmed by Customer') !== false ? 'text-green-700' : 'text-blue-700' }} mt-1">
+                            {{ $notification->message }}
+                        </p>
+                        <p class="text-xs {{ strpos($notification->title, 'Confirmed by Customer') !== false ? 'text-green-600' : 'text-blue-600' }} mt-2">
+                            {{ $notification->created_at->diffForHumans() }}
+                        </p>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
     <!-- Order Timeline -->
     @if($order->tracking_history)
     <div class="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">

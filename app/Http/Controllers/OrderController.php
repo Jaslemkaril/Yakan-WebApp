@@ -148,12 +148,13 @@ class OrderController extends Controller
             \App\Models\Notification::createNotification(
                 $admin->id,
                 'order',
-                'Order Completed',
-                "Customer confirmed receipt of order #{$order->id}. Order is now completed.",
+                'Order Received - Confirmed by Customer',
+                "Order #{$order->id} (Tracking: {$order->tracking_number}) has been confirmed as received by {$order->user->name}. Order is now completed.",
                 '/admin/orders/' . $order->id,
                 [
                     'order_id' => $order->id,
                     'customer_name' => $order->user->name,
+                    'tracking_number' => $order->tracking_number,
                     'status' => 'completed',
                 ]
             );

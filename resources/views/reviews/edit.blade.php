@@ -21,7 +21,7 @@
         <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
             <div class="flex items-center">
                 @if($product->image)
-                    <img class="h-16 w-16 rounded-lg object-cover" src="{{ asset('storage/' . $product->image) }}" alt="">
+                    <img class="h-16 w-16 rounded-lg object-cover" src="{{ asset('uploads/products/' . $product->image) }}" alt="">
                 @else
                     <div class="h-16 w-16 rounded-lg bg-gray-200 flex items-center justify-center">
                         <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

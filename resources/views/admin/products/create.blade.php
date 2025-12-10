@@ -167,173 +167,6 @@
                 required>
         </div>
 
-        <!-- Available Sizes -->
-        <div class="border-2 rounded-lg p-4" style="border-color: #800000; background-color: #fff9f9;">
-            <label class="block font-bold text-gray-900 mb-2">
-                <i class="fas fa-ruler mr-2" style="color: #800000;"></i>Available Sizes
-            </label>
-            <p class="text-sm text-gray-600 mb-3">
-                Add size options for this product. Examples: S, M, L, XL (for clothing) | 6, 7, 8, 9 (for shoes) | 1m, 2m, 3m (for fabrics)
-            </p>
-            
-            <div class="flex gap-2 mb-3">
-                <input type="text" id="sizeInput" placeholder="e.g., Small, 7, 2m"
-                    class="border rounded px-3 py-2 flex-1 focus:outline-none focus:ring-2"
-                    style="border-color: #800000;"
-                    onkeypress="if(event.key === 'Enter') { event.preventDefault(); addSize(); }">
-                <button type="button" onclick="addSize()" 
-                    class="px-4 py-2 text-white rounded hover:opacity-90 transition-colors whitespace-nowrap"
-                    style="background-color: #800000;">
-                    <i class="fas fa-plus mr-1"></i> Add Size
-                </button>
-            </div>
-            
-            <div id="sizesList" class="flex flex-wrap gap-2 min-h-[40px] p-2 border rounded bg-white">
-                <span class="text-sm text-gray-400 italic" id="sizesPlaceholder">No sizes added yet</span>
-            </div>
-            <input type="hidden" name="available_sizes" id="sizesData" value="">
-        </div>
-
-        <!-- Available Colors -->
-        <div class="border-2 rounded-lg p-4" style="border-color: #800000; background-color: #fff9f9;">
-            <label class="block font-bold text-gray-900 mb-2">
-                <i class="fas fa-palette mr-2" style="color: #800000;"></i>Available Colors
-            </label>
-            <p class="text-sm text-gray-600 mb-3">
-                Add color options for this product. Examples: Red, Blue, Green, Multicolor
-            </p>
-            
-            <div class="flex gap-2 mb-3">
-                <input type="text" id="colorInput" placeholder="e.g., Red, Blue, Multicolor"
-                    class="border rounded px-3 py-2 flex-1 focus:outline-none focus:ring-2"
-                    style="border-color: #800000;"
-                    onkeypress="if(event.key === 'Enter') { event.preventDefault(); addColor(); }">
-                <button type="button" onclick="addColor()" 
-                    class="px-4 py-2 text-white rounded hover:opacity-90 transition-colors whitespace-nowrap"
-                    style="background-color: #800000;">
-                    <i class="fas fa-plus mr-1"></i> Add Color
-                </button>
-            </div>
-            
-            <div id="colorsList" class="flex flex-wrap gap-2 min-h-[40px] p-2 border rounded bg-white">
-                <span class="text-sm text-gray-400 italic" id="colorsPlaceholder">No colors added yet</span>
-            </div>
-            <input type="hidden" name="available_colors" id="colorsData" value="">
-        </div>
-
-        <script>
-        let sizes = [];
-        let colors = [];
-        
-        function addSize() {
-            const input = document.getElementById('sizeInput');
-            const size = input.value.trim();
-            
-            if (!size) {
-                alert('Please enter a size');
-                return;
-            }
-            
-            if (sizes.includes(size)) {
-                alert('This size already exists');
-                return;
-            }
-            
-            sizes.push(size);
-            input.value = '';
-            updateSizesList();
-        }
-        
-        function removeSize(size) {
-            sizes = sizes.filter(s => s !== size);
-            updateSizesList();
-        }
-        
-        function updateSizesList() {
-            const container = document.getElementById('sizesList');
-            const placeholder = document.getElementById('sizesPlaceholder');
-            const hiddenInput = document.getElementById('sizesData');
-            
-            if (sizes.length === 0) {
-                placeholder.classList.remove('hidden');
-                container.innerHTML = '<span class="text-sm text-gray-400 italic" id="sizesPlaceholder">No sizes added yet</span>';
-            } else {
-                container.innerHTML = sizes.map(size => `
-                    <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium text-white gap-2"
-                          style="background-color: #800000;">
-                        ${size}
-                        <button type="button" onclick="removeSize('${size}')" 
-                                class="hover:bg-red-800 rounded-full w-4 h-4 flex items-center justify-center">
-                            <i class="fas fa-times text-xs"></i>
-                        </button>
-                    </span>
-                `).join('');
-            }
-            
-            hiddenInput.value = JSON.stringify(sizes);
-        }
-        
-        function addColor() {
-            const input = document.getElementById('colorInput');
-            const color = input.value.trim();
-            
-            if (!color) {
-                alert('Please enter a color');
-                return;
-            }
-            
-            if (colors.includes(color)) {
-                alert('This color already exists');
-                return;
-            }
-            
-            colors.push(color);
-            input.value = '';
-            updateColorsList();
-        }
-        
-        function removeColor(color) {
-            colors = colors.filter(c => c !== color);
-            updateColorsList();
-        }
-        
-        function updateColorsList() {
-            const container = document.getElementById('colorsList');
-            const placeholder = document.getElementById('colorsPlaceholder');
-            const hiddenInput = document.getElementById('colorsData');
-            
-            if (colors.length === 0) {
-                placeholder.classList.remove('hidden');
-                container.innerHTML = '<span class="text-sm text-gray-400 italic" id="colorsPlaceholder">No colors added yet</span>';
-            } else {
-                container.innerHTML = colors.map(color => `
-                    <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium text-white gap-2"
-                          style="background-color: #800000;">
-                        ${color}
-                        <button type="button" onclick="removeColor('${color}')" 
-                                class="hover:bg-red-800 rounded-full w-4 h-4 flex items-center justify-center">
-                            <i class="fas fa-times text-xs"></i>
-                        </button>
-                    </span>
-                `).join('');
-            }
-            
-            hiddenInput.value = JSON.stringify(colors);
-            
-            // Update color dropdowns in image slots
-            updateImageColorDropdowns();
-        }
-        
-        function updateImageColorDropdowns() {
-            const selects = document.querySelectorAll('select[name="image_colors[]"]');
-            selects.forEach(select => {
-                const currentValue = select.value;
-                select.innerHTML = '<option value="">No color</option>' + 
-                    colors.map(color => `<option value="${color}" ${currentValue === color ? 'selected' : ''}>${color}</option>`).join('');
-            });
-        }
-        </script>
-
         <!-- Description -->
         <div>
             <label class="block font-medium text-gray-700">Description</label>
@@ -347,7 +180,7 @@
                 <i class="fas fa-images mr-2" style="color: #800000;"></i>Product Images
             </label>
             <p class="text-sm text-gray-600 mb-4">
-                Upload up to 9 images. The first image will be the main product image. Recommended size: 800x800px.
+                Upload up to 4 images. The first image will be the main product image. Recommended size: 800x800px.
             </p>
             
             <!-- Image Upload Area -->
@@ -369,19 +202,16 @@
                                 <i class="fas fa-times text-xs"></i>
                             </button>
                         </div>
-                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-                            <span class="text-white text-xs font-bold">
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-1" onclick="event.stopPropagation()">
+                            <span class="text-white text-xs font-bold block">
                                 <i class="fas fa-star"></i> Main
                             </span>
-                            <select name="image_colors[]" class="w-full mt-1 text-xs bg-white/90 rounded px-1 py-0.5" onchange="updateImageColor(0, this.value)">
-                                <option value="">No color</option>
-                            </select>
                         </div>
                     </div>
                 </div>
 
-                <!-- Additional Image Slots (8 more) -->
-                @for ($i = 1; $i < 9; $i++)
+                <!-- Additional Image Slots (3 more) -->
+                @for ($i = 1; $i < 4; $i++)
                 <div class="image-slot relative aspect-square border-2 border-dashed rounded-lg overflow-hidden bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group"
                      onclick="document.getElementById('imageInput{{ $i }}').click()">
                     <input type="file" id="imageInput{{ $i }}" name="images[]" accept="image/*" class="hidden" onchange="handleImageSelect(event, {{ $i }})">
@@ -397,10 +227,8 @@
                                 <i class="fas fa-times text-xs"></i>
                             </button>
                         </div>
-                        <div class="absolute bottom-0 left-0 right-0 bg-black/70 p-1">
-                            <select name="image_colors[]" class="w-full text-xs bg-white/90 rounded px-1 py-0.5" onchange="updateImageColor({{ $i }}, this.value)">
-                                <option value="">No color</option>
-                            </select>
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-1" onclick="event.stopPropagation()">
+                            <span class="text-white text-xs font-bold block">Image {{ $i + 1 }}</span>
                         </div>
                     </div>
                 </div>
@@ -426,12 +254,6 @@
 
         <script>
         let uploadedImages = [];
-        let imageColors = {}; // Track color for each image index
-        
-        function updateImageColor(index, color) {
-            imageColors[index] = color;
-            console.log('Image', index, 'assigned color:', color);
-        }
         
         function handleImageSelect(event, index) {
             const file = event.target.files[0];

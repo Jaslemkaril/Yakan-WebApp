@@ -262,13 +262,25 @@
                                         ✓ Order Received
                                     </button>
                                 </form>
+                            @elseif($order->status === 'completed')
+                                <button type="button" 
+                                        class="block w-full text-center px-4 py-2 bg-green-600 text-white rounded-lg opacity-60 cursor-not-allowed font-semibold" disabled>
+                                    ✓ Order Received
+                                </button>
                             @endif
 
                             <!-- Track Button -->
-                            <a href="{{ route('track-order.show', $order->tracking_number) }}" 
-                               class="block w-full text-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-semibold">
-                                Track This Order
-                            </a>
+                            @if($order->status === 'completed')
+                                <a href="{{ route('orders.show', $order->id) }}" 
+                                   class="block w-full text-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-semibold">
+                                    View Order
+                                </a>
+                            @else
+                                <a href="{{ route('track-order.show', $order->tracking_number) }}" 
+                                   class="block w-full text-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-semibold">
+                                    Track This Order
+                                </a>
+                            @endif
                         </div>
                     </div>
                 @endforeach

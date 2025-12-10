@@ -19,43 +19,74 @@ class CartController extends Controller
      */
     public function add(Request $request, Product $product)
     {
-        $userId = Auth::id();
-        $qty = max(1, (int)($request->input('quantity', 1)));
-
-        // Check inventory stock
-        $inventory = \App\Models\Inventory::where('product_id', $product->id)->first();
-        if (!$inventory || !$inventory->hasSufficientStock($qty)) {
-            $availableQty = $inventory?->quantity ?? 0;
-            return redirect()->back()->with('error', "Insufficient stock. Only {$availableQty} item(s) available.");
-        }
-
-        // If "Buy Now" was clicked, store in session and redirect directly to checkout
-        if ($request->input('buy_now')) {
-            session([
-                'buy_now_item' => [
-                    'product_id' => $product->id,
-                    'quantity' => $qty,
-                    'price' => $product->price,
-                    'name' => $product->name,
-                    'image' => $product->image,
-                ]
-            ]);
-            return redirect()->route('cart.checkout')->with('success', 'Proceeding to checkout!');
-        }
-
-        // Regular "Add to Cart" flow
-        $cartItem = Cart::where('user_id', $userId)
-                        ->where('product_id', $product->id)
-                        ->first();
-
-        if ($cartItem) {
-            // Check if new total exceeds available stock
-            $newTotal = $cartItem->quantity + $qty;
-            if (!$inventory->hasSufficientStock($newTotal)) {
-                $availableQty = $inventory->quantity;
-                return redirect()->back()->with('error', "Cannot add more. Only {$availableQty} item(s) available in total.");
+        try {
+            // Check if user is authenticated
+            if (!Auth::check()) {
+                return redirect()->route('login')->with('info', 'Please login to continue shopping.');
             }
-            $cartItem->quantity += $qty;
+            
+            $userId = Auth::id();
+            $qty = max(1, (int)($request->input('quantity', 1)));
+
+            \Log::info('Buy Now/Add to Cart attempt', [
+                'user_id' => $userId,
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'quantity' => $qty,
+                'buy_now' => $request->input('buy_now') ? 'yes' : 'no'
+            ]);
+
+            // Check or create inventory record
+            $inventory = \App\Models\Inventory::where('product_id', $product->id)->first();
+            
+            if (!$inventory) {
+                // Auto-create inventory from product stock
+                $inventory = \App\Models\Inventory::create([
+                    'product_id' => $product->id,
+                    'quantity' => $product->stock,
+                    'min_stock_level' => 5,
+                    'max_stock_level' => 100,
+                    'cost_price' => $product->price * 0.6,
+                    'selling_price' => $product->price,
+                ]);
+                \Log::info('Auto-created inventory', ['product_id' => $product->id, 'quantity' => $product->stock]);
+            }
+            
+            // Check inventory stock
+            if (!$inventory->hasSufficientStock($qty)) {
+                $availableQty = $inventory->quantity;
+                \Log::warning('Insufficient stock', ['product_id' => $product->id, 'requested' => $qty, 'available' => $availableQty]);
+                return redirect()->back()->with('error', "Insufficient stock. Only {$availableQty} item(s) available.");
+            }
+
+            // If "Buy Now" was clicked, store in session and redirect directly to checkout
+            if ($request->input('buy_now')) {
+                \Log::info('Buy Now triggered', ['user_id' => $userId, 'product_id' => $product->id, 'quantity' => $qty]);
+                
+                // Store Buy Now item in session (not in cart)
+                session(['buy_now_item' => [
+                    'product_id' => $product->id,
+                    'quantity' => $qty
+                ]]);
+                
+                \Log::info('Buy Now item stored in session', ['product_id' => $product->id, 'quantity' => $qty]);
+                return redirect()->route('cart.checkout')->with('success', 'Proceeding to checkout!');
+            }
+
+            // Regular "Add to Cart" flow
+            $cartItem = Cart::where('user_id', $userId)
+                            ->where('product_id', $product->id)
+                            ->first();
+
+            if ($cartItem) {
+                // Check if new total exceeds available stock
+                $newTotal = $cartItem->quantity + $qty;
+                
+                if (!$inventory->hasSufficientStock($newTotal)) {
+                    $availableQty = $inventory->quantity;
+                    return redirect()->back()->with('error', "Cannot add more. Only {$availableQty} item(s) available in total.");
+                }
+                $cartItem->quantity += $qty;
             $cartItem->save();
             \Log::info('Cart item updated', ['cart_item_id' => $cartItem->id, 'new_quantity' => $cartItem->quantity]);
         } else {
@@ -86,6 +117,16 @@ class CartController extends Controller
         }
 
         return redirect()->back()->with('success', 'Product added to cart!');
+        } catch (\Exception $e) {
+            \Log::error('Error adding to cart', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->back()->with('error', 'Error adding product to cart. Please try again.');
+        }
     }
 
     /**
@@ -168,6 +209,9 @@ class CartController extends Controller
     {
         $userId = Auth::id();
         
+        // Clear Buy Now item from session when viewing regular cart
+        session()->forget('buy_now_item');
+        
         $cartItems = Cart::with('product')
                         ->where('user_id', $userId)
                         ->get();
@@ -193,6 +237,14 @@ class CartController extends Controller
             \Cache::forget('cart_count_' . Auth::id());
         }
 
+        // Check if this is a JSON request
+        if (request()->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Item removed from cart'
+            ]);
+        }
+
         return redirect()->back()->with('success', 'Item removed from cart');
     }
 
@@ -201,6 +253,8 @@ class CartController extends Controller
      */
     public function update(Request $request, $id)
     {
+        \Log::info('CartController@update called', ['id' => $id, 'is_json' => $request->wantsJson(), 'is_ajax' => $request->isXmlHttpRequest()]);
+        
         $request->validate([
             'quantity' => 'required|integer|min:1',
         ]);
@@ -211,7 +265,7 @@ class CartController extends Controller
             $product = Product::find($buyNowItem['product_id']);
             
             if (!$product) {
-                if ($request->expectsJson()) {
+                if ($request->wantsJson()) {
                     return response()->json(['success' => false, 'message' => 'Product not found'], 404);
                 }
                 return redirect()->back()->with('error', 'Product not found');
@@ -230,7 +284,7 @@ class CartController extends Controller
                 'quantity' => $newQty,
             ]]);
             
-            if ($request->expectsJson()) {
+            if ($request->wantsJson()) {
                 $itemSubtotal = $newQty * $product->price;
                 $cartTotal = $itemSubtotal;
                 
@@ -268,7 +322,7 @@ class CartController extends Controller
                         ->first();
 
         if (!$cartItem) {
-            if ($request->expectsJson()) {
+            if ($request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => 'Cart item not found'], 404);
             }
             return redirect()->back()->with('error', 'Cart item not found');
@@ -285,8 +339,8 @@ class CartController extends Controller
         // Clear cart count cache
         \Cache::forget('cart_count_' . Auth::id());
 
-        // If it's an AJAX request, return JSON with updated cart data
-        if ($request->expectsJson()) {
+        // If it's a JSON request, return JSON with updated cart data
+        if ($request->wantsJson()) {
             // Calculate new item subtotal
             $itemSubtotal = $cartItem->quantity * $cartItem->product->price;
             

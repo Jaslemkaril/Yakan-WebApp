@@ -51,13 +51,15 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'images' => 'nullable|array',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'image_colors' => 'nullable|array',
+            'image_colors.*' => 'nullable|string',
             'status' => 'required|in:active,inactive',
             'category_id' => 'nullable|exists:categories,id',
             'available_sizes' => 'nullable|json',
             'available_colors' => 'nullable|json',
         ]);
 
-        // Handle multiple image uploads
+        // Handle multiple image uploads with color associations
         $imagePath = null;
         $allImages = [];
         $imageColors = $request->input('image_colors', []);
@@ -69,7 +71,6 @@ class ProductController extends Controller
                     $imageName = time() . '_' . $imageIndex . '_' . $image->getClientOriginalName();
                     $image->move(public_path('uploads/products'), $imageName);
                     
-                    // Store image with its color
                     $allImages[] = [
                         'path' => $imageName,
                         'color' => $imageColors[$index] ?? null,
@@ -103,15 +104,9 @@ class ProductController extends Controller
             'available_colors' => $colors,
         ]);
         
-        // Store all images in product_images table
+        // Store all images with color associations in JSON column
         if (!empty($allImages)) {
-            foreach ($allImages as $imageData) {
-                $product->productImages()->create([
-                    'image_path' => $imageData['path'],
-                    'color' => $imageData['color'],
-                    'sort_order' => $imageData['sort_order']
-                ]);
-            }
+            $product->update(['all_images' => json_encode($allImages)]);
         }
 
         return redirect()->route('admin.products.index')->with('success', 'Product created successfully with ' . count($allImages) . ' image(s).');
@@ -149,21 +144,77 @@ class ProductController extends Controller
             'price' => 'required|numeric',
             'stock' => 'required|integer|min:0',
             'description' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images' => 'nullable|array',
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'image_colors' => 'nullable|array',
+            'image_colors.*' => 'nullable|string',
             'status' => 'required|in:active,inactive',
+            'category_id' => 'nullable|exists:categories,id',
+            'available_sizes' => 'nullable|json',
+            'available_colors' => 'nullable|json',
+            'delete_images' => 'nullable|json',
         ]);
 
-        // Handle image upload
-        if ($request->hasFile('image')) {
-            // Delete old image if exists
-            if ($product->image && file_exists(public_path('uploads/products/' . $product->image))) {
-                unlink(public_path('uploads/products/' . $product->image));
-            }
-            $image = $request->file('image');
-            $imageName = time() . '_' . $image->getClientOriginalName();
-            $image->move(public_path('uploads/products'), $imageName);
-            $product->image = $imageName;
+        // Handle image deletions
+        $allImages = $product->all_images ?? [];
+        // Ensure $allImages is an array
+        if (is_string($allImages)) {
+            $allImages = json_decode($allImages, true) ?? [];
         }
+        
+        $imagesToDelete = $request->delete_images ? json_decode($request->delete_images, true) : [];
+        
+        if (!empty($imagesToDelete)) {
+            // Remove deleted images from array and delete files
+            $allImages = array_filter($allImages, function($img) use ($imagesToDelete) {
+                if (in_array($img['path'], $imagesToDelete)) {
+                    // Delete physical file
+                    if (file_exists(public_path('uploads/products/' . $img['path']))) {
+                        unlink(public_path('uploads/products/' . $img['path']));
+                    }
+                    return false;
+                }
+                return true;
+            });
+            // Reindex array
+            $allImages = array_values($allImages);
+        }
+
+        // Handle new image uploads with color associations
+        $imagePath = $product->image;
+        $imageColors = $request->input('image_colors', []);
+        
+        if ($request->hasFile('images')) {
+            $imageIndex = count($allImages);
+            foreach ($request->file('images') as $index => $image) {
+                if ($image && $image->isValid()) {
+                    $imageName = time() . '_' . $imageIndex . '_' . $image->getClientOriginalName();
+                    $image->move(public_path('uploads/products'), $imageName);
+                    
+                    $allImages[] = [
+                        'path' => $imageName,
+                        'color' => $imageColors[$index] ?? null,
+                        'sort_order' => $imageIndex
+                    ];
+                    
+                    // First image becomes the main image if no main image exists or all were deleted
+                    if ($imagePath === null || empty($imagePath) || in_array($imagePath, $imagesToDelete)) {
+                        $imagePath = $imageName;
+                    }
+                    
+                    $imageIndex++;
+                }
+            }
+        }
+        
+        // If main image was deleted and no new images, set first remaining image as main
+        if (!empty($allImages) && (in_array($imagePath, $imagesToDelete) || !$imagePath)) {
+            $imagePath = $allImages[0]['path'];
+        }
+
+        // Parse sizes and colors JSON
+        $sizes = $request->available_sizes ? json_decode($request->available_sizes, true) : null;
+        $colors = $request->available_colors ? json_decode($request->available_colors, true) : null;
 
         // Update product
         $product->update([
@@ -172,10 +223,24 @@ class ProductController extends Controller
             'stock' => $request->stock,
             'description' => $request->description,
             'status' => $request->status,
-            'image' => $product->image, // ensure updated image is saved
+            'category_id' => $request->category_id,
+            'image' => $imagePath,
+            'available_sizes' => $sizes,
+            'available_colors' => $colors,
+            'all_images' => !empty($allImages) ? $allImages : null,
         ]);
 
-        return redirect()->route('admin.products.index')->with('success', 'Product updated successfully.');
+        $imageCount = count($allImages);
+        $deletedCount = count($imagesToDelete);
+        $message = "Product updated successfully";
+        if ($imageCount > 0) {
+            $message .= " with {$imageCount} image(s)";
+        }
+        if ($deletedCount > 0) {
+            $message .= ". Deleted {$deletedCount} image(s)";
+        }
+
+        return redirect()->route('admin.products.index')->with('success', $message . '.');
     }
 
     /**

@@ -177,13 +177,14 @@
                 <main class="lg:w-2/3">
                     <div class="space-y-4">
                         @foreach($cartItems as $index => $item)
-                            <div class="cart-item animate-fade-in-up" style="animation-delay: {{ $index * 0.1 }}s">
+                            <div class="cart-item animate-fade-in-up" style="animation-delay: {{ $index * 0.1 }}s" data-item-id="{{ $item->id }}">
                                 <div class="flex gap-4">
                                     <!-- Product Image -->
                                     <div class="cart-image w-24 h-24 flex-shrink-0">
                                         @if($item->product->image)
-                                            <img src="{{ asset('storage/' . $item->product->image) }}" alt="{{ $item->product->name }}" 
-                                                 class="w-full h-full object-cover rounded-lg">
+                                            <img src="{{ asset('uploads/products/' . $item->product->image) }}" alt="{{ $item->product->name }}" 
+                                                 class="w-full h-full object-cover rounded-lg"
+                                                 onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full bg-gray-100 rounded-lg flex items-center justify-center\'><div class=\'text-2xl\'>📦</div></div>';">
                                         @else
                                             <div class="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center">
                                                 <div class="text-2xl">📦</div>
@@ -271,30 +272,24 @@
                             $subtotal = $cartItems->sum(function($item) {
                                 return $item->product->price * $item->quantity;
                             });
-                            $shipping = 50; // Fixed shipping cost
-                            $tax = $subtotal * 0.12; // 12% tax
-                            $total = $subtotal + $shipping + $tax;
+                            $shipping = 0; // Free shipping
+                            $total = $subtotal + $shipping;
                         @endphp
 
                         <div class="space-y-2">
                             <div class="summary-row">
                                 <span class="text-gray-600">Subtotal</span>
-                                <span class="font-semibold">₱{{ number_format($subtotal) }}</span>
+                                <span class="font-semibold" data-summary="subtotal">₱{{ number_format($subtotal) }}</span>
                             </div>
                             
                             <div class="summary-row">
                                 <span class="text-gray-600">Shipping</span>
-                                <span class="font-semibold">₱{{ number_format($shipping) }}</span>
-                            </div>
-                            
-                            <div class="summary-row">
-                                <span class="text-gray-600">Tax (12%)</span>
-                                <span class="font-semibold">₱{{ number_format($tax) }}</span>
+                                <span class="font-semibold text-green-600">Free</span>
                             </div>
                             
                             <div class="summary-row">
                                 <span class="text-lg font-bold text-gray-900">Total</span>
-                                <span class="text-2xl font-bold text-red-600">₱{{ number_format($total) }}</span>
+                                <span class="text-2xl font-bold text-red-600" data-summary="total">₱{{ number_format($total) }}</span>
                             </div>
                         </div>
 
@@ -395,7 +390,17 @@
                         @endphp
                         @foreach($recommendedProducts as $product)
                             <div class="bg-white rounded-xl p-4 shadow-lg hover:shadow-xl transition-shadow">
-                                <div class="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg mb-4"></div>
+                                <div class="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg mb-4 overflow-hidden">
+                                    @if($product->image)
+                                        <img src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" 
+                                             class="w-full h-full object-cover"
+                                             onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full bg-gray-100 flex items-center justify-center\'><div class=\'text-3xl\'>📦</div></div>';">
+                                    @else
+                                        <div class="w-full h-full bg-gray-100 flex items-center justify-center">
+                                            <div class="text-3xl">📦</div>
+                                        </div>
+                                    @endif
+                                </div>
                                 <h5 class="font-semibold text-gray-900 mb-2">{{ $product->name }}</h5>
                                 <div class="flex items-center justify-between">
                                     <span class="text-lg font-bold text-red-600">₱{{ number_format($product->price ?? 0) }}</span>
@@ -414,28 +419,164 @@
     <!-- JavaScript for Cart Operations -->
     <script>
         function updateQuantity(itemId, newQuantity) {
-            if (newQuantity < 1) return;
+            console.log('Updating quantity - Item ID:', itemId, 'New Qty:', newQuantity);
             
-            // Make AJAX call to update quantity
+            if (newQuantity < 1) {
+                console.log('Quantity is less than 1, aborting');
+                return;
+            }
+            
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const cartItem = document.querySelector(`[data-item-id="${itemId}"]`);
+            const quantityInput = cartItem?.querySelector('.quantity-input');
+            const priceDisplay = cartItem?.querySelector('.text-xl.font-bold.text-red-600');
+            
+            // Make AJAX call to update quantity using PATCH
             fetch(`/cart/update/${itemId}`, {
-                method: 'POST',
+                method: 'PATCH',
                 headers: {
+                    'Accept': 'application/json',
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
                     quantity: newQuantity
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Response data:', data);
                 if (data.success) {
-                    location.reload(); // Reload to update cart
+                    // Update the quantity input value
+                    if (quantityInput) {
+                        quantityInput.value = newQuantity;
+                    }
+                    
+                    // Get product price from the cart item
+                    const eachPriceText = cartItem?.querySelector('.text-sm.text-gray-500');
+                    const eachPrice = parseFloat(eachPriceText?.textContent.match(/[\d.]+/)?.[0] || 0);
+                    const itemTotal = eachPrice * newQuantity;
+                    
+                    // Update the item total price
+                    if (priceDisplay) {
+                        priceDisplay.textContent = '₱' + itemTotal.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+                    }
+                    
+                    // Update order summary
+                    updateOrderSummary();
+                } else {
+                    alert('Failed to update quantity: ' + (data.message || 'Unknown error'));
                 }
             })
             .catch(error => {
                 console.error('Error updating cart:', error);
+                alert('Error updating quantity. Please try again.');
             });
         }
+        
+        function updateOrderSummary() {
+            // Calculate new subtotal from all items
+            const cartItems = document.querySelectorAll('[data-item-id]');
+            let subtotal = 0;
+            
+            cartItems.forEach(item => {
+                const priceText = item.querySelector('.text-sm.text-gray-500');
+                const quantityInput = item.querySelector('.quantity-input');
+                
+                if (priceText && quantityInput) {
+                    const price = parseFloat(priceText.textContent.match(/[\d.]+/)?.[0] || 0);
+                    const quantity = parseInt(quantityInput.value) || 0;
+                    subtotal += price * quantity;
+                }
+            });
+            
+            // Update summary display
+            const subtotalDisplay = document.querySelector('[data-summary="subtotal"]');
+            const totalDisplay = document.querySelector('[data-summary="total"]');
+            
+            if (subtotalDisplay) {
+                subtotalDisplay.textContent = '₱' + subtotal.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            }
+            
+            if (totalDisplay) {
+                totalDisplay.textContent = '₱' + subtotal.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            }
+        }
+
+        // Delete cart item handler
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Initializing delete button handlers');
+            const deleteButtons = document.querySelectorAll('.remove-btn');
+            console.log('Found ' + deleteButtons.length + ' delete buttons');
+            
+            deleteButtons.forEach((button, index) => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const cartItem = this.closest('.cart-item');
+                    const itemId = cartItem?.getAttribute('data-item-id');
+                    
+                    console.log('Delete button clicked - Item ID:', itemId);
+                    
+                    if (!itemId) {
+                        alert('Could not identify item. Please try again.');
+                        return;
+                    }
+                    
+                    if (confirm('Are you sure you want to remove this item from your cart?')) {
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                        console.log('Sending delete request for item:', itemId);
+                        
+                        fetch(`/cart/remove/${itemId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => {
+                            console.log('Delete response status:', response.status);
+                            if (!response.ok) {
+                                throw new Error(`HTTP ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Delete response data:', data);
+                            if (data.success) {
+                                console.log('Delete successful, removing item from DOM');
+                                // Remove the item from the page
+                                cartItem.remove();
+                                
+                                // Update order summary
+                                updateOrderSummary();
+                                
+                                // Check if cart is now empty
+                                const remainingItems = document.querySelectorAll('[data-item-id]').length;
+                                if (remainingItems === 0) {
+                                    console.log('Cart is now empty, reloading page');
+                                    location.reload();
+                                }
+                            } else {
+                                alert('Failed to remove item: ' + (data.message || 'Unknown error'));
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error removing item:', error);
+                            alert('Error removing item. Please try again.');
+                        });
+                    }
+                });
+            });
+        });
     </script>
 @endsection

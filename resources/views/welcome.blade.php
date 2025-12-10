@@ -5,7 +5,7 @@
 @push('styles')
 <style>
     .hero-section {
-        background: linear-gradient(135deg, #800000 0%, #800000 50%, #800000 100%);
+        background: linear-gradient(135deg, rgba(128, 0, 0, 0.85) 0%, rgba(128, 0, 0, 0.85) 100%), url('https://images.unsplash.com/photo-1577720643272-265e434f3894?w=1200&h=600&fit=crop') center/cover;
         position: relative;
         overflow: hidden;
     }
@@ -136,12 +136,14 @@
         <div class="hero-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                 <div class="animate-fade-in-up">
-                    <h1 class="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-                        Discover Premium
-                        <span class="block text-red-200">Quality Products</span>
+                    <h1 class="text-5xl lg:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-lg">
+                        TUWAS YAKAN
                     </h1>
-                    <p class="text-xl lg:text-2xl mb-8 text-red-100 leading-relaxed">
-                        Shop our curated collection of premium products or create custom orders tailored exactly to your needs. Quality meets creativity.
+                    <p class="text-2xl lg:text-4xl mb-6 text-red-100 leading-relaxed font-semibold tracking-wide">
+                        Weaving Through Generations
+                    </p>
+                    <p class="text-lg lg:text-2xl mb-8 text-red-100 leading-relaxed font-light">
+                        Authentic handcrafted products with traditional artistry
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4">
                         <a href="{{ route('products.index') }}" class="btn-primary text-lg px-8 py-4 inline-flex items-center justify-center group">
@@ -161,11 +163,10 @@
                                     </div>
                 
                 <div class="relative animate-float">
-                    <div class="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20">
-                        <div class="aspect-square bg-gradient-to-br from-red-200 to-red-300 rounded-2xl flex items-center justify-center">
-                            <div class="text-center">
-                                
-                            </div>
+                    <div class="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 shadow-2xl overflow-hidden">
+                        <div class="aspect-square rounded-2xl flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-red-600 to-red-900">
+                            <!-- Yakan weaver with traditional loom image -->
+                            <img src="{{ asset('uploads/yakan-weaver.jpg') }}" alt="Yakan Weaver" class="w-full h-full object-cover" loading="lazy">
                         </div>
                     </div>
                 </div>
@@ -263,7 +264,7 @@
                         <div class="bg-white rounded-2xl shadow-xl overflow-hidden transform hover:scale-105 transition-all duration-300 animate-fade-in-up" style="animation-delay: {{ $index * 0.1 }}s">
                             <div class="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
                                 @if($product->image)
-                                    <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" 
+                                    <img src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" 
                                          class="w-full h-full object-cover">
                                 @else
                                     <div class="text-6xl">📦</div>

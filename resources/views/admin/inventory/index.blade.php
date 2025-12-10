@@ -68,7 +68,7 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm text-gray-500">Total Items</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ $inventories->total() }}</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $products->total() }}</p>
                     </div>
                     <i class="fas fa-chart-bar text-blue-500 text-2xl"></i>
                 </div>
@@ -163,12 +163,15 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    @forelse($inventories as $inventory)
-                        <tr class="hover:bg-gray-50 transition-colors">
+                    @forelse($products as $product)
+                        @php
+                            $inventory = $product->inventory;
+                        @endphp
+                        <tr class="hover:bg-gray-50 transition-colors {{ !$inventory ? 'bg-yellow-50' : '' }}">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    @if($inventory->product->image)
-                                        <img class="h-10 w-10 rounded-lg object-cover" src="{{ asset('storage/' . $inventory->product->image) }}" alt="">
+                                    @if($product->image)
+                                        <img class="h-10 w-10 rounded-lg object-cover" src="{{ asset('uploads/products/' . $product->image) }}" alt="">
                                     @else
                                         <div class="h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center">
                                             <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,38 +180,62 @@
                                         </div>
                                     @endif
                                     <div class="ml-4">
-                                        <div class="text-sm font-medium text-gray-900">{{ $inventory->product->name }}</div>
-                                        <div class="text-sm text-gray-500">{{ $inventory->product->category->name ?? 'No Category' }}</div>
+                                        <div class="text-sm font-medium text-gray-900">{{ $product->name }}</div>
+                                        <div class="text-sm text-gray-500">{{ $product->category->name ?? 'No Category' }}</div>
                                     </div>
                                 </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if($inventory)
                                     <div class="text-sm font-medium {{ $inventory->isLowStock() ? 'text-red-600' : 'text-gray-900' }}">
                                         {{ $inventory->quantity }}
                                     </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
+                                @else
+                                    <div class="text-sm text-gray-400 italic">{{ $product->stock ?? 0 }}</div>
+                                    <div class="text-xs text-orange-600">No inventory</div>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if($inventory)
                                     <div class="text-sm text-gray-900">
                                         <span class="font-medium">{{ $inventory->min_stock_level }}</span> / 
                                         <span class="font-medium">{{ $inventory->max_stock_level }}</span>
                                     </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
+                                @else
+                                    <div class="text-sm text-gray-400">-</div>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if($inventory)
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $inventory->stock_status_color }}">
                                         {{ $inventory->stock_status }}
                                     </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                @else
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                        No Tracking
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                @if($inventory)
                                     <div class="font-medium">{{ $inventory->total_sold ?? 0 }}</div>
                                     @if($inventory->last_sale_at)
                                         <div class="text-xs text-gray-500">{{ $inventory->last_sale_at->format('M d, Y') }}</div>
                                     @endif
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                @else
+                                    <div class="text-gray-400">-</div>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                @if($inventory)
                                     <div class="font-medium">₱{{ number_format($inventory->total_revenue ?? 0, 2) }}</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <div class="flex items-center space-x-2">
+                                @else
+                                    <div class="text-gray-400">-</div>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <div class="flex items-center space-x-2">
+                                    @if($inventory)
                                         <!-- Inventory Actions -->
                                         <a href="{{ route('admin.inventory.show', $inventory) }}" class="text-red-600 hover:text-red-900" title="View Inventory">
                                             <i class="fas fa-box"></i>
@@ -224,17 +251,29 @@
                                         
                                         <!-- Divider -->
                                         <div class="w-px h-4 bg-gray-300"></div>
-                                        
-                                        <!-- Product Actions -->
-                                        <a href="{{ route('admin.products.show', $inventory->product->id) }}" class="text-purple-600 hover:text-purple-900" title="View Product">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <a href="{{ route('admin.products.edit', $inventory->product->id) }}" class="text-orange-600 hover:text-orange-900" title="Edit Product">
-                                            <i class="fas fa-tag"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
+                                    @else
+                                        <!-- Create Inventory Action -->
+            
+            <!-- Pagination -->
+            @if($products->hasPages())
+                <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+                    {{ $products->links() }}
+                </div>
+            @endif                      
+                                        <!-- Divider -->
+                                        <div class="w-px h-4 bg-gray-300"></div>
+                                    @endif
+                                    
+                                    <!-- Product Actions -->
+                                    <a href="{{ route('products.show', $product->id) }}" class="text-purple-600 hover:text-purple-900" title="View Product">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{{ route('admin.products.edit', $product->id) }}" class="text-orange-600 hover:text-orange-900" title="Edit Product">
+                                        <i class="fas fa-tag"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
                         @empty
                             <tr>
                                 <td colspan="7" class="px-6 py-12 text-center">
@@ -242,9 +281,9 @@
                                         <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
                                         </svg>
-                                        <p class="text-gray-500 font-medium">No inventory records found</p>
-                                        <a href="{{ route('admin.inventory.create') }}" class="mt-4 inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors">
-                                            Add First Inventory Record
+                                        <p class="text-gray-500 font-medium">No products found</p>
+                                        <a href="{{ route('admin.products.create') }}" class="mt-4 inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors">
+                                            Add First Product
                                         </a>
                                     </div>
                                 </td>
@@ -255,9 +294,9 @@
             </div>
             
             <!-- Pagination -->
-            @if($inventories->hasPages())
+            @if($products->hasPages())
                 <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-                    {{ $inventories->links() }}
+                    {{ $products->links() }}
                 </div>
             @endif
         </div>

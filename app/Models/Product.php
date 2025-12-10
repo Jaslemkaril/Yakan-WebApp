@@ -33,12 +33,14 @@ class Product extends Model
         'sku',
         'available_sizes',
         'available_colors',
+        'all_images',
     ];
 
     protected $casts = [
         'price' => 'float',
         'available_sizes' => 'array',
         'available_colors' => 'array',
+        'all_images' => 'array',
     ];
 
     public function category()
@@ -49,11 +51,6 @@ class Product extends Model
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class);
-    }
-
-    public function productImages(): HasMany
-    {
-        return $this->hasMany(ProductImage::class)->orderBy('sort_order');
     }
 
     public function inventory(): HasOne

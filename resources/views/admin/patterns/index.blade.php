@@ -27,10 +27,10 @@
     <!-- Filters -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
         <div class="bg-white rounded-xl shadow-lg p-4">
-            <form method="GET" class="flex flex-wrap gap-4 items-end">
+            <form method="GET" id="filterForm" class="flex flex-wrap gap-4 items-end">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                    <select name="category" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500">
+                    <select name="category" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500" onchange="document.getElementById('filterForm').submit()">
                         <option value="">All Categories</option>
                         <option value="traditional" {{ request('category') == 'traditional' ? 'selected' : '' }}>Traditional</option>
                         <option value="modern" {{ request('category') == 'modern' ? 'selected' : '' }}>Modern</option>
@@ -39,16 +39,18 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Difficulty</label>
-                    <select name="difficulty" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500">
+                    <select name="difficulty" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500" onchange="document.getElementById('filterForm').submit()">
                         <option value="">All Levels</option>
                         <option value="simple" {{ request('difficulty') == 'simple' ? 'selected' : '' }}>Simple</option>
-                        <option value="medium" {{ request('difficulty') == 'medium' ? 'selected' : '' }}>Medium</option>
-                        <option value="complex" {{ request('difficulty') == 'complex' ? 'selected' : '' }}>Complex</option>
+                        <option value="intermediate" {{ request('difficulty') == 'intermediate' ? 'selected' : '' }}>Intermediate</option>
+                        <option value="advanced" {{ request('difficulty') == 'advanced' ? 'selected' : '' }}>Advanced</option>
+                        <option value="expert" {{ request('difficulty') == 'expert' ? 'selected' : '' }}>Expert</option>
+                        <option value="master" {{ request('difficulty') == 'master' ? 'selected' : '' }}>Master</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Tag</label>
-                    <select name="tag" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500">
+                    <select name="tag" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500" onchange="document.getElementById('filterForm').submit()">
                         <option value="">All Tags</option>
                         @foreach($tags as $tag)
                             <option value="{{ $tag->slug }}" {{ request('tag') == $tag->slug ? 'selected' : '' }}>{{ $tag->name }}</option>
