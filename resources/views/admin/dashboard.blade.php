@@ -180,14 +180,14 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-in-left">
             <!-- Total Revenue Card -->
             <div class="group relative">
-                <div class="absolute -inset-0.5 bg-gradient-to-r from-green-400 to-emerald-600 rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
+                <div class="absolute -inset-0.5 bg-[#800000] rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
                 <div class="relative bg-white rounded-2xl p-6 card-hover-lift">
                     <div class="flex items-center justify-between mb-4">
-                        <div class="w-14 h-14 bg-gradient-to-br from-green-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                            <i class="fas fa-money-bill-wave text-white text-xl"></i>
+                        <div class="w-14 h-14 bg-[#800000] rounded-xl flex items-center justify-center shadow-lg">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </div>
                         <div class="flex flex-col items-end">
-                            <span class="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">Live</span>
+                            <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">Live</span>
                             <span class="text-xs text-gray-500 mt-1">+12.5%</span>
                         </div>
                     </div>
@@ -201,7 +201,7 @@
                             <span>{{ min(100, round($totalRevenue / 1000)) }}%</span>
                         </div>
                         <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div class="h-full bg-gradient-to-r from-green-400 to-emerald-600 rounded-full progress-animate" style="width: {{ min(100, $totalRevenue / 1000) }}%"></div>
+                            <div class="h-full bg-[#800000] rounded-full progress-animate" style="width: {{ min(100, $totalRevenue / 1000) }}%"></div>
                         </div>
                     </div>
                 </div>
@@ -209,14 +209,14 @@
 
             <!-- Total Orders Card -->
             <div class="group relative">
-                <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-400 to-indigo-600 rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
+                <div class="absolute -inset-0.5 bg-[#800000] rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
                 <div class="relative bg-white rounded-2xl p-6 card-hover-lift">
                     <div class="flex items-center justify-between mb-4">
-                        <div class="w-14 h-14 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                            <i class="fas fa-shopping-bag text-white text-xl"></i>
+                        <div class="w-14 h-14 bg-[#800000] rounded-xl flex items-center justify-center shadow-lg">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
                         </div>
                         <div class="flex flex-col items-end">
-                            <span class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">{{ $pendingOrders }} pending</span>
+                            <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">{{ $pendingOrders }} pending</span>
                             <span class="text-xs text-gray-500 mt-1">+8.2%</span>
                         </div>
                     </div>
@@ -230,7 +230,7 @@
                             <span>{{ min(100, round($totalOrders / 20)) }}%</span>
                         </div>
                         <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div class="h-full bg-gradient-to-r from-blue-400 to-indigo-600 rounded-full progress-animate" style="width: {{ min(100, $totalOrders / 20) }}%"></div>
+                            <div class="h-full bg-[#800000] rounded-full progress-animate" style="width: {{ min(100, $totalOrders / 20) }}%"></div>
                         </div>
                     </div>
                 </div>
@@ -238,14 +238,14 @@
 
             <!-- Total Users Card -->
             <div class="group relative">
-                <div class="absolute -inset-0.5 bg-gradient-to-r from-purple-400 to-pink-600 rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
+                <div class="absolute -inset-0.5 bg-[#800000] rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
                 <div class="relative bg-white rounded-2xl p-6 card-hover-lift">
                     <div class="flex items-center justify-between mb-4">
-                        <div class="w-14 h-14 bg-gradient-to-br from-purple-400 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
-                            <i class="fas fa-users text-white text-xl"></i>
+                        <div class="w-14 h-14 bg-[#800000] rounded-xl flex items-center justify-center shadow-lg">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM6 20h12a6 6 0 00-6-6 6 6 0 00-6 6z"/></svg>
                         </div>
                         <div class="flex flex-col items-end">
-                            <span class="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded-full">Active</span>
+                            <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">Active</span>
                             <span class="text-xs text-gray-500 mt-1">+15.3%</span>
                         </div>
                     </div>
@@ -259,7 +259,7 @@
                             <span>{{ min(100, round($totalUsers / 100)) }}%</span>
                         </div>
                         <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div class="h-full bg-gradient-to-r from-purple-400 to-pink-600 rounded-full progress-animate" style="width: {{ min(100, $totalUsers / 100) }}%"></div>
+                            <div class="h-full bg-[#800000] rounded-full progress-animate" style="width: {{ min(100, $totalUsers / 100) }}%"></div>
                         </div>
                     </div>
                 </div>
@@ -267,14 +267,14 @@
 
             <!-- Completed Orders Card -->
             <div class="group relative">
-                <div class="absolute -inset-0.5 bg-gradient-to-r from-orange-400 to-red-600 rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
+                <div class="absolute -inset-0.5 bg-[#800000] rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
                 <div class="relative bg-white rounded-2xl p-6 card-hover-lift">
                     <div class="flex items-center justify-between mb-4">
-                        <div class="w-14 h-14 bg-gradient-to-br from-orange-400 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
-                            <i class="fas fa-check-circle text-white text-xl"></i>
+                        <div class="w-14 h-14 bg-[#800000] rounded-xl flex items-center justify-center shadow-lg">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </div>
                         <div class="flex flex-col items-end">
-                            <span class="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full">{{ $completedOrders }} done</span>
+                            <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">{{ $completedOrders }} done</span>
                             <span class="text-xs text-gray-500 mt-1">{{ $totalOrders > 0 ? round(($completedOrders / $totalOrders) * 100) : 0 }}% rate</span>
                         </div>
                     </div>
@@ -288,7 +288,7 @@
                             <span>{{ $totalOrders > 0 ? round(($completedOrders / $totalOrders) * 100) : 0 }}%</span>
                         </div>
                         <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div class="h-full bg-gradient-to-r from-orange-400 to-red-600 rounded-full progress-animate" style="width: {{ $totalOrders > 0 ? min(100, ($completedOrders / $totalOrders) * 100) : 0 }}%"></div>
+                            <div class="h-full bg-[#800000] rounded-full progress-animate" style="width: {{ $totalOrders > 0 ? min(100, ($completedOrders / $totalOrders) * 100) : 0 }}%"></div>
                         </div>
                     </div>
                 </div>
@@ -300,11 +300,11 @@
             <!-- Average Order Value -->
             <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 card-hover-lift">
                 <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center shadow-md">
-                        <i class="fas fa-calculator text-white text-lg"></i>
+                    <div class="w-12 h-12 bg-[#800000] rounded-xl flex items-center justify-center shadow-md">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3v3m-6-1v-6a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
                     </div>
                     <div class="text-right">
-                        <span class="text-xs font-medium text-cyan-600 bg-cyan-50 px-2 py-1 rounded-full">AOV</span>
+                        <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">AOV</span>
                     </div>
                 </div>
                 <div class="space-y-1">
@@ -317,11 +317,11 @@
             <!-- Today's Orders -->
             <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 card-hover-lift">
                 <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-md">
-                        <i class="fas fa-calendar-day text-white text-lg"></i>
+                    <div class="w-12 h-12 bg-[#800000] rounded-xl flex items-center justify-center shadow-md">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     </div>
                     <div class="text-right">
-                        <span class="text-xs font-medium text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">Today</span>
+                        <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">Today</span>
                     </div>
                 </div>
                 <div class="space-y-1">
@@ -334,11 +334,11 @@
             <!-- Shipped Orders -->
             <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 card-hover-lift">
                 <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-gradient-to-br from-teal-400 to-green-500 rounded-xl flex items-center justify-center shadow-md">
-                        <i class="fas fa-shipping-fast text-white text-lg"></i>
+                    <div class="w-12 h-12 bg-[#800000] rounded-xl flex items-center justify-center shadow-md">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                     </div>
                     <div class="text-right">
-                        <span class="text-xs font-medium text-teal-600 bg-teal-50 px-2 py-1 rounded-full">In Transit</span>
+                        <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">In Transit</span>
                     </div>
                 </div>
                 <div class="space-y-1">
@@ -351,11 +351,11 @@
             <!-- Orders with Notes -->
             <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 card-hover-lift">
                 <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-xl flex items-center justify-center shadow-md">
-                        <i class="fas fa-comment-dots text-white text-lg"></i>
+                    <div class="w-12 h-12 bg-[#800000] rounded-xl flex items-center justify-center shadow-md">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
                     </div>
                     <div class="text-right">
-                        <span class="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">Notes</span>
+                        <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">Notes</span>
                     </div>
                 </div>
                 <div class="space-y-1">
@@ -479,7 +479,7 @@
                             <p class="text-sm text-gray-500">Real-time distribution</p>
                         </div>
                     </div>
-                    <a href="{{ route('admin.orders.index') }}" class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1">
+                    <a href="{{ route('admin.regular.index') }}" class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1">
                         <span>View All</span>
                         <i class="fas fa-arrow-right text-xs"></i>
                     </a>
@@ -552,7 +552,7 @@
                             <p class="text-sm text-gray-500">Latest customer activity</p>
                         </div>
                     </div>
-                    <a href="{{ route('admin.orders.index') }}" class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1">
+                    <a href="{{ route('admin.regular.index') }}" class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1">
                         <span>View All</span>
                         <i class="fas fa-arrow-right text-xs"></i>
                     </a>

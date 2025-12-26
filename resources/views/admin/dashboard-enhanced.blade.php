@@ -342,7 +342,7 @@
             <p class="text-sm text-gray-600 mt-1">Create new product</p>
         </div>
 
-        <div class="quick-action-card" onclick="window.location.href='{{ route('admin.orders.index') }}'">
+        <div class="quick-action-card" onclick="window.location.href='{{ route('admin.regular.index') }}'">
             <div class="quick-action-icon" style="background: var(--success-gradient);">
                 <i class="fas fa-list"></i>
             </div>

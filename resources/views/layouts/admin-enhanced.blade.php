@@ -188,7 +188,7 @@
                         <span>Products</span>
                     </a>
 
-                    <a href="{{ route('admin.orders.index') }}" class="sidebar-item flex items-center px-4 py-3 text-gray-700 {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
+                    <a href="{{ route('admin.regular.index') }}" class="sidebar-item flex items-center px-4 py-3 text-gray-700 {{ request()->routeIs('admin.regular.*') ? 'active' : '' }}">
                         <i class="fas fa-shopping-bag w-5 mr-3"></i>
                         <span>Orders</span>
                         <span class="notification-badge">3</span>

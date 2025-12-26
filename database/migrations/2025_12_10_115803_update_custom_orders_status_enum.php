@@ -12,7 +12,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE `custom_orders` MODIFY COLUMN `status` ENUM('pending', 'approved', 'rejected', 'processing', 'in_production', 'production_complete', 'out_for_delivery', 'delivered', 'completed', 'cancelled') DEFAULT 'pending'");
+        // SQLite doesn't support ENUM, so we'll use a string column with check constraint
+        // For now, we'll just ensure the column exists as string
+        if (Schema::hasColumn('custom_orders', 'status')) {
+            // Column already exists, no need to modify for SQLite
+            return;
+        }
+        
+        Schema::table('custom_orders', function (Blueprint $table) {
+            $table->string('status')->default('pending')->change();
+        });
     }
 
     /**
@@ -20,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE `custom_orders` MODIFY COLUMN `status` ENUM('pending', 'approved', 'rejected', 'processing', 'completed', 'cancelled') DEFAULT 'pending'");
+        // No need to reverse for SQLite
     }
 };

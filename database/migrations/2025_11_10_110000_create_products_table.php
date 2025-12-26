@@ -16,6 +16,10 @@ return new class extends Migration
             $table->integer('stock')->default(0);
             $table->foreignId('category_id')->nullable()->constrained('categories')->onDelete('set null');
             $table->string('image')->nullable();
+            $table->string('sku')->nullable()->unique();
+            $table->string('status')->default('active');
+            $table->json('available_sizes')->nullable();
+            $table->json('available_colors')->nullable();
             $table->timestamps();
         });
     }

@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -11,7 +12,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE `custom_orders` MODIFY COLUMN `status` ENUM('pending','price_quoted','approved','rejected','processing','in_production','production_complete','out_for_delivery','delivered','completed','cancelled') NOT NULL DEFAULT 'pending'");
+        // SQLite doesn't support ENUM, so we'll just ensure the column exists as string
+        // The status values will be validated at the application level
+        if (Schema::hasColumn('custom_orders', 'status')) {
+            // Column already exists, no need to modify for SQLite
+            return;
+        }
+        
+        Schema::table('custom_orders', function (Blueprint $table) {
+            $table->string('status')->default('pending')->change();
+        });
     }
 
     /**
@@ -19,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE `custom_orders` MODIFY COLUMN `status` ENUM('pending','approved','rejected','processing','in_production','production_complete','out_for_delivery','delivered','completed','cancelled') NOT NULL DEFAULT 'pending'");
+        // No need to reverse for SQLite
     }
 };

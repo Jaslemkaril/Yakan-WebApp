@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 // Fallback route for storage files when symlink doesn't exist
-// This serves files from storage/app/public when public/storage symlink is missing
 Route::get('/storage/{path}', function ($path) {
     $filePath = storage_path('app/public/' . $path);
     
@@ -21,17 +20,15 @@ Route::get('/storage/{path}', function ($path) {
     ]);
 })->where('path', '.*')->name('storage.fallback');
 
-// Real admin login route at the top (fixes routing issue)
+// Admin login routes
 Route::get('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'showLoginForm'])->name('admin.login.form');
 Route::post('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'login'])->name('admin.login.submit');
 
-// Admin dashboard route at the top (fixes redirect issue) - temporarily without auth
+// Admin dashboard route
 Route::get('/admin/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->middleware('auth:admin')->name('admin.dashboard');
 
-// Regular user login routes at the top (fixes redirect issue)
+// Regular user login routes
 Route::get('/login', function() {
-    \Log::info('Login page accessed - Auth states: web=' . (Auth::guard('web')->check() ? 'true' : 'false') . ', admin=' . (Auth::guard('admin')->check() ? 'true' : 'false'));
-    
     if (Auth::guard('web')->check()) {
         return redirect('/dashboard');
     }
@@ -41,106 +38,6 @@ Route::get('/login', function() {
 })->name('login');
 
 Route::post('/login', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'storeUser']);
-
-// User dashboard route moved below with proper auth middleware
-
-
-// Test controller outside admin middleware
-Route::get('/test-controller-outside-admin', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'indexEnhanced']);
-
-// Check authentication status
-Route::get('/check-auth', function() {
-    $webAuth = auth()->guard('web')->check();
-    $adminAuth = auth()->guard('admin')->check();
-    $webUser = auth()->guard('web')->user();
-    $adminUser = auth()->guard('admin')->user();
-    
-    return [
-        'web_authenticated' => $webAuth,
-        'admin_authenticated' => $adminAuth,
-        'web_user' => $webUser ? ['id' => $webUser->id, 'email' => $webUser->email, 'role' => $webUser->role] : null,
-        'admin_user' => $adminUser ? ['id' => $adminUser->id, 'email' => $adminUser->email, 'role' => $adminUser->role] : null,
-        'message' => $adminAuth && $adminUser && $adminUser->role === 'admin' 
-            ? '✅ You are logged in as admin!' 
-            : '❌ You are NOT logged in as admin. Please login at: ' . route('admin.login.form')
-    ];
-});
-
-// Bypass authentication test
-Route::get('/test-admin-orders-no-auth', function() {
-    try {
-        return 'Admin Orders bypass auth works!';
-    } catch (\Exception $e) {
-        return 'Bypass auth error: ' . $e->getMessage();
-    }
-});
-
-// Direct view test route
-Route::get('/test-view', function() {
-    try {
-        return view('admin.orders.test', ['orders' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20)]);
-    } catch (\Exception $e) {
-        return 'View error: ' . $e->getMessage();
-    }
-});
-
-// Debug route for admin controller
-Route::get('/debug-admin-controller', function() {
-    try {
-        $controller = new \App\Http\Controllers\Admin\AdminCustomOrderController();
-        return "Admin controller loaded successfully";
-    } catch (\Exception $e) {
-        return "Admin controller error: " . $e->getMessage();
-    }
-});
-
-// Debug route for CustomOrder
-Route::get('/debug-customorder', function() {
-    try {
-        $count = \App\Models\CustomOrder::count();
-        return "CustomOrder count: " . $count;
-    } catch (\Exception $e) {
-        return "CustomOrder error: " . $e->getMessage();
-    }
-});
-
-
-// Test custom orders database connection
-Route::get('/test-custom-orders-db', function() {
-    try {
-        $count = \App\Models\CustomOrder::count();
-        return "Custom orders count: " . $count;
-    } catch (\Exception $e) {
-        return "Database error: " . $e->getMessage();
-    }
-});
-
-// Test admin layout
-Route::get('/test-admin-layout', function() {
-    try {
-        return view('admin.custom_orders.index', ['orders' => collect()]);
-    } catch (\Exception $e) {
-        return "Layout error: " . $e->getMessage();
-    }
-});
-
-// Test admin layout at admin path
-Route::get('/admin/test-admin-layout', function() {
-    try {
-        return view('admin.custom_orders.index', ['orders' => collect()]);
-    } catch (\Exception $e) {
-        return "Layout error: " . $e->getMessage();
-    }
-});
-
-// Test just the admin layout
-Route::get('/admin/test-layout-only', function() {
-    try {
-        return view('layouts.admin');
-    } catch (\Exception $e) {
-        return "Layout only error: " . $e->getMessage();
-    }
-});
 
 // Controllers
 use App\Http\Controllers\ProfileController;
@@ -187,126 +84,15 @@ Route::post('/contact', [WelcomeController::class, 'submitContact'])->name('cont
 
 /*
 |--------------------------------------------------------------------------
-| Temporary Admin Creation Route
+| Admin Creation Route (Keep for initial setup)
 |--------------------------------------------------------------------------
 */
-// Debug route for custom order access
-Route::get('/debug-order/{id}', function ($id) {
-    $order = \App\Models\CustomOrder::find($id);
-    $user = \Illuminate\Support\Facades\Auth::user();
-    
-    return response()->json([
-        'order_id' => $id,
-        'order_exists' => !!$order,
-        'order_user_id' => $order?->user_id,
-        'authenticated_user_id' => \Illuminate\Support\Facades\Auth::id(),
-        'is_authenticated' => \Illuminate\Support\Facades\Auth::check(),
-        'authenticated_user_email' => $user?->email,
-        'user_belongs_to_order' => $order && $user && $order->user_id === $user->id,
-        'session_data' => session()->all()
-    ]);
-});
-
-// Test actual view rendering
-Route::get('/render-debug', function () {
-    try {
-        // Get products
-        $products = \App\Models\Product::where('is_active', true)->get();
-        
-        // Test 1: Try to get the rendered HTML
-        $html = view('custom_orders.wizard.step1', compact('products'))->render();
-        
-        // Test 2: Return just a snippet to see if basic rendering works
-        return 'View rendered successfully! Length: ' . strlen($html) . ' characters';
-        
-    } catch (\Exception $e) {
-        return 'Render Error: ' . $e->getMessage() . '<br>File: ' . $e->getFile() . '<br>Line: ' . $e->getLine();
-    }
-});
-
-// Ultra simple debug route
-Route::get('/ultra-debug', function () {
-    return 'Ultra simple debug works!';
-});
-
-// Step by step debug route
-Route::get('/step-debug', function () {
-    try {
-        // Step 1: Test database
-        $pdo = \DB::connection()->getPdo();
-        $result = 'Step 1: DB OK - ';
-        
-        // Step 2: Test Product model
-        $products = \App\Models\Product::where('is_active', true)->get();
-        $result .= 'Step 2: Products (' . $products->count() . ') - ';
-        
-        // Step 3: Test view compilation
-        try {
-            $view = view('custom_orders.wizard.step1', compact('products'));
-            $result .= 'Step 3: View compiles OK';
-            return $result;
-        } catch (\Exception $viewEx) {
-            return $result . 'Step 3 FAILED: ' . $viewEx->getMessage();
-        }
-        
-    } catch (\Exception $e) {
-        return 'Error: ' . $e->getMessage() . '<br>File: ' . $e->getFile() . '<br>Line: ' . $e->getLine();
-    }
-});
-
-// Temporary debug route for step1 without authentication
-Route::get('/debug-step1', function () {
-    try {
-        // Test basic database connection
-        $pdo = \DB::connection()->getPdo();
-        
-        // Test Category model
-        $categories = \App\Models\Category::with('products')->get();
-        
-        // Get products directly since there are no categories
-        $products = \App\Models\Product::where('is_active', true)->get();
-        
-        // Try to render the view
-        return view('custom_orders.wizard.step1', compact('products'))->with('hasBackup', false);
-        
-    } catch (\Exception $e) {
-        return 'Error: ' . $e->getMessage() . '<br>File: ' . $e->getFile() . '<br>Line: ' . $e->getLine();
-    }
-});
-
-// Create test user
-Route::get('/create-test-user', function () {
-    $user = \App\Models\User::create([
-        'name' => 'Test User',
-        'first_name' => 'Test',
-        'last_name' => 'User',
-        'email' => 'test@example.com',
-        'password' => \Illuminate\Support\Facades\Hash::make('password'),
-        'role' => 'user',
-        'email_verified_at' => now(),
-    ]);
-    
-    return 'Test user created! Email: test@example.com, Password: password';
-});
-
-// Even simpler debug route
-Route::get('/simple-debug', function () {
-    return 'Debug route is working!';
-});
-
 Route::get('/create-admin', function () {
-    // Check if admin already exists
     $existingAdmin = \App\Models\User::where('email', 'admin@yakan.com')->first();
     
     if ($existingAdmin) {
         return response()->json([
             'message' => 'Admin user already exists!',
-            'admin_details' => [
-                'email' => $existingAdmin->email,
-                'name' => $existingAdmin->name,
-                'role' => $existingAdmin->role,
-                'created_at' => $existingAdmin->created_at
-            ],
             'credentials' => [
                 'email' => 'admin@yakan.com',
                 'password' => 'admin123',
@@ -325,38 +111,15 @@ Route::get('/create-admin', function () {
         'email_verified_at' => now(),
     ]);
 
-    $user = \App\Models\User::where('email', 'user@yakan.com')->first();
-    if (!$user) {
-        $user = \App\Models\User::create([
-            'name' => 'Test User',
-            'first_name' => 'Test',
-            'last_name' => 'User',
-            'email' => 'user@yakan.com',
-            'password' => \Illuminate\Support\Facades\Hash::make('user123'),
-            'role' => 'user',
-            'email_verified_at' => now(),
-        ]);
-    }
-
     return response()->json([
-        'message' => 'Admin and test users created successfully!',
-        'admin_credentials' => [
+        'message' => 'Admin created successfully!',
+        'credentials' => [
             'email' => 'admin@yakan.com',
             'password' => 'admin123',
             'login_url' => route('admin.login.form')
-        ],
-        'user_credentials' => [
-            'email' => 'user@yakan.com',
-            'password' => 'user123'
         ]
     ]);
 });
-
-/*
-|--------------------------------------------------------------------------
-| Default Login Redirect
-|--------------------------------------------------------------------------
-*/
 
 /*
 |--------------------------------------------------------------------------
@@ -369,11 +132,14 @@ Route::middleware('guest')->group(function () {
     Route::get('/login-user', fn() => view('auth.user-login'))->name('login.user.form');
     Route::post('/login-user', [AuthenticatedSessionController::class, 'storeUser'])->name('login.user.submit');
 
-    // Admin login moved to dedicated guest:admin group below
-
     // User Registration
     Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
     Route::post('/register', [RegisteredUserController::class, 'store'])->name('register.store');
+
+    // OTP Verification Routes
+    Route::get('/verify-otp', [\App\Http\Controllers\Auth\OtpVerificationController::class, 'showForm'])->name('verification.otp.form');
+    Route::post('/verify-otp', [\App\Http\Controllers\Auth\OtpVerificationController::class, 'verify'])->name('verification.otp.verify');
+    Route::post('/resend-otp', [\App\Http\Controllers\Auth\OtpVerificationController::class, 'resend'])->name('verification.otp.resend');
 
     /*
     |--------------------------------------------------------------------------
@@ -443,6 +209,21 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/', [ProfileController::class, 'destroy'])->name('profile.destroy');
     });
 
+    // Addresses
+    Route::prefix('addresses')->name('addresses.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\AddressController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\AddressController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\AddressController::class, 'store'])->name('store');
+        Route::get('/{address}/edit', [\App\Http\Controllers\AddressController::class, 'edit'])->name('edit');
+        Route::put('/{address}', [\App\Http\Controllers\AddressController::class, 'update'])->name('update');
+        Route::delete('/{address}', [\App\Http\Controllers\AddressController::class, 'destroy'])->name('destroy');
+        Route::post('/{address}/set-default', [\App\Http\Controllers\AddressController::class, 'setDefault'])->name('setDefault');
+        
+        // API endpoints
+        Route::get('/api/default', [\App\Http\Controllers\AddressController::class, 'getDefault'])->name('api.default');
+        Route::get('/api/all', [\App\Http\Controllers\AddressController::class, 'getAll'])->name('api.all');
+    });
+
     // Cart & Checkout
     Route::prefix('cart')->group(function () {
         Route::get('/', [CartController::class, 'index'])->name('cart.index');
@@ -478,6 +259,37 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{order}/invoice', [OrderController::class, 'downloadInvoice'])->name('orders.invoice');
     });
 
+    // Reviews
+    Route::prefix('reviews')->name('reviews.')->group(function () {
+        Route::get('/order/{order}', [ReviewController::class, 'createForOrder'])->name('create.order');
+        Route::post('/order-item/{orderItem}', [ReviewController::class, 'storeForOrderItem'])->name('store.order-item');
+        Route::get('/custom-order/{customOrder}', [ReviewController::class, 'createForCustomOrder'])->name('create.custom-order');
+        Route::post('/custom-order/{customOrder}', [ReviewController::class, 'storeForCustomOrder'])->name('store.custom-order');
+        Route::get('/product/{product}', [ReviewController::class, 'showProductReviews'])->name('product');
+        Route::post('/{review}/helpful', [ReviewController::class, 'markHelpful'])->name('helpful');
+        Route::post('/{review}/unhelpful', [ReviewController::class, 'markUnhelpful'])->name('unhelpful');
+        Route::delete('/{review}', [ReviewController::class, 'destroy'])->name('destroy');
+    });
+
+    // Notifications
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', [NotificationController::class, 'index'])->name('index');
+        Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('read');
+        Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
+        Route::post('/clear', [NotificationController::class, 'clear'])->name('clear');
+        Route::get('/unread-count', [NotificationController::class, 'getUnreadCount'])->name('unread-count');
+    });
+
+    // Chat
+    Route::prefix('chats')->name('chats.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\ChatController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\ChatController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\ChatController::class, 'store'])->name('store');
+        Route::get('/{chat}', [\App\Http\Controllers\ChatController::class, 'show'])->name('show');
+        Route::post('/{chat}/message', [\App\Http\Controllers\ChatController::class, 'sendMessage'])->name('send-message');
+        Route::post('/{chat}/close', [\App\Http\Controllers\ChatController::class, 'close'])->name('close');
+    });
+
     // Redirect old colors route to pattern selection
     Route::get('/custom-orders/create/colors', function() {
         return redirect()->route('custom_orders.create.pattern')
@@ -500,6 +312,8 @@ Route::middleware(['auth'])->prefix('wishlist')->name('wishlist.')->group(functi
 Route::get('/test-auth', function() {
     return 'Auth test - User ID: ' . (auth()->check() ? auth()->id() : 'Not authenticated') . ' - Session ID: ' . session()->getId();
 });
+
+
 
 // Custom Orders (Enhanced) - Require Authentication
 Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->group(function () {
@@ -581,16 +395,6 @@ Route::prefix('products/{product}/reviews')->name('reviews.')->group(function ()
     Route::get('/{review}/edit', [ReviewController::class, 'edit'])->name('edit');
     Route::patch('/{review}', [ReviewController::class, 'update'])->name('update');
     Route::delete('/{review}', [ReviewController::class, 'destroy'])->name('destroy');
-});
-
-// Notifications
-Route::prefix('notifications')->name('notifications.')->group(function () {
-    Route::get('/', [NotificationController::class, 'index'])->name('index');
-    Route::get('/recent', [NotificationController::class, 'recent'])->name('recent');
-    Route::patch('/{notification}/read', [NotificationController::class, 'markAsRead'])->name('mark-read');
-    Route::patch('/{notification}/unread', [NotificationController::class, 'markAsUnread'])->name('mark-unread');
-    Route::patch('/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
-    Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
 });
 
 });
@@ -741,11 +545,11 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::post('/cultural-heritage/{id}/toggle-status', [\App\Http\Controllers\Admin\CulturalHeritageController::class, 'toggleStatus'])->name('cultural-heritage.toggleStatus');
 
     // Orders (Main Orders Page - Enhanced Custom Orders)
-    Route::get('/orders', [AdminCustomOrderController::class, 'indexEnhanced'])->name('orders');
+    Route::get('/custom-orders-dashboard', [AdminCustomOrderController::class, 'indexEnhanced'])->name('orders.index');
 
     // Orders (Regular Orders)
     Route::prefix('orders')->group(function () {
-        Route::get('/', [AdminOrderController::class, 'index'])->name('orders.index');
+        Route::get('/', [AdminOrderController::class, 'index'])->name('regular.index');
         Route::get('/create', [AdminOrderController::class, 'create'])->name('orders.create');
         Route::post('/', [AdminOrderController::class, 'store'])->name('orders.store');
         Route::get('/{order}/edit', [AdminOrderController::class, 'edit'])->name('orders.edit');
@@ -893,6 +697,16 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     
     // Production Dashboard
     Route::get('custom-orders/production-dashboard', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'productionDashboard'])->name('custom_orders.production-dashboard');
+
+    // Chat Management
+    Route::prefix('chats')->name('chats.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\ChatController::class, 'index'])->name('index');
+        Route::get('/{chat}', [\App\Http\Controllers\Admin\ChatController::class, 'show'])->name('show');
+        Route::post('/{chat}/reply', [\App\Http\Controllers\Admin\ChatController::class, 'sendReply'])->name('reply');
+        Route::patch('/{chat}/status', [\App\Http\Controllers\Admin\ChatController::class, 'updateStatus'])->name('update-status');
+        Route::delete('/{chat}', [\App\Http\Controllers\Admin\ChatController::class, 'destroy'])->name('destroy');
+        Route::get('/unread-count', [\App\Http\Controllers\Admin\ChatController::class, 'unreadCount'])->name('unread-count');
+    });
 });
 
 /*

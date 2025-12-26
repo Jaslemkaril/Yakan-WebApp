@@ -9,34 +9,66 @@
     <!-- Tailwind CSS -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     
-        
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVJkEZSMUkrQ6usKu8zIvxUsvypLcXdAawO/PzWJNSQsizuX7937ekip6qq3R4gKbjwQZLiqy+EQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
     <!-- Simple CSS instead of Vite -->
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         /* Enhanced scrollbar */
         .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
+            width: 8px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.1);
+            background: rgba(0, 0, 0, 0.05);
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 3px;
+            background: rgba(128, 0, 0, 0.3);
+            border-radius: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(128, 0, 0, 0.5);
         }
         
         /* Smooth transitions */
         .nav-link {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: #fff;
+            border-radius: 0 4px 4px 0;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateX(4px);
         }
         
         /* Active state indicator */
         .nav-link-active {
-            background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
-            border-left: 4px solid #3b82f6;
-            color: #3b82f6;
+            background: rgba(255, 255, 255, 0.2);
+            border-left: 4px solid #fff;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .nav-link-active::before {
+            opacity: 1;
         }
         
                 
@@ -48,7 +80,7 @@
         }
         
         .animated-gradient {
-            background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #f5576c);
+            background: linear-gradient(-45deg, #800000, #600000, #a00000, #700000);
             background-size: 400% 400%;
             animation: gradient 15s ease infinite;
         }
@@ -81,9 +113,11 @@
         
         /* Basic layout styles */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
             margin: 0;
             padding: 0;
+            background: #f8f9fa;
+            color: #333;
         }
         
         .admin-layout {
@@ -93,7 +127,7 @@
         
         .sidebar {
             width: 250px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #800000 0%, #600000 100%);
             color: white;
             padding: 20px 0;
         }
@@ -101,14 +135,21 @@
         .main-content {
             flex: 1;
             padding: 20px;
+            overflow-y: auto;
         }
         
         .card {
             background: white;
             border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             padding: 24px;
             margin-bottom: 20px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+            transition: all 0.3s ease;
         }
         
         .grid {
@@ -119,6 +160,11 @@
         .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
         .grid-cols-5 { grid-template-columns: repeat(5, 1fr); }
         
+        @media (max-width: 1200px) {
+            .grid-cols-4 { grid-template-columns: repeat(3, 1fr); }
+            .grid-cols-5 { grid-template-columns: repeat(3, 1fr); }
+        }
+
         @media (max-width: 768px) {
             .grid-cols-4, .grid-cols-5 { grid-template-columns: repeat(2, 1fr); }
         }
@@ -130,10 +176,48 @@
         /* Card hover effects */
         .card-hover {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
         }
+
         .card-hover:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 24px rgba(128, 0, 0, 0.15);
+        }
+
+        /* Stat card styles */
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid #800000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 8px 16px rgba(128, 0, 0, 0.12);
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #800000;
+        }
+
+        .stat-card .subtitle {
+            font-size: 12px;
+            color: #999;
+            margin-top: 8px;
         }
         
         /* Responsive Sidebar Styles */
@@ -414,6 +498,265 @@
         
         /* Backdrop blur for mobile */
         .mobile-backdrop {
+            backdrop-filter: blur(4px);
+        }
+
+        /* Button styles */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: #800000;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #600000;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(128, 0, 0, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .btn-secondary:hover {
+            background: #e8e8e8;
+            border-color: #999;
+        }
+
+        /* Enhanced Input Focus States */
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #800000 !important;
+            box-shadow: 0 0 0 3px rgba(128, 0, 0, 0.1) !important;
+        }
+
+        /* Smooth Transitions */
+        * {
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        /* Tooltip Styles */
+        [title] {
+            position: relative;
+        }
+
+        /* Loading State */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* Success/Error Messages */
+        .alert {
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            animation: slideInDown 0.3s ease-out;
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        /* Table enhancements */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table thead {
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #666;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Badge styles */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        /* Header styles */
+        .page-header {
+            margin-bottom: 30px;
+            animation: slideInLeft 0.5s ease-out;
+        }
+
+        .page-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* Filter section */
+        .filter-section {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .filter-section h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Input styles */
+        input[type="text"],
+        input[type="email"],
+        input[type="date"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="date"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #800000;
+            box-shadow: 0 0 0 3px rgba(128, 0, 0, 0.1);
+        }
+
+        /* Loading animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        /* Smooth page transitions */
+        .page-transition {
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .slide-in-left {
+            animation: slideInLeft 0.5s ease-out;
         }
     </style>
 </head>
@@ -476,7 +819,8 @@
     
     <div class="flex min-h-screen">
         <!-- Enhanced Responsive Sidebar -->
-        <aside class="sidebar-mobile w-72 bg-white shadow-2xl border-r border-gray-200 flex flex-col fixed md:static inset-y-0 left-0 z-40 transition-all duration-300 ease-in-out" 
+        <aside class="sidebar-mobile w-72 bg-gradient-to-b shadow-2xl border-r flex flex-col fixed md:static inset-y-0 left-0 z-40 transition-all duration-300 ease-in-out" 
+               style="background: linear-gradient(135deg, #800000 0%, #600000 100%); border-right-color: #600000;" 
                :class="{ 
                    'open': sidebarOpen,
                    'sidebar-collapsed': sidebarCollapsed && !sidebarOpen,
@@ -498,56 +842,65 @@
 
            <!-- Navigation -->
 <nav class="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
-    <a href="{{ route('admin.dashboard') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 group {{ request()->routeIs('admin.dashboard') ? 'nav-link-active' : '' }}">
-        <i class="fas fa-tachometer-alt w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0"></i>
-        <span class="sidebar-text font-medium text-gray-700 group-hover:text-gray-900">Dashboard</span>
+    <a href="{{ route('admin.dashboard') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ request()->routeIs('admin.dashboard') ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+        <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-3m0 0l7-4 7 4M5 9v10a1 1 0 001 1h12a1 1 0 001-1V9m-9 11l4-4m0 0l4 4m-4-4v4"/></svg>
+        <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Dashboard</span>
     </a>
 
-    <a href="{{ route('admin.orders.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 group {{ request()->routeIs('admin.orders.*') ? 'nav-link-active' : '' }}">
-        <i class="fas fa-shopping-bag w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0"></i>
-        <span class="sidebar-text font-medium text-gray-700 group-hover:text-gray-900">Orders</span>
+    <a href="{{ route('admin.regular.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ request()->routeIs('admin.regular.*') ? 'nav-link-active' : '' }}" style="color: white; position: relative;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+        <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+        <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Orders</span>
+        @if($pendingOrdersCount > 0)
+            <span style="position: absolute; top: -8px; right: -8px; background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%); color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 12px; min-width: 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3); z-index: 10; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;">
+                {{ $pendingOrdersCount > 9 ? '9+' : $pendingOrdersCount }}
+            </span>
+        @endif
     </a>
 
-    <a href="{{ route('admin.patterns.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 group {{ request()->routeIs('admin.patterns.*') ? 'nav-link-active' : '' }}">
-        <i class="fas fa-th-large w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0"></i>
-        <span class="sidebar-text font-medium text-gray-700 group-hover:text-gray-900">Patterns</span>
+    <a href="{{ route('admin.patterns.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ request()->routeIs('admin.patterns.*') ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+        <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
+        <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Patterns</span>
     </a>
 
-    <a href="{{ route('admin.custom_orders.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 group {{ request()->routeIs('admin.custom_orders.*') ? 'nav-link-active' : '' }}">
-        <i class="fas fa-paint-brush w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0"></i>
-        <span class="sidebar-text font-medium text-gray-700 group-hover:text-gray-900">Custom Orders</span>
+    <a href="{{ route('admin.custom_orders.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ request()->routeIs('admin.custom_orders.*') ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+        <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+        <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Custom Orders</span>
     </a>
 
-    <a href="{{ route('admin.products.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 group {{ request()->routeIs('admin.products.*') ? 'nav-link-active' : '' }}">
-        <i class="fas fa-cube w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0"></i>
-        <span class="sidebar-text font-medium text-gray-700 group-hover:text-gray-900">Products</span>
+    <a href="{{ route('admin.products.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ request()->routeIs('admin.products.*') ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+        <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m0 0v10l8 4"/></svg>
+        <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Products</span>
     </a>
 
-    <a href="{{ route('admin.coupons.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 group {{ request()->routeIs('admin.coupons.*') ? 'nav-link-active' : '' }}">
-        <i class="fas fa-ticket-alt w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0"></i>
-        <span class="sidebar-text font-medium text-gray-700 group-hover:text-gray-900">Coupons</span>
+    <a href="{{ route('admin.coupons.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ request()->routeIs('admin.coupons.*') ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+        <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+        <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Coupons</span>
     </a>
 
-    <a href="{{ route('admin.cultural-heritage.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 group {{ request()->routeIs('admin.cultural-heritage.*') ? 'nav-link-active' : '' }}">
-        <i class="fas fa-book-open w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0"></i>
-        <span class="sidebar-text font-medium text-gray-700 group-hover:text-gray-900">Cultural Heritage</span>
+    <a href="{{ route('admin.cultural-heritage.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ request()->routeIs('admin.cultural-heritage.*') ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+        <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C6.5 6.253 2 10.998 2 17s4.5 10.747 10 10.747c5.5 0 10-4.998 10-10.747S17.5 6.253 12 6.253z"/></svg>
+        <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Cultural Heritage</span>
     </a>
 
-    <!-- <a href="{{ route('admin.inventory.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 group {{ request()->routeIs('admin.inventory.*') ? 'nav-link-active' : '' }}">
-        <i class="fas fa-warehouse w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0"></i>
-        <span class="sidebar-text font-medium text-gray-700 group-hover:text-gray-900">Inventory</span>
-        <span class="sidebar-text ml-auto bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">!</span>
-    </a> -->
-
-    <a href="{{ route('admin.users.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 group {{ request()->routeIs('admin.users.*') ? 'nav-link-active' : '' }}">
-        <i class="fas fa-user-friends w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0"></i>
-        <span class="sidebar-text font-medium text-gray-700 group-hover:text-gray-900">Users</span>
+    <a href="{{ route('admin.users.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ request()->routeIs('admin.users.*') ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+        <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Users</span>
     </a>
 
-    <!-- <a href="{{ route('admin.reports.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 group {{ request()->routeIs('admin.reports.*') ? 'nav-link-active' : '' }}">
-        <i class="fas fa-chart-pie text-gray-400 group-hover:text-gray-600 w-5"></i>
-        <span class="sidebar-text font-medium text-gray-700 group-hover:text-gray-900">Reports</span>
-    </a> -->
+    <a href="{{ route('admin.chats.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ request()->routeIs('admin.chats.*') ? 'nav-link-active' : '' }}" style="color: white; position: relative;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+        <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Chat</span>
+        @php
+            $unreadChatsCount = \App\Models\Chat::whereHas('messages', function ($query) {
+                $query->where('sender_type', 'user')->where('is_read', false);
+            })->count();
+        @endphp
+        @if($unreadChatsCount > 0)
+            <span style="position: absolute; top: -8px; right: -8px; background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%); color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 12px; min-width: 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3); z-index: 10; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;">
+                {{ $unreadChatsCount > 9 ? '9+' : $unreadChatsCount }}
+            </span>
+        @endif
+    </a>
 
     <!-- <a href="{{ route('admin.analytics') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 group {{ request()->routeIs('admin.analytics') ? 'nav-link-active' : '' }}">
         <i class="fas fa-chart-line w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0"></i>
@@ -623,7 +976,7 @@
         <main class="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out"
               :class="{ 'ml-0': sidebarCollapsed && window.innerWidth >= 768, 'md:ml-0': !sidebarCollapsed && window.innerWidth >= 768 }">
             <!-- Top Header Bar -->
-            <header class="bg-white shadow-sm border-b border-gray-200 mobile-header transition-all duration-300">
+            <header class="bg-white shadow-sm border-b-4 mobile-header transition-all duration-300" style="border-bottom-color: #800000;">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <!-- Mobile Menu Toggle -->
@@ -651,7 +1004,6 @@
                         
                         <div class="min-w-0 flex-1">
                             <h1 class="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 truncate">@yield('title', 'Dashboard')</h1>
-                            <p class="text-sm text-gray-500 mt-1 hidden sm:block">Welcome back to your admin panel</p>
                         </div>
                     </div>
                     <div class="flex items-center space-x-2 md:space-x-4">

@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Mail\OtpVerificationMail;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 
@@ -66,14 +68,17 @@ class RegisteredUserController extends Controller
             
             \Log::info('User created successfully', ['user_id' => $user->id]);
             
-            // Trigger email verification event
-            event(new Registered($user));
+            // Generate OTP and send email
+            $otp = $user->generateOtp();
             
-            \Log::info('Email verification event triggered', ['user_id' => $user->id]);
+            // Send OTP email
+            Mail::to($user->email)->send(new OtpVerificationMail($user, $otp));
+            
+            \Log::info('OTP email sent', ['user_id' => $user->id, 'email' => $user->email]);
         
-            // Redirect to email verification notice instead of auto-login
-            return redirect()->route('verification.notice')
-                ->with('success', 'Account created successfully! Please check your email to verify your account.');
+            // Redirect to OTP verification page
+            return redirect()->route('verification.otp.form', ['email' => $user->email])
+                ->with('success', 'Account created successfully! Please check your email for the verification code.');
                 
         } catch (\Exception $e) {
             \Log::error('Registration error', [

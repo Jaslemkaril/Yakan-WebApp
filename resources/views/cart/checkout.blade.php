@@ -218,90 +218,49 @@
                             Delivery Address
                         </h2>
 
-                        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4 rounded">
-                            <p class="text-sm text-blue-800 flex items-start gap-2">
-                                <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                                </svg>
-                                <span>Please provide your <strong>complete delivery details</strong> so our courier can find you easily.</span>
-                            </p>
-                        </div>
-
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                                    <span class="text-red-500">*</span> House / Unit / Building No.
+                        @if($addresses->count() > 0)
+                            <div class="mb-6">
+                                <label class="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1">
+                                    <span class="text-red-500">*</span> Select Saved Address
                                 </label>
-                                <input type="text" name="delivery_house" form="checkout-form" required
-                                       value="{{ old('delivery_house') }}" placeholder="e.g., Unit 201, Bldg A"
-                                       class="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all">
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                                    <span class="text-red-500">*</span> Street
-                                </label>
-                                <input type="text" name="delivery_street" form="checkout-form" required
-                                       value="{{ old('delivery_street') }}" placeholder="e.g., Main Street"
-                                       class="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all">
-                            </div>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                                        <span class="text-red-500">*</span> Barangay
-                                    </label>
-                                    <input type="text" name="delivery_barangay" form="checkout-form" required
-                                           value="{{ old('delivery_barangay') }}" placeholder="e.g., Barangay Central"
-                                           class="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all">
+                                <div class="space-y-3">
+                                    @foreach($addresses as $address)
+                                        <label class="flex items-start p-4 border-2 rounded-xl cursor-pointer hover:border-red-300 hover:bg-red-50 transition-all {{ ($defaultAddress && $defaultAddress->id === $address->id) || old('address_id') == $address->id ? 'border-red-500 bg-red-50 ring-2 ring-red-200' : 'border-gray-200' }}">
+                                            <input type="radio" name="address_id" value="{{ $address->id }}" form="checkout-form" 
+                                                   {{ ($defaultAddress && $defaultAddress->id === $address->id) || old('address_id') == $address->id ? 'checked' : '' }}
+                                                   class="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0">
+                                            <div class="ml-3 flex-1">
+                                                <div class="font-semibold text-gray-900 flex items-center gap-2">
+                                                    {{ $address->label }}
+                                                    @if($address->is_default)
+                                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Default</span>
+                                                    @endif
+                                                </div>
+                                                <div class="text-sm text-gray-600 mt-1">
+                                                    <div>{{ $address->full_name }} • {{ $address->phone_number }}</div>
+                                                    <div>{{ $address->formatted_address }}</div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    @endforeach
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                                        <span class="text-red-500">*</span> City / Municipality
-                                    </label>
-                                    <input type="text" name="delivery_city" form="checkout-form" required
-                                           value="{{ old('delivery_city') }}" placeholder="e.g., Basilan City"
-                                           class="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all">
-                                </div>
+                                <a href="{{ route('addresses.index') }}" class="inline-flex items-center gap-2 mt-4 text-sm text-red-600 hover:text-red-700 font-medium">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                    Add New Address
+                                </a>
                             </div>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                                        <span class="text-red-500">*</span> Province
-                                    </label>
-                                    <input type="text" name="delivery_province" form="checkout-form" required
-                                           value="{{ old('delivery_province') }}" placeholder="e.g., Basilan"
-                                           class="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">ZIP Code <span class="text-gray-400 font-normal">(optional)</span></label>
-                                    <input type="text" name="delivery_zip" form="checkout-form"
-                                           value="{{ old('delivery_zip') }}" placeholder="e.g., 7300"
-                                           class="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all">
-                                </div>
+                        @else
+                            <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-4 rounded">
+                                <p class="text-sm text-yellow-800 flex items-start gap-2">
+                                    <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <span>No saved addresses yet. <a href="{{ route('addresses.create') }}" class="font-semibold text-yellow-900 hover:underline">Create one now</a></span>
+                                </p>
                             </div>
-
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Landmark <span class="text-gray-400 font-normal">(optional)</span></label>
-                                <input type="text" name="delivery_landmark" form="checkout-form"
-                                       placeholder="e.g., Near XYZ Mall, in front of Barangay Hall, beside the church"
-                                       value="{{ old('delivery_landmark') }}"
-                                       class="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all">
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                                    <span class="text-red-500">*</span> Contact Number
-                                </label>
-                                <input type="tel" name="delivery_contact_number" form="checkout-form" required
-                                       placeholder="e.g., +63 9XX XXX XXXX or 0XX XXX XXXX"
-                                       value="{{ old('delivery_contact_number', auth()->user()->phone ?? '') }}"
-                                       pattern="[0-9+\-\s()]{10,}"
-                                       class="w-full border-2 border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all">
-                                <p class="text-xs text-gray-500 mt-1">We'll use this number to contact you about your delivery</p>
-                            </div>
-                        </div>
+                        @endif
                     </div>
 
                     <!-- Pickup Information Section (only visible when pickup is selected) -->
@@ -459,87 +418,124 @@
                 <!-- Order Summary Sidebar -->
                 <div class="lg:col-span-1">
                     <div class="bg-white rounded-2xl shadow-lg p-6 sticky top-6 border border-gray-100">
-                        <h2 class="text-xl font-bold text-gray-900 mb-6 pb-4 border-b border-gray-200">Order Summary</h2>
+                        <h2 class="text-2xl font-bold text-gray-900 mb-6 pb-4 border-b-2 border-gray-200 flex items-center gap-2">
+                            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Order Summary
+                        </h2>
                         
                         <div class="space-y-4 mb-6">
-                            <div class="flex justify-between text-gray-600">
-                                <span class="subtotal-items">Subtotal ({{ count($cartItems) }} items)</span>
-                                <span class="font-medium order-subtotal">₱{{ number_format($subtotal ?? $total, 2) }}</span>
+                            <!-- Subtotal Row -->
+                            <div class="flex justify-between items-center py-3 border-b border-gray-100">
+                                <span class="text-gray-600 font-medium subtotal-items">Subtotal ({{ count($cartItems) }} items)</span>
+                                <span class="font-bold text-gray-900 order-subtotal text-lg">₱{{ number_format($subtotal ?? $total, 2) }}</span>
                             </div>
-                            <!-- Coupon input -->
-                            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+
+                            <!-- Coupon Section -->
+                            <div class="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-xl border-2 border-amber-200 shadow-sm">
                                 @if(session('success'))
-                                    <div class="text-green-600 text-sm mb-2">{{ session('success') }}</div>
+                                    <div class="text-green-600 text-sm mb-2 flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                        </svg>
+                                        {{ session('success') }}
+                                    </div>
                                 @endif
                                 @if(session('error'))
-                                    <div class="text-red-600 text-sm mb-2">{{ session('error') }}</div>
+                                    <div class="text-red-600 text-sm mb-2 flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                        </svg>
+                                        {{ session('error') }}
+                                    </div>
                                 @endif
-                                <form action="{{ route('cart.coupon.apply') }}" method="POST" class="flex gap-2">
+                                <form action="{{ route('cart.coupon.apply') }}" method="POST" class="flex flex-col sm:flex-row gap-2">
                                     @csrf
-                                    <input type="text" name="code" placeholder="Enter coupon code" value="{{ $appliedCoupon->code ?? '' }}" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" @if(!empty($appliedCoupon)) disabled @endif>
+                                    <input type="text" name="code" placeholder="Enter coupon code" value="{{ $appliedCoupon->code ?? '' }}" class="flex-1 min-w-0 border-2 border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all" @if(!empty($appliedCoupon)) disabled @endif>
                                     @if(empty($appliedCoupon))
-                                        <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">Apply</button>
+                                        <button type="submit" class="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 font-bold transition-all shadow-md whitespace-nowrap text-sm">Apply</button>
                                     @else
-                                        <button type="submit" formaction="{{ route('cart.coupon.remove') }}" formmethod="POST" onclick="event.preventDefault(); document.getElementById('remove-coupon-form').submit();" class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800">Remove</button>
+                                        <button type="submit" formaction="{{ route('cart.coupon.remove') }}" formmethod="POST" onclick="event.preventDefault(); document.getElementById('remove-coupon-form').submit();" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 font-bold transition-all shadow-md whitespace-nowrap text-sm">Remove</button>
                                     @endif
                                 </form>
                                 <form id="remove-coupon-form" action="{{ route('cart.coupon.remove') }}" method="POST" class="hidden">@csrf @method('DELETE')</form>
                                 @if(!empty($appliedCoupon))
-                                    <div class="text-sm text-gray-600 mt-2">Applied coupon: <span class="font-semibold text-gray-900">{{ $appliedCoupon->code }}</span></div>
+                                    <div class="text-sm text-amber-900 mt-3 flex items-center gap-2 bg-white rounded-lg p-2">
+                                        <svg class="w-4 h-4 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                        </svg>
+                                        <span class="min-w-0"><strong>Coupon:</strong> {{ $appliedCoupon->code }}</span>
+                                    </div>
                                 @endif
                             </div>
-                            <div class="flex justify-between text-gray-600">
-                                <span>Shipping Fee</span>
-                                <span class="font-medium text-green-600">FREE</span>
+
+                            <!-- Shipping Fee Row -->
+                            <div class="flex justify-between items-center py-3 border-b border-gray-100">
+                                <span class="text-gray-600 font-medium">Shipping Fee</span>
+                                <span class="font-bold text-green-600 text-lg">FREE</span>
                             </div>
-                            <div class="flex justify-between text-gray-600">
-                                <span>Tax</span>
-                                <span class="font-medium">₱0.00</span>
+
+                            <!-- Tax Row -->
+                            <div class="flex justify-between items-center py-3 border-b border-gray-100">
+                                <span class="text-gray-600 font-medium">Tax</span>
+                                <span class="font-bold text-gray-900">₱0.00</span>
                             </div>
+
+                            <!-- Discount Row (if applicable) -->
                             @if(($discount ?? 0) > 0)
-                            <div class="flex justify-between text-gray-600">
-                                <span>Discount</span>
-                                <span class="font-medium text-green-600">− ₱{{ number_format($discount, 2) }}</span>
+                            <div class="flex justify-between items-center py-3 border-b border-gray-100 bg-green-50 px-3 rounded-lg">
+                                <span class="text-gray-600 font-medium">Discount</span>
+                                <span class="font-bold text-green-600 text-lg">− ₱{{ number_format($discount, 2) }}</span>
                             </div>
                             @endif
                             
-                            <div class="border-t border-gray-200 pt-4 mt-4">
+                            <!-- Total Amount -->
+                            <div class="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-4 border-2 border-red-200 mt-4">
                                 <div class="flex justify-between items-center mb-2">
-                                    <span class="text-lg font-semibold text-gray-900">Total Amount</span>
-                                    <span class="text-2xl font-bold text-red-600 order-total">₱{{ number_format($total, 2) }}</span>
+                                    <span class="text-lg font-bold text-gray-900">Total Amount</span>
+                                    <span class="text-3xl font-bold text-red-600 order-total">₱{{ number_format($total, 2) }}</span>
                                 </div>
-                                <p class="text-xs text-gray-500 text-right">Inclusive of all taxes</p>
+                                <p class="text-xs text-gray-600 text-right">Inclusive of all taxes</p>
                             </div>
                         </div>
 
-                        <button id="place-order-button" type="button" class="block w-full bg-gradient-to-r from-red-600 to-red-700 text-white text-center px-6 py-4 rounded-xl hover:from-red-700 hover:to-red-800 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl font-semibold mb-3">
+                        <!-- Place Order Button -->
+                        <button id="place-order-button" type="button" class="w-full bg-gradient-to-r from-red-600 to-red-700 text-white text-center px-6 py-4 rounded-xl hover:from-red-700 hover:to-red-800 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl font-bold text-lg mb-3 flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
                             Place Order
                         </button>
                         
-                        <a href="{{ route('cart.index') }}" class="block w-full text-center text-gray-700 hover:text-red-600 px-6 py-3 rounded-xl border-2 border-gray-200 hover:border-red-600 transition-all duration-200 font-medium">
+                        <!-- Back to Cart Button -->
+                        <a href="{{ route('cart.index') }}" class="block w-full text-center text-gray-700 hover:text-red-600 px-6 py-3 rounded-xl border-2 border-gray-300 hover:border-red-600 transition-all duration-200 font-bold flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                            </svg>
                             Back to Cart
                         </a>
 
                         <!-- Security Badges -->
-                        <div class="mt-6 pt-6 border-t border-gray-200">
-                            <div class="flex items-center gap-3 text-sm text-gray-600 mb-3">
-                                <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <div class="mt-6 pt-6 border-t-2 border-gray-200 space-y-3">
+                            <div class="flex items-center gap-3 text-sm text-gray-700 bg-green-50 p-3 rounded-lg border border-green-200">
+                                <svg class="w-5 h-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                                 </svg>
-                                <span>Secure Checkout</span>
+                                <span class="font-semibold">Secure Checkout</span>
                             </div>
-                            <div class="flex items-center gap-3 text-sm text-gray-600 mb-3">
-                                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                            <div class="flex items-center gap-3 text-sm text-gray-700 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                <svg class="w-5 h-5 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
                                     <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
                                 </svg>
-                                <span>Fast Delivery</span>
+                                <span class="font-semibold">Fast Delivery</span>
                             </div>
-                            <div class="flex items-center gap-3 text-sm text-gray-600">
-                                <svg class="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                            <div class="flex items-center gap-3 text-sm text-gray-700 bg-purple-50 p-3 rounded-lg border border-purple-200">
+                                <svg class="w-5 h-5 text-purple-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                                 </svg>
-                                <span>Money-back Guarantee</span>
+                                <span class="font-semibold">Money-back Guarantee</span>
                             </div>
                         </div>
                     </div>
@@ -686,16 +682,18 @@ document.addEventListener('DOMContentLoaded', function() {
         if (deliveryType === 'delivery') {
             deliveryAddressSection.classList.remove('hidden');
             pickupInfoSection.classList.add('hidden');
-            // Make delivery fields required
-            document.querySelectorAll('#delivery-address-section input[required]').forEach(input => {
-                input.setAttribute('required', 'required');
+            // Make address selection required
+            const addressRadios = document.querySelectorAll('input[name="address_id"]');
+            addressRadios.forEach(radio => {
+                radio.setAttribute('required', 'required');
             });
         } else if (deliveryType === 'pickup') {
             deliveryAddressSection.classList.add('hidden');
             pickupInfoSection.classList.remove('hidden');
-            // Remove required from delivery fields when pickup is selected
-            document.querySelectorAll('#delivery-address-section input[required]').forEach(input => {
-                input.removeAttribute('required');
+            // Remove required from address selection when pickup is selected
+            const addressRadios = document.querySelectorAll('input[name="address_id"]');
+            addressRadios.forEach(radio => {
+                radio.removeAttribute('required');
             });
         }
     }
@@ -750,19 +748,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 const errors = [];
                 
                 if (deliveryType === 'delivery') {
-                    // Check if delivery address fields are filled
-                    const deliveryFields = ['delivery_house', 'delivery_street', 'delivery_barangay', 'delivery_city', 'delivery_province'];
-                    deliveryFields.forEach(field => {
-                        const input = document.querySelector(`input[name="${field}"]`);
-                        if (!input || !input.value.trim()) {
-                            isValid = false;
-                            errors.push(`${field.replace('delivery_', '').replace(/_/g, ' ')} is required`);
-                        }
-                    });
+                    // Check if an address is selected
+                    const selectedAddress = document.querySelector('input[name="address_id"]:checked');
+                    if (!selectedAddress) {
+                        isValid = false;
+                        errors.push('Please select a delivery address');
+                    }
                 }
                 
                 if (!isValid) {
-                    alert('Please fill in all required delivery fields:\n' + errors.join('\n'));
+                    alert('Please complete the following:\n' + errors.join('\n'));
                     return;
                 }
                 

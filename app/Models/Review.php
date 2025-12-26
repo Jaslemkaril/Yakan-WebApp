@@ -4,130 +4,210 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Review extends Model
 {
     protected $fillable = [
         'user_id',
         'product_id',
+        'order_id',
+        'custom_order_id',
+        'order_item_id',
         'rating',
         'title',
         'comment',
-        'is_verified',
+        'verified_purchase',
         'is_approved',
-        'admin_response',
-        'admin_response_at',
-        'admin_id',
-        'helpful_count',
+        'rejection_reason',
+        'approved_by',
+        'approved_at',
     ];
 
     protected $casts = [
         'rating' => 'integer',
-        'is_verified' => 'boolean',
+        'verified_purchase' => 'boolean',
         'is_approved' => 'boolean',
-        'helpful_count' => 'integer',
-        'admin_response_at' => 'datetime',
+        'approved_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
+    /**
+     * Get the user who wrote the review
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Get the product being reviewed
+     */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
-    public function admin(): BelongsTo
+    /**
+     * Get the order this review is for
+     */
+    public function order(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'admin_id');
+        return $this->belongsTo(Order::class);
     }
 
-    public function getRatingStarsAttribute(): string
+    /**
+     * Get the custom order this review is for
+     */
+    public function customOrder(): BelongsTo
     {
-        $stars = '';
-        for ($i = 1; $i <= 5; $i++) {
-            if ($i <= $this->rating) {
-                $stars .= '<i class="fas fa-star text-yellow-400"></i>';
-            } else {
-                $stars .= '<i class="far fa-star text-gray-300"></i>';
-            }
-        }
-        return $stars;
+        return $this->belongsTo(CustomOrder::class);
     }
 
-    public function getRatingPercentageAttribute(): int
+    /**
+     * Get the order item this review is for
+     */
+    public function orderItem(): BelongsTo
     {
-        return ($this->rating / 5) * 100;
+        return $this->belongsTo(OrderItem::class);
     }
 
+    /**
+     * Get the admin who approved this review
+     */
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /**
+     * Scope to get approved reviews only
+     */
     public function scopeApproved($query)
     {
         return $query->where('is_approved', true);
     }
 
-    public function scopeVerified($query)
+    /**
+     * Scope to get pending reviews
+     */
+    public function scopePending($query)
     {
-        return $query->where('is_verified', true);
+        return $query->where('is_approved', false);
     }
 
-    public function scopeWithRating($query, $rating)
+    /**
+     * Scope to get reviews for a product
+     */
+    public function scopeForProduct($query, $productId)
     {
-        return $query->where('rating', $rating);
+        return $query->where('product_id', $productId)->approved();
     }
 
-    public function markAsVerified(): void
+    /**
+     * Scope to get reviews for an order
+     */
+    public function scopeForOrder($query, $orderId)
     {
-        $this->is_verified = true;
-        $this->save();
+        return $query->where('order_id', $orderId);
     }
 
-    public function approve(): void
+    /**
+     * Scope to get reviews for a custom order
+     */
+    public function scopeForCustomOrder($query, $customOrderId)
     {
-        $this->is_approved = true;
-        $this->save();
+        return $query->where('custom_order_id', $customOrderId);
     }
 
-    public function reject(): void
+    /**
+     * Scope to get reviews by a user
+     */
+    public function scopeByUser($query, $userId)
     {
-        $this->is_approved = false;
-        $this->save();
+        return $query->where('user_id', $userId);
     }
 
-    public function addAdminResponse(string $response, $adminId): void
+    /**
+     * Get average rating for a product
+     */
+    public static function getAverageRating($productId)
     {
-        $this->admin_response = $response;
-        $this->admin_response_at = now();
-        $this->admin_id = $adminId;
-        $this->save();
+        return static::forProduct($productId)->avg('rating') ?? 0;
     }
 
+    /**
+     * Get rating distribution for a product
+     */
+    public static function getRatingDistribution($productId)
+    {
+        return static::forProduct($productId)
+            ->selectRaw('rating, COUNT(*) as count')
+            ->groupBy('rating')
+            ->orderBy('rating', 'desc')
+            ->pluck('count', 'rating')
+            ->toArray();
+    }
+
+    /**
+     * Get total review count for a product
+     */
+    public static function getReviewCount($productId)
+    {
+        return static::forProduct($productId)->count();
+    }
+
+    /**
+     * Mark review as helpful
+     */
     public function markAsHelpful(): void
     {
         $this->increment('helpful_count');
     }
 
-    public function getStatusAttribute(): string
+    /**
+     * Mark review as unhelpful
+     */
+    public function markAsUnhelpful(): void
     {
-        if (!$this->is_approved) {
-            return 'Pending Approval';
-        } elseif ($this->is_verified) {
-            return 'Verified Purchase';
-        } else {
-            return 'Approved';
-        }
+        $this->increment('unhelpful_count');
     }
 
-    public function getStatusColorAttribute(): string
+    /**
+     * Approve review
+     */
+    public function approve($adminId = null): bool
     {
-        if (!$this->is_approved) {
-            return 'text-yellow-600 bg-yellow-50';
-        } elseif ($this->is_verified) {
-            return 'text-green-600 bg-green-50';
-        } else {
-            return 'text-blue-600 bg-blue-50';
-        }
+        $this->is_approved = true;
+        $this->approved_by = $adminId;
+        $this->approved_at = now();
+        return $this->save();
+    }
+
+    /**
+     * Reject review
+     */
+    public function reject($reason, $adminId = null): bool
+    {
+        $this->is_approved = false;
+        $this->rejection_reason = $reason;
+        $this->approved_by = $adminId;
+        return $this->save();
+    }
+
+    /**
+     * Get star rating display
+     */
+    public function getStarDisplay(): string
+    {
+        return str_repeat('★', $this->rating) . str_repeat('☆', 5 - $this->rating);
+    }
+
+    /**
+     * Check if review is verified purchase
+     */
+    public function isVerifiedPurchase(): bool
+    {
+        return $this->verified_purchase;
     }
 }

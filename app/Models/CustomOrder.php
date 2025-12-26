@@ -138,6 +138,14 @@ class CustomOrder extends Model
     }
 
     /**
+     * Get the reviews for this custom order
+     */
+    public function reviews()
+    {
+        return $this->hasMany(Review::class, 'custom_order_id');
+    }
+
+    /**
      * Get fabric type (if fabric_type_id exists in future)
      */
     public function fabricType()

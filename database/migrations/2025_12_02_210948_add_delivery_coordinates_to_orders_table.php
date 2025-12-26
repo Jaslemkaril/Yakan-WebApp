@@ -12,9 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('orders', function (Blueprint $table) {
-            $table->string('delivery_address')->nullable()->after('tracking_notes');
-            $table->decimal('delivery_latitude', 10, 8)->nullable()->after('delivery_address');
-            $table->decimal('delivery_longitude', 11, 8)->nullable()->after('delivery_latitude');
+            if (!Schema::hasColumn('orders', 'delivery_address')) {
+                $table->string('delivery_address')->nullable();
+            }
+            if (!Schema::hasColumn('orders', 'delivery_latitude')) {
+                $table->decimal('delivery_latitude', 10, 8)->nullable();
+            }
+            if (!Schema::hasColumn('orders', 'delivery_longitude')) {
+                $table->decimal('delivery_longitude', 11, 8)->nullable();
+            }
         });
     }
 

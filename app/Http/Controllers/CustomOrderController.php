@@ -111,60 +111,52 @@ class CustomOrderController extends Controller
             $validated = $request->validate([
                 'order_name' => 'required|string|max:255',
                 'size' => 'required|string|max:50',
-                'priority' => 'required|in:standard,priority,express',
                 'delivery_type' => 'required|in:delivery,pickup',
-                'customer_name' => 'nullable|string|max:255',
+                'address_id' => 'required_if:delivery_type,delivery|nullable|integer|exists:user_addresses,id',
                 'customer_email' => 'nullable|email',
                 'customer_phone' => 'nullable|string|max:50',
-                'delivery_address' => 'required_if:delivery_type,delivery|nullable|string|max:2000',
-                'description' => 'nullable|string|max:2000',
                 'special_instructions' => 'nullable|string|max:2000',
                 'addons' => 'nullable|array',
                 'addons.*' => 'string',
-                // Product-specific optional fields
-                'head_size' => 'nullable|string|max:100',
-                'fit_preference' => 'nullable|string|max:100',
-                'cap_style' => 'nullable|string|max:100',
-                'clothing_size' => 'nullable|string|max:20',
-                'chest_measurement' => 'nullable|string|max:50',
-                'length_measurement' => 'nullable|string|max:50',
-                'sleeve_measurement' => 'nullable|string|max:50',
-                'bag_size' => 'nullable|string|max:50',
-                'strap_length' => 'nullable|string|max:50',
-                'closure_type' => 'nullable|string|max:50',
             ]);
 
             $wizardData = $request->session()->get('wizard', []);
 
+            // Get the selected address if delivery type is delivery
+            $deliveryAddress = null;
+            if ($validated['delivery_type'] === 'delivery' && $validated['address_id']) {
+                $address = auth()->user()->addresses()->find($validated['address_id']);
+                if ($address) {
+                    $deliveryAddress = "{$address->street}, {$address->barangay}, {$address->city}, {$address->province} {$address->postal_code}";
+                }
+            }
+
             $wizardData['details'] = [
                 'order_name' => $validated['order_name'],
                 'size' => $validated['size'],
-                'priority' => $validated['priority'],
                 'delivery_type' => $validated['delivery_type'],
-                'customer_name' => $validated['customer_name'] ?? null,
+                'address_id' => $validated['address_id'] ?? null,
                 'customer_email' => $validated['customer_email'] ?? null,
                 'customer_phone' => $validated['customer_phone'] ?? null,
-                'delivery_address' => $validated['delivery_address'] ?? null,
-                'description' => $validated['description'] ?? null,
+                'delivery_address' => $deliveryAddress,
                 'special_instructions' => $validated['special_instructions'] ?? null,
                 'addons' => $validated['addons'] ?? [],
-                'measurements' => [
-                    'head_size' => $validated['head_size'] ?? null,
-                    'fit_preference' => $validated['fit_preference'] ?? null,
-                    'cap_style' => $validated['cap_style'] ?? null,
-                    'clothing_size' => $validated['clothing_size'] ?? null,
-                    'chest_measurement' => $validated['chest_measurement'] ?? null,
-                    'length_measurement' => $validated['length_measurement'] ?? null,
-                    'sleeve_measurement' => $validated['sleeve_measurement'] ?? null,
-                    'bag_size' => $validated['bag_size'] ?? null,
-                    'strap_length' => $validated['strap_length'] ?? null,
-                    'closure_type' => $validated['closure_type'] ?? null,
-                ],
                 'updated_at' => now()->toISOString(),
             ];
 
             $wizardData['step'] = 'details_complete';
             $request->session()->put('wizard', $wizardData);
+            $request->session()->save();
+            
+            \Log::info('storeStep3 - session saved', [
+                'wizard_keys' => array_keys($wizardData),
+                'has_pattern' => isset($wizardData['pattern']),
+                'has_details' => isset($wizardData['details']),
+                'session_id' => $request->session()->getId(),
+            ]);
+
+            // Also flash the wizard data as a backup in case session is lost
+            $request->session()->flash('wizard_backup', $wizardData);
 
             return redirect()->route('custom_orders.create.step4');
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -823,6 +815,7 @@ class CustomOrderController extends Controller
                 'pattern' => $wizardData['pattern'],
                 'fabric' => $wizardData['fabric'] ?? null,
                 'session_has_pattern' => $request->session()->has('wizard.pattern'),
+                'session_id' => $request->session()->getId(),
             ]);
             
             // Return JSON response with review URL
@@ -830,13 +823,13 @@ class CustomOrderController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Patterns saved successfully!',
-                    'review_url' => route('custom_orders.create.step4'),
-                    'next_url' => route('custom_orders.create.step4'),
+                    'review_url' => route('custom_orders.create.step3'),
+                    'next_url' => route('custom_orders.create.step3'),
                 ]);
             }
             
-            // Fallback for non-AJAX requests
-            return redirect()->route('custom_orders.create.step4');
+            // Fallback for non-AJAX requests - redirect to step 3 (Order Details) instead of step 4
+            return redirect()->route('custom_orders.create.step3')->with('wizard_saved', true);
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Pattern validation error:', $e->errors());
@@ -934,10 +927,32 @@ class CustomOrderController extends Controller
     {
         try {
             $wizardData = $request->session()->get('wizard');
+            
+            // If main session is lost, try to restore from backup
+            if (!$wizardData && $request->session()->has('wizard_backup')) {
+                $wizardData = $request->session()->get('wizard_backup');
+                $request->session()->put('wizard', $wizardData);
+                \Log::info('createStep4 - restored wizard from backup');
+            }
+            
+            \Log::info('createStep4 - wizard data check', [
+                'has_wizard' => !empty($wizardData),
+                'wizard_keys' => $wizardData ? array_keys($wizardData) : [],
+                'has_pattern' => isset($wizardData['pattern']),
+                'has_design' => isset($wizardData['design']),
+                'has_product' => isset($wizardData['product']),
+                'session_id' => $request->session()->getId(),
+                'all_session_data' => $request->session()->all(),
+            ]);
+            
             if (!$wizardData) {
                 return redirect()->route('custom_orders.create.choice')
                     ->with('error', 'Please start your custom order.');
             }
+
+            // Get user's saved addresses
+            $userAddresses = auth()->user()->addresses()->get();
+            $defaultAddress = auth()->user()->addresses()->where('is_default', true)->first();
 
             if (isset($wizardData['product'])) {
                 $product = \App\Models\Product::find($wizardData['product']['id'] ?? null);
@@ -961,12 +976,24 @@ class CustomOrderController extends Controller
                     'previewImage' => $previewImage,
                     'selectedPatterns' => $selectedPatterns,
                     'wizardData' => $wizardData,
+                    'userAddresses' => $userAddresses,
+                    'defaultAddress' => $defaultAddress,
                 ]);
             }
 
             if (!isset($wizardData['pattern']) && !isset($wizardData['design'])) {
-                return redirect()->route('custom_orders.create.pattern')
-                    ->with('error', 'Please select a pattern first.');
+                \Log::warning('createStep4 - no pattern or design found', [
+                    'wizard_keys' => array_keys($wizardData),
+                    'full_wizard' => $wizardData,
+                ]);
+                // If we have details but no pattern, go back to pattern selection
+                if (isset($wizardData['details'])) {
+                    return redirect()->route('custom_orders.create.pattern')
+                        ->with('error', 'Please select a pattern first.');
+                }
+                // If we don't have details either, start from the beginning
+                return redirect()->route('custom_orders.create.step1')
+                    ->with('error', 'Session expired. Please start your custom order again.');
             }
 
             // Fabric flow
@@ -981,9 +1008,22 @@ class CustomOrderController extends Controller
                 'previewImage' => $previewImage,
                 'selectedPatterns' => $selectedPatterns,
                 'wizardData' => $wizardData,
+                'userAddresses' => $userAddresses,
+                'defaultAddress' => $defaultAddress,
             ]);
         } catch (\Exception $e) {
-            \Log::error('createStep4 error', ['error' => $e->getMessage()]);
+            \Log::error('createStep4 error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'wizard_data' => $wizardData ?? null,
+            ]);
+            
+            // If we have wizard data but just missing pattern, redirect to pattern selection
+            if (!empty($wizardData) && !isset($wizardData['pattern']) && !isset($wizardData['design'])) {
+                return redirect()->route('custom_orders.create.pattern')
+                    ->with('error', 'Please select a pattern first.');
+            }
+            
             return redirect()->route('custom_orders.create.step1')
                 ->with('error', 'Unable to load review page. Please try again.');
         }
@@ -1008,11 +1048,7 @@ class CustomOrderController extends Controller
             'quantity' => 'required|integer|min:1',
             'specifications' => 'nullable|string|max:1000',
             'delivery_type' => 'required|in:delivery,pickup',
-            'delivery_house' => 'required_if:delivery_type,delivery|string|max:255',
-            'delivery_street' => 'required_if:delivery_type,delivery|string|max:255',
-            'delivery_barangay' => 'required_if:delivery_type,delivery|string|max:255',
-            'delivery_city' => 'required_if:delivery_type,delivery|string|max:255',
-            'delivery_province' => 'required_if:delivery_type,delivery|string|max:255',
+            'address_id' => 'required_if:delivery_type,delivery|nullable|integer|exists:user_addresses,id',
             'delivery_zip' => 'nullable|string|max:20',
             'delivery_landmark' => 'nullable|string|max:255',
         ]);

@@ -31,6 +31,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'provider_token',
         'avatar',
         'email_verified_at',
+        'otp_code',
+        'otp_expires_at',
+        'otp_attempts',
         'role', // <-- Add this if you want to check admin/user
     ];
 
@@ -42,6 +45,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'otp_expires_at' => 'datetime',
         'password' => 'hashed',
     ];
 
@@ -106,6 +110,14 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * User addresses
+     */
+    public function addresses()
+    {
+        return $this->hasMany(UserAddress::class);
+    }
+
+    /**
      * Unread notifications
      */
     public function unreadNotifications()
@@ -119,5 +131,70 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getUnreadNotificationCountAttribute(): int
     {
         return $this->unreadNotifications()->count();
+    }
+
+    /**
+     * Generate and save OTP code
+     */
+    public function generateOtp(): string
+    {
+        $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        
+        $this->update([
+            'otp_code' => $otp,
+            'otp_expires_at' => now()->addMinutes(10), // OTP expires in 10 minutes
+            'otp_attempts' => 0,
+        ]);
+
+        return $otp;
+    }
+
+    /**
+     * Verify OTP code
+     */
+    public function verifyOtp(string $otp): bool
+    {
+        // Check if OTP exists and hasn't expired
+        if (!$this->otp_code || !$this->otp_expires_at || $this->otp_expires_at->isPast()) {
+            return false;
+        }
+
+        // Check attempt limit (max 3 attempts)
+        if ($this->otp_attempts >= 3) {
+            return false;
+        }
+
+        // Increment attempts
+        $this->increment('otp_attempts');
+
+        // Check if OTP matches
+        if ($this->otp_code === $otp) {
+            // Clear OTP and verify email
+            $this->update([
+                'otp_code' => null,
+                'otp_expires_at' => null,
+                'otp_attempts' => 0,
+                'email_verified_at' => now(),
+            ]);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if OTP is expired
+     */
+    public function isOtpExpired(): bool
+    {
+        return !$this->otp_expires_at || $this->otp_expires_at->isPast();
+    }
+
+    /**
+     * Check if OTP attempts exceeded
+     */
+    public function isOtpAttemptsExceeded(): bool
+    {
+        return $this->otp_attempts >= 3;
     }
 }

@@ -4,12 +4,14 @@
 <div class="container mx-auto py-6">
 
     {{-- Back Button --}}
-    <div class="flex items-center justify-between mb-4">
-        <a href="{{ route('admin.orders') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800">
-            <span>←</span>
+    <div class="flex items-center justify-between mb-6">
+        <a href="{{ route('admin.orders') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#800000] to-[#600000] text-white rounded-lg hover:from-[#600000] hover:to-[#400000] transition-all duration-300 font-semibold shadow-md">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
             <span>Back to Orders</span>
         </a>
-        <div class="text-sm text-gray-500">Created {{ $order->created_at->format('M d, Y h:i A') }}</div>
+        <div class="text-sm text-gray-600 font-medium">Created {{ $order->created_at->format('M d, Y h:i A') }}</div>
     </div>
 
     {{-- Success Message --}}
@@ -19,25 +21,28 @@
         </div>
     @endif
 
-    <div class="bg-white shadow-xl rounded-2xl border border-gray-100">
-        <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-gray-900">Custom Order #{{ $order->id }}</h1>
-            <div class="flex items-center gap-2">
+    <div class="bg-white shadow-xl rounded-2xl border-2 border-[#e0b0b0]">
+        <div class="px-6 py-6 border-b-2 border-[#e0b0b0] bg-gradient-to-r from-[#fef2f2] to-white flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-[#800000]">Custom Order #{{ $order->id }}</h1>
+                <p class="text-gray-600 mt-1">Manage and track this custom order</p>
+            </div>
+            <div class="flex items-center gap-3">
                 {{-- Order Status --}}
-                <span class="px-3 py-1 rounded-full text-xs font-semibold
-                    {{ $order->status === 'completed' ? 'bg-green-100 text-green-700' : ($order->status === 'processing' ? 'bg-yellow-100 text-yellow-700' : ($order->status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700')) }}">
+                <span class="px-4 py-2 rounded-full text-sm font-bold
+                    {{ $order->status === 'completed' ? 'bg-green-100 text-green-700' : ($order->status === 'processing' ? 'bg-yellow-100 text-yellow-700' : ($order->status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-[#fef2f2] text-[#800000] border-2 border-[#e0b0b0]')) }}">
                     {{ ucfirst(str_replace('_', ' ', $order->status)) }}
                 </span>
                 
                 {{-- Payment Status --}}
-                <span class="px-3 py-1 rounded-full text-xs font-semibold
-                    {{ $order->payment_status === 'paid' ? 'bg-green-100 text-green-700' : ($order->payment_status === 'pending_verification' ? 'bg-yellow-100 text-yellow-700' : ($order->payment_status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700')) }}">
-                    {{ $order->payment_status === 'pending_verification' ? 'Pending Verification' : ucfirst($order->payment_status) }}
+                <span class="px-4 py-2 rounded-full text-sm font-bold
+                    {{ $order->payment_status === 'paid' ? 'bg-green-100 text-green-700' : ($order->payment_status === 'pending' ? 'bg-yellow-100 text-yellow-700' : ($order->payment_status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-[#fef2f2] text-[#800000] border-2 border-[#e0b0b0]')) }}">
+                    {{ $order->payment_status === 'pending' ? 'Pending' : ucfirst($order->payment_status) }}
                 </span>
                 
                 {{-- Payment Method --}}
                 @if($order->payment_method)
-                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                    <span class="px-4 py-2 rounded-full text-sm font-bold bg-[#800000] text-white">
                         {{ ucfirst(str_replace('_', ' ', $order->payment_method)) }}
                     </span>
                 @endif
@@ -47,83 +52,107 @@
         <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-2 space-y-6">
                 <div class="grid sm:grid-cols-2 gap-4">
-                    <div class="rounded-xl border border-gray-200 p-4">
-                        <div class="text-xs uppercase tracking-wider text-gray-500">Customer</div>
-                        <div class="mt-1 text-gray-900 font-medium">{{ $order->user->name ?? 'N/A' }}</div>
-                        <div class="text-sm text-gray-500">{{ $order->user->email ?? 'N/A' }}</div>
+                    <div class="rounded-xl border-2 border-[#e0b0b0] bg-gradient-to-br from-white to-[#faf5f5] p-5 hover:shadow-lg transition-shadow">
+                        <div class="flex items-center mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center mr-2">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                </svg>
+                            </div>
+                            <div class="text-xs uppercase tracking-wider font-bold text-[#800000]">Customer</div>
+                        </div>
+                        <div class="mt-2 text-gray-900 font-bold text-lg">{{ $order->user->name ?? 'N/A' }}</div>
+                        <div class="text-sm text-gray-600 mt-1">{{ $order->user->email ?? 'N/A' }}</div>
                         @if($order->phone)
-                            <div class="text-sm text-gray-600 mt-1">
-                                <span class="font-semibold">Phone:</span>
-                                <span class="ml-1">{{ $order->phone }}</span>
+                            <div class="text-sm text-gray-700 mt-2 font-medium">
+                                📱 {{ $order->phone }}
                             </div>
                         @endif
-                        <div class="text-sm text-gray-600 mt-2">
-                            <span class="font-semibold">Delivery:</span>
-                            <span class="ml-1 font-medium text-gray-800">
-                                @if($order->delivery_type === 'pickup')
-                                    Store Pickup
-                                @elseif($order->delivery_type === 'delivery')
-                                    Delivery
-                                @else
-                                    Not specified
-                                @endif
-                            </span>
+                        <div class="text-sm text-gray-700 mt-3 font-medium">
+                            @if($order->delivery_type === 'pickup')
+                                🏪 Store Pickup
+                            @elseif($order->delivery_type === 'delivery')
+                                🚚 Delivery
+                            @else
+                                Not specified
+                            @endif
                         </div>
                         @if($order->delivery_address)
-                            <div class="mt-1 text-sm text-gray-600">
-                                <span class="font-semibold">Address:</span>
-                                <p class="mt-1 text-gray-800 whitespace-pre-line">{{ $order->delivery_address }}</p>
+                            <div class="mt-3 text-sm text-gray-700 bg-[#fef2f2] p-3 rounded-lg border border-[#e0b0b0]">
+                                <span class="font-bold text-[#800000]">📍 Address:</span>
+                                <p class="mt-1 whitespace-pre-line">{{ $order->delivery_address }}</p>
                             </div>
                         @endif
                     </div>
-                    <div class="rounded-xl border border-gray-200 p-4">
-                        <div class="text-xs uppercase tracking-wider text-gray-500">Quantity</div>
-                        <div class="mt-1 text-gray-900 font-semibold">
+                    <div class="rounded-xl border-2 border-[#e0b0b0] bg-gradient-to-br from-white to-[#faf5f5] p-5 hover:shadow-lg transition-shadow">
+                        <div class="flex items-center mb-3">
+                            <div class="w-8 h-8 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center mr-2">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                            </div>
+                            <div class="text-xs uppercase tracking-wider font-bold text-[#800000]">Quantity</div>
+                        </div>
+                        <div class="mt-2 text-gray-900 font-bold text-3xl">
                             @if($order->isFabricOrder())
                                 {{ $order->formatted_fabric_quantity }}
                             @else
                                 {{ $order->quantity }}
                             @endif
                         </div>
-                    </div>
-                    <div class="sm:col-span-2 rounded-xl border border-gray-200 p-4">
-                        <div class="text-xs uppercase tracking-wider text-gray-500">
+                        <p class="text-sm text-gray-600 mt-2">
                             @if($order->isFabricOrder())
-                                Fabric Details
+                                Fabric Order
                             @else
-                                Specifications
+                                Items
                             @endif
+                        </p>
+                    </div>
+                    <div class="sm:col-span-2 rounded-xl border-2 border-[#e0b0b0] bg-gradient-to-br from-white to-[#faf5f5] p-5 hover:shadow-lg transition-shadow">
+                        <div class="flex items-center mb-4">
+                            <div class="w-8 h-8 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center mr-2">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <div class="text-xs uppercase tracking-wider font-bold text-[#800000]">
+                                @if($order->isFabricOrder())
+                                    Fabric Details
+                                @else
+                                    Specifications
+                                @endif
+                            </div>
                         </div>
-                        <div class="mt-2 text-gray-800">
+                        <div class="mt-3 text-gray-800">
                             @if($order->isFabricOrder())
                                 <div class="space-y-3">
-                                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                                        <span class="text-sm font-semibold text-purple-900 w-32">Fabric Type:</span>
-                                        <span class="text-sm text-gray-800 font-medium">{{ $order->fabric_type }}</span>
+                                    <div class="flex justify-between items-center py-3 px-3 bg-white rounded-lg border border-[#e0b0b0]">
+                                        <span class="text-sm font-bold text-[#800000]">Fabric Type:</span>
+                                        <span class="text-sm text-gray-800 font-semibold">{{ $order->fabric_type }}</span>
                                     </div>
-                                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                                        <span class="text-sm font-semibold text-purple-900 w-32">Quantity:</span>
-                                        <span class="text-sm text-gray-800 font-medium bg-purple-50 px-2 py-1 rounded">{{ $order->formatted_fabric_quantity }}</span>
+                                    <div class="flex justify-between items-center py-3 px-3 bg-white rounded-lg border border-[#e0b0b0]">
+                                        <span class="text-sm font-bold text-[#800000]">Quantity:</span>
+                                        <span class="text-sm text-gray-800 font-semibold bg-[#fef2f2] px-3 py-1 rounded-full">{{ $order->formatted_fabric_quantity }}</span>
                                     </div>
-                                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                                        <span class="text-sm font-semibold text-purple-900 w-32">Intended Use:</span>
-                                        <span class="text-sm text-gray-800 font-medium">{{ $order->intended_use_label }}</span>
+                                    <div class="flex justify-between items-center py-3 px-3 bg-white rounded-lg border border-[#e0b0b0]">
+                                        <span class="text-sm font-bold text-[#800000]">Intended Use:</span>
+                                        <span class="text-sm text-gray-800 font-semibold">{{ $order->intended_use_label }}</span>
                                     </div>
                                     @if($order->fabric_specifications)
-                                        <div class="py-2">
-                                            <span class="text-sm font-semibold text-purple-900 block mb-2">Specifications:</span>
-                                            <p class="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">{{ $order->fabric_specifications }}</p>
+                                        <div class="py-3 px-3 bg-white rounded-lg border border-[#e0b0b0]">
+                                            <span class="text-sm font-bold text-[#800000] block mb-2">Specifications:</span>
+                                            <p class="text-sm text-gray-700">{{ $order->fabric_specifications }}</p>
                                         </div>
                                     @endif
                                     @if($order->special_requirements)
-                                        <div class="py-2">
-                                            <span class="text-sm font-semibold text-purple-900 block mb-2">Special Requirements:</span>
-                                            <p class="text-sm text-gray-700 bg-yellow-50 p-3 rounded-lg">{{ $order->special_requirements }}</p>
+                                        <div class="py-3 px-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                                            <span class="text-sm font-bold text-yellow-800 block mb-2">⚠️ Special Requirements:</span>
+                                            <p class="text-sm text-yellow-900">{{ $order->special_requirements }}</p>
                                         </div>
                                     @endif
                                 </div>
                             @else
-                                <div class="whitespace-pre-line">{{ $order->specifications }}</div>
+                                <div class="whitespace-pre-line text-gray-800 bg-white p-3 rounded-lg border border-[#e0b0b0]">{{ $order->specifications }}</div>
                             @endif
                         </div>
                     </div>
@@ -131,11 +160,18 @@
 
                 {{-- Payment Details --}}
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-900 mb-3">Payment Details</h2>
-                    <div class="rounded-xl border border-gray-200 p-4 space-y-3">
-                        <div class="flex justify-between">
-                            <span class="text-sm text-gray-600">Payment Method</span>
-                            <span class="font-medium">
+                    <div class="flex items-center mb-4">
+                        <div class="w-8 h-8 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center mr-2">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                            </svg>
+                        </div>
+                        <h2 class="text-lg font-bold text-[#800000]">Payment Details</h2>
+                    </div>
+                    <div class="rounded-xl border-2 border-[#e0b0b0] bg-gradient-to-br from-white to-[#faf5f5] p-5 space-y-4">
+                        <div class="flex justify-between items-center py-3 px-3 bg-white rounded-lg border border-[#e0b0b0]">
+                            <span class="text-sm font-semibold text-gray-700">Payment Method</span>
+                            <span class="font-bold text-[#800000]">
                                 @if($order->payment_method)
                                     {{ ucfirst(str_replace('_', ' ', $order->payment_method)) }}
                                 @else
@@ -144,21 +180,21 @@
                             </span>
                         </div>
                         @if($order->final_price)
-                        <div class="flex justify-between">
-                            <span class="text-sm text-gray-600">Quoted Price</span>
-                            <span class="font-semibold text-red-600">₱{{ number_format($order->final_price, 2) }}</span>
+                        <div class="flex justify-between items-center py-3 px-3 bg-white rounded-lg border border-[#e0b0b0]">
+                            <span class="text-sm font-semibold text-gray-700">Quoted Price</span>
+                            <span class="font-bold text-2xl text-[#800000]">₱{{ number_format($order->final_price, 2) }}</span>
                         </div>
                         @endif
                         @if($order->transaction_id)
-                        <div class="flex justify-between">
-                            <span class="text-sm text-gray-600">Transaction ID</span>
-                            <span class="font-mono text-sm">{{ $order->transaction_id }}</span>
+                        <div class="flex justify-between items-center py-3 px-3 bg-white rounded-lg border border-[#e0b0b0]">
+                            <span class="text-sm font-semibold text-gray-700">Transaction ID</span>
+                            <span class="font-mono text-sm font-bold text-[#800000]">{{ $order->transaction_id }}</span>
                         </div>
                         @endif
                         @if($order->paid_at)
-                        <div class="flex justify-between">
-                            <span class="text-sm text-gray-600">Paid At</span>
-                            <span class="font-medium">
+                        <div class="flex justify-between items-center py-3 px-3 bg-white rounded-lg border border-[#e0b0b0]">
+                            <span class="text-sm font-semibold text-gray-700">Paid At</span>
+                            <span class="font-medium text-gray-800">
                                 @if(is_string($order->paid_at))
                                     {{ \Carbon\Carbon::parse($order->paid_at)->format('M d, Y h:i A') }}
                                 @else
@@ -168,9 +204,9 @@
                         </div>
                         @endif
                         @if($order->transfer_date)
-                        <div class="flex justify-between">
-                            <span class="text-sm text-gray-600">Transfer Date</span>
-                            <span class="font-medium">
+                        <div class="flex justify-between items-center py-3 px-3 bg-white rounded-lg border border-[#e0b0b0]">
+                            <span class="text-sm font-semibold text-gray-700">Transfer Date</span>
+                            <span class="font-medium text-gray-800">
                                 @if(is_string($order->transfer_date))
                                     {{ \Carbon\Carbon::parse($order->transfer_date)->format('M d, Y') }}
                                 @else
@@ -180,15 +216,15 @@
                         </div>
                         @endif
                         @if($order->payment_notes)
-                        <div>
-                            <span class="text-sm text-gray-600 block mb-1">Payment Notes</span>
-                            <p class="text-sm text-gray-800 bg-gray-50 p-2 rounded">{{ $order->payment_notes }}</p>
+                        <div class="py-3 px-3 bg-white rounded-lg border border-[#e0b0b0]">
+                            <span class="text-sm font-semibold text-gray-700 block mb-2">Payment Notes</span>
+                            <p class="text-sm text-gray-800">{{ $order->payment_notes }}</p>
                         </div>
                         @endif
                         @if($order->payment_receipt)
-                        <div>
-                            <span class="text-sm text-gray-600 block mb-2">Payment Receipt</span>
-                            <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                        <div class="py-3 px-3 bg-white rounded-lg border border-[#e0b0b0]">
+                            <span class="text-sm font-semibold text-gray-700 block mb-2">Payment Receipt</span>
+                            <div class="bg-[#faf5f5] rounded-lg p-3 border border-[#e0b0b0]">
                                 @php
                                     // Check if path starts with 'payment_receipts/' (new uploads disk)
                                     $receiptUrl = str_starts_with($order->payment_receipt, 'payment_receipts/') 

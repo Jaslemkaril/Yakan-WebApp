@@ -149,12 +149,23 @@ class OrderController extends Controller
             
             // Add to tracking history
             $history = $order->tracking_history ?? [];
+            
+            // Decode JSON if it's a string
+            if (is_string($history)) {
+                $history = json_decode($history, true) ?? [];
+            }
+            
+            // Ensure it's an array
+            if (!is_array($history)) {
+                $history = [];
+            }
+            
             array_unshift($history, [
                 'status' => $request->tracking_status,
                 'date' => now()->format('M d, Y h:i A'),
                 'note' => $request->tracking_notes
             ]);
-            $order->tracking_history = $history;
+            $order->tracking_history = json_encode($history);
         }
 
         $order->courier_name = $request->courier_name;

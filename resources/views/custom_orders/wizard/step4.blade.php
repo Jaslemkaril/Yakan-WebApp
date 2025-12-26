@@ -3,24 +3,32 @@
 @section('title', 'Review Your Order - Custom Order')
 
 @section('content')
-<div class="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-100">
+<div class="min-h-screen bg-gradient-to-br from-maroon-50 via-white to-maroon-50">
     <!-- Enhanced Progress Bar -->
-    <div class="bg-white shadow-lg border-b border-gray-200">
+    <div class="bg-white shadow-lg border-b-2" style="border-bottom-color:#e0b0b0;">
         <div class="container mx-auto px-4 py-6">
-            <div class="flex items-center justify-center space-x-6">
-                <div class="flex items-center">
-                    <div class="w-10 h-10 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg" style="background-color:#800000;">✓</div>
-                    <span class="ml-3 font-bold" style="color:#800000;">Fabric</span>
+            <div class="flex items-center justify-center space-x-4 md:space-x-6">
+                <div class="flex items-center group cursor-pointer">
+                    <div class="w-10 h-10 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg transform transition-all duration-300 group-hover:scale-110" style="background-color:#800000;">✓</div>
+                    <span class="ml-2 md:ml-3 font-bold text-xs md:text-base" style="color:#800000;">Fabric</span>
                 </div>
-                <div class="w-20 h-1 rounded-full" style="background-color:#800000;"></div>
-                <div class="flex items-center">
-                    <div class="w-10 h-10 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg" style="background-color:#800000;">✓</div>
-                    <span class="ml-3 font-bold" style="color:#800000;">Pattern</span>
+                <div class="w-8 md:w-20 h-1 rounded-full" style="background-color:#800000;"></div>
+                <div class="flex items-center group cursor-pointer">
+                    <div class="w-10 h-10 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg transform transition-all duration-300 group-hover:scale-110" style="background-color:#800000;">✓</div>
+                    <span class="ml-2 md:ml-3 font-bold text-xs md:text-base" style="color:#800000;">Pattern</span>
                 </div>
-                <div class="w-20 h-1 rounded-full" style="background-color:#800000;"></div>
-                <div class="flex items-center">
-                    <div class="w-10 h-10 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg" style="background-color:#800000;">3</div>
-                    <span class="ml-3 font-bold" style="color:#800000;">Review</span>
+                <div class="w-8 md:w-20 h-1 rounded-full" style="background-color:#800000;"></div>
+                <div class="flex items-center group cursor-pointer">
+                    <div class="w-10 h-10 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg transform transition-all duration-300 group-hover:scale-110" style="background-color:#800000;">✓</div>
+                    <span class="ml-2 md:ml-3 font-bold text-xs md:text-base" style="color:#800000;">Details</span>
+                </div>
+                <div class="w-8 md:w-20 h-1 bg-gray-300 rounded-full"></div>
+                <div class="flex items-center group cursor-pointer">
+                    <div class="relative">
+                        <div class="w-10 h-10 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg transform transition-all duration-300 group-hover:scale-110" style="background-color:#800000;">4</div>
+                        <div class="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    </div>
+                    <span class="ml-2 md:ml-3 font-bold text-xs md:text-base" style="color:#800000;">Review</span>
                 </div>
             </div>
         </div>
@@ -40,7 +48,7 @@
     <div class="container mx-auto px-4 py-8">
 
         @if ($errors->any())
-            <div class="max-w-6xl mx-auto mb-6 bg-red-50 border border-red-200 text-red-800 rounded-xl p-4">
+            <div class="max-w-6xl mx-auto mb-6 bg-maroon-50 border border-maroon-200 text-maroon-800 rounded-xl p-4">
                 <div class="flex items-start">
                     <svg class="w-5 h-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 18a9 9 0 110-18 9 9 0 010 18z" />
@@ -74,7 +82,7 @@
                     <div class="space-y-6">
                         <!-- Product Info -->
                         <div class="flex items-start space-x-4 pb-6 border-b-2 border-gray-200">
-                            <div class="w-24 h-24 bg-gradient-to-br from-red-100 to-red-200 rounded-xl flex items-center justify-center shadow-lg">
+                            <div class="w-24 h-24 bg-gradient-to-br from-maroon-100 to-maroon-200 rounded-xl flex items-center justify-center shadow-lg">
                                 @if(isset($product) && $product->image)
                                     <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover rounded-xl">
                                 @else
@@ -130,7 +138,7 @@
                             <!-- Pattern Preview Image -->
                             @if($patternPreviewUrl)
                             <div class="mb-6">
-                                <div class="rounded-xl p-4 border-2 shadow-lg" style="background: linear-gradient(to bottom right, #fff5f5, #fff0f0); border-color:#c08080;">
+                                <div class="rounded-xl p-4 border-2 shadow-lg" style="background: linear-gradient(to bottom right, #f5e6e8, #e8ccd1); border-color:#8b3a56;">
                                     <div class="flex items-center justify-between mb-3">
                                         <h6 class="text-sm font-semibold text-gray-700 flex items-center">
                                             <svg class="w-5 h-5 mr-2" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -149,17 +157,17 @@
                                     </div>
                                     @if(isset($wizardData['pattern']['customization_settings']) && is_array($wizardData['pattern']['customization_settings']))
                                     <div class="mt-3 grid grid-cols-3 gap-2">
-                                        <div class="bg-white rounded-lg px-3 py-2 text-center border" style="border-color:#e0b0b0;">
+                                        <div class="bg-white rounded-lg px-3 py-2 text-center border" style="border-color:#d9a3b3;">
                                             <div class="text-xs text-gray-500">Scale</div>
-                                            <div class="font-bold" style="color:#800000;">{{ $wizardData['pattern']['customization_settings']['scale'] ?? 1 }}x</div>
+                                            <div class="font-bold" style="color:#8b3a56;">{{ $wizardData['pattern']['customization_settings']['scale'] ?? 1 }}x</div>
                                         </div>
-                                        <div class="bg-white rounded-lg px-3 py-2 text-center border" style="border-color:#e0b0b0;">
+                                        <div class="bg-white rounded-lg px-3 py-2 text-center border" style="border-color:#d9a3b3;">
                                             <div class="text-xs text-gray-500">Rotation</div>
-                                            <div class="font-bold" style="color:#800000;">{{ $wizardData['pattern']['customization_settings']['rotation'] ?? 0 }}°</div>
+                                            <div class="font-bold" style="color:#8b3a56;">{{ $wizardData['pattern']['customization_settings']['rotation'] ?? 0 }}°</div>
                                         </div>
-                                        <div class="bg-white rounded-lg px-3 py-2 text-center border" style="border-color:#e0b0b0;">
+                                        <div class="bg-white rounded-lg px-3 py-2 text-center border" style="border-color:#d9a3b3;">
                                             <div class="text-xs text-gray-500">Opacity</div>
-                                            <div class="font-bold" style="color:#800000;">{{ round(($wizardData['pattern']['customization_settings']['opacity'] ?? 0.85) * 100) }}%</div>
+                                            <div class="font-bold" style="color:#8b3a56;">{{ round(($wizardData['pattern']['customization_settings']['opacity'] ?? 0.85) * 100) }}%</div>
                                         </div>
                                     </div>
                                     @endif
@@ -169,7 +177,7 @@
                             
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 @forelse($selectedPatterns as $p)
-                                    <div class="flex items-center space-x-3 p-3 rounded-lg border" style="background-color:#fff5f5; border-color:#e0b0b0;">
+                                    <div class="flex items-center space-x-3 p-3 rounded-lg border" style="background-color:#f5e6e8; border-color:#d9a3b3;">
                                         @php $thumb = optional($p->media->first())->url; @endphp
                                         @if($thumb)
                                             <img src="{{ $thumb }}" alt="{{ $p->name }}" class="w-8 h-8 rounded object-cover"/>
@@ -351,9 +359,9 @@
                         </div>
                     </div>
                     
-                    <div class="mt-6 p-4 rounded-xl border-2" style="background: linear-gradient(to right, #fff5f5, #fff0f0); border-color:#c08080;">
-                        <p class="text-sm font-bold" style="color:#800000;">Estimated Delivery</p>
-                        <p class="text-xl font-bold" style="color:#800000;">{{ session('wizard.details.addons') && in_array('priority_production', session('wizard.details.addons')) ? date('M d, Y', strtotime('+10 days')) : date('M d, Y', strtotime('+17 days')) }}</p>
+                    <div class="mt-6 p-4 rounded-xl border-2" style="background: linear-gradient(to right, #f5e6e8, #e8ccd1); border-color:#8b3a56;">
+                        <p class="text-sm font-bold" style="color:#8b3a56;">Estimated Delivery</p>
+                        <p class="text-xl font-bold" style="color:#8b3a56;">{{ session('wizard.details.addons') && in_array('priority_production', session('wizard.details.addons')) ? date('M d, Y', strtotime('+10 days')) : date('M d, Y', strtotime('+17 days')) }}</p>
                     </div>
                 </div>
 
@@ -377,19 +385,19 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Delivery Option *</label>
                                     <div class="flex flex-col sm:flex-row gap-3">
-                                        <label class="inline-flex items-center px-4 py-3 rounded-lg border-2 text-sm cursor-pointer transition-all duration-200 hover:border-red-800 hover:bg-red-50" style="border-color:#c08080;" id="delivery-option-label">
-                                            <input type="radio" name="delivery_type" value="delivery" class="mr-3 w-4 h-4 text-red-800 delivery-radio" checked>
+                                        <label class="inline-flex items-center px-4 py-3 rounded-lg border-2 text-sm cursor-pointer transition-all duration-200 hover:border-maroon-800 hover:bg-maroon-50" style="border-color:#8b3a56;" id="delivery-option-label">
+                                            <input type="radio" name="delivery_type" value="delivery" class="mr-3 w-4 h-4 delivery-radio" checked style="accent-color: #8b3a56;">
                                             <div class="flex items-center">
-                                                <svg class="w-5 h-5 mr-2 text-red-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #8b3a56;">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                                                 </svg>
                                                 <span class="font-medium">Delivery to Address</span>
                                             </div>
                                         </label>
-                                        <label class="inline-flex items-center px-4 py-3 rounded-lg border-2 text-sm cursor-pointer transition-all duration-200 hover:border-red-800 hover:bg-red-50" style="border-color:#c08080;" id="pickup-option-label">
-                                            <input type="radio" name="delivery_type" value="pickup" class="mr-3 w-4 h-4 text-red-800 delivery-radio">
+                                        <label class="inline-flex items-center px-4 py-3 rounded-lg border-2 text-sm cursor-pointer transition-all duration-200 hover:border-maroon-800 hover:bg-maroon-50" style="border-color:#8b3a56;" id="pickup-option-label">
+                                            <input type="radio" name="delivery_type" value="pickup" class="mr-3 w-4 h-4 delivery-radio" style="accent-color: #8b3a56;">
                                             <div class="flex items-center">
-                                                <svg class="w-5 h-5 mr-2 text-red-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #8b3a56;">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                                 </svg>
                                                 <span class="font-medium">Store Pickup</span>
@@ -398,47 +406,73 @@
                                     </div>
                                 </div>
 
-                                <!-- Delivery Address Fields -->
+                                <!-- Delivery Address Selection -->
                                 <div id="delivery-address-section">
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        Delivery Address *
-                                        <span class="text-xs text-gray-500 font-normal">(Please provide complete address for delivery)</span>
-                                    </label>
-                                    <div class="space-y-3">
-                                        <input type="text" name="delivery_house" id="delivery_house" placeholder="House / Unit / Building No. *" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-red-800" style="--tw-ring-color:#800000;" required />
-                                        <input type="text" name="delivery_street" id="delivery_street" placeholder="Street Name *" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-red-800" style="--tw-ring-color:#800000;" required />
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <input type="text" name="delivery_barangay" id="delivery_barangay" placeholder="Barangay *" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-red-800" style="--tw-ring-color:#800000;" required />
-                                            <input type="text" name="delivery_city" id="delivery_city" placeholder="City / Municipality *" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-red-800" style="--tw-ring-color:#800000;" required />
+                                    @if($userAddresses->count() > 0)
+                                        <label class="block text-sm font-medium text-gray-700 mb-3">
+                                            Select Delivery Address *
+                                        </label>
+                                        <div class="space-y-2 mb-4">
+                                            @foreach($userAddresses as $address)
+                                                <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-maroon-400" style="border-color: {{ $address->id === ($defaultAddress->id ?? null) ? '#8b3a56' : '#e5e7eb' }}; background-color: {{ $address->id === ($defaultAddress->id ?? null) ? '#f5e6e8' : 'white' }};">
+                                                    <input type="radio" name="address_id" value="{{ $address->id }}" class="mt-1 mr-3" style="accent-color: #8b3a56;" {{ $address->id === ($defaultAddress->id ?? null) ? 'checked' : '' }} required />
+                                                    <div class="flex-1">
+                                                        <p class="font-bold text-gray-900">{{ $address->street_name }}, {{ $address->barangay }}</p>
+                                                        <p class="text-sm text-gray-600">{{ $address->city }}, {{ $address->province }} {{ $address->zip_code }}</p>
+                                                        @if($address->landmark)
+                                                            <p class="text-xs text-gray-500 mt-1">Landmark: {{ $address->landmark }}</p>
+                                                        @endif
+                                                        @if($address->is_default)
+                                                            <span class="inline-block mt-2 px-2 py-1 bg-maroon-100 text-maroon-700 text-xs font-bold rounded">Default Address</span>
+                                                        @endif
+                                                    </div>
+                                                </label>
+                                            @endforeach
                                         </div>
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <input type="text" name="delivery_province" id="delivery_province" placeholder="Province *" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-red-800" style="--tw-ring-color:#800000;" required />
-                                            <input type="text" name="delivery_zip" id="delivery_zip" placeholder="ZIP Code (optional)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-red-800" style="--tw-ring-color:#800000;" />
+                                        <p class="text-xs text-gray-500 mb-4">
+                                            <a href="{{ route('addresses.index') }}" class="text-maroon-600 hover:text-maroon-700 font-semibold">Manage your addresses</a>
+                                        </p>
+                                    @else
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Delivery Address *
+                                            <span class="text-xs text-gray-500 font-normal">(Please provide complete address for delivery)</span>
+                                        </label>
+                                        <div class="space-y-3">
+                                            <input type="text" name="delivery_house" id="delivery_house" placeholder="House / Unit / Building No. *" value="{{ data_get($wizardData, 'details.delivery_house', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" required />
+                                            <input type="text" name="delivery_street" id="delivery_street" placeholder="Street Name *" value="{{ data_get($wizardData, 'details.delivery_street', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" required />
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <input type="text" name="delivery_barangay" id="delivery_barangay" placeholder="Barangay *" value="{{ data_get($wizardData, 'details.delivery_barangay', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" required />
+                                                <input type="text" name="delivery_city" id="delivery_city" placeholder="City / Municipality *" value="{{ data_get($wizardData, 'details.delivery_city', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" required />
+                                            </div>
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <input type="text" name="delivery_province" id="delivery_province" placeholder="Province *" value="{{ data_get($wizardData, 'details.delivery_province', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" required />
+                                                <input type="text" name="delivery_zip" id="delivery_zip" placeholder="ZIP Code (optional)" value="{{ data_get($wizardData, 'details.delivery_zip', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" />
+                                            </div>
+                                            <input type="text" name="delivery_landmark" id="delivery_landmark" placeholder="Landmark (e.g., near SM Mall, beside gas station)" value="{{ data_get($wizardData, 'details.delivery_landmark', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" />
+                                            <div class="bg-maroon-50 border border-maroon-200 rounded-lg p-3">
+                                                <p class="text-xs text-maroon-800 flex items-start">
+                                                    <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style="color: #8b3a56;">
+                                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                                    </svg>
+                                                    Please provide as much detail as possible so our courier can find your location easily. Landmark is very helpful!
+                                                </p>
+                                            </div>
                                         </div>
-                                        <input type="text" name="delivery_landmark" id="delivery_landmark" placeholder="Landmark (e.g., near SM Mall, beside gas station)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-red-800" style="--tw-ring-color:#800000;" />
-                                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                            <p class="text-xs text-blue-800 flex items-start">
-                                                <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                                                </svg>
-                                                Please provide as much detail as possible so our courier can find your location easily. Landmark is very helpful!
-                                            </p>
-                                        </div>
-                                    </div>
+                                    @endif
                                 </div>
 
                                 <!-- Store Pickup Information -->
                                 <div id="pickup-info-section" class="hidden">
-                                    <div class="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-xl p-6">
+                                    <div class="bg-gradient-to-br from-maroon-50 to-maroon-100 border-2 border-maroon-200 rounded-xl p-6">
                                         <div class="flex items-start">
-                                            <svg class="w-6 h-6 text-green-600 mr-3 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-6 h-6 mr-3 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #8b3a56;">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                             </svg>
                                             <div class="flex-1">
-                                                <h4 class="font-bold text-green-900 mb-2 text-lg">Store Pickup Location</h4>
-                                                <p class="text-sm text-green-800 mb-3">Pick up your order at our Yakan weaving center:</p>
-                                                <div class="bg-white rounded-lg p-4 border border-green-300">
+                                                <h4 class="font-bold text-maroon-900 mb-2 text-lg">Store Pickup Location</h4>
+                                                <p class="text-sm text-maroon-800 mb-3">Pick up your order at our Yakan weaving center:</p>
+                                                <div class="bg-white rounded-lg p-4 border border-maroon-300">
                                                     <p class="font-semibold text-gray-900">Tuwas Yakan Weaving Center</p>
                                                     <p class="text-sm text-gray-700 mt-2">
                                                         123 Yakan Street, Barangay Tulay<br>
@@ -453,8 +487,8 @@
                                                         <strong>Contact:</strong> (062) 123-4567
                                                     </p>
                                                 </div>
-                                                <p class="text-xs text-green-700 mt-3 flex items-start">
-                                                    <svg class="w-4 h-4 mr-1 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                <p class="text-xs text-maroon-700 mt-3 flex items-start">
+                                                    <svg class="w-4 h-4 mr-1 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" style="color: #8b3a56;">
                                                         <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
                                                     </svg>
                                                     We will notify you when your order is ready for pickup. Please bring a valid ID.
@@ -470,14 +504,14 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="submit" id="submitBtn" class="group relative w-full px-8 py-4 text-white rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2" style="background-color:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
+                        <button type="submit" id="submitBtn" class="group relative w-full px-8 py-4 text-white rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2" style="background-color:#8b3a56 !important;" onmouseover="this.style.backgroundColor='#7a3350 !important'" onmouseout="this.style.backgroundColor='#8b3a56 !important'">
                             <span class="flex items-center justify-center" id="submitBtnText">
                                 <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7"/>
                                 </svg>
                                 Submit Custom Order
                             </span>
-                            <div class="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300" style="background-color:#800000;"></div>
+                            <div class="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300" style="background-color:#8b3a56;"></div>
                         </button>
                     </form>
                     
@@ -490,14 +524,14 @@
                     });
                     </script>
                     
-                    <a href="{{ route('custom_orders.create.pattern') }}" class="group block w-full text-center px-8 py-3 bg-white border-2 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-all duration-300 transform hover:scale-105" style="border-color:#c08080;">
+                    <button type="button" onclick="window.history.back()" class="group block w-full text-center px-8 py-3 bg-white border-2 text-maroon-700 rounded-xl font-bold hover:bg-maroon-50 transition-all duration-300 transform hover:scale-105" style="border-color:#8b3a56;">
                         <span class="flex items-center justify-center">
-                            <svg class="w-5 h-5 mr-2 transition-transform duration-300 group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 mr-2 transition-transform duration-300 group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #8b3a56;">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                             </svg>
-                            Back to Pattern Selection
+                            Back to Order Details
                         </span>
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>

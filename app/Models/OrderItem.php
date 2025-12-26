@@ -18,12 +18,15 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'product_id',
+        'product_name',
         'quantity',
         'price',
+        'total',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'total' => 'decimal:2',
     ];
 
     /**
@@ -40,5 +43,13 @@ class OrderItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * Get the review for this order item
+     */
+    public function review()
+    {
+        return $this->hasOne(Review::class, 'order_item_id');
     }
 }

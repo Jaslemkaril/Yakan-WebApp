@@ -146,12 +146,22 @@ class OrderController extends Controller
     /**
      * Get user's orders
      * 
-     * GET /api/v1/orders?status=pending_confirmation&limit=20
+     * GET /orders (web view)
+     * GET /api/v1/orders?status=pending_confirmation&limit=20 (API)
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request)
     {
         try {
-            $query = Order::query();
+            $query = Order::with('orderItems.product');
+
+            // Filter by authenticated user - show all orders (including guest orders with null user_id)
+            // This allows viewing of orders created from mobile app before user login
+            if (auth()->check()) {
+                $query->where(function($q) {
+                    $q->where('user_id', auth()->id())
+                      ->orWhereNull('user_id');
+                });
+            }
 
             // Filter by status
             if ($request->has('status')) {
@@ -167,6 +177,12 @@ class OrderController extends Controller
             $limit = $request->query('limit', 20);
             $orders = $query->orderByDesc('created_at')->paginate($limit);
 
+            // Return web view if not API request
+            if (!request()->wantsJson()) {
+                return view('orders.index', compact('orders'));
+            }
+
+            // Return JSON for API requests
             return response()->json([
                 'success' => true,
                 'data' => $orders->items(),
@@ -179,58 +195,60 @@ class OrderController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Error fetching orders', ['error' => $e->getMessage()]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch orders',
-            ], 500);
+            
+            if (request()->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to fetch orders',
+                ], 500);
+            }
+            abort(500, 'Failed to fetch orders');
         }
     }
 
     /**
      * Get single order with items
      * 
-     * GET /api/v1/orders/{id}
-     * GET /orders/{id} (web)
+     * GET /orders/{id} (web view)
+     * GET /api/v1/orders/{id} (API)
      */
     public function show($id)
     {
         try {
-            $order = Order::with('items')->find($id);
+            $order = Order::with('orderItems.product')->findOrFail($id);
 
-            if (!$order) {
-                // Check if this is an API request
-                if (request()->is('api/*') || request()->expectsJson()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Order not found',
-                    ], 404);
-                }
-                
-                // Web request
-                abort(404, 'Order not found');
+            // Check authorization
+            if ($order->user_id && $order->user_id !== auth()->id()) {
+                abort(403, 'Unauthorized access to this order.');
             }
 
-            // Check if this is an API request
-            if (request()->is('api/*') || request()->expectsJson()) {
+            // Return web view if not API request
+            if (!request()->wantsJson()) {
+                return view('orders.show', compact('order'));
+            }
+
+            // Return JSON for API requests
+            return response()->json([
+                'success' => true,
+                'data' => $this->formatOrder($order),
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            if (request()->wantsJson()) {
                 return response()->json([
-                    'success' => true,
-                    'data' => $this->formatOrder($order),
-                ]);
+                    'success' => false,
+                    'message' => 'Order not found',
+                ], 404);
             }
-
-            // Web request - return view
-            return view('orders.show', compact('order'));
-            
+            abort(404, 'Order not found');
         } catch (\Exception $e) {
             Log::error('Error fetching order', ['error' => $e->getMessage()]);
             
-            if (request()->is('api/*') || request()->expectsJson()) {
+            if (request()->wantsJson()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Failed to fetch order',
                 ], 500);
             }
-            
             abort(500, 'Failed to fetch order');
         }
     }

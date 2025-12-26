@@ -200,12 +200,12 @@ class AdminCustomOrderController extends Controller
 
     public function verifyPayment(Request $request, CustomOrder $order)
     {
-        $request->validate([
-            'payment_status' => 'required|in:paid,failed',
-            'payment_notes' => 'nullable|string'
-        ]);
-
         try {
+            $request->validate([
+                'payment_status' => 'required|in:paid,failed',
+                'payment_notes' => 'nullable|string'
+            ]);
+
             $paymentStatus = $request->payment_status;
             $notes = $request->payment_notes ?? '';
 
@@ -217,9 +217,9 @@ class AdminCustomOrderController extends Controller
             
             // If payment is verified as paid and order is processing, we can move it forward
             if ($paymentStatus === 'paid' && $order->status === 'processing') {
-                $order->status = 'in_production';
+                $order->status = 'processing'; // Keep as processing, payment is now verified
             } elseif ($paymentStatus === 'failed') {
-                $order->status = 'payment_failed';
+                $order->status = 'cancelled'; // Use 'cancelled' instead of 'payment_failed'
             }
             
             $order->save();
@@ -239,10 +239,26 @@ class AdminCustomOrderController extends Controller
             }
 
             return redirect()->back()->with('success', 'Payment status updated successfully.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Payment verification validation error', [
+                'order_id' => $order->id,
+                'errors' => $e->errors()
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+
+            return redirect()->back()->withErrors($e->errors());
         } catch (\Exception $e) {
             \Log::error('Payment verification error', [
                 'order_id' => $order->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             if ($request->expectsJson()) {
@@ -1049,16 +1065,15 @@ class AdminCustomOrderController extends Controller
             $perPage = $request->get('per_page', 20);
             $orders = $query->paginate($perPage);
             
-            // Debug what we got
-            \Log::info('Orders type: ' . get_class($orders));
-            \Log::info('Orders total: ' . (method_exists($orders, 'total') ? $orders->total() : 'no total method'));
+            // Calculate statistics
+            $totalOrders = CustomOrder::count();
+            $todayOrders = CustomOrder::whereDate('created_at', today())->count();
+            $pendingCount = CustomOrder::where('status', 'pending')->count();
+            $totalRevenue = CustomOrder::where('payment_status', 'paid')->sum('final_price');
             
-            // Ensure we have a proper paginator
-            if (!$orders instanceof \Illuminate\Pagination\LengthAwarePaginator) {
-                $orders = new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPage);
-            }
+            $stats = compact('totalOrders', 'todayOrders', 'pendingCount', 'totalRevenue');
             
-            return view('admin.orders.index', compact('orders'));
+            return view('admin.custom_orders.index_enhanced', compact('orders', 'stats'));
             
         } catch (\Exception $e) {
             \Log::error('Enhanced Custom Orders Index Error: ' . $e->getMessage());

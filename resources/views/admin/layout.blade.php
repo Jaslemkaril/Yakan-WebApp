@@ -16,7 +16,7 @@
         <h2 class="text-2xl font-bold mb-8">Admin</h2>
         <nav class="flex flex-col space-y-2">
             <a href="{{ route('admin.dashboard') }}" class="hover:bg-red-700 p-2 rounded">Dashboard</a>
-            <a href="{{ route('admin.orders.index') }}" class="hover:bg-red-700 p-2 rounded">Orders</a>
+            <a href="{{ route('admin.regular.index') }}" class="hover:bg-red-700 p-2 rounded">Orders</a>
             <a href="{{ route('admin.custom-orders.index') }}" class="hover:bg-red-700 p-2 rounded">Custom Orders</a>
             <a href="{{ route('admin.products.index') }}" class="hover:bg-red-700 p-2 rounded">Products</a>
             <a href="{{ route('admin.users.index') }}" class="hover:bg-red-700 p-2 rounded">Users</a>

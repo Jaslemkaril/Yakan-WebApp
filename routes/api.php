@@ -32,6 +32,14 @@ Route::prefix('v1')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user', [AuthController::class, 'user']);
 
+        // Addresses (for mobile app)
+        Route::get('/addresses', [\App\Http\Controllers\Api\AddressController::class, 'index']);
+        Route::get('/addresses/default', [\App\Http\Controllers\Api\AddressController::class, 'getDefault']);
+        Route::post('/addresses', [\App\Http\Controllers\Api\AddressController::class, 'store']);
+        Route::put('/addresses/{address}', [\App\Http\Controllers\Api\AddressController::class, 'update']);
+        Route::delete('/addresses/{address}', [\App\Http\Controllers\Api\AddressController::class, 'destroy']);
+        Route::post('/addresses/{address}/set-default', [\App\Http\Controllers\Api\AddressController::class, 'setDefault']);
+
         // Admin Orders
         Route::patch('/orders/{id}/status', [OrderController::class, 'updateStatus']);
         Route::get('/admin/orders', [OrderController::class, 'adminIndex']);

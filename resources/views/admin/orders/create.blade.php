@@ -12,7 +12,7 @@
                 <p class="text-blue-100 text-lg">Create a manual order for a customer</p>
             </div>
             <div class="mt-4 md:mt-0">
-                <a href="{{ route('admin.orders.index') }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
+                <a href="{{ route('admin.regular.index') }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
                     <i class="fas fa-arrow-left mr-2"></i>Back to Orders
                 </a>
             </div>
@@ -157,7 +157,7 @@
                         Stock will be automatically updated when order is created
                     </div>
                     <div class="flex space-x-3">
-                        <a href="{{ route('admin.orders.index') }}" 
+                        <a href="{{ route('admin.regular.index') }}" 
                            class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                             <i class="fas fa-times mr-2"></i>Cancel
                         </a>

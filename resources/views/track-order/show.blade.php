@@ -322,6 +322,29 @@
                     </div>
                 @endif
 
+                <!-- Order Received Button - Show when Out for Delivery -->
+                @if($order->tracking_status === 'Out for Delivery' && $order->status !== 'completed')
+                    <div class="tracking-card p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
+                        <div class="text-center">
+                            <div class="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
+                                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-900 mb-2">Order Out for Delivery</h3>
+                            <p class="text-sm text-gray-600 mb-4">Your order is on its way! Click below to confirm receipt and leave a review.</p>
+                            <a href="{{ route('reviews.create.order', $order->id) }}" 
+                               class="block w-full px-4 py-3 text-white font-semibold rounded-lg hover:opacity-90 transition-opacity"
+                               style="background-color: #22c55e;">
+                                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Order Received - Leave Review
+                            </a>
+                        </div>
+                    </div>
+                @endif
+
                 <!-- Delivery Address -->
                 <div class="tracking-card p-6">
                     <h3 class="text-lg font-bold text-gray-900 mb-4">Delivery Address</h3>

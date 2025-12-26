@@ -114,7 +114,7 @@
                                     </svg>
                                 </div>
                             </a>
-                            <a href="{{ route('admin.orders.index') }}" class="group bg-gradient-to-br from-[#fef2f2] to-[#fde8e8] border border-[#f4c7c7] rounded-2xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                            <a href="{{ route('admin.regular.index') }}" class="group bg-gradient-to-br from-[#fef2f2] to-[#fde8e8] border border-[#f4c7c7] rounded-2xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                                 <div class="flex items-center mb-4">
                                     <div class="w-12 h-12 bg-gradient-to-br from-[#800000] to-[#4b0000] rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
                                         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

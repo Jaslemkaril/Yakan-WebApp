@@ -22,21 +22,30 @@
     }
     
     .status-pending { 
-        @apply bg-yellow-100 text-yellow-800 border border-yellow-200; 
+        background-color: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fcd34d;
     }
     .status-processing { 
-        @apply bg-blue-100 text-blue-800 border border-blue-200;
+        background-color: #dbeafe;
+        color: #1e40af;
+        border: 1px solid #93c5fd;
     }
     .status-completed { 
-        @apply bg-green-100 text-green-800 border border-green-200;
+        background-color: #dcfce7;
+        color: #166534;
+        border: 1px solid #86efac;
     }
     .status-cancelled { 
-        @apply bg-red-100 text-red-800 border border-red-200;
+        background-color: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fca5a5;
     }
     
     /* Statistics Cards */
     .stat-card {
-        @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow;
+        @apply bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow;
+        border-color: #e0b0b0;
         animation: slideInUp 0.5s ease-out;
     }
     
@@ -47,19 +56,23 @@
     
     /* Table Enhancements */
     .enhanced-table {
-        @apply bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden;
+        @apply bg-white rounded-xl shadow-sm border overflow-hidden;
+        border-color: #e0b0b0;
     }
     
     .enhanced-table th {
-        @apply bg-gray-50 text-gray-700 font-semibold text-sm border-b border-gray-200;
+        @apply text-gray-700 font-semibold text-sm;
+        background-color: #faf5f5;
+        border-bottom-color: #e0b0b0;
+        border-bottom-width: 2px;
     }
     
     .enhanced-table td {
-        @apply border-b border-gray-100;
+        border-bottom-color: #f5e6e8;
     }
     
     .enhanced-table tr:hover {
-        @apply bg-gray-50;
+        background-color: #faf5f5;
     }
 </style>
 @endpush
@@ -74,7 +87,7 @@
             <p class="text-gray-600 mt-1">Manage and track custom order requests</p>
         </div>
         <div class="flex items-center gap-3">
-            <a href="{{ route('admin.custom_orders.production-dashboard') }}" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+            <a href="{{ route('admin.custom_orders.production-dashboard') }}" class="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors" style="background-color: #800000;">
                 Production Dashboard
             </a>
         </div>
@@ -89,8 +102,8 @@
                     <p class="text-sm text-gray-600 font-medium">Total Orders</p>
                     <p class="text-2xl font-bold text-gray-900">{{ $totalOrders }}</p>
                 </div>
-                <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-12 h-12 rounded-lg flex items-center justify-center" style="background-color: #faf5f5;">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #800000;">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                     </svg>
                 </div>
@@ -101,10 +114,10 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600 font-medium">Today's Orders</p>
-                    <p class="text-2xl font-bold text-green-600">{{ $todayOrders }}</p>
+                    <p class="text-2xl font-bold" style="color: #800000;">{{ $todayOrders }}</p>
                 </div>
-                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-12 h-12 rounded-lg flex items-center justify-center" style="background-color: #faf5f5;">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #800000;">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
@@ -115,10 +128,10 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600 font-medium">Pending</p>
-                    <p class="text-2xl font-bold text-yellow-600">{{ $pendingCount }}</p>
+                    <p class="text-2xl font-bold" style="color: #800000;">{{ $pendingCount }}</p>
                 </div>
-                <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-12 h-12 rounded-lg flex items-center justify-center" style="background-color: #faf5f5;">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #800000;">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
@@ -129,10 +142,10 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600 font-medium">Total Revenue</p>
-                    <p class="text-2xl font-bold text-purple-600">₱{{ number_format($totalRevenue, 2) }}</p>
+                    <p class="text-2xl font-bold" style="color: #800000;">₱{{ number_format($totalRevenue, 2) }}</p>
                 </div>
-                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-12 h-12 rounded-lg flex items-center justify-center" style="background-color: #faf5f5;">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #800000;">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
@@ -147,12 +160,12 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Name, email, order ID..." 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none transition-all" style="border-color: #e0b0b0; focus-color: #800000;">
             </div>
             
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none transition-all" style="border-color: #e0b0b0;">
                     <option value="">All Status</option>
                     <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
                     <option value="processing" {{ request('status') == 'processing' ? 'selected' : '' }}>Processing</option>
@@ -164,17 +177,17 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Date From</label>
                 <input type="date" name="date_from" value="{{ request('date_from') }}" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none transition-all" style="border-color: #e0b0b0;">
             </div>
             
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Date To</label>
                 <input type="date" name="date_to" value="{{ request('date_to') }}" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none transition-all" style="border-color: #e0b0b0;">
             </div>
             
             <div class="md:col-span-4 flex items-center gap-3">
-                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                <button type="submit" class="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors" style="background-color: #800000;">
                     Filter Orders
                 </button>
                 <a href="{{ route('custom_orders.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
@@ -225,21 +238,21 @@
                                     @if(str_starts_with($order->design_upload, 'data:image'))
                                         {{-- Base64 image --}}
                                         <img src="{{ $order->design_upload }}" alt="Pattern Preview" 
-                                             class="w-16 h-16 rounded-lg object-cover border-2 border-purple-200 shadow-sm">
+                                             class="w-16 h-16 rounded-lg object-cover shadow-sm" style="border: 2px solid #e0b0b0;">
                                     @else
                                         {{-- File path --}}
                                         <img src="{{ asset('storage/' . $order->design_upload) }}" alt="Pattern Preview" 
-                                             class="w-16 h-16 rounded-lg object-cover border-2 border-purple-200 shadow-sm">
+                                             class="w-16 h-16 rounded-lg object-cover shadow-sm" style="border: 2px solid #e0b0b0;">
                                     @endif
                                     @if($order->design_method === 'pattern')
-                                        <span class="absolute -top-1 -right-1 w-5 h-5 bg-purple-600 text-white text-xs rounded-full flex items-center justify-center" title="Pattern Customization">
+                                        <span class="absolute -top-1 -right-1 w-5 h-5 text-white text-xs rounded-full flex items-center justify-center" title="Pattern Customization" style="background-color: #800000;">
                                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                                 <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
                                             </svg>
                                         </span>
                                     @endif
                                     {{-- Hover preview --}}
-                                    <div class="absolute left-0 top-0 w-64 h-64 bg-white rounded-lg shadow-2xl border-2 border-purple-300 p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 -translate-y-2 pointer-events-none">
+                                    <div class="absolute left-0 top-0 w-64 h-64 bg-white rounded-lg shadow-2xl p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 -translate-y-2 pointer-events-none" style="border: 2px solid #e0b0b0;">
                                         @if(str_starts_with($order->design_upload, 'data:image'))
                                             <img src="{{ $order->design_upload }}" alt="Pattern Preview" class="w-full h-full object-contain rounded">
                                         @else
@@ -323,13 +336,13 @@
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-2">
                                 <a href="{{ route('admin.custom_orders.show', $order->id) }}" 
-                                   class="text-indigo-600 hover:text-indigo-900 font-medium text-sm">
+                                   class="font-medium text-sm hover:opacity-80 transition-opacity" style="color: #800000;">
                                     View
                                 </a>
                                 @if($order->status === 'pending')
                                     <form action="{{ route('admin.custom_orders.approve', $order->id) }}" method="POST" class="inline">
                                         @csrf
-                                        <button type="submit" class="text-green-600 hover:text-green-900 font-medium text-sm"
+                                        <button type="submit" class="text-[#800000] hover:text-[#600000] font-medium text-sm"
                                                 onclick="return confirm('Approve this order?')">
                                             Approve
                                         </button>

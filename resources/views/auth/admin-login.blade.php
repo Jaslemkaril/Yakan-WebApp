@@ -69,8 +69,8 @@
         }
         
         .input-focus:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            border-color: #800000 !important;
+            box-shadow: 0 0 0 3px rgba(128, 0, 0, 0.1) !important;
         }
         
         .show-password {
@@ -79,19 +79,19 @@
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen flex items-center justify-center p-4">
+<body class="min-h-screen flex items-center justify-center p-4" style="background: linear-gradient(to bottom right, #1a0000, #330000, #1a0000);">
     <div class="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
         <!-- Left Side - Admin Login Form -->
         <div class="w-full max-w-md mx-auto lg:order-1 animate-slide-left">
             <div class="bg-white rounded-3xl shadow-2xl p-8 md:p-12 border border-gray-100">
                 <!-- Logo -->
                 <div class="flex items-center justify-center space-x-3 mb-8">
-                    <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg" style="background: linear-gradient(to bottom right, #800000, #600000);">
                         <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                         </svg>
                     </div>
-                    <span class="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Yakan Admin</span>
+                    <span class="text-2xl font-bold" style="color: #800000;">Yakan Admin</span>
                 </div>
 
                 <div class="text-center mb-8">
@@ -174,18 +174,18 @@
 
                     <!-- Remember Me -->
                     <div class="flex items-center">
-                        <input type="checkbox" id="remember" name="remember" class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                        <input type="checkbox" id="remember" name="remember" class="w-4 h-4 border-gray-300 rounded" style="accent-color: #800000;">
                         <label for="remember" class="ml-2 text-sm text-gray-700">Keep me signed in</label>
                     </div>
 
                     <!-- Security Notice -->
-                    <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+                    <div class="border rounded-xl p-4" style="background-color: #faf5f5; border-color: #e0b0b0;">
                         <div class="flex items-start">
-                            <svg class="w-5 h-5 text-indigo-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #800000;">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <div>
-                                <p class="text-sm text-indigo-800">
+                                <p class="text-sm" style="color: #600000;">
                                     <span class="font-semibold">Security Notice:</span> This area is restricted to authorized administrators only.
                                 </p>
                             </div>
@@ -195,7 +195,10 @@
                     <!-- Submit Button -->
                     <button 
                         type="submit" 
-                        class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                        class="w-full text-white py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                        style="background: linear-gradient(to right, #800000, #600000);"
+                        onmouseover="this.style.background='linear-gradient(to right, #600000, #400000)'"
+                        onmouseout="this.style.background='linear-gradient(to right, #800000, #600000)'"
                     >
                         Access Dashboard
                     </button>
@@ -203,7 +206,7 @@
 
                 <!-- Forgot Password Link -->
                 <div class="mt-6 text-center">
-                    <a href="{{ route('password.request') }}" class="text-sm text-indigo-600 hover:text-indigo-700 font-semibold">
+                    <a href="{{ route('password.request') }}" class="text-sm font-semibold hover:opacity-80 transition" style="color: #800000;">
                         Forgot your password?
                     </a>
                 </div>
@@ -224,9 +227,9 @@
         <div class="hidden lg:block lg:order-2 animate-slide-right">
             <div class="relative">
                 <!-- Decorative Background -->
-                <div class="absolute inset-0 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl transform -rotate-3 opacity-20"></div>
+                <div class="absolute inset-0 rounded-3xl transform -rotate-3 opacity-20" style="background: linear-gradient(to bottom right, #800000, #400000);"></div>
                 
-                <div class="relative bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-12 text-white pattern-grid shadow-2xl overflow-hidden">
+                <div class="relative rounded-3xl p-12 text-white pattern-grid shadow-2xl overflow-hidden" style="background: linear-gradient(to bottom right, #800000, #400000);">
                     <!-- Animated Background Elements -->
                     <div class="absolute top-10 right-10 w-40 h-40 bg-white/5 rounded-full animate-pulse-slow"></div>
                     <div class="absolute bottom-10 left-10 w-32 h-32 bg-white/5 rounded-full animate-pulse-slow" style="animation-delay: 1s;"></div>

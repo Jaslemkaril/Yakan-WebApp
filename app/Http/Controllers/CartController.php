@@ -212,12 +212,30 @@ class CartController extends Controller
         // Clear Buy Now item from session when viewing regular cart
         session()->forget('buy_now_item');
         
-        $cartItems = Cart::with('product')
-                        ->where('user_id', $userId)
+        // Get cart items - use simple query first
+        $cartItems = Cart::where('user_id', $userId)
+                        ->orderBy('created_at', 'desc')
                         ->get();
+
+        // Manually load products to ensure they're loaded
+        foreach ($cartItems as $item) {
+            if (!$item->product) {
+                $item->load('product');
+            }
+        }
 
         // Debug log
         \Log::info('Cart Index - User ID: ' . $userId . ', Cart Items Count: ' . $cartItems->count());
+        
+        // Log each item for debugging
+        foreach ($cartItems as $item) {
+            \Log::info('Cart Item', [
+                'id' => $item->id,
+                'product_id' => $item->product_id,
+                'product_name' => $item->product?->name ?? 'NULL',
+                'quantity' => $item->quantity
+            ]);
+        }
 
         return view('cart.index', compact('cartItems'));
     }
@@ -246,6 +264,17 @@ class CartController extends Controller
         }
 
         return redirect()->back()->with('success', 'Item removed from cart');
+    }
+
+    /**
+     * Clear all items from cart
+     */
+    public function clear()
+    {
+        Cart::where('user_id', Auth::id())->delete();
+        \Cache::forget('cart_count_' . Auth::id());
+        
+        return redirect()->back()->with('success', 'Cart cleared successfully');
     }
 
     /**
@@ -434,7 +463,14 @@ class CartController extends Controller
 
         $total = max(0, $subtotal - $discount);
 
-        return view('cart.checkout', compact('cartItems', 'total'))
+        // Load user addresses
+        $addresses = \App\Models\UserAddress::forUser(Auth::id())
+            ->orderBy('is_default', 'desc')
+            ->get();
+        
+        $defaultAddress = $addresses->firstWhere('is_default', true);
+
+        return view('cart.checkout', compact('cartItems', 'total', 'addresses', 'defaultAddress'))
             ->with('subtotal', $subtotal)
             ->with('discount', $discount)
             ->with('appliedCoupon', $appliedCoupon);
@@ -448,15 +484,14 @@ class CartController extends Controller
         $request->validate([
             'payment_method'      => 'required|in:online,bank_transfer',
             'delivery_type'       => 'required|in:delivery,pickup',
-            'delivery_house'      => 'required_if:delivery_type,delivery|string|max:100',
-            'delivery_street'     => 'required_if:delivery_type,delivery|string|max:100',
-            'delivery_barangay'   => 'required_if:delivery_type,delivery|string|max:100',
-            'delivery_city'       => 'required_if:delivery_type,delivery|string|max:100',
-            'delivery_province'   => 'required_if:delivery_type,delivery|string|max:100',
-            'delivery_zip'        => 'nullable|string|max:20',
-            'delivery_landmark'   => 'nullable|string|max:150',
+            'address_id'          => 'required_if:delivery_type,delivery|exists:user_addresses,id',
             'customer_notes'      => 'nullable|string|max:500',
         ]);
+
+        // Map form values to database enum values for compatibility
+        $paymentMethod = $request->input('payment_method') === 'online' ? 'gcash' : $request->input('payment_method');
+        $deliveryType = $request->input('delivery_type') === 'delivery' ? 'deliver' : $request->input('delivery_type');
+        $status = 'pending_confirmation'; // Map 'pending' to 'pending_confirmation'
 
         $userId = Auth::id();
         
@@ -513,23 +548,28 @@ class CartController extends Controller
 
         // Build delivery address string (only for delivery type)
         $deliveryAddress = null;
+        $userAddressId = null;
+        
         if ($request->input('delivery_type') === 'delivery') {
+            // Get the selected address
+            $userAddress = \App\Models\UserAddress::where('id', $request->input('address_id'))
+                ->where('user_id', $userId)
+                ->firstOrFail();
+            
+            $userAddressId = $userAddress->id;
+            
+            // Build formatted address string
             $addressParts = [];
-            $addressParts[] = $request->input('delivery_house');
-            $addressParts[] = $request->input('delivery_street');
-            $addressParts[] = 'Brgy. ' . $request->input('delivery_barangay');
-            $addressParts[] = $request->input('delivery_city');
-            $addressParts[] = $request->input('delivery_province');
+            $addressParts[] = $userAddress->street;
+            $addressParts[] = 'Brgy. ' . $userAddress->barangay;
+            $addressParts[] = $userAddress->city;
+            $addressParts[] = $userAddress->province;
 
-            if ($request->filled('delivery_zip')) {
-                $addressParts[] = $request->input('delivery_zip');
+            if ($userAddress->postal_code) {
+                $addressParts[] = $userAddress->postal_code;
             }
 
             $deliveryAddress = implode(', ', array_filter($addressParts));
-
-            if ($request->filled('delivery_landmark')) {
-                $deliveryAddress .= ' - Landmark: ' . $request->input('delivery_landmark');
-            }
         } else {
             $deliveryAddress = 'Store Pickup';
         }
@@ -537,27 +577,40 @@ class CartController extends Controller
         // Create main order (tracking number & history auto-handled in Order model)
         // Initialize tracking details
         $trackingNumber = 'YAK-' . strtoupper(Str::random(10));
-        $initialHistory = [
+        $initialHistory = json_encode([
             [
                 'status' => 'Order Placed',
                 'date' => now()->format('Y-m-d h:i A')
             ]
-        ];
+        ]);
 
+        $user = Auth::user();
+        
         $order = Order::create([
             'user_id'           => $userId,
+            'customer_name'     => $user->name,
+            'customer_email'    => $user->email,
+            'customer_phone'    => $user->phone ?? '',
+            'subtotal'          => $subtotal,
+            'shipping_fee'      => 0,
+            'discount'          => $discount,
+            'total'             => $totalAmount,
             'total_amount'      => $totalAmount,
             'discount_amount'   => $discount,
             'coupon_id'         => $coupon?->id,
             'coupon_code'       => $coupon?->code,
-            'payment_method'    => $request->payment_method,
-            'delivery_type'     => $request->input('delivery_type'),
-            'status'            => 'pending',
+            'payment_method'    => $paymentMethod,
+            'delivery_type'     => $deliveryType,
+            'status'            => $status,
             'payment_status'    => 'pending',
             'tracking_number'   => $trackingNumber,
             'tracking_status'   => 'Order Placed',
             'tracking_history'  => $initialHistory,
+            'shipping_address'  => $deliveryAddress,
             'delivery_address'  => $deliveryAddress,
+            'shipping_city'     => $request->input('delivery_type') === 'delivery' ? $userAddress->city : 'Store Pickup',
+            'shipping_province' => $request->input('delivery_type') === 'delivery' ? $userAddress->province : 'Store Pickup',
+            'user_address_id'   => $userAddressId,
             'customer_notes'    => $request->input('customer_notes'),
         ]);
 
@@ -617,7 +670,7 @@ class CartController extends Controller
                 'order_id' => $order->id,
                 'tracking_number' => $order->tracking_number,
                 'total_amount' => $totalAmount,
-                'payment_method' => $request->payment_method
+                'payment_method' => $paymentMethod
             ]
         );
 
@@ -635,7 +688,7 @@ class CartController extends Controller
                     'customer_name' => $order->user->name,
                     'tracking_number' => $order->tracking_number,
                     'total_amount' => $totalAmount,
-                    'payment_method' => $request->payment_method
+                    'payment_method' => $paymentMethod
                 ]
             );
         }
@@ -677,27 +730,193 @@ class CartController extends Controller
 
         // If POST request, handle receipt upload
         if ($request->isMethod('post')) {
+            try {
+                $request->validate([
+                    'receipt' => 'required|image|max:5000', // 5MB max
+                ]);
+
+                // Upload image
+                $path = $request->file('receipt')->store('bank_receipts', 'uploads');
+                \Log::info('Bank receipt uploaded', ['path' => $path, 'order_id' => $orderId]);
+
+                $order->payment_status = 'paid';
+                $order->payment_verified_at = now();
+                $order->bank_receipt = $path;
+                
+                if ($order->status === 'pending_confirmation') {
+                    $order->status = 'confirmed';
+                }
+                
+                $order->appendTrackingEvent('Bank receipt uploaded - Payment verified');
+                $order->save();
+                
+                \Log::info('Bank payment processed successfully', [
+                    'order_id' => $orderId,
+                    'payment_status' => $order->payment_status,
+                    'status' => $order->status,
+                ]);
+
+                // Notify user
+                \App\Models\Notification::createNotification(
+                    $order->user_id,
+                    'payment',
+                    'Bank payment verified',
+                    "Your bank payment for order #{$order->id} has been verified. Your order is now being processed!",
+                    route('orders.show', $order->id),
+                    [
+                        'order_id' => $order->id,
+                        'payment_method' => $order->payment_method,
+                        'payment_status' => $order->payment_status,
+                    ]
+                );
+
+                // Notify admins about the payment
+                $adminUsers = \App\Models\User::where('role', 'admin')->get();
+                foreach ($adminUsers as $admin) {
+                    \App\Models\Notification::createNotification(
+                        $admin->id,
+                        'payment',
+                        'Payment Received',
+                        "Payment received for order #{$order->id} via Bank Transfer. Amount: ₱" . number_format($order->total_amount, 2),
+                        route('admin.orders.show', $order->id),
+                        [
+                            'order_id' => $order->id,
+                            'payment_method' => $order->payment_method,
+                            'payment_status' => $order->payment_status,
+                        ]
+                    );
+                }
+
+                return redirect()->route('orders.show', $orderId)
+                                 ->with('success', 'Bank payment verified! Your order is now being processed.');
+            } catch (\Exception $e) {
+                \Log::error('Error processing bank payment', [
+                    'order_id' => $orderId,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                
+                return redirect()->route('orders.show', $orderId)
+                                 ->with('error', 'Error processing payment: ' . $e->getMessage());
+            }
+        }
+
+        // GET request - show the payment form
+        return view('cart.payment-bank', compact('order'));
+    }
+
+    /**
+     * Submit Bank Payment (Upload Receipt)
+     */
+    public function submitBankPayment(Request $request, $orderId)
+    {
+        try {
             $request->validate([
                 'receipt' => 'required|image|max:5000', // 5MB max
             ]);
 
+            $order = Order::findOrFail($orderId);
+
+            if ($order->user_id !== Auth::id()) {
+                abort(403, 'Unauthorized payment submission.');
+            }
+
             // Upload image
             $path = $request->file('receipt')->store('bank_receipts', 'uploads');
+            \Log::info('Bank receipt uploaded', ['path' => $path, 'order_id' => $orderId]);
 
             $order->payment_status = 'paid';
+            $order->payment_verified_at = now();
             $order->bank_receipt = $path;
-            if ($order->status === 'pending') {
-                $order->status = 'processing';
+            
+            if ($order->status === 'pending_confirmation') {
+                $order->status = 'confirmed';
             }
+            
             $order->appendTrackingEvent('Bank receipt uploaded - Payment verified');
             $order->save();
+            
+            \Log::info('Bank payment submitted successfully', [
+                'order_id' => $orderId,
+                'payment_status' => $order->payment_status,
+                'status' => $order->status,
+            ]);
 
-            // Notify user
+            return redirect()->route('orders.show', $orderId)
+                             ->with('success', 'Bank payment verified! Your order is now being processed.');
+        } catch (\Exception $e) {
+            \Log::error('Error submitting bank payment', [
+                'order_id' => $orderId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return redirect()->route('orders.show', $orderId)
+                             ->with('error', 'Error processing payment: ' . $e->getMessage());
+        }
+    }
+
+    public function processPayment(Request $request, $orderId)
+    {
+        try {
+            $order = Order::with('user')->findOrFail($orderId);
+
+            if ($order->user_id !== Auth::id()) {
+                abort(403, 'Unauthorized access to this order.');
+            }
+
+            if ($order->payment_method !== 'gcash') {
+                return redirect()->route('orders.show', $orderId)
+                                 ->with('error', 'This order is not set up for online payment.');
+            }
+
+            $request->validate([
+                'gcash_reference' => 'nullable|string|max:191',
+                'payment_proof' => 'required|image|mimes:jpeg,jpg,png,gif|max:5120',
+            ]);
+
+            // Handle payment proof upload
+            $paymentProofPath = null;
+            if ($request->hasFile('payment_proof')) {
+                $file = $request->file('payment_proof');
+                $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $paymentProofPath = $file->storeAs('payment_proofs', $fileName, 'public');
+                \Log::info('Payment proof uploaded', ['path' => $paymentProofPath, 'order_id' => $orderId]);
+            }
+
+            // Update payment status
+            $order->payment_status = 'paid';
+            $order->payment_verified_at = now();
+            
+            // Update order status if pending
+            if ($order->status === 'pending_confirmation') {
+                $order->status = 'confirmed';
+            }
+
+            // Store payment proof path
+            if ($paymentProofPath) {
+                $order->gcash_receipt = $paymentProofPath;
+            }
+
+            $message = 'Payment verified via GCash';
+            if ($request->filled('gcash_reference')) {
+                $message .= ' (Ref: ' . $request->input('gcash_reference') . ')';
+            }
+
+            $order->appendTrackingEvent($message);
+            $order->save();
+            
+            \Log::info('Payment processed successfully', [
+                'order_id' => $orderId,
+                'payment_status' => $order->payment_status,
+                'status' => $order->status,
+            ]);
+
             \App\Models\Notification::createNotification(
                 $order->user_id,
                 'payment',
-                'Bank payment verified',
-                "Your bank payment for order #{$order->id} has been verified. Your order is now being processed!",
+                'GCash payment verified',
+                "Your GCash payment for order #{$order->id} has been verified. Your order is now being processed!",
                 route('orders.show', $order->id),
                 [
                     'order_id' => $order->id,
@@ -713,7 +932,7 @@ class CartController extends Controller
                     $admin->id,
                     'payment',
                     'Payment Received',
-                    "Payment received for order #{$order->id} via Bank Transfer. Amount: ₱" . number_format($order->total_amount, 2),
+                    "Payment received for order #{$order->id} via GCash. Amount: ₱" . number_format($order->total_amount, 2),
                     route('admin.orders.show', $order->id),
                     [
                         'order_id' => $order->id,
@@ -724,118 +943,16 @@ class CartController extends Controller
             }
 
             return redirect()->route('orders.show', $orderId)
-                             ->with('success', 'Bank payment verified! Your order is now being processed.');
-        }
-
-        // GET request - show the payment form
-        return view('cart.payment-bank', compact('order'));
-    }
-
-    /**
-     * Submit Bank Payment (Upload Receipt)
-     */
-    public function submitBankPayment(Request $request, $orderId)
-    {
-        $request->validate([
-            'receipt' => 'required|image|max:5000', // 5MB max
-        ]);
-
-        $order = Order::findOrFail($orderId);
-
-        if ($order->user_id !== Auth::id()) {
-            abort(403, 'Unauthorized payment submission.');
-        }
-
-        // Upload image
-        $path = $request->file('receipt')->store('bank_receipts', 'uploads');
-
-        $order->payment_status = 'paid';
-        $order->bank_receipt = $path;
-        if ($order->status === 'pending') {
-            $order->status = 'processing';
-        }
-        $order->appendTrackingEvent('Bank receipt uploaded - Payment verified');
-        $order->save();
-
-        return redirect()->route('orders.show', $orderId)
-                         ->with('success', 'Bank payment verified! Your order is now being processed.');
-    }
-
-    public function processPayment(Request $request, $orderId)
-    {
-        $order = Order::with('user')->findOrFail($orderId);
-
-        if ($order->user_id !== Auth::id()) {
-            abort(403, 'Unauthorized access to this order.');
-        }
-
-        if ($order->payment_method !== 'online') {
+                             ->with('success', 'GCash payment verified! Your order is now being processed.');
+        } catch (\Exception $e) {
+            \Log::error('Error processing payment', [
+                'order_id' => $orderId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
             return redirect()->route('orders.show', $orderId)
-                             ->with('error', 'This order is not set up for online payment.');
+                             ->with('error', 'Error processing payment: ' . $e->getMessage());
         }
-
-        $request->validate([
-            'gcash_reference' => 'nullable|string|max:191',
-            'payment_proof' => 'required|image|mimes:jpeg,jpg,png,gif|max:5120',
-        ]);
-
-        // Handle payment proof upload
-        $paymentProofPath = null;
-        if ($request->hasFile('payment_proof')) {
-            $file = $request->file('payment_proof');
-            $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-            $paymentProofPath = $file->storeAs('payment_proofs', $fileName, 'public');
-        }
-
-        $order->payment_status = 'paid';
-        if ($order->status === 'pending') {
-            $order->status = 'processing';
-        }
-
-        // Store payment proof path
-        if ($paymentProofPath) {
-            $order->gcash_receipt = $paymentProofPath;
-        }
-
-        $message = 'Payment verified via GCash';
-        if ($request->filled('gcash_reference')) {
-            $message .= ' (Ref: ' . $request->input('gcash_reference') . ')';
-        }
-
-        $order->appendTrackingEvent($message);
-        $order->save();
-
-        \App\Models\Notification::createNotification(
-            $order->user_id,
-            'payment',
-            'GCash payment verified',
-            "Your GCash payment for order #{$order->id} has been verified. Your order is now being processed!",
-            route('orders.show', $order->id),
-            [
-                'order_id' => $order->id,
-                'payment_method' => $order->payment_method,
-                'payment_status' => $order->payment_status,
-            ]
-        );
-
-        // Notify admins about the payment
-        $adminUsers = \App\Models\User::where('role', 'admin')->get();
-        foreach ($adminUsers as $admin) {
-            \App\Models\Notification::createNotification(
-                $admin->id,
-                'payment',
-                'Payment Received',
-                "Payment received for order #{$order->id} via GCash. Amount: ₱" . number_format($order->total_amount, 2),
-                route('admin.orders.show', $order->id),
-                [
-                    'order_id' => $order->id,
-                    'payment_method' => $order->payment_method,
-                    'payment_status' => $order->payment_status,
-                ]
-            );
-        }
-
-        return redirect()->route('orders.show', $orderId)
-                         ->with('success', 'GCash payment verified! Your order is now being processed.');
     }
 }

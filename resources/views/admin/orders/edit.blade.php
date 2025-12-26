@@ -21,7 +21,7 @@
                 <a href="{{ route('admin.orders.show', $order->id) }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
                     <i class="fas fa-eye mr-2"></i>View Order
                 </a>
-                <a href="{{ route('admin.orders.index') }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
+                <a href="{{ route('admin.regular.index') }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
                     <i class="fas fa-arrow-left mr-2"></i>Back to Orders
                 </a>
             </div>
