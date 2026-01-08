@@ -67,7 +67,7 @@
             <!-- Product Header -->
             <div>
                 @if($product->category)
-                    <span class="inline-block px-3 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded-full mb-3">
+                    <span class="inline-block px-3 py-1 text-white text-xs font-semibold rounded-full mb-3" style="background-color: #800000;">
                         {{ $product->category->name }}
                     </span>
                 @endif
@@ -92,12 +92,12 @@
             </div>
 
             <!-- Price Section -->
-            <div class="bg-gradient-to-r from-red-50 to-orange-50 rounded-2xl p-6 border border-red-100">
+            <div class="bg-gradient-to-r from-red-50 to-red-50 rounded-2xl p-6 border" style="border-color: #800000;">
                 <div class="flex items-baseline gap-3">
-                    <div class="text-4xl font-bold text-red-600">₱{{ number_format($product->price, 2) }}</div>
+                    <div class="text-4xl font-bold" style="color: #800000;">₱{{ number_format($product->price, 2) }}</div>
                     @if($product->original_price && $product->original_price > $product->price)
                         <div class="text-lg text-gray-500 line-through">₱{{ number_format($product->original_price, 2) }}</div>
-                        <span class="bg-red-600 text-white px-2 py-1 rounded-full text-xs font-semibold">
+                        <span class="text-white px-2 py-1 rounded-full text-xs font-semibold" style="background-color: #800000;">
                             Save ₱{{ number_format($product->original_price - $product->price, 2) }}
                         </span>
                     @endif
@@ -160,7 +160,10 @@
                         @csrf
                         <input type="hidden" name="quantity" id="cartQty" value="1">
                         <button type="submit" 
-                                class="w-full h-full bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-xl font-semibold hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 whitespace-nowrap"
+                                class="w-full h-full text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 whitespace-nowrap"
+                                style="background: linear-gradient(135deg, #800000 0%, #600000 100%);"
+                                onmouseover="this.style.background='linear-gradient(135deg, #600000 0%, #400000 100%)'"
+                                onmouseout="this.style.background='linear-gradient(135deg, #800000 0%, #600000 100%)'"
                                 @if($product->stock == 0) disabled @endif
                         >
                             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -195,7 +198,10 @@
                     <input type="hidden" name="buy_now" value="1">
                     <button type="submit" 
                             id="buyNowBtn"
-                            class="w-full h-full border-2 border-red-600 text-red-600 px-6 py-3 rounded-xl font-semibold hover:bg-red-50 hover:border-red-700 transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap"
+                            class="w-full h-full border-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap"
+                            style="border-color: #800000; color: #800000;"
+                            onmouseover="this.style.backgroundColor='#fff5f5'"
+                            onmouseout="this.style.backgroundColor='transparent'"
                             @if($product->stock == 0) disabled @endif
                     >
                         <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -395,22 +401,25 @@ function markUnhelpful(reviewId) {
     })
     .catch(error => console.error('Error:', error));
 }
+</script>
 
 <script>
 // Quantity controls
 function incrementQty() {
     const input = document.getElementById('qty');
     const maxValue = parseInt(input.max) || 999;
-    if (parseInt(input.value) < maxValue) {
-        input.value = parseInt(input.value) + 1;
+    const currentValue = parseInt(input.value) || 1;
+    if (currentValue < maxValue) {
+        input.value = currentValue + 1;
         updateHiddenInputs();
     }
 }
 
 function decrementQty() {
     const input = document.getElementById('qty');
-    if (parseInt(input.value) > 1) {
-        input.value = parseInt(input.value) - 1;
+    const currentValue = parseInt(input.value) || 1;
+    if (currentValue > 1) {
+        input.value = currentValue - 1;
         updateHiddenInputs();
     }
 }
@@ -442,16 +451,23 @@ function checkWishlistStatus() {
 }
 
 function toggleWishlist(type, id) {
+    @guest
+        window.location.href = '{{ route("login") }}';
+        return;
+    @endguest
+    
     const btn = document.getElementById('wishlistBtn');
     const btnText = document.getElementById('wishlistBtnText');
+    const btnTextMobile = document.getElementById('wishlistBtnTextMobile');
     
     // Disable button temporarily
     btn.disabled = true;
     btnText.textContent = 'Loading...';
+    btnTextMobile.textContent = 'Loading...';
     
     const action = btn.classList.contains('in-wishlist') ? 'remove' : 'add';
     
-    fetch(`{{ route("wishlist.add") }}`, {
+    fetch('{{ route("wishlist.add") }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -487,13 +503,19 @@ function updateWishlistButton(inWishlist) {
     const btnTextMobile = document.getElementById('wishlistBtnTextMobile');
     
     if (inWishlist) {
-        btn.classList.add('in-wishlist', 'border-red-500', 'text-red-600', 'bg-red-50');
+        btn.classList.add('in-wishlist');
         btn.classList.remove('border-gray-300', 'text-gray-700');
-        btnText.textContent = 'Remove from Wishlist';
-        btnTextMobile.textContent = 'Remove';
+        btn.style.borderColor = '#800000';
+        btn.style.color = '#800000';
+        btn.style.backgroundColor = '#fff5f5';
+        btnText.textContent = 'In Wishlist';
+        btnTextMobile.textContent = 'In Wishlist';
     } else {
-        btn.classList.remove('in-wishlist', 'border-red-500', 'text-red-600', 'bg-red-50');
+        btn.classList.remove('in-wishlist');
         btn.classList.add('border-gray-300', 'text-gray-700');
+        btn.style.borderColor = '';
+        btn.style.color = '';
+        btn.style.backgroundColor = '';
         btnText.textContent = 'Add to Wishlist';
         btnTextMobile.textContent = 'Wishlist';
     }

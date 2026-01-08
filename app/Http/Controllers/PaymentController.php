@@ -156,9 +156,9 @@ class PaymentController extends Controller
 
         // Store proof under storage/app/public/payment_proofs
         $path = $request->file('proof_image')->store('payment_proofs', 'public');
-        $url = asset('storage/' . $path);
 
-        $order->payment_proof_path = $url;
+        // Store relative path only, not full URL
+        $order->payment_proof_path = $path;
         $order->payment_status = 'paid';
         $order->save();
 
@@ -168,7 +168,7 @@ class PaymentController extends Controller
             'data' => [
                 'order_id' => $order->id,
                 'payment_status' => $order->payment_status,
-                'payment_proof_url' => $url,
+                'payment_proof_url' => asset('storage/' . $path),
             ],
         ]);
     }

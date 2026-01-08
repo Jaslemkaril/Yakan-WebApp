@@ -14,39 +14,50 @@ class ProductController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        // Temporarily disable caching to debug 500 error
-        // $cacheKey = 'products:' . md5(json_encode($request->all()));
-        
-        // $products = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 7200), function () use ($request) {
-            $query = Product::with('category')->active();
+        try {
+            $cacheKey = 'products:' . md5(json_encode($request->all()));
             
-            if ($request->has('category')) {
-                $query->where('category_id', $request->category);
-            }
-            
-            if ($request->has('search')) {
-                $query->where(function ($q) use ($request) {
-                    $q->where('name', 'like', '%' . $request->search . '%')
-                      ->orWhere('description', 'like', '%' . $request->search . '%');
-                });
-            }
-            
-            if ($request->has('sort_by')) {
-                $sortBy = $request->sort_by;
-                $sortOrder = $request->get('sort_order', 'asc');
+            $products = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 3600), function () use ($request) {
+                $query = Product::select([
+                    'id', 'name', 'description', 'price', 'stock', 'category_id', 'image', 'status', 'sku'
+                ])->active();
                 
-                if (in_array($sortBy, ['name', 'price', 'created_at'])) {
-                    $query->orderBy($sortBy, $sortOrder);
+                if ($request->has('category')) {
+                    $query->where('category_id', $request->category);
                 }
-            }
-            
-            $products = $query->paginate($request->get('per_page', 12));
-        // });
+                
+                if ($request->has('search')) {
+                    $search = $request->search;
+                    $query->where(function ($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%')
+                          ->orWhere('description', 'like', '%' . $search . '%');
+                    });
+                }
+                
+                if ($request->has('sort_by')) {
+                    $sortBy = $request->sort_by;
+                    $sortOrder = $request->get('sort_order', 'asc');
+                    
+                    if (in_array($sortBy, ['name', 'price', 'created_at'])) {
+                        $query->orderBy($sortBy, $sortOrder);
+                    }
+                }
+                
+                return $query->limit($request->get('per_page', 12))->get();
+            });
 
-        return response()->json([
-            'success' => true,
-            'data' => $products
-        ]);
+            return response()->json([
+                'success' => true,
+                'data' => $products
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Products API Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to fetch products',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function show(Product $product): JsonResponse

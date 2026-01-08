@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  SafeAreaView,
+  StatusBar,
 } from 'react-native';
 import { useCart } from '../context/CartContext';
 import ApiService from '../services/api';
@@ -61,30 +63,30 @@ const OrdersScreen = ({ navigation }) => {
   };
 
   const getStatusColor = (status) => {
+    // Use consistent maroon color theme
+    // Darker maroon for completed/delivered (success state)
+    // Primary maroon for active states
+    // Warning colors for pending
     const statusColors = {
       pending: '#f59e0b',
       pending_payment: '#f59e0b',
-      payment_verified: '#3b82f6',
-      pending_confirmation: '#3b82f6',
-      confirmed: '#3b82f6',
-      processing: '#8b5cf6',
-      shipped: '#6366f1',
-      delivered: '#22c55e',
-      completed: '#22c55e',
+      payment_verified: colors.primary,
+      pending_confirmation: colors.primary,
+      confirmed: colors.primary,
+      processing: '#9B1C1C',
+      shipped: colors.primary,
+      delivered: '#6B1F1F',
+      completed: '#6B1F1F',
       cancelled: '#ef4444',
     };
-    return statusColors[status] || '#999';
+    return statusColors[status] || colors.primary;
   };
 
   const getStatusLabel = (status) => {
     const labels = {
       pending: 'Pending',
-      pending_payment: 'Awaiting Payment',
-      payment_verified: 'Payment Verified',
-      pending_confirmation: 'Pending Confirmation',
-      confirmed: 'Confirmed',
       processing: 'Processing',
-      shipped: 'Shipped',
+      shipped: 'Shipping',
       delivered: 'Delivered',
       completed: 'Completed',
       cancelled: 'Cancelled',
@@ -94,7 +96,8 @@ const OrdersScreen = ({ navigation }) => {
 
   if (!isLoggedIn) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
         <View style={styles.centerContent}>
           <Text style={styles.emptyIcon}>📦</Text>
           <Text style={styles.title}>Login Required</Text>
@@ -107,24 +110,26 @@ const OrdersScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
         <BottomNav navigation={navigation} activeRoute="Orders" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading orders...</Text>
         </View>
         <BottomNav navigation={navigation} activeRoute="Orders" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>My Orders</Text>
@@ -135,23 +140,25 @@ const OrdersScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {orders.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>📦</Text>
-          <Text style={styles.emptyText}>No orders yet</Text>
-          <Text style={styles.emptySubtext}>Start shopping to place your first order</Text>
-          <TouchableOpacity
-            style={styles.emptyButton}
-            onPress={() => navigation.navigate('Home')}
-          >
-            <Text style={styles.emptyButtonText}>Continue Shopping</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={orders}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
+      <View style={styles.content}>
+        {orders.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyIcon}>📦</Text>
+            <Text style={styles.emptyText}>No orders yet</Text>
+            <Text style={styles.emptySubtext}>Start shopping to place your first order</Text>
+            <TouchableOpacity
+              style={styles.emptyButton}
+              onPress={() => navigation.navigate('Home')}
+            >
+              <Text style={styles.emptyButtonText}>Continue Shopping</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            style={{flex: 1}}
+            data={orders}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.orderCard}
               onPress={() => navigation.navigate('OrderDetails', { orderData: item })}
@@ -191,7 +198,7 @@ const OrdersScreen = ({ navigation }) => {
                   <Text style={styles.detailLabel}>Payment</Text>
                   <Text style={[
                     styles.detailValue,
-                    { color: item.payment_status === 'paid' ? '#22c55e' : '#f59e0b' }
+                    { color: item.payment_status === 'paid' ? '#6B1F1F' : '#f59e0b' }
                   ]}>
                     {item.payment_status === 'paid' ? 'Paid' : 'Pending'}
                   </Text>
@@ -211,12 +218,12 @@ const OrdersScreen = ({ navigation }) => {
               tintColor={colors.primary}
             />
           }
-          scrollEnabled={orders.length > 5}
         />
-      )}
+        )}
+      </View>
 
       <BottomNav navigation={navigation} activeRoute="Orders" />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -224,6 +231,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  content: {
+    flex: 1,
   },
   centerContent: {
     flex: 1,
@@ -236,7 +246,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 50,
+    paddingBottom: 16,
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
@@ -322,7 +333,8 @@ const styles = StyleSheet.create({
   },
   ordersList: {
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: 100,
   },
   orderCard: {
     backgroundColor: colors.white,

@@ -139,4 +139,37 @@ class ChatController extends Controller
 
         return redirect()->route('chats.index')->with('success', 'Chat closed successfully!');
     }
+
+    /**
+     * Respond to price quote
+     */
+    public function respondToQuote(Request $request, Chat $chat)
+    {
+        if ($chat->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'response' => 'required|in:accepted,declined',
+            'quote_message_id' => 'required|exists:chat_messages,id',
+        ]);
+
+        $response = $validated['response'];
+        $emoji = $response === 'accepted' ? '✅' : '❌';
+        $action = $response === 'accepted' ? 'accepted' : 'declined';
+        
+        $message = "{$emoji} Customer {$action} the price quote.\n\n" . 
+                   "Customer will " . ($response === 'accepted' ? 'proceed with the custom order.' : 'not proceed with this quote.');
+
+        ChatMessage::create([
+            'chat_id' => $chat->id,
+            'user_id' => auth()->id(),
+            'sender_type' => 'user',
+            'message' => $message,
+        ]);
+
+        $chat->update(['updated_at' => now()]);
+
+        return redirect()->route('chats.show', $chat)->with('success', 'Response sent to admin!');
+    }
 }

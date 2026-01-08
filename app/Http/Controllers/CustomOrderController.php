@@ -67,6 +67,11 @@ class CustomOrderController extends Controller
                     ->with('error', 'Please start your custom order.');
             }
 
+            // For Fabric Flow (fabric + pattern), skip Order Details and go directly to Review
+            if (isset($wizardData['fabric']) && isset($wizardData['pattern']) && !isset($wizardData['product'])) {
+                return redirect()->route('custom_orders.create.step4');
+            }
+
             if (isset($wizardData['product'])) {
                 $product = \App\Models\Product::find($wizardData['product']['id'] ?? null);
                 if (!$product) {
@@ -579,8 +584,8 @@ class CustomOrderController extends Controller
                 ]);
             }
 
-            // Redirect to image upload (new step 2)
-            return redirect()->route('custom_orders.create.image');
+            // Redirect directly to pattern selection (skip image upload)
+            return redirect()->route('custom_orders.create.pattern');
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Validation error in storeStep1', [
@@ -828,8 +833,8 @@ class CustomOrderController extends Controller
                 ]);
             }
             
-            // Fallback for non-AJAX requests - redirect to step 3 (Order Details) instead of step 4
-            return redirect()->route('custom_orders.create.step3')->with('wizard_saved', true);
+            // Skip Details step and go directly to Review (step 4)
+            return redirect()->route('custom_orders.create.step3');
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Pattern validation error:', $e->errors());
@@ -950,9 +955,14 @@ class CustomOrderController extends Controller
                     ->with('error', 'Please start your custom order.');
             }
 
-            // Get user's saved addresses
-            $userAddresses = auth()->user()->addresses()->get();
-            $defaultAddress = auth()->user()->addresses()->where('is_default', true)->first();
+            // Get user's saved addresses - force fresh query from database
+            $userAddresses = \App\Models\UserAddress::where('user_id', auth()->id())
+                ->orderBy('is_default', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+            $defaultAddress = \App\Models\UserAddress::where('user_id', auth()->id())
+                ->where('is_default', true)
+                ->first();
 
             if (isset($wizardData['product'])) {
                 $product = \App\Models\Product::find($wizardData['product']['id'] ?? null);
@@ -1138,14 +1148,26 @@ class CustomOrderController extends Controller
                 $complexity = $this->calculateComplexityFromMetadata($designMetadata);
                 $designMethod = 'visual';
             } elseif (isset($wizardData['pattern'])) {
-                // Pattern-based flow (supports string or array)
+                // Pattern-based flow
                 $patternName = null;
-                $patternId = $wizardData['pattern_id'] ?? null;
+                $patternId = null;
                 $patternDifficulty = 'medium';
 
-                if (is_array($wizardData['pattern'])) {
+                // Check for selected_ids array (from wizard pattern selection)
+                if (isset($wizardData['pattern']['selected_ids']) && !empty($wizardData['pattern']['selected_ids'])) {
+                    // Get the first pattern ID from the array
+                    $patternId = $wizardData['pattern']['selected_ids'][0];
+                    
+                    // Load the pattern model
+                    $patternModel = \App\Models\YakanPattern::find($patternId);
+                    if ($patternModel) {
+                        $patternName = $patternModel->name;
+                        $patternDifficulty = $patternModel->difficulty_level ?? $patternDifficulty;
+                        $patternsArray = $wizardData['pattern']['selected_ids']; // Store all selected pattern IDs
+                    }
+                } elseif (is_array($wizardData['pattern'])) {
                     $patternName = $wizardData['pattern']['name'] ?? null;
-                    $patternId = $wizardData['pattern']['id'] ?? $patternId;
+                    $patternId = $wizardData['pattern']['id'] ?? null;
                     $patternDifficulty = $wizardData['pattern']['difficulty'] ?? $patternDifficulty;
                     
                     // Extract preview image from pattern data
@@ -1158,8 +1180,8 @@ class CustomOrderController extends Controller
                     $patternName = $wizardData['pattern'];
                 }
 
-                // Try to resolve pattern details from DB if possible
-                if ($patternId || $patternName) {
+                // Try to resolve pattern details from DB if not already loaded
+                if (!$patternId && ($patternId || $patternName)) {
                     $patternModel = null;
                     if ($patternId) {
                         $patternModel = \App\Models\YakanPattern::find($patternId);
@@ -1174,7 +1196,10 @@ class CustomOrderController extends Controller
                     }
                 }
 
-                $patternsArray = array_values(array_filter([$patternName]));
+                // Set patterns array if not already set
+                if (empty($patternsArray)) {
+                    $patternsArray = $patternId ? [$patternId] : array_values(array_filter([$patternName]));
+                }
                 $complexity = $patternDifficulty;
                 
                 // Include customization settings and preview in metadata
@@ -1200,6 +1225,9 @@ class CustomOrderController extends Controller
             $addrProvince  = $validated['delivery_province'] ?? null;
             $addrZip       = $validated['delivery_zip'] ?? null;
             $addrLandmark  = $validated['delivery_landmark'] ?? null;
+            
+            // Extract customization settings
+            $customizationSettings = $wizardData['pattern']['customization_settings'] ?? null;
 
             $formDeliveryAddr = null;
             if ($formDeliveryType === 'delivery') {
@@ -1239,6 +1267,9 @@ class CustomOrderController extends Controller
                 if ($imagePath) {
                     $order->design_upload = $imagePath;
                 }
+                if ($customizationSettings) {
+                    $order->customization_settings = $customizationSettings;
+                }
                 $order->save();
                 $customOrder = $order;
             } else {
@@ -1266,6 +1297,7 @@ class CustomOrderController extends Controller
                     'design_upload' => $imagePath,
                     'design_method' => $designMethod,
                     'design_metadata' => $designMetadata,
+                    'customization_settings' => $customizationSettings,
                     
                     // Fabric-specific fields
                     'fabric_type' => $wizardData['fabric']['type'] ?? null,
@@ -1720,7 +1752,7 @@ class CustomOrderController extends Controller
 
         // Store receipt if uploaded
         if ($request->hasFile('receipt')) {
-            $order->payment_receipt = $request->file('receipt')->store('payment_receipts', 'uploads');
+            $order->payment_receipt = $request->file('receipt')->store('payment_receipts', 'public');
         }
 
         $order->transaction_id = $request->transaction_id;
@@ -1730,10 +1762,13 @@ class CustomOrderController extends Controller
             $order->transfer_date = $request->transfer_date;
         }
 
-        // For all payment methods, mark as 'pending' in the DB (valid enum value).
-        // The UI treats 'pending' as a payment submitted / pending verification state
-        // for custom orders, so this avoids enum truncation errors.
-        $order->payment_status = 'pending';
+        // Set payment status to 'paid' when receipt is uploaded
+        // Status remains at 'approved' - admin must manually click 'Start Production'
+        if ($request->hasFile('receipt')) {
+            $order->payment_status = 'paid';
+        } else {
+            $order->payment_status = 'pending';
+        }
         
         $order->save();
 

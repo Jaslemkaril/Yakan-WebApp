@@ -1,19 +1,9 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Login - Yakan</title>
+@extends('layouts.app')
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+@section('title', 'Login - Yakan')
 
-    <!-- Scripts -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    
-    <style>
+@push('styles')
+<style>
     .auth-container {
         background: #800000;
         min-height: 100vh;
@@ -28,8 +18,8 @@
         right: -50%;
         width: 200%;
         height: 200%;
-        background: radial-gradient(circle, rgba(251, 146, 60, 0.1) 0%, transparent 70%);
-        animation: rotate 20s linear infinite;
+        background: radial-gradient(circle, rgba(251, 146, 60, 0.05) 0%, transparent 70%);
+        animation: rotate 60s linear infinite;
     }
 
     @keyframes rotate {
@@ -56,7 +46,13 @@
     }
 
     .auth-form {
-        padding: 3rem;
+        padding: 2rem;
+    }
+
+    @media (min-width: 768px) {
+        .auth-form {
+            padding: 3rem;
+        }
     }
 
     .social-login-btn {
@@ -71,6 +67,7 @@
         font-weight: 600;
         transition: all 0.3s ease;
         cursor: pointer;
+        width: 100%;
     }
 
     .social-login-btn:hover {
@@ -113,6 +110,7 @@
         transform: translateY(-50%);
         color: #9ca3af;
         transition: color 0.3s ease;
+        pointer-events: none;
     }
 
     .auth-input {
@@ -131,7 +129,7 @@
         box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
     }
 
-    .auth-input:focus + .input-icon {
+    .auth-input:focus ~ .input-icon {
         color: #dc2626;
     }
 
@@ -150,13 +148,20 @@
 
     .auth-illustration {
         background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%);
-        padding: 3rem;
+        padding: 2rem;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
         text-align: center;
         color: white;
+        border-radius: 24px;
+    }
+
+    @media (min-width: 1024px) {
+        .auth-illustration {
+            padding: 3rem;
+        }
     }
 
     .feature-list {
@@ -186,6 +191,19 @@
         flex-shrink: 0;
     }
 
+    .error-message {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #dc2626;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 14px;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
     .btn-primary {
         background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%);
         color: white;
@@ -196,10 +214,15 @@
         cursor: pointer;
     }
 
-    .btn-primary:hover {
+    .btn-primary:hover:not(:disabled) {
         background: linear-gradient(135deg, #b91c1c 0%, #c2410c 100%);
         transform: translateY(-2px);
         box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3);
+    }
+
+    .btn-primary:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
     }
 
     .text-gradient {
@@ -209,8 +232,19 @@
         background-clip: text;
     }
 </style>
+@endpush
 
+@section('content')
 <div class="auth-container relative">
+    <!-- Hide main header for auth page -->
+    <style>
+        body > header {
+            display: none;
+        }
+        body > footer {
+            display: none;
+        }
+    </style>
     <div class="relative z-10 min-h-screen flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
         <div class="max-w-6xl w-full">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
@@ -358,6 +392,4 @@
         </div>
     </div>
 </div>
-</div>
-</body>
-</html>
+@endsection

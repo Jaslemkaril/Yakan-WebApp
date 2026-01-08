@@ -21,6 +21,11 @@
         overflow: hidden;
     }
 
+    .cart-item.selected {
+        border-color: #800000;
+        background: #fef2f2;
+    }
+
     .cart-item::before {
         content: '';
         position: absolute;
@@ -35,6 +40,29 @@
         transform: translateY(-4px);
         box-shadow: 0 16px 32px rgba(128, 0, 0, 0.15);
         border-color: #800000;
+    }
+
+    .cart-checkbox {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #d1d5db;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        accent-color: #800000;
+    }
+
+    .cart-checkbox:checked {
+        border-color: #800000;
+    }
+
+    .select-all-container {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        border: 2px solid #f3f4f6;
     }
 
     .product-image-wrapper {
@@ -280,6 +308,14 @@
             <div class="flex flex-col lg:flex-row gap-8">
                 <!-- Cart Items -->
                 <main class="lg:w-2/3">
+                    <!-- Select All -->
+                    <div class="select-all-container">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="selectAll" class="cart-checkbox" checked onchange="toggleSelectAll(this)">
+                            <span class="font-semibold text-gray-900">Select All</span>
+                        </label>
+                    </div>
+
                     <div class="space-y-4">
                         @foreach($cartItems as $index => $item)
                             @php
@@ -287,8 +323,13 @@
                             @endphp
                             
                             @if($product)
-                                <div class="cart-item" data-item-id="{{ $item->id }}">
+                                <div class="cart-item selected" data-item-id="{{ $item->id }}">
                                     <div class="flex gap-4">
+                                        <!-- Checkbox -->
+                                        <div class="flex items-start pt-1">
+                                            <input type="checkbox" class="item-checkbox cart-checkbox" data-item-id="{{ $item->id }}" data-price="{{ $product->price * $item->quantity }}" checked onchange="updateSelection()">
+                                        </div>
+
                                         <!-- Product Image -->
                                         <div class="w-28 h-28 flex-shrink-0 product-image-wrapper">
                                             @if($product->image)
@@ -386,12 +427,13 @@
                                 }
                             }
                             $total = $subtotal;
+                            $itemCount = count($cartItems);
                         @endphp
 
                         <div class="space-y-0 mb-6 pb-6 border-b-2 border-gray-200">
                             <div class="summary-row">
                                 <span class="text-gray-600">Subtotal</span>
-                                <span class="font-semibold text-gray-900">₱{{ number_format($subtotal, 2) }}</span>
+                                <span class="font-semibold text-gray-900" id="subtotalDisplay">₱{{ number_format($subtotal, 2) }}</span>
                             </div>
                             <div class="summary-row">
                                 <span class="text-gray-600">Shipping</span>
@@ -399,16 +441,16 @@
                             </div>
                             <div class="summary-row total">
                                 <span class="label">Total</span>
-                                <span class="value">₱{{ number_format($total, 2) }}</span>
+                                <span class="value" id="totalDisplay">₱{{ number_format($total, 2) }}</span>
                             </div>
                         </div>
 
-                        <a href="{{ route('cart.checkout') }}" class="btn-primary w-full text-lg py-4 justify-center mb-4">
-                            <span>Proceed to Checkout</span>
+                        <button onclick="proceedToCheckout()" class="btn-primary w-full text-lg py-4 justify-center mb-4">
+                            <span id="checkoutText">Proceed to Checkout (<span id="selectedCount">{{ $itemCount }}</span> items)</span>
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
                             </svg>
-                        </a>
+                        </button>
 
                         <div class="text-center text-sm text-gray-500 flex items-center justify-center gap-2">
                             <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
@@ -453,6 +495,94 @@
     </div>
 
     <script>
+        function toggleSelectAll(checkbox) {
+            const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+            itemCheckboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+                const cartItem = cb.closest('.cart-item');
+                if (checkbox.checked) {
+                    cartItem.classList.add('selected');
+                } else {
+                    cartItem.classList.remove('selected');
+                }
+            });
+            updateSelection();
+        }
+
+        function updateSelection() {
+            const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+            const selectAllCheckbox = document.getElementById('selectAll');
+            
+            // Update select all checkbox
+            const allChecked = Array.from(itemCheckboxes).every(cb => cb.checked);
+            const someChecked = Array.from(itemCheckboxes).some(cb => cb.checked);
+            selectAllCheckbox.checked = allChecked;
+            selectAllCheckbox.indeterminate = someChecked && !allChecked;
+            
+            // Update cart item styling
+            itemCheckboxes.forEach(cb => {
+                const cartItem = cb.closest('.cart-item');
+                if (cb.checked) {
+                    cartItem.classList.add('selected');
+                } else {
+                    cartItem.classList.remove('selected');
+                }
+            });
+            
+            // Calculate totals for selected items
+            let selectedSubtotal = 0;
+            let selectedCount = 0;
+            
+            itemCheckboxes.forEach(cb => {
+                if (cb.checked) {
+                    selectedSubtotal += parseFloat(cb.dataset.price);
+                    selectedCount++;
+                }
+            });
+            
+            // Update displays
+            document.getElementById('subtotalDisplay').textContent = '₱' + selectedSubtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            document.getElementById('totalDisplay').textContent = '₱' + selectedSubtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            document.getElementById('selectedCount').textContent = selectedCount;
+        }
+
+        function proceedToCheckout() {
+            const selectedItems = Array.from(document.querySelectorAll('.item-checkbox:checked'));
+            
+            if (selectedItems.length === 0) {
+                alert('Please select items to checkout');
+                return;
+            }
+            
+            // Get selected item IDs
+            const selectedIds = selectedItems.map(cb => cb.dataset.itemId);
+            
+            // Create form to POST selected items
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route("cart.checkout") }}';
+            
+            // Add CSRF token
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_token';
+            csrfInput.value = csrfToken;
+            form.appendChild(csrfInput);
+            
+            // Add selected item IDs
+            selectedIds.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'selected_items[]';
+                input.value = id;
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+
         function updateQuantity(itemId, newQuantity) {
             if (newQuantity < 1) return;
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');

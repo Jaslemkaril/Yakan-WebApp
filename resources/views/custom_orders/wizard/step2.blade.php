@@ -19,19 +19,12 @@
                     <div class="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full flex items-center justify-center text-xs sm:text-xs lg:text-sm font-semibold shadow animate-pulse">
                         2
                     </div>
-                    <span class="ml-1 sm:ml-2 text-xs font-medium text-purple-600 hidden sm:inline">Design</span>
+                    <span class="ml-1 sm:ml-2 text-xs font-medium text-purple-600 hidden sm:inline">Pattern</span>
                 </div>
                 <div class="w-4 sm:w-8 lg:w-16 h-1 bg-gray-300 rounded-full"></div>
                 <div class="flex items-center">
                     <div class="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-xs sm:text-xs lg:text-sm font-semibold">
                         3
-                    </div>
-                    <span class="ml-1 sm:ml-2 text-xs text-gray-500 hidden sm:inline">Details</span>
-                </div>
-                <div class="w-4 sm:w-8 lg:w-16 h-1 bg-gray-300 rounded-full"></div>
-                <div class="flex items-center">
-                    <div class="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-xs sm:text-xs lg:text-sm font-semibold">
-                        4
                     </div>
                     <span class="ml-1 sm:ml-2 text-xs text-gray-500 hidden sm:inline">Review</span>
                 </div>
@@ -41,7 +34,7 @@
 
     <!-- Mobile Header -->
     <div class="lg:hidden bg-white shadow-lg sm:shadow-xl border-b border-purple-100 sticky top-16 z-30">
-        <div class="p-2 sm:p-4">
+        <div class="p-2 sm:p-4 relative z-10">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2 sm:space-x-3">
                     @if($product && $product->image)

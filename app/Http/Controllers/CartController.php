@@ -10,6 +10,7 @@ use App\Models\OrderItem;
 use App\Models\Coupon;
 use App\Models\CouponRedemption;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CartController extends Controller
@@ -59,18 +60,37 @@ class CartController extends Controller
                 return redirect()->back()->with('error', "Insufficient stock. Only {$availableQty} item(s) available.");
             }
 
-            // If "Buy Now" was clicked, store in session and redirect directly to checkout
+            // If "Buy Now" was clicked, add to cart and redirect to cart page
             if ($request->input('buy_now')) {
                 \Log::info('Buy Now triggered', ['user_id' => $userId, 'product_id' => $product->id, 'quantity' => $qty]);
                 
-                // Store Buy Now item in session (not in cart)
-                session(['buy_now_item' => [
-                    'product_id' => $product->id,
-                    'quantity' => $qty
-                ]]);
+                // Add to cart instead of session
+                $cartItem = Cart::where('user_id', $userId)
+                                ->where('product_id', $product->id)
+                                ->first();
+
+                if ($cartItem) {
+                    // Check if new total exceeds available stock
+                    $newTotal = $cartItem->quantity + $qty;
+                    
+                    if (!$inventory->hasSufficientStock($newTotal)) {
+                        $availableQty = $inventory->quantity;
+                        return redirect()->back()->with('error', "Cannot add more. Only {$availableQty} item(s) available in total.");
+                    }
+                    $cartItem->quantity += $qty;
+                    $cartItem->save();
+                    \Log::info('Cart item updated via Buy Now', ['cart_item_id' => $cartItem->id, 'new_quantity' => $cartItem->quantity]);
+                } else {
+                    $newItem = Cart::create([
+                        'user_id'    => $userId,
+                        'product_id' => $product->id,
+                        'quantity'   => $qty,
+                    ]);
+                    \Log::info('Cart item created via Buy Now', ['cart_item_id' => $newItem->id]);
+                }
                 
-                \Log::info('Buy Now item stored in session', ['product_id' => $product->id, 'quantity' => $qty]);
-                return redirect()->route('cart.checkout')->with('success', 'Proceeding to checkout!');
+                \Log::info('Redirecting to cart for review');
+                return redirect()->route('cart.index')->with('success', 'Product added to cart. Review and proceed to checkout.');
             }
 
             // Regular "Add to Cart" flow
@@ -410,8 +430,13 @@ class CartController extends Controller
     /**
      * Show checkout page (Mode of Payment)
      */
-    public function checkout()
+    public function checkout(Request $request)
     {
+        // Store selected item IDs in session if provided
+        if ($request->has('selected_items')) {
+            session(['selected_cart_items' => $request->input('selected_items')]);
+        }
+        
         // Check if "Buy Now" item exists in session
         if (session()->has('buy_now_item')) {
             $buyNowItem = session('buy_now_item');
@@ -441,6 +466,18 @@ class CartController extends Controller
 
             if ($cartItems->isEmpty()) {
                 return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
+            }
+            
+            // Filter by selected items if any are selected
+            if (session()->has('selected_cart_items')) {
+                $selectedIds = session('selected_cart_items');
+                $cartItems = $cartItems->filter(function($item) use ($selectedIds) {
+                    return in_array($item->id, $selectedIds);
+                });
+                
+                if ($cartItems->isEmpty()) {
+                    return redirect()->route('cart.index')->with('error', 'Please select items to checkout.');
+                }
             }
             
             $subtotal = $cartItems->sum(fn($item) => $item->product->price * $item->quantity);
@@ -520,6 +557,18 @@ class CartController extends Controller
             if ($cartItems->isEmpty()) {
                 return redirect()->back()->with('error', 'Your cart is empty.');
             }
+            
+            // Filter by selected items if they exist in session
+            if (session()->has('selected_cart_items')) {
+                $selectedIds = session('selected_cart_items');
+                $cartItems = $cartItems->filter(function($item) use ($selectedIds) {
+                    return in_array($item->id, $selectedIds);
+                });
+                
+                if ($cartItems->isEmpty()) {
+                    return redirect()->back()->with('error', 'No items selected for checkout.');
+                }
+            }
         }
 
         // Validate stock availability for all items before processing
@@ -544,11 +593,12 @@ class CartController extends Controller
             }
         }
 
-        $totalAmount = max(0, $subtotal - $discount);
+        $totalBeforeShipping = max(0, $subtotal - $discount);
 
         // Build delivery address string (only for delivery type)
         $deliveryAddress = null;
         $userAddressId = null;
+        $shippingFee = 0;
         
         if ($request->input('delivery_type') === 'delivery') {
             // Get the selected address
@@ -570,9 +620,35 @@ class CartController extends Controller
             }
 
             $deliveryAddress = implode(', ', array_filter($addressParts));
+
+            // Server-side shipping fee calculation (mirror frontend tiers)
+            $cityLower = strtolower($userAddress->city ?? '');
+            $regionLower = strtolower($userAddress->province ?? $userAddress->region ?? '');
+            $postalCode = $userAddress->postal_code ?? '';
+
+            if (str_contains($cityLower, 'zamboanga') && str_starts_with($postalCode, '7')) {
+                $shippingFee = 0;
+            } elseif (str_contains($regionLower, 'zamboanga') || in_array($cityLower, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
+                $shippingFee = 80;
+            } elseif (in_array($cityLower, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) || str_contains($regionLower, 'barmm') || str_contains($regionLower, 'armm')) {
+                $shippingFee = 120;
+            } elseif (str_contains($regionLower, 'mindanao') || in_array($cityLower, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'])) {
+                $shippingFee = 150;
+            } elseif (str_contains($regionLower, 'visayas') || in_array($cityLower, ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'])) {
+                $shippingFee = 180;
+            } elseif (str_contains($cityLower, 'manila') || str_contains($regionLower, 'ncr') || in_array($cityLower, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'])) {
+                $shippingFee = 220;
+            } elseif (str_contains($regionLower, 'luzon') || in_array($cityLower, ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'])) {
+                $shippingFee = 250;
+            } else {
+                $shippingFee = 280;
+            }
         } else {
             $deliveryAddress = 'Store Pickup';
+            $shippingFee = 0;
         }
+
+        $totalAmount = $totalBeforeShipping + $shippingFee;
 
         // Create main order (tracking number & history auto-handled in Order model)
         // Initialize tracking details
@@ -587,12 +663,13 @@ class CartController extends Controller
         $user = Auth::user();
         
         $order = Order::create([
+            'order_ref'         => Order::generateOrderRef(),
             'user_id'           => $userId,
             'customer_name'     => $user->name,
             'customer_email'    => $user->email,
             'customer_phone'    => $user->phone ?? '',
             'subtotal'          => $subtotal,
-            'shipping_fee'      => 0,
+            'shipping_fee'      => $shippingFee,
             'discount'          => $discount,
             'total'             => $totalAmount,
             'total_amount'      => $totalAmount,
@@ -653,7 +730,17 @@ class CartController extends Controller
         if (session()->has('buy_now_item')) {
             session()->forget('buy_now_item');
         } else {
-            Cart::where('user_id', $userId)->delete();
+            // If specific items were selected, only delete those
+            if (session()->has('selected_cart_items')) {
+                $selectedIds = session('selected_cart_items');
+                Cart::where('user_id', $userId)
+                    ->whereIn('id', $selectedIds)
+                    ->delete();
+                session()->forget('selected_cart_items');
+            } else {
+                // Otherwise, clear entire cart
+                Cart::where('user_id', $userId)->delete();
+            }
         }
         
         // Clear cart count cache
@@ -730,25 +817,65 @@ class CartController extends Controller
 
         // If POST request, handle receipt upload
         if ($request->isMethod('post')) {
+            \Log::info('=== BANK RECEIPT UPLOAD STARTED ===', [
+                'order_id' => $orderId,
+                'has_file' => $request->hasFile('receipt'),
+                'user_id' => Auth::id()
+            ]);
+            
             try {
                 $request->validate([
                     'receipt' => 'required|image|max:5000', // 5MB max
                 ]);
+                
+                \Log::info('Validation passed');
 
                 // Upload image
-                $path = $request->file('receipt')->store('bank_receipts', 'uploads');
-                \Log::info('Bank receipt uploaded', ['path' => $path, 'order_id' => $orderId]);
+                $path = $request->file('receipt')->store('bank_receipts', 'public');
+                \Log::info('Bank receipt file uploaded', [
+                    'path' => $path,
+                    'order_id' => $orderId,
+                    'full_path' => storage_path('app/public/' . $path)
+                ]);
 
-                $order->payment_status = 'paid';
-                $order->payment_verified_at = now();
-                $order->bank_receipt = $path;
+                // Direct DB update to ensure it saves
+                // Automatically set order status to 'processing' and payment_status to 'verified' when receipt is uploaded
+                DB::table('orders')
+                    ->where('id', $orderId)
+                    ->update([
+                        'status' => 'processing',
+                        'payment_status' => 'verified',
+                        'bank_receipt' => $path,
+                        'updated_at' => now()
+                    ]);
                 
-                if ($order->status === 'pending_confirmation') {
-                    $order->status = 'confirmed';
+                \Log::info('DB UPDATE EXECUTED');
+                
+                // Refresh the model
+                $order = $order->fresh();
+                
+                \Log::info('Bank receipt saved via direct DB update', [
+                    'order_id' => $orderId,
+                    'bank_receipt' => $order->bank_receipt,
+                    'payment_status' => $order->payment_status
+                ]);
+                
+                // Try to append tracking event
+                try {
+                    $order->appendTrackingEvent('Bank receipt uploaded - Pending verification');
+                    $order->save();
+                } catch (\Exception $e) {
+                    \Log::warning('Could not append tracking event: ' . $e->getMessage());
                 }
                 
-                $order->appendTrackingEvent('Bank receipt uploaded - Payment verified');
-                $order->save();
+                $saved = true;
+                
+                \Log::info('Bank receipt order update', [
+                    'saved' => $saved,
+                    'order_id' => $orderId,
+                    'bank_receipt' => $order->bank_receipt,
+                    'payment_status' => $order->payment_status
+                ]);
                 
                 \Log::info('Bank payment processed successfully', [
                     'order_id' => $orderId,
@@ -788,7 +915,7 @@ class CartController extends Controller
                 }
 
                 return redirect()->route('orders.show', $orderId)
-                                 ->with('success', 'Bank payment verified! Your order is now being processed.');
+                                 ->with('success', 'Bank receipt uploaded! We will verify and update your order shortly.');
             } catch (\Exception $e) {
                 \Log::error('Error processing bank payment', [
                     'order_id' => $orderId,
@@ -822,19 +949,35 @@ class CartController extends Controller
             }
 
             // Upload image
-            $path = $request->file('receipt')->store('bank_receipts', 'uploads');
+            $path = $request->file('receipt')->store('bank_receipts', 'public');
             \Log::info('Bank receipt uploaded', ['path' => $path, 'order_id' => $orderId]);
 
-            $order->payment_status = 'paid';
-            $order->payment_verified_at = now();
-            $order->bank_receipt = $path;
+            // Direct DB update
+            \DB::table('orders')
+                ->where('id', $orderId)
+                ->update([
+                    'payment_status' => 'verification_pending',
+                    'bank_receipt' => $path,
+                    'updated_at' => now()
+                ]);
             
-            if ($order->status === 'pending_confirmation') {
-                $order->status = 'confirmed';
+            $order = $order->fresh();
+            
+            // Try tracking event
+            try {
+                $order->appendTrackingEvent('Bank receipt uploaded - Pending verification');
+                $order->save();
+            } catch (\Exception $e) {
+                \Log::warning('Could not append tracking event: ' . $e->getMessage());
             }
             
-            $order->appendTrackingEvent('Bank receipt uploaded - Payment verified');
-            $order->save();
+            $saved = true;
+            
+            \Log::info('Bank receipt saved (submitBankPayment)', [
+                'saved' => $saved,
+                'order_id' => $orderId,
+                'bank_receipt' => $order->bank_receipt
+            ]);
             
             \Log::info('Bank payment submitted successfully', [
                 'order_id' => $orderId,
@@ -843,7 +986,7 @@ class CartController extends Controller
             ]);
 
             return redirect()->route('orders.show', $orderId)
-                             ->with('success', 'Bank payment verified! Your order is now being processed.');
+                             ->with('success', 'Bank receipt uploaded! We will verify and update your order shortly.');
         } catch (\Exception $e) {
             \Log::error('Error submitting bank payment', [
                 'order_id' => $orderId,
@@ -888,10 +1031,8 @@ class CartController extends Controller
             $order->payment_status = 'paid';
             $order->payment_verified_at = now();
             
-            // Update order status if pending
-            if ($order->status === 'pending_confirmation') {
-                $order->status = 'confirmed';
-            }
+            // Automatically set order status to 'processing' when payment is verified
+            $order->status = 'processing';
 
             // Store payment proof path
             if ($paymentProofPath) {

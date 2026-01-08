@@ -105,17 +105,17 @@
         <div class="mb-8">
             <div class="flex items-center justify-center space-x-4">
                 <div class="flex items-center">
-                    <div class="w-10 h-10 bg-green-600 text-white rounded-full flex items-center justify-center font-semibold">
+                    <div class="w-10 h-10 text-white rounded-full flex items-center justify-center font-semibold" style="background-color:#800000;">
                         ✓
                     </div>
                     <span class="ml-2 font-medium" style="color:#800000;">Fabric</span>
                 </div>
-                <div class="w-16 h-1 bg-maroon-600"></div>
+                <div class="w-16 h-1 rounded-full" style="background-color:#800000;"></div>
                 <div class="flex items-center">
-                    <div class="w-10 h-10 bg-maroon-600 text-white rounded-full flex items-center justify-center font-semibold">
+                    <div class="w-10 h-10 text-white rounded-full flex items-center justify-center font-semibold" style="background-color:#800000;">
                         2
                     </div>
-                    <span class="ml-2 font-medium" style="color:#800000;">Pattern</span>
+                    <span class="ml-2 font-bold" style="color:#800000;">Pattern</span>
                 </div>
                 <div class="w-16 h-1 bg-gray-300"></div>
                 <div class="flex items-center">
@@ -128,7 +128,7 @@
         </div>
 
         <!-- Header -->
-        <div class="text-center mb-8">
+        <div class="text-center mb-8 relative z-10">
             <h1 class="text-3xl font-black text-gray-900 mb-2">Choose Your Yakan Patterns</h1>
             <p class="text-gray-600">Select from our traditional Yakan weaving patterns, each with unique cultural significance. You can choose multiple patterns to create your unique combination!</p>
         </div>
@@ -424,7 +424,7 @@
                          data-pattern-id="{{ $pattern->id }}"
                          data-category="{{ $pattern->category }}"
                          data-pattern-name="{{ $pattern->name }}"
-                         data-pattern-svg="{{ base64_encode($pattern->pattern_data['svg'] ?? '') }}"
+                         data-pattern-svg="{{ $pattern->hasSvg() ? base64_encode($pattern->getSvgContent()) : '' }}"
                          data-pattern-image="{{ $pattern->media->isNotEmpty() ? $pattern->media->first()->url : '' }}">
                         
                         <!-- Multi-Selection Checkbox -->
@@ -438,7 +438,12 @@
                         
                         <!-- Pattern Preview -->
                         <div class="h-48 bg-gradient-to-br from-purple-100 to-red-100 relative overflow-hidden">
-                            @if($pattern->media->isNotEmpty())
+                            @if($pattern->hasSvg())
+                                <!-- Display SVG Pattern -->
+                                <div class="absolute inset-0 flex items-center justify-center p-4">
+                                    {!! $pattern->getSvgContent() !!}
+                                </div>
+                            @elseif($pattern->media->isNotEmpty())
                                 @php
                                     $firstMedia = $pattern->media->first();
                                     $patternImage = $firstMedia->url;
@@ -449,12 +454,6 @@
                                      class="w-full h-full object-cover"
                                      data-pattern-image="{{ $patternImage }}"
                                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                            @elseif($pattern->pattern_data && isset($pattern->pattern_data['svg']))
-                                <!-- Fallback to SVG Pattern Display -->
-                                <div class="absolute inset-0 flex items-center justify-center" data-pattern-svg="{{ base64_encode($pattern->pattern_data['svg']) }}">
-                                    <div class="w-32 h-32" style="background: url('data:image/svg+xml;base64,{{ base64_encode($pattern->pattern_data['svg']) }}') center/contain no-repeat;">
-                                    </div>
-                                </div>
                             @else
                                 <!-- No Pattern Image Available -->
                                 <div class="absolute inset-0 flex items-center justify-center" data-pattern-svg="">

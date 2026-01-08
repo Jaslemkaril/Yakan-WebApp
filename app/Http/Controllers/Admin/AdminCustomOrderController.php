@@ -90,12 +90,9 @@ class AdminCustomOrderController extends Controller
                 $order->payment_status = 'paid';
             }
             
-            // Set timestamps for new delivery statuses
+            // Set timestamps for workflow statuses
             if ($request->status === 'production_complete' && !$order->production_completed_at) {
                 $order->production_completed_at = now();
-                // Auto-trigger out for delivery
-                $order->status = 'out_for_delivery';
-                $order->out_for_delivery_at = now();
             }
             
             if ($request->status === 'out_for_delivery' && !$order->out_for_delivery_at) {
@@ -149,10 +146,14 @@ class AdminCustomOrderController extends Controller
             $success = $order->quotePrice($request->price, $request->notes);
             
             if ($success) {
+                // Auto-progression: Update status to price_quoted
+                $order->status = 'price_quoted';
+                $order->save();
+                
                 // Notify user
                 $order->notifyUser();
                 
-                \Log::info('Price quoted for custom order', [
+                \Log::info('Price quoted for custom order (auto-progressed to price_quoted)', [
                     'order_id' => $order->id,
                     'price' => $request->price,
                     'user_id' => $order->user_id
@@ -162,13 +163,13 @@ class AdminCustomOrderController extends Controller
                 if ($request->expectsJson()) {
                     return response()->json([
                         'success' => true,
-                        'message' => 'Price quoted successfully. Customer has been notified.',
+                        'message' => 'Price quoted successfully. Status updated to "Price Quoted".',
                         'order' => $order->fresh()
                     ]);
                 }
 
                 // Otherwise redirect back with success message
-                return redirect()->back()->with('success', 'Price quoted successfully. Customer has been notified.');
+                return redirect()->back()->with('success', 'Price quoted successfully. Status updated to "Price Quoted".');
             }
             
             // For non-success, respond appropriately based on request type
@@ -215,11 +216,15 @@ class AdminCustomOrderController extends Controller
                 $order->payment_notes = $notes;
             }
             
-            // If payment is verified as paid and order is processing, we can move it forward
-            if ($paymentStatus === 'paid' && $order->status === 'processing') {
-                $order->status = 'processing'; // Keep as processing, payment is now verified
+            // Auto-progression: If payment verified, move to approved status
+            if ($paymentStatus === 'paid') {
+                $order->status = 'approved';
+                \Log::info('Payment verified - Order auto-progressed to approved', [
+                    'order_id' => $order->id,
+                    'admin_id' => auth('admin')->id() ?? auth()->id()
+                ]);
             } elseif ($paymentStatus === 'failed') {
-                $order->status = 'cancelled'; // Use 'cancelled' instead of 'payment_failed'
+                $order->status = 'cancelled';
             }
             
             $order->save();
@@ -227,13 +232,16 @@ class AdminCustomOrderController extends Controller
             \Log::info('Payment verified for custom order', [
                 'order_id' => $order->id,
                 'payment_status' => $paymentStatus,
+                'new_status' => $order->status,
                 'admin_id' => auth('admin')->id() ?? auth()->id()
             ]);
 
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Payment status updated successfully.',
+                    'message' => $paymentStatus === 'paid' 
+                        ? 'Payment verified. Order automatically approved and ready for production.'
+                        : 'Payment marked as failed.',
                     'order' => $order->fresh()
                 ]);
             }
@@ -257,18 +265,84 @@ class AdminCustomOrderController extends Controller
         } catch (\Exception $e) {
             \Log::error('Payment verification error', [
                 'order_id' => $order->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
 
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to verify payment: ' . $e->getMessage()
+                    'message' => 'Failed to update payment status: ' . $e->getMessage()
                 ], 500);
             }
 
-            return redirect()->back()->with('error', 'Failed to verify payment: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to update payment status.');
+        }
+    }
+
+    public function confirmPayment(CustomOrder $order)
+    {
+        try {
+            // Verify the order is in the correct state for payment confirmation
+            if ($order->status !== 'approved') {
+                return redirect()->back()->with('error', 'Order must be in approved status to confirm payment.');
+            }
+
+            if ($order->payment_status !== 'paid' || !$order->payment_receipt) {
+                return redirect()->back()->with('error', 'Payment receipt must be uploaded before confirmation.');
+            }
+
+            // Confirm payment by adding a timestamp - payment_status stays 'paid'
+            // (custom_orders enum only has: pending, paid, failed - no 'verified')
+            $order->payment_confirmed_at = now();
+            $order->save();
+
+            \Log::info('Payment confirmed for custom order', [
+                'order_id' => $order->id,
+                'admin_id' => auth('admin')->id() ?? auth()->id()
+            ]);
+
+            return redirect()->back()->with('success', 'Payment confirmed. You can now start production.');
+        } catch (\Exception $e) {
+            \Log::error('Payment confirmation error', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->back()->with('error', 'Failed to confirm payment: ' . $e->getMessage());
+        }
+    }
+
+    public function rejectPayment(CustomOrder $order)
+    {
+        try {
+            // Verify the order is in the correct state for payment rejection
+            if ($order->status !== 'approved') {
+                return redirect()->back()->with('error', 'Order must be in approved status to reject payment.');
+            }
+
+            if (!$order->payment_receipt) {
+                return redirect()->back()->with('error', 'No payment receipt found to reject.');
+            }
+
+            // Reject payment and set status back for customer to resubmit
+            $order->payment_status = 'failed';
+            $order->payment_receipt = null; // Clear the rejected receipt
+            $order->status = 'price_quoted'; // Revert to quoted status for customer to resubmit
+            $order->save();
+
+            \Log::info('Payment rejected for custom order', [
+                'order_id' => $order->id,
+                'admin_id' => auth('admin')->id() ?? auth()->id()
+            ]);
+
+            return redirect()->back()->with('success', 'Payment rejected. Customer will need to resubmit payment.');
+        } catch (\Exception $e) {
+            \Log::error('Payment rejection error', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->back()->with('error', 'Failed to reject payment: ' . $e->getMessage());
         }
     }
     
@@ -321,8 +395,112 @@ class AdminCustomOrderController extends Controller
                     'message' => 'Failed to reject order: ' . $e->getMessage()
                 ], 500);
             }
-            
+
             return redirect()->back()->with('error', 'Failed to reject order: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Notify customer about production delay
+     */
+    public function notifyDelay(Request $request, CustomOrder $order)
+    {
+        $request->validate([
+            'delay_reason' => 'required|string|max:1000'
+        ]);
+        
+        try {
+            $order->is_delayed = true;
+            $order->delay_reason = $request->delay_reason;
+            $order->delay_notified_at = now();
+            $order->save();
+            
+            \Log::info('Production delay notification sent', [
+                'order_id' => $order->id,
+                'reason' => $order->delay_reason,
+                'user_id' => $order->user_id
+            ]);
+
+            // Send email notification to customer
+            try {
+                $user = $order->user;
+                if ($user && $user->email) {
+                    \Mail::to($user->email)->send(new \App\Mail\CustomOrderDelayNotification($order));
+                    \Log::info('Delay email sent', ['order_id' => $order->id, 'email' => $user->email]);
+                }
+            } catch (\Exception $e) {
+                \Log::error('Failed to send delay email', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+            
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Delay notification sent to customer successfully.',
+                    'order' => $order->fresh()
+                ]);
+            }
+            
+            return redirect()->back()->with('success', 'Delay notification sent successfully!');
+            
+        } catch (\Exception $e) {
+            \Log::error('Notify delay error', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to send delay notification: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', 'Failed to send delay notification: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Clear delay status
+     */
+    public function clearDelay(Request $request, CustomOrder $order)
+    {
+        try {
+            $order->is_delayed = false;
+            $order->delay_reason = null;
+            $order->save();
+            
+            \Log::info('Delay status cleared', [
+                'order_id' => $order->id,
+                'user_id' => $order->user_id
+            ]);
+            
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Delay status cleared successfully.',
+                    'order' => $order->fresh()
+                ]);
+            }
+            
+            return redirect()->back()->with('success', 'Delay status cleared successfully!');
+            
+        } catch (\Exception $e) {
+            \Log::error('Clear delay error', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to clear delay status: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', 'Failed to clear delay status: ' . $e->getMessage());
         }
     }
 
@@ -763,7 +941,16 @@ class AdminCustomOrderController extends Controller
 
             $user = \App\Models\User::find($wizardData['user_id']);
             
-            return view('admin.custom_orders.wizard.review', compact('wizardData', 'user'));
+            // Get user's saved addresses
+            $userAddresses = \App\Models\UserAddress::where('user_id', $wizardData['user_id'])
+                ->orderBy('is_default', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+            $defaultAddress = \App\Models\UserAddress::where('user_id', $wizardData['user_id'])
+                ->where('is_default', true)
+                ->first();
+            
+            return view('admin.custom_orders.wizard.review', compact('wizardData', 'user', 'userAddresses', 'defaultAddress'));
             
         } catch (\Exception $e) {
             \Log::error('Admin review error: ' . $e->getMessage());

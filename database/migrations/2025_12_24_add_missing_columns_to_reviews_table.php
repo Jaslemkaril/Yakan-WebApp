@@ -14,15 +14,24 @@ return new class extends Migration
         Schema::table('reviews', function (Blueprint $table) {
             // Add custom_order_id column if it doesn't exist
             if (!Schema::hasColumn('reviews', 'custom_order_id')) {
-                $table->unsignedBigInteger('custom_order_id')->nullable()->after('order_id');
-                $table->foreign('custom_order_id')->references('id')->on('custom_orders')->onDelete('cascade');
+                // Check if order_id exists, if not add custom_order_id at the end
+                if (Schema::hasColumn('reviews', 'order_id')) {
+                    $table->unsignedBigInteger('custom_order_id')->nullable()->after('order_id');
+                } else {
+                    $table->unsignedBigInteger('custom_order_id')->nullable();
+                }
+                if (Schema::hasTable('custom_orders')) {
+                    $table->foreign('custom_order_id')->references('id')->on('custom_orders')->onDelete('cascade');
+                }
                 $table->index('custom_order_id');
             }
             
             // Add order_item_id column if it doesn't exist
             if (!Schema::hasColumn('reviews', 'order_item_id')) {
-                $table->unsignedBigInteger('order_item_id')->nullable()->after('custom_order_id');
-                $table->foreign('order_item_id')->references('id')->on('order_items')->onDelete('cascade');
+                $table->unsignedBigInteger('order_item_id')->nullable();
+                if (Schema::hasTable('order_items')) {
+                    $table->foreign('order_item_id')->references('id')->on('order_items')->onDelete('cascade');
+                }
                 $table->index('order_item_id');
             }
         });

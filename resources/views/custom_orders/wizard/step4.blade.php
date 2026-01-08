@@ -19,13 +19,8 @@
                 </div>
                 <div class="w-8 md:w-20 h-1 rounded-full" style="background-color:#800000;"></div>
                 <div class="flex items-center group cursor-pointer">
-                    <div class="w-10 h-10 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg transform transition-all duration-300 group-hover:scale-110" style="background-color:#800000;">✓</div>
-                    <span class="ml-2 md:ml-3 font-bold text-xs md:text-base" style="color:#800000;">Details</span>
-                </div>
-                <div class="w-8 md:w-20 h-1 bg-gray-300 rounded-full"></div>
-                <div class="flex items-center group cursor-pointer">
                     <div class="relative">
-                        <div class="w-10 h-10 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg transform transition-all duration-300 group-hover:scale-110" style="background-color:#800000;">4</div>
+                        <div class="w-10 h-10 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg transform transition-all duration-300 group-hover:scale-110" style="background-color:#800000;">3</div>
                         <div class="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
                     </div>
                     <span class="ml-2 md:ml-3 font-bold text-xs md:text-base" style="color:#800000;">Review</span>
@@ -34,9 +29,21 @@
         </div>
     </div>
 
-    <!-- Simple Header (no decorative banner) -->
+    <!-- Enhanced Header -->
     <div class="bg-white border-b border-gray-200">
-        <div class="container mx-auto px-4 py-8">
+        <div class="absolute inset-0 opacity-[0.02] pointer-events-none">
+            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <pattern id="yakanReviewPattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
+                        <circle cx="50" cy="50" r="35" fill="#8B0000" stroke="#ffffff" stroke-width="1"/>
+                        <circle cx="50" cy="50" r="25" fill="#FFD700" stroke="#ffffff" stroke-width="0.5"/>
+                        <circle cx="50" cy="50" r="12" fill="#8B0000"/>
+                    </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#yakanReviewPattern)"/>
+            </svg>
+        </div>
+        <div class="container mx-auto px-4 py-8 relative z-10">
             <div class="text-center">
                 <h1 class="text-4xl font-bold text-gray-900 mb-2">Review Your Order</h1>
                 <p class="text-lg text-gray-600 max-w-2xl mx-auto">Confirm your custom design and submit your order to our master craftsmen</p>
@@ -123,20 +130,8 @@
                                 Patterns Applied
                             </h5>
                             
-                            @php
-                                $patternPreviewUrl = null;
-                                $rawPreview = $wizardData['pattern']['preview_image'] ?? null;
-                                $storedPath = $wizardData['pattern']['preview_image_path'] ?? null;
-
-                                if (!empty($rawPreview)) {
-                                    $patternPreviewUrl = $rawPreview; // already url or data URI
-                                } elseif (!empty($storedPath)) {
-                                    $patternPreviewUrl = Storage::url($storedPath);
-                                }
-                            @endphp
-
-                            <!-- Pattern Preview Image -->
-                            @if($patternPreviewUrl)
+                            <!-- Pattern Preview Display -->
+                            @if(isset($selectedPatterns) && $selectedPatterns->count() > 0)
                             <div class="mb-6">
                                 <div class="rounded-xl p-4 border-2 shadow-lg" style="background: linear-gradient(to bottom right, #f5e6e8, #e8ccd1); border-color:#8b3a56;">
                                     <div class="flex items-center justify-between mb-3">
@@ -150,27 +145,59 @@
                                         <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Final Preview</span>
                                     </div>
                                     <div class="bg-white rounded-lg p-3 shadow-inner">
-                                        <img src="{{ $patternPreviewUrl }}" 
-                                             alt="Pattern Preview" 
-                                             class="w-full h-auto rounded-lg border-2 shadow-md" style="border-color:#e0b0b0;"
-                                             style="max-height: 350px; object-fit: contain;">
+                                        @foreach($selectedPatterns as $pattern)
+                                        <div class="mb-4 last:mb-0">
+                                            <div class="text-xs font-semibold text-gray-600 mb-2">{{ $pattern->name }}</div>
+                                            @if($pattern->hasSvg())
+                                            @php
+                                                $customization = $wizardData['pattern']['customization_settings'] ?? [];
+                                                $scale = $customization['scale'] ?? 1;
+                                                $rotation = $customization['rotation'] ?? 0;
+                                                $opacity = $customization['opacity'] ?? 1;
+                                                $hue = $customization['hue'] ?? 0;
+                                                $saturation = $customization['saturation'] ?? 100;
+                                                $brightness = $customization['brightness'] ?? 100;
+                                                
+                                                // Build CSS filter string for color customization
+                                                $filterStyle = sprintf(
+                                                    'filter: hue-rotate(%ddeg) saturate(%d%%) brightness(%d%%); opacity: %s; transform: scale(%s) rotate(%ddeg);',
+                                                    $hue,
+                                                    $saturation,
+                                                    $brightness,
+                                                    $opacity,
+                                                    $scale,
+                                                    $rotation
+                                                );
+                                            @endphp
+                                            <div class="w-full rounded-lg border-2 shadow-md overflow-hidden" style="border-color:#e0b0b0; max-height: 350px;">
+                                                <div class="w-full h-64 flex items-center justify-center bg-gray-50 p-4">
+                                                    <div style="{{ $filterStyle }} transform-origin: center; transition: all 0.3s ease;">
+                                                        {!! $pattern->getSvgContent() !!}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            @else
+                                            <div class="w-full h-64 rounded-lg border-2 shadow-md flex items-center justify-center bg-gray-100" style="border-color:#e0b0b0;">
+                                                <span class="text-gray-400">No preview available</span>
+                                            </div>
+                                            @endif
+                                        </div>
+                                        @endforeach
                                     </div>
-                                    @if(isset($wizardData['pattern']['customization_settings']) && is_array($wizardData['pattern']['customization_settings']))
-                                    <div class="mt-3 grid grid-cols-3 gap-2">
-                                        <div class="bg-white rounded-lg px-3 py-2 text-center border" style="border-color:#d9a3b3;">
-                                            <div class="text-xs text-gray-500">Scale</div>
-                                            <div class="font-bold" style="color:#8b3a56;">{{ $wizardData['pattern']['customization_settings']['scale'] ?? 1 }}x</div>
+                                    <div class="mt-4 grid grid-cols-3 gap-3">
+                                        <div class="bg-white rounded-lg px-3 py-2 text-center border-2" style="border-color:#d9a3b3;">
+                                            <div class="text-xs font-semibold text-gray-600 mb-1">Scale</div>
+                                            <div class="font-bold text-lg" style="color:#8b3a56;">{{ $wizardData['pattern']['customization_settings']['scale'] ?? 1 }}x</div>
                                         </div>
-                                        <div class="bg-white rounded-lg px-3 py-2 text-center border" style="border-color:#d9a3b3;">
-                                            <div class="text-xs text-gray-500">Rotation</div>
-                                            <div class="font-bold" style="color:#8b3a56;">{{ $wizardData['pattern']['customization_settings']['rotation'] ?? 0 }}°</div>
+                                        <div class="bg-white rounded-lg px-3 py-2 text-center border-2" style="border-color:#d9a3b3;">
+                                            <div class="text-xs font-semibold text-gray-600 mb-1">Rotation</div>
+                                            <div class="font-bold text-lg" style="color:#8b3a56;">{{ $wizardData['pattern']['customization_settings']['rotation'] ?? 0 }}°</div>
                                         </div>
-                                        <div class="bg-white rounded-lg px-3 py-2 text-center border" style="border-color:#d9a3b3;">
-                                            <div class="text-xs text-gray-500">Opacity</div>
-                                            <div class="font-bold" style="color:#8b3a56;">{{ round(($wizardData['pattern']['customization_settings']['opacity'] ?? 0.85) * 100) }}%</div>
+                                        <div class="bg-white rounded-lg px-3 py-2 text-center border-2" style="border-color:#d9a3b3;">
+                                            <div class="text-xs font-semibold text-gray-600 mb-1">Opacity</div>
+                                            <div class="font-bold text-lg" style="color:#8b3a56;">{{ round(($wizardData['pattern']['customization_settings']['opacity'] ?? 0.85) * 100) }}%</div>
                                         </div>
                                     </div>
-                                    @endif
                                 </div>
                             </div>
                             @endif
@@ -202,10 +229,17 @@
                             </h5>
 
                             @php
-                                $customerName      = data_get($wizardData, 'details.customer_name') ?? optional(auth()->user())->name;
-                                $customerEmail     = data_get($wizardData, 'details.customer_email') ?? optional(auth()->user())->email;
-                                $customerPhone     = data_get($wizardData, 'details.customer_phone');
-                                $deliveryAddress   = data_get($wizardData, 'details.delivery_address');
+                                $user = auth()->user();
+                                // Build full name from user's account
+                                $fullName = $user->name;
+                                if ($user->first_name && $user->last_name) {
+                                    $fullName = trim($user->first_name . ' ' . ($user->middle_initial ? $user->middle_initial . '. ' : '') . $user->last_name);
+                                }
+                                
+                                $customerName      = $fullName;
+                                $customerEmail     = $user->email;
+                                $customerPhone     = data_get($wizardData, 'details.customer_phone') ?? ($defaultAddress ? $defaultAddress->phone_number : null);
+                                $deliveryAddress   = data_get($wizardData, 'details.delivery_address') ?? ($defaultAddress ? $defaultAddress->formatted_address : null);
                                 $deliveryType      = data_get($wizardData, 'details.delivery_type');
                             @endphp
 
@@ -244,11 +278,39 @@
                                     </span>
                                 </div>
 
-                                @if($deliveryAddress)
+                                @if($deliveryAddress && $deliveryType === 'delivery')
                                     <div class="md:col-span-2">
                                         <div class="flex items-start">
-                                            <span class="text-gray-500 font-medium w-24">Delivery Address</span>
+                                            <span class="text-gray-500 font-medium w-24">Address</span>
                                             <span class="ml-2 text-gray-900 whitespace-pre-line">{{ $deliveryAddress }}</span>
+                                        </div>
+                                    </div>
+                                @endif
+
+                                @if($defaultAddress && $deliveryType === 'delivery')
+                                    <div class="md:col-span-2">
+                                        <div class="bg-gradient-to-r from-maroon-50 to-transparent rounded-lg p-3 border-l-4" style="border-left-color:#800000;">
+                                            <div class="flex items-start">
+                                                <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                </svg>
+                                                <div class="flex-1">
+                                                    <div class="flex items-center mb-1">
+                                                        <span class="font-semibold text-gray-700 text-xs">{{ $defaultAddress->label ?? 'Default Address' }}</span>
+                                                        @if($defaultAddress->is_default)
+                                                            <span class="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Default</span>
+                                                        @endif
+                                                    </div>
+                                                    @if($defaultAddress->full_name)
+                                                        <p class="text-xs text-gray-700 font-medium">{{ $defaultAddress->full_name }}</p>
+                                                    @endif
+                                                    @if($defaultAddress->phone_number)
+                                                        <p class="text-xs text-gray-600">{{ $defaultAddress->phone_number }}</p>
+                                                    @endif
+                                                    <p class="text-xs text-gray-600 mt-1">{{ $defaultAddress->formatted_address }}</p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 @endif
@@ -273,18 +335,32 @@
                     @php
                         $patternCount = isset($selectedPatterns) ? $selectedPatterns->count() : 0;
                         $basePrice = isset($product) ? (float) ($product->price ?? 1300) : 1300;
+                        
+                        // Add fabric cost (₱500 per meter)
+                        $fabricCost = 0;
+                        if (isset($wizardData['fabric']['quantity_meters'])) {
+                            $fabricMeters = (float) $wizardData['fabric']['quantity_meters'];
+                            $fabricCost = $fabricMeters * 500;
+                        }
+                        
                         $patternFee = $patternCount * 200;
                         $addons = session('wizard.details.addons') ?? [];
                         $addonsTotal = collect($addons)->sum(function($addon) {
                             return $addon == 'priority_production' ? 500 : ($addon == 'gift_wrapping' ? 150 : ($addon == 'extra_patterns' ? 200 : 100));
                         });
-                        $finalTotal = $basePrice + $patternFee + $addonsTotal;
+                        $finalTotal = $basePrice + $fabricCost + $patternFee + $addonsTotal;
                     @endphp
                     <div class="space-y-4">
                         <div class="flex justify-between items-center pb-3 border-b border-gray-100">
                             <span class="text-gray-600 font-medium">Base Price</span>
                             <span class="font-medium text-gray-900">₱{{ number_format($basePrice, 2) }}</span>
                         </div>
+                        @if($fabricCost > 0)
+                        <div class="flex justify-between items-center pb-3 border-b border-gray-100">
+                            <span class="text-gray-600 font-medium">Fabric Cost ({{ $wizardData['fabric']['quantity_meters'] }}m × ₱500)</span>
+                            <span class="font-medium text-gray-900">₱{{ number_format($fabricCost, 2) }}</span>
+                        </div>
+                        @endif
                         <div class="flex justify-between items-center pb-3 border-b border-gray-100">
                             <span class="text-gray-600 font-medium">Pattern Fees ({{ $patternCount }})</span>
                             <span class="font-medium text-gray-900">₱{{ number_format($patternFee, 2) }}</span>
@@ -412,26 +488,56 @@
                                         <label class="block text-sm font-medium text-gray-700 mb-3">
                                             Select Delivery Address *
                                         </label>
-                                        <div class="space-y-2 mb-4">
+                                        <div class="space-y-3 mb-4">
                                             @foreach($userAddresses as $address)
-                                                <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-maroon-400" style="border-color: {{ $address->id === ($defaultAddress->id ?? null) ? '#8b3a56' : '#e5e7eb' }}; background-color: {{ $address->id === ($defaultAddress->id ?? null) ? '#f5e6e8' : 'white' }};">
-                                                    <input type="radio" name="address_id" value="{{ $address->id }}" class="mt-1 mr-3" style="accent-color: #8b3a56;" {{ $address->id === ($defaultAddress->id ?? null) ? 'checked' : '' }} required />
-                                                    <div class="flex-1">
-                                                        <p class="font-bold text-gray-900">{{ $address->street_name }}, {{ $address->barangay }}</p>
-                                                        <p class="text-sm text-gray-600">{{ $address->city }}, {{ $address->province }} {{ $address->zip_code }}</p>
+                                                <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md" style="border-color: {{ $address->id === ($defaultAddress->id ?? null) ? '#8b3a56' : '#d1d5db' }}; background-color: {{ $address->id === ($defaultAddress->id ?? null) ? '#f5e6e8' : 'white' }};">
+                                                    <input type="radio" name="address_id" value="{{ $address->id }}" class="mt-1 mr-3 w-4 h-4 flex-shrink-0" style="accent-color: #8b3a56;" {{ $address->id === ($defaultAddress->id ?? null) ? 'checked' : '' }} required />
+                                                    <div class="flex-1 min-w-0">
+                                                        <div class="flex items-start justify-between gap-2 mb-1">
+                                                            <p class="font-bold text-gray-900 text-base">
+                                                                @if($address->label)
+                                                                    <span class="text-maroon-700">{{ $address->label }}</span>
+                                                                @endif
+                                                            </p>
+                                                            @if($address->is_default)
+                                                                <span class="inline-flex items-center px-2 py-0.5 text-xs font-bold rounded-full whitespace-nowrap" style="background-color: #800000; color: white;">Default Address</span>
+                                                            @endif
+                                                        </div>
+                                                        <p class="text-sm text-gray-800 leading-relaxed">
+                                                            {{ $address->house_number }}{{ $address->street_name ? ', ' . $address->street_name : '' }}{{ $address->barangay ? ', ' . $address->barangay : '' }}
+                                                        </p>
+                                                        <p class="text-sm text-gray-600 mt-1">
+                                                            {{ $address->city }}{{ $address->province ? ', ' . $address->province : '' }}
+                                                            @if($address->region && $address->region !== $address->province)
+                                                                , {{ $address->region }}
+                                                            @endif
+                                                            @if($address->zip_code)
+                                                                {{ $address->zip_code }}
+                                                            @endif
+                                                        </p>
                                                         @if($address->landmark)
-                                                            <p class="text-xs text-gray-500 mt-1">Landmark: {{ $address->landmark }}</p>
-                                                        @endif
-                                                        @if($address->is_default)
-                                                            <span class="inline-block mt-2 px-2 py-1 bg-maroon-100 text-maroon-700 text-xs font-bold rounded">Default Address</span>
+                                                            <p class="text-xs text-gray-500 mt-2 flex items-start">
+                                                                <svg class="w-3.5 h-3.5 mr-1 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                                                                </svg>
+                                                                <span>{{ $address->landmark }}</span>
+                                                            </p>
                                                         @endif
                                                     </div>
                                                 </label>
                                             @endforeach
                                         </div>
-                                        <p class="text-xs text-gray-500 mb-4">
-                                            <a href="{{ route('addresses.index') }}" class="text-maroon-600 hover:text-maroon-700 font-semibold">Manage your addresses</a>
-                                        </p>
+                                        <div class="flex items-center justify-between pt-2 border-t border-gray-200">
+                                            <p class="text-xs text-gray-500">
+                                                Need to add or edit an address?
+                                            </p>
+                                            <a href="{{ route('addresses.index') }}" class="inline-flex items-center text-sm text-maroon-600 hover:text-maroon-700 font-semibold transition-colors duration-200">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                </svg>
+                                                Manage your addresses
+                                            </a>
+                                        </div>
                                     @else
                                         <label class="block text-sm font-medium text-gray-700 mb-2">
                                             Delivery Address *

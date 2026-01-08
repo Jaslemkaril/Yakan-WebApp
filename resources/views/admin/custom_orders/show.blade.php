@@ -226,10 +226,8 @@
                             <span class="text-sm font-semibold text-gray-700 block mb-2">Payment Receipt</span>
                             <div class="bg-[#faf5f5] rounded-lg p-3 border border-[#e0b0b0]">
                                 @php
-                                    // Check if path starts with 'payment_receipts/' (new uploads disk)
-                                    $receiptUrl = str_starts_with($order->payment_receipt, 'payment_receipts/') 
-                                        ? asset('uploads/' . $order->payment_receipt)
-                                        : asset('storage/' . $order->payment_receipt);
+                                    // All new receipts use public disk (storage/)
+                                    $receiptUrl = asset('storage/' . $order->payment_receipt);
                                 @endphp
                                 <a href="{{ $receiptUrl }}" target="_blank" class="block">
                                     @php
@@ -282,10 +280,8 @@
                         </div>
                         
                         @php
-                            // Check if path starts with 'payment_receipts/' (new uploads disk)
-                            $receiptUrl = str_starts_with($order->payment_receipt, 'payment_receipts/') 
-                                ? asset('uploads/' . $order->payment_receipt)
-                                : asset('storage/' . $order->payment_receipt);
+                            // All new receipts use public disk (storage/)
+                            $receiptUrl = asset('storage/' . $order->payment_receipt);
                         @endphp
                         
                         <a href="{{ $receiptUrl }}" target="_blank" class="block">
@@ -338,7 +334,55 @@
                             Design Upload
                         @endif
                     </h2>
-                    @if($order->design_upload)
+                    
+                    @php
+                        // Load pattern for SVG display
+                        $patternModel = null;
+                        if (!empty($order->design_metadata) && isset($order->design_metadata['pattern_id'])) {
+                            $patternModel = \App\Models\YakanPattern::find($order->design_metadata['pattern_id']);
+                        } elseif (!empty($order->patterns) && is_array($order->patterns)) {
+                            if (!empty($order->patterns) && is_numeric($order->patterns[0])) {
+                                $patternModel = \App\Models\YakanPattern::find($order->patterns[0]);
+                            } elseif (!empty($order->patterns)) {
+                                $patternModel = \App\Models\YakanPattern::where('name', $order->patterns[0])->first();
+                            }
+                        }
+                    @endphp
+                    
+                    @if($patternModel && $patternModel->hasSvg())
+                        {{-- Display pattern SVG --}}
+                        <div class="rounded-xl border border-gray-200 p-4 bg-gray-50">
+                            <div class="mb-3">
+                                <p class="text-sm text-gray-600 mb-2">
+                                    <span class="font-semibold text-purple-700">Pattern: {{ $patternModel->name }}</span>
+                                    <span class="block text-xs text-gray-500 mt-1">Authentic Yakan weaving pattern</span>
+                                </p>
+                            </div>
+                            
+                            <div class="w-full max-w-lg rounded-lg shadow-md border-2 border-purple-200 bg-white p-4 overflow-hidden">
+                                <div class="w-full h-96 flex items-center justify-center">
+                                    {!! $patternModel->getSvgContent() !!}
+                                </div>
+                            </div>
+                            
+                            @if($order->design_metadata && isset($order->design_metadata['customization_settings']))
+                            <div class="mt-4 grid grid-cols-3 gap-3">
+                                <div class="bg-white rounded-lg px-3 py-2 text-center border-2" style="border-color:#d9a3b3;">
+                                    <div class="text-xs font-semibold text-gray-600 mb-1">Scale</div>
+                                    <div class="font-bold text-lg" style="color:#8b3a56;">{{ $order->design_metadata['customization_settings']['scale'] ?? 1 }}x</div>
+                                </div>
+                                <div class="bg-white rounded-lg px-3 py-2 text-center border-2" style="border-color:#d9a3b3;">
+                                    <div class="text-xs font-semibold text-gray-600 mb-1">Rotation</div>
+                                    <div class="font-bold text-lg" style="color:#8b3a56;">{{ $order->design_metadata['customization_settings']['rotation'] ?? 0 }}°</div>
+                                </div>
+                                <div class="bg-white rounded-lg px-3 py-2 text-center border-2" style="border-color:#d9a3b3;">
+                                    <div class="text-xs font-semibold text-gray-600 mb-1">Opacity</div>
+                                    <div class="font-bold text-lg" style="color:#8b3a56;">{{ round(($order->design_metadata['customization_settings']['opacity'] ?? 0.85) * 100) }}%</div>
+                                </div>
+                            </div>
+                            @endif
+                        </div>
+                    @elseif($order->design_upload)
                         <div class="rounded-xl border border-gray-200 p-4 bg-gray-50">
                             <div class="mb-3">
                                 @if($order->design_method === 'pattern')
@@ -537,15 +581,63 @@
                     <p class="text-xs text-gray-600 mt-3">Customer can accept or reject your quote from their dashboard.</p>
                 </div>
                 @elseif($order->status === 'approved')
-                <div class="bg-green-50 mt-4 p-4 rounded-xl border border-green-200">
-                    <h2 class="text-lg font-semibold mb-2 text-green-800">✅ Customer Accepted Quote</h2>
-                    <p class="text-sm text-gray-700 mb-2">
-                        <span class="font-semibold">Agreed Price:</span> ₱{{ number_format($order->final_price, 2) }}
-                    </p>
-                    <p class="text-sm text-gray-700">
-                        <span class="font-semibold">Accepted At:</span> {{ $order->approved_at->format('M d, Y h:i A') }}
-                    </p>
-                    <p class="text-xs text-gray-600 mt-3">Waiting for customer payment to start production.</p>
+                <div class="bg-green-50 mt-4 p-4 rounded-xl border-2 border-green-300 shadow-lg">
+                    <div class="flex items-start gap-3 mb-4">
+                        <div class="flex-shrink-0 w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h2 class="text-lg font-bold mb-1 text-green-900">✅ Customer Accepted Quote</h2>
+                            <p class="text-sm text-gray-700 mb-2">
+                                <span class="font-semibold">Agreed Price:</span> 
+                                <span class="text-xl font-bold text-green-700">₱{{ number_format($order->final_price, 2) }}</span>
+                            </p>
+                            <p class="text-sm text-gray-700 mb-3">
+                                <span class="font-semibold">Accepted At:</span> {{ $order->approved_at->format('M d, Y h:i A') }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border-2 border-green-200 rounded-lg p-4 mb-3">
+                        <h3 class="font-bold text-green-900 mb-3 flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            </svg>
+                            Next Steps (Susunod na Gawin):
+                        </h3>
+                        <ol class="space-y-2 text-sm">
+                            <li class="flex items-start gap-2">
+                                <span class="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                                <span class="text-gray-800"><strong>Hintayin ang Payment Receipt</strong> - Customer will upload proof of payment</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                                <span class="text-gray-800"><strong>I-verify ang Payment</strong> - Check receipt, transaction ID, and amount (₱{{ number_format($order->final_price, 2) }})</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                                <span class="text-gray-800"><strong>Mark as "Paid"</strong> - Once verified, update payment status below</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold">4</span>
+                                <span class="text-gray-800"><strong>Start Production</strong> - Begin crafting the custom order</span>
+                            </li>
+                        </ol>
+                    </div>
+
+                    @if(in_array($order->payment_status, ['unpaid', 'pending']))
+                        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-3 rounded">
+                            <p class="text-sm font-semibold text-yellow-800 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Waiting for payment receipt from customer...
+                            </p>
+                            <p class="text-xs text-yellow-700 mt-1">Payment status will change to "Pending Verification" once receipt is uploaded.</p>
+                        </div>
+                    @endif
                 </div>
                 @elseif($order->status === 'rejected')
                 <div class="bg-red-50 mt-4 p-4 rounded-xl border border-red-200">
@@ -574,9 +666,8 @@
                         @endif
                         @if($order->payment_receipt)
                             @php
-                                $receiptUrl = str_starts_with($order->payment_receipt, 'payment_receipts/') 
-                                    ? asset('uploads/' . $order->payment_receipt)
-                                    : asset('storage/' . $order->payment_receipt);
+                                // All new receipts use public disk (storage/)
+                                $receiptUrl = asset('storage/' . $order->payment_receipt);
                             @endphp
                             <p class="text-sm text-gray-700 mb-2">
                                 Receipt uploaded:

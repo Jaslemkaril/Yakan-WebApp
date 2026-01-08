@@ -96,7 +96,7 @@
                     <div class="p-8 flex flex-col justify-center">
                         <h3 class="text-3xl font-bold text-gray-900 mb-4">{{ $featured->title }}</h3>
                         <p class="text-gray-600 mb-6 leading-relaxed">
-                            {{ $featured->summary ?? $featured->excerpt }}
+                            {{ $featured->summary ?? $featured->content }}
                         </p>
                         <div class="flex items-center text-sm text-gray-500 mb-6">
                             @if($featured->author)
@@ -109,9 +109,6 @@
                                 <i class="fas fa-calendar mr-1"></i>{{ $featured->published_date->format('M d, Y') }}
                             </span>
                             @endif
-                            <span>
-                                <i class="fas fa-clock mr-1"></i>{{ $featured->reading_time }} min read
-                            </span>
                         </div>
                         <a href="{{ route('cultural-heritage.show', $featured->slug) }}" 
                            class="inline-flex items-center px-6 py-3 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors w-fit">
@@ -159,7 +156,7 @@
                     <div class="p-6">
                         <h3 class="text-xl font-bold text-gray-900 mb-3 line-clamp-2">{{ $heritage->title }}</h3>
                         <p class="text-gray-600 mb-4 line-clamp-3 text-sm">
-                            {{ $heritage->summary ?? $heritage->excerpt }}
+                            {{ $heritage->summary ?? Str::limit($heritage->content, 100) }}
                         </p>
                         
                         <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
@@ -168,9 +165,6 @@
                                 <i class="fas fa-calendar mr-1"></i>{{ $heritage->published_date->format('M d, Y') }}
                             </span>
                             @endif
-                            <span>
-                                <i class="fas fa-clock mr-1"></i>{{ $heritage->reading_time }} min
-                            </span>
                         </div>
                         
                         <a href="{{ route('cultural-heritage.show', $heritage->slug) }}" 

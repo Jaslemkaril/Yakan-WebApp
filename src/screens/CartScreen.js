@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,52 @@ import {
   ActivityIndicator,
   FlatList,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import API_CONFIG from '../config/config';
 import colors from '../constants/colors';
 
 const CartScreen = ({ navigation }) => {
-  const { cartItems, removeFromCart, updateQuantity, getCartTotal, clearCart } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, getCartTotal, clearCart, fetchCart, isLoggedIn, setCheckoutItems } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedItems, setSelectedItems] = useState({});
+
+  // Initialize all items as selected when cart loads
+  useEffect(() => {
+    const initialSelection = {};
+    cartItems.forEach(item => {
+      initialSelection[item.id] = true;
+    });
+    setSelectedItems(initialSelection);
+  }, [cartItems]);
+
+  // Refresh cart when screen comes into focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      console.log('[CartScreen] Screen focused, refreshing cart');
+      if (isLoggedIn) {
+        fetchCart();
+      }
+    });
+    
+    return unsubscribe;
+  }, [navigation, isLoggedIn]);
+
+  const toggleItemSelection = (itemId) => {
+    setSelectedItems(prev => ({
+      ...prev,
+      [itemId]: !prev[itemId]
+    }));
+  };
+
+  const toggleSelectAll = () => {
+    const allSelected = Object.values(selectedItems).every(val => val);
+    const newSelection = {};
+    cartItems.forEach(item => {
+      newSelection[item.id] = !allSelected;
+    });
+    setSelectedItems(newSelection);
+  };
 
   const handleRemoveItem = (productId, productName) => {
     Alert.alert(
@@ -42,10 +81,15 @@ const CartScreen = ({ navigation }) => {
   };
 
   const handleCheckout = () => {
-    if (cartItems.length === 0) {
-      Alert.alert('Empty Cart', 'Please add items before checking out');
+    const selectedCartItems = cartItems.filter(item => selectedItems[item.id]);
+    
+    if (selectedCartItems.length === 0) {
+      Alert.alert('No Items Selected', 'Please select items to checkout');
       return;
     }
+    
+    // Set the selected items for checkout
+    setCheckoutItems(selectedCartItems);
     navigation.navigate('Checkout');
   };
 
@@ -93,16 +137,32 @@ const CartScreen = ({ navigation }) => {
         return imageStr;
       }
       
-      // If it's a relative path, construct full URL using config
-      const fullUrl = `${API_CONFIG.STORAGE_BASE_URL}/${imageStr}`;
+      // Use /uploads/products/ path like ProductsScreen
+      const fullUrl = imageStr.startsWith('/uploads') || imageStr.startsWith('/storage')
+        ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${imageStr}`
+        : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/uploads/products/${imageStr}`;
+      
       console.log('[CartScreen] Constructed URL:', fullUrl);
       return fullUrl;
     };
 
     const imageUri = getImageUri();
+    const isSelected = selectedItems[item.id] || false;
 
     return (
       <View style={styles.cartItemCard}>
+        {/* Checkbox */}
+        <TouchableOpacity 
+          style={styles.checkboxContainer}
+          onPress={() => toggleItemSelection(item.id)}
+        >
+          <Ionicons 
+            name={isSelected ? "checkbox" : "square-outline"} 
+            size={24} 
+            color={isSelected ? colors.primary : "#999"} 
+          />
+        </TouchableOpacity>
+
         {/* Product Image */}
         <View style={styles.imageContainer}>
           {imageUri ? (
@@ -122,10 +182,6 @@ const CartScreen = ({ navigation }) => {
               <Text style={styles.placeholderText}>📦</Text>
             </View>
           )}
-          {/* Quantity Badge */}
-          <View style={styles.quantityBadge}>
-            <Text style={styles.quantityBadgeText}>{item.quantity}</Text>
-          </View>
         </View>
 
         {/* Product Details */}
@@ -216,9 +272,12 @@ const CartScreen = ({ navigation }) => {
     );
   }
 
-  const subtotal = getCartTotal() || 0;
-  const tax = subtotal * 0.12; // 12% tax
-  const total = subtotal + tax;
+  const subtotal = cartItems
+    .filter(item => selectedItems[item.id])
+    .reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
+  const total = subtotal;
+  const selectedCount = Object.values(selectedItems).filter(val => val).length;
+  const allSelected = selectedCount === cartItems.length && cartItems.length > 0;
 
   return (
     <View style={styles.container}>
@@ -230,6 +289,21 @@ const CartScreen = ({ navigation }) => {
         <Text style={styles.headerTitle}>Shopping Cart</Text>
         <TouchableOpacity onPress={handleClearCart}>
           <Text style={styles.clearButton}>Clear</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Select All Section */}
+      <View style={styles.selectAllContainer}>
+        <TouchableOpacity 
+          style={styles.selectAllButton}
+          onPress={toggleSelectAll}
+        >
+          <Ionicons 
+            name={allSelected ? "checkbox" : "square-outline"} 
+            size={24} 
+            color={allSelected ? colors.primary : "#999"} 
+          />
+          <Text style={styles.selectAllText}>Select All</Text>
         </TouchableOpacity>
       </View>
 
@@ -249,11 +323,6 @@ const CartScreen = ({ navigation }) => {
           <Text style={styles.summaryValue}>₱{subtotal.toFixed(2)}</Text>
         </View>
 
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Tax (12%)</Text>
-          <Text style={styles.summaryValue}>₱{tax.toFixed(2)}</Text>
-        </View>
-
         <View style={styles.divider} />
 
         <View style={styles.summaryRow}>
@@ -266,7 +335,7 @@ const CartScreen = ({ navigation }) => {
           onPress={handleCheckout}
         >
           <Text style={styles.checkoutButtonText}>
-            Proceed to Checkout ({cartItems.length} items)
+            Proceed to Checkout ({selectedCount} items)
           </Text>
         </TouchableOpacity>
 
@@ -338,11 +407,34 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    paddingLeft: 12,
+  },
+  checkboxContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingRight: 8,
+  },
+  selectAllContainer: {
+    backgroundColor: colors.white,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  selectAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  selectAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
   },
   imageContainer: {
     position: 'relative',
-    width: 100,
-    height: 100,
+    width: 120,
+    height: 120,
   },
   productImage: {
     width: '100%',
@@ -356,24 +448,6 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: 40,
-  },
-  quantityBadge: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
-  quantityBadgeText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: 'bold',
   },
   detailsContainer: {
     flex: 1,

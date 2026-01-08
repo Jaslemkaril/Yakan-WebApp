@@ -215,7 +215,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/create', [\App\Http\Controllers\AddressController::class, 'create'])->name('create');
         Route::post('/', [\App\Http\Controllers\AddressController::class, 'store'])->name('store');
         Route::get('/{address}/edit', [\App\Http\Controllers\AddressController::class, 'edit'])->name('edit');
-        Route::put('/{address}', [\App\Http\Controllers\AddressController::class, 'update'])->name('update');
+        // Accept both PUT and PATCH to cover form submissions and any cached clients
+        Route::match(['put', 'patch'], '/{address}', [\App\Http\Controllers\AddressController::class, 'update'])->name('update');
         Route::delete('/{address}', [\App\Http\Controllers\AddressController::class, 'destroy'])->name('destroy');
         Route::post('/{address}/set-default', [\App\Http\Controllers\AddressController::class, 'setDefault'])->name('setDefault');
         
@@ -233,7 +234,7 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/update/{id}', [CartController::class, 'update'])->name('cart.update');
         Route::post('/clear', [CartController::class, 'clear'])->name('cart.clear');
 
-        Route::get('/checkout', [CartController::class, 'checkout'])->name('cart.checkout');
+        Route::match(['get', 'post'], '/checkout', [CartController::class, 'checkout'])->name('cart.checkout');
         Route::match(['post','patch'],'/checkout/process', [CartController::class, 'processCheckout'])->name('cart.checkout.process');
 
         // Coupons
@@ -288,6 +289,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{chat}', [\App\Http\Controllers\ChatController::class, 'show'])->name('show');
         Route::post('/{chat}/message', [\App\Http\Controllers\ChatController::class, 'sendMessage'])->name('send-message');
         Route::post('/{chat}/close', [\App\Http\Controllers\ChatController::class, 'close'])->name('close');
+        Route::post('/{chat}/respond-quote', [\App\Http\Controllers\ChatController::class, 'respondToQuote'])->name('respond-quote');
     });
 
     // Redirect old colors route to pattern selection
@@ -349,9 +351,9 @@ Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->gr
     
     Route::get('/create/step2', [\App\Http\Controllers\CustomOrderController::class, 'createStep2'])->name('create.step2');
     Route::post('/create/step2', [\App\Http\Controllers\CustomOrderController::class, 'storeStep2'])->name('store.step2');
+    Route::get('/restore', [\App\Http\Controllers\CustomOrderController::class, 'restoreWizard'])->name('create.restore');
     Route::get('/create/step3', [\App\Http\Controllers\CustomOrderController::class, 'createStep3'])->name('create.step3');
     Route::post('/create/step3', [\App\Http\Controllers\CustomOrderController::class, 'storeStep3'])->name('store.step3');
-    Route::get('/restore', [\App\Http\Controllers\CustomOrderController::class, 'restoreWizard'])->name('create.restore');
     Route::get('/create/step4', [\App\Http\Controllers\CustomOrderController::class, 'createStep4'])->name('create.step4');
     Route::post('/create/complete', [\App\Http\Controllers\CustomOrderController::class, 'completeWizard'])->name('complete.wizard');
     Route::get('/success/{order}', [\App\Http\Controllers\CustomOrderController::class, 'success'])->name('success');
@@ -677,8 +679,12 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::post('custom-orders/{order}/update-status', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'updateStatus'])->name('custom_orders.update_status');
     Route::post('custom-orders/{order}/quote-price', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'quotePrice'])->name('custom_orders.quote_price');
     Route::post('custom-orders/{order}/verify-payment', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'verifyPayment'])->name('custom_orders.verify_payment');
+    Route::post('custom-orders/{order}/confirm-payment', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'confirmPayment'])->name('custom_orders.confirmPayment');
+    Route::post('custom-orders/{order}/reject-payment', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'rejectPayment'])->name('custom_orders.rejectPayment');
     Route::post('custom-orders/{order}/reject', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'rejectOrder'])->name('custom_orders.reject');
     Route::post('custom-orders/{order}/approve', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'approveOrder'])->name('custom_orders.approve');
+    Route::post('custom-orders/{order}/notify-delay', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'notifyDelay'])->name('custom_orders.notifyDelay');
+    Route::post('custom-orders/{order}/clear-delay', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'clearDelay'])->name('custom_orders.clearDelay');
     Route::delete('custom-orders/{order}', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'destroy'])->name('custom_orders.delete');
 
     // Custom Order Creation

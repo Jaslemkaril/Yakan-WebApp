@@ -7,7 +7,8 @@
     <title>@yield('title', 'Admin') - Yakan E-commerce Admin</title>
     
     <!-- Tailwind CSS -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Static Assets (Vite build disabled for Expo frontend) -->
     
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVJkEZSMUkrQ6usKu8zIvxUsvypLcXdAawO/PzWJNSQsizuX7937ekip6qq3R4gKbjwQZLiqy+EQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />

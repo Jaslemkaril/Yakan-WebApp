@@ -1,12 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, Alert } from 'react-native';
 import { useCart } from '../context/CartContext';
+import ApiService from '../services/api';
 
 const AccountScreen = ({ navigation }) => {
-  const { isLoggedIn, userInfo, logout, updateUserInfo } = useCart();
+  const { isLoggedIn, userInfo, logout, updateUserInfo, setUserInfo } = useCart();
+  
+  // Debug logging
+  console.log('[AccountScreen] Render - isLoggedIn:', isLoggedIn);
+  console.log('[AccountScreen] Render - userInfo:', JSON.stringify(userInfo, null, 2));
+  
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editedName, setEditedName] = useState(userInfo?.name || '');
   const [editedEmail, setEditedEmail] = useState(userInfo?.email || '');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch user data when screen loads or when screen comes into focus
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (isLoggedIn) {
+        try {
+          setIsLoading(true);
+          console.log('[AccountScreen] Fetching user data...');
+          const response = await ApiService.getCurrentUser();
+          console.log('[AccountScreen] API Response:', JSON.stringify(response, null, 2));
+          
+          if (response.success) {
+            const userData = response.data?.user || response.data;
+            console.log('[AccountScreen] Extracted user data:', JSON.stringify(userData, null, 2));
+            setUserInfo(userData);
+            // Force update the local state
+            setEditedName(userData?.name || '');
+            setEditedEmail(userData?.email || '');
+          } else {
+            console.error('[AccountScreen] Failed to fetch user:', response.error);
+          }
+        } catch (error) {
+          console.error('[AccountScreen] Error fetching user:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    fetchUserData();
+    
+    // Also fetch when screen comes into focus
+    const unsubscribe = navigation.addListener('focus', () => {
+      console.log('[AccountScreen] Screen focused, refreshing user data');
+      fetchUserData();
+    });
+    
+    return unsubscribe;
+  }, [isLoggedIn, navigation]);
 
   const handleLogout = () => {
     Alert.alert(
@@ -96,16 +142,33 @@ const AccountScreen = ({ navigation }) => {
       <ScrollView style={styles.content}>
         <View style={styles.profileSection}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{getInitials(userInfo?.name)}</Text>
+            <Text style={styles.avatarText}>
+              {getInitials((userInfo?.data?.name || userInfo?.name) || 
+                          ((userInfo?.data?.first_name || userInfo?.first_name) && (userInfo?.data?.last_name || userInfo?.last_name) 
+                            ? `${userInfo?.data?.first_name || userInfo?.first_name} ${userInfo?.data?.last_name || userInfo?.last_name}` 
+                            : 'User'))}
+            </Text>
           </View>
-          <Text style={styles.userName}>{userInfo?.name || 'User'}</Text>
-          <Text style={styles.userEmail}>{userInfo?.email || 'email@example.com'}</Text>
+          <Text style={styles.userName}>
+            {(userInfo?.data?.name || userInfo?.name) || 
+             ((userInfo?.data?.first_name || userInfo?.first_name) && (userInfo?.data?.last_name || userInfo?.last_name) 
+               ? `${userInfo?.data?.first_name || userInfo?.first_name} ${userInfo?.data?.last_name || userInfo?.last_name}` 
+               : (userInfo?.data?.first_name || userInfo?.first_name) || (userInfo?.data?.last_name || userInfo?.last_name) || 'User')}
+          </Text>
+          <Text style={styles.userEmail}>{userInfo?.data?.email || userInfo?.email || 'email@example.com'}</Text>
+          
+          {isLoading && <Text style={styles.loadingText}>Loading...</Text>}
           
           <TouchableOpacity
             style={styles.editProfileButton}
             onPress={() => {
-              setEditedName(userInfo?.name || '');
-              setEditedEmail(userInfo?.email || '');
+              const name = (userInfo?.data?.name || userInfo?.name) || 
+                          ((userInfo?.data?.first_name || userInfo?.first_name) && (userInfo?.data?.last_name || userInfo?.last_name) 
+                            ? `${userInfo?.data?.first_name || userInfo?.first_name} ${userInfo?.data?.last_name || userInfo?.last_name}` 
+                            : '');
+              const email = userInfo?.data?.email || userInfo?.email || '';
+              setEditedName(name);
+              setEditedEmail(email);
               setIsEditModalVisible(true);
             }}
           >
@@ -116,9 +179,17 @@ const AccountScreen = ({ navigation }) => {
         <View style={styles.menuSection}>
           <TouchableOpacity 
             style={styles.menuItem}
-            onPress={() => navigation.navigate('TrackOrders')}
+            onPress={() => navigation.navigate('Orders')}
           >
             <Text style={styles.menuText}> My Orders</Text>
+            <Text style={styles.menuArrow}>→</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Wishlist')}
+          >
+            <Text style={styles.menuText}> My Wishlists</Text>
             <Text style={styles.menuArrow}>→</Text>
           </TouchableOpacity>
           

@@ -5,9 +5,10 @@
 @push('styles')
 <style>
     .hero-section {
-        background: linear-gradient(135deg, rgba(128, 0, 0, 0.85) 0%, rgba(128, 0, 0, 0.85) 100%), url('https://images.unsplash.com/photo-1577720643272-265e434f3894?w=1200&h=600&fit=crop') center/cover;
+        background: linear-gradient(135deg, rgba(139, 0, 0, 0.92) 0%, rgba(100, 0, 0, 0.95) 100%), url('https://images.unsplash.com/photo-1577720643272-265e434f3894?w=1200&h=600&fit=crop') center/cover;
         position: relative;
         overflow: hidden;
+        min-height: 90vh;
     }
 
     .hero-section::before {
@@ -18,13 +19,24 @@
         right: 0;
         bottom: 0;
         background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/><circle cx="10" cy="50" r="0.5" fill="white" opacity="0.1"/><circle cx="90" cy="30" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-        opacity: 0.3;
+        opacity: 0.4;
     }
 
     .hero-content {
         position: relative;
         z-index: 10;
     }
+
+    .weaver-image-container {
+        position: relative;
+        transition: transform 0.5s ease;
+    }
+
+    .weaver-image-container:hover {
+        transform: scale(1.02);
+    }
+
+
 
     .feature-card {
         background: white;
@@ -95,10 +107,11 @@
     }
 
     .cta-section {
-        background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+        background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
         border-radius: 24px;
         position: relative;
         overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     }
 
     .cta-section::before {
@@ -108,7 +121,19 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="white" opacity="0.05"/><circle cx="80" cy="80" r="2" fill="white" opacity="0.05"/><circle cx="50" cy="50" r="1" fill="white" opacity="0.05"/></svg>');
+        background: 
+            radial-gradient(circle at 20% 50%, rgba(139, 0, 0, 0.15) 0%, transparent 50%),
+            radial-gradient(circle at 80% 50%, rgba(139, 0, 0, 0.15) 0%, transparent 50%),
+            url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="white" opacity="0.05"/><circle cx="80" cy="80" r="2" fill="white" opacity="0.05"/><circle cx="50" cy="50" r="1" fill="white" opacity="0.05"/></svg>');
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+
+    .animate-float {
+        animation: float 6s ease-in-out infinite;
     }
 </style>
 @endpush
@@ -135,39 +160,63 @@
     <section class="hero-section text-white py-20 lg:py-32">
         <div class="hero-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                <div class="animate-fade-in-up">
-                    <h1 class="text-5xl lg:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-lg">
+                <div class="animate-fade-in-up space-y-6">
+                    <h1 class="text-5xl lg:text-6xl xl:text-7xl font-bold mb-6 leading-none text-white drop-shadow-2xl whitespace-nowrap">
                         TUWAS YAKAN
                     </h1>
-                    <p class="text-2xl lg:text-4xl mb-6 text-red-100 leading-relaxed font-semibold tracking-wide">
+                    <p class="text-2xl lg:text-4xl xl:text-5xl mb-6 text-red-100 leading-relaxed font-semibold tracking-wide drop-shadow-lg">
                         Weaving Through Generations
                     </p>
-                    <p class="text-lg lg:text-2xl mb-8 text-red-100 leading-relaxed font-light">
-                        Authentic handcrafted products with traditional artistry
+                    <p class="text-lg lg:text-xl xl:text-2xl mb-8 text-red-100 leading-relaxed font-light max-w-xl">
+                        Authentic handcrafted products with traditional artistry passed down through generations of skilled Yakan weavers
                     </p>
-                    <div class="flex flex-col sm:flex-row gap-4">
-                        <a href="{{ route('products.index') }}" class="btn-primary text-lg px-8 py-4 inline-flex items-center justify-center group">
+                    <div class="flex flex-col sm:flex-row gap-4 pt-4">
+                        <a href="{{ route('products.index') }}" class="group bg-maroon-800 hover:bg-maroon-900 text-white text-lg px-10 py-5 inline-flex items-center justify-center shadow-2xl hover:shadow-red-500/50 transform hover:scale-105 transition-all duration-300 rounded-lg font-semibold" style="background-color: #800000;">
+                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                            </svg>
                             <span>Shop Products</span>
                             <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
                             </svg>
                         </a>
-                        <a href="{{ route('custom_orders.index') }}" class="btn-secondary text-lg px-8 py-4 inline-flex items-center justify-center">
-                            <span>Custom Orders</span>
-                            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="{{ route('custom_orders.index') }}" class="group btn-secondary text-lg px-10 py-5 inline-flex items-center justify-center shadow-2xl border-2 hover:shadow-white/30 transform hover:scale-105 transition-all duration-300">
+                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                             </svg>
+                            <span>Custom Orders</span>
                         </a>
                     </div>
                     
-                                    </div>
+                    <!-- Stats or features -->
+                    <div class="grid grid-cols-3 gap-6 pt-8 border-t border-white/20">
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-white mb-1">1000+</div>
+                            <div class="text-sm text-red-200">Happy Customers</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-white mb-1">500+</div>
+                            <div class="text-sm text-red-200">Products</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-white mb-1">100%</div>
+                            <div class="text-sm text-red-200">Authentic</div>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="relative animate-float">
-                    <div class="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 shadow-2xl overflow-hidden">
-                        <div class="aspect-square rounded-2xl flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-red-600 to-red-900">
+                    <div class="bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/30 shadow-2xl overflow-hidden weaver-image-container">
+                        <div class="aspect-square rounded-2xl flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-red-700 to-red-900 shadow-inner">
                             <!-- Yakan weaver with traditional loom image -->
-                            <img src="{{ asset('uploads/yakan-weaver.jpg') }}" alt="Yakan Weaver" class="w-full h-full object-cover" loading="lazy">
+                            <img src="{{ asset('uploads/yakan-weaver.webp') }}" alt="Yakan Weaver" class="w-full h-full object-cover" loading="lazy">
+                            <!-- Decorative corner accent -->
+                            <div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-white/20 to-transparent"></div>
+                            <div class="absolute bottom-0 left-0 w-20 h-20 bg-gradient-to-tr from-white/20 to-transparent"></div>
                         </div>
+                        <!-- Traditional pattern decoration -->
+                        <div class="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full opacity-20 blur-xl"></div>
+                        <div class="absolute -bottom-4 -left-4 w-24 h-24 bg-gradient-to-br from-red-400 to-pink-500 rounded-full opacity-20 blur-xl"></div>
                     </div>
                 </div>
             </div>
@@ -362,19 +411,61 @@
     <!-- CTA Section -->
     <section class="py-20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="cta-section text-white p-12 lg:p-16 relative">
+            <div class="cta-section text-white p-12 lg:p-20 relative">
                 <div class="relative z-10 text-center">
-                    <h2 class="text-4xl lg:text-5xl font-bold mb-6">Ready to Start Shopping?</h2>
-                    <p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+                    <div class="inline-block mb-6">
+                        <div class="w-16 h-16 bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <h2 class="text-4xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-white via-red-100 to-white bg-clip-text text-transparent">Ready to Start Shopping?</h2>
+                    <p class="text-xl lg:text-2xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed">
                         Join thousands of satisfied customers who have discovered the perfect blend of quality and creativity.
                     </p>
-                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                        <a href="{{ route('products.index') }}" class="btn-primary text-lg px-8 py-4 bg-white text-gray-900 hover:bg-gray-100">
-                            Start Shopping
+                    <div class="flex flex-col sm:flex-row gap-5 justify-center">
+                        <a href="{{ route('products.index') }}" class="group relative overflow-hidden bg-white text-gray-900 text-lg px-10 py-5 rounded-xl font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center justify-center">
+                            <span class="relative z-10">Start Shopping</span>
+                            <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                            </svg>
+                            <div class="absolute inset-0 bg-gradient-to-r from-red-600 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            <span class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 text-white font-bold transition-opacity duration-300">
+                                Start Shopping
+                                <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                                </svg>
+                            </span>
                         </a>
-                        <a href="{{ route('custom_orders.index') }}" class="btn-secondary text-lg px-8 py-4 border-white text-white hover:bg-white hover:text-gray-900">
-                            Create Custom Order
+                        <a href="{{ route('custom_orders.index') }}" class="group bg-transparent border-2 border-white text-white text-lg px-10 py-5 rounded-xl font-bold hover:bg-white hover:text-gray-900 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            </svg>
+                            <span>Create Custom Order</span>
                         </a>
+                    </div>
+                    <!-- Trust indicators -->
+                    <div class="mt-12 flex flex-wrap items-center justify-center gap-8 text-gray-400 text-sm">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                            <span>Secure Checkout</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                                <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z"/>
+                            </svg>
+                            <span>Fast Delivery</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                            </svg>
+                            <span>Quality Guaranteed</span>
+                        </div>
                     </div>
                 </div>
             </div>

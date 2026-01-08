@@ -18,6 +18,13 @@
                         </svg>
                         Check Updates
                     </button>
+                    <a href="{{ route('chats.create') }}"
+                       class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-[#6B0000] to-[#5B0000] hover:from-[#5B0000] hover:to-[#4B0000] text-white font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
+                        Send Design Request
+                    </a>
                     <a href="{{ route('custom_orders.create') }}"
                        class="inline-flex items-center px-6 py-3 bg-red-700 hover:bg-red-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -184,7 +191,51 @@
                                 </td>
                                 
                                 <td class="px-6 py-4">
-                                    @if($order->design_upload)
+                                    @php
+                                        // Load pattern for SVG display
+                                        $patternModel = null;
+                                        if (!empty($order->design_metadata) && isset($order->design_metadata['pattern_id'])) {
+                                            $patternModel = \App\Models\YakanPattern::find($order->design_metadata['pattern_id']);
+                                        } elseif (!empty($order->patterns) && is_array($order->patterns)) {
+                                            if (!empty($order->patterns) && is_numeric($order->patterns[0])) {
+                                                $patternModel = \App\Models\YakanPattern::find($order->patterns[0]);
+                                            } elseif (!empty($order->patterns)) {
+                                                $patternModel = \App\Models\YakanPattern::where('name', $order->patterns[0])->first();
+                                            }
+                                        }
+
+                                        // Get customization settings from order
+                                        $customization = $order->customization_settings ?? [];
+                                        $filterStyle = '';
+                                        if (!empty($customization)) {
+                                            $hue = $customization['hue'] ?? 0;
+                                            $saturation = $customization['saturation'] ?? 100;
+                                            $brightness = $customization['brightness'] ?? 100;
+                                            $scale = $customization['scale'] ?? 1;
+                                            $rotation = $customization['rotation'] ?? 0;
+                                            $opacity = $customization['opacity'] ?? 1;
+                                            
+                                            $filterStyle = sprintf(
+                                                'filter: hue-rotate(%ddeg) saturate(%d%%) brightness(%d%%); opacity: %s; transform: scale(%s) rotate(%ddeg);',
+                                                $hue,
+                                                $saturation,
+                                                $brightness,
+                                                $opacity,
+                                                $scale,
+                                                $rotation
+                                            );
+                                        }
+                                    @endphp
+                                    
+                                    @if($patternModel && $patternModel->hasSvg())
+                                        <div class="mb-2">
+                                            <div class="w-16 h-16 rounded-lg border border-gray-200 shadow-sm bg-gray-50 p-1 flex items-center justify-center overflow-hidden">
+                                                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; {{ $filterStyle }}">
+                                                    {!! $patternModel->getSvgContent() !!}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @elseif($order->design_upload)
                                         <div class="mb-2">
                                             <img src="{{ asset('storage/' . $order->design_upload) }}" 
                                                  alt="Custom pattern preview"

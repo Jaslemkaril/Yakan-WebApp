@@ -61,7 +61,9 @@
                                 </div>
                                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end;">
                                     <span style="display: inline-flex; align-items: center; padding: 0.375rem 0.75rem; background: linear-gradient(135deg, #f5e6e6 0%, #e8cccc 100%); color: #800000; font-size: 0.75rem; font-weight: bold; border-radius: 9999px; border: 1px solid #d4a5a5;">
-                                        @if($order->status === 'delivered')
+                                        @if($order->status === 'completed')
+                                            ✅ Completed
+                                        @elseif($order->status === 'delivered')
                                             ✅ Delivered
                                         @elseif($order->status === 'shipped')
                                             🚚 Shipped
@@ -89,8 +91,8 @@
                             <div style="display: flex; gap: 0.5rem; overflow-x: auto; margin-bottom: 1.5rem; padding-bottom: 0.5rem;">
                                 @foreach($order->orderItems->take(3) as $item)
                                     <div style="flex-shrink: 0; width: 5rem; height: 5rem; background-color: #f3f4f6; border-radius: 0.75rem; overflow: hidden; border: 2px solid #e5e7eb;">
-                                        @if($item->product && $item->product->image)
-                                            <img src="{{ asset('storage/' . $item->product->image) }}" alt="{{ $item->product->name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                        @if($item->product)
+                                            <img src="{{ $item->product->image_url }}" alt="{{ $item->product->name }}" style="width: 100%; height: 100%; object-fit: cover;">
                                         @else
                                             <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);">
                                                 <svg style="width: 1.5rem; height: 1.5rem; color: #9ca3af;" fill="none" viewBox="0 0 24 24" stroke="currentColor">

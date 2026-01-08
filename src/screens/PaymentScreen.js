@@ -131,6 +131,7 @@ export default function PaymentScreen({ navigation, route }) {
         payment_method: selectedPaymentMethod,
         payment_status: 'paid',
         payment_reference: referenceNumber || null,
+        delivery_type: orderData.deliveryOption || 'deliver', // 'deliver' or 'pickup'
         items: orderData.items.map(item => ({
           product_id: item.id,
           quantity: item.quantity || 1,

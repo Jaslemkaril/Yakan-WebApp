@@ -1,40 +1,32 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="min-h-screen bg-gradient-to-br from-maroon-50 via-white to-maroon-50">
-    <div class="container mx-auto px-4 py-12">
-        <div class="max-w-5xl mx-auto">
-            <!-- Enhanced Header -->
-            <div class="mb-12">
-                <div class="flex justify-between items-center mb-6">
-                    <div>
-                        <div class="flex items-center gap-3 mb-2">
-                            <div class="w-12 h-12 rounded-full flex items-center justify-center shadow-lg" style="background-color:#800000;">
-                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <h1 class="text-4xl font-bold text-gray-900">My Addresses</h1>
-                                <p class="text-gray-600 mt-1">Manage your delivery locations</p>
-                            </div>
-                        </div>
-                    </div>
-                    <a href="{{ route('addresses.create') }}" class="group relative px-8 py-3 text-white rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2" style="background-color:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
-                        <span class="flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                            </svg>
-                            Add New Address
-                        </span>
-                    </a>
+<div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
+    <div class="container mx-auto px-4">
+        <div class="max-w-6xl mx-auto">
+            <!-- Back Button and Header -->
+            <div class="mb-8">
+                <button onclick="window.history.back()" class="mb-4 flex items-center gap-2 text-gray-600 hover:text-[#8B1A1A] transition-colors duration-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    <span class="font-medium">Back</span>
+                </button>
+                
+                <div class="flex justify-between items-center">
+                    <h1 class="text-3xl font-bold text-gray-900">My Addresses</h1>
+                    <button onclick="document.getElementById('addAddressModal').classList.remove('hidden')" class="px-6 py-3 bg-[#8B1A1A] text-white font-medium rounded-lg hover:bg-[#6B1414] transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Add New Address
+                    </button>
                 </div>
             </div>
 
             <!-- Success Message -->
             @if (session('success'))
-                <div class="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 rounded-lg p-4 shadow-md" style="border-left-color:#10b981;">
+                <div class="mb-6 bg-green-50 border-l-4 border-green-500 rounded-lg p-4 shadow-md">
                     <div class="flex items-center">
                         <svg class="w-6 h-6 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -44,186 +36,182 @@
                 </div>
             @endif
 
+            <!-- Address Section Title -->
+            <div class="mb-4">
+                <h2 class="text-xl font-semibold text-gray-800">Address</h2>
+            </div>
+
             <!-- Addresses List -->
             @if ($addresses->count() > 0)
-                <div class="grid gap-6">
+                <div class="space-y-4">
                     @foreach ($addresses as $address)
-                        <div class="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border-l-4 {{ $address->is_default ? 'border-maroon-600' : 'border-gray-200' }}" style="{{ $address->is_default ? 'border-left-color:#800000;' : '' }}">
-                            <!-- Card Header -->
-                            <div class="bg-gradient-to-r {{ $address->is_default ? 'from-maroon-50 to-maroon-100' : 'from-gray-50 to-gray-100' }} px-6 py-4 border-b {{ $address->is_default ? 'border-maroon-200' : 'border-gray-200' }}">
-                                <div class="flex justify-between items-start">
-                                    <div class="flex-1">
-                                        <div class="flex items-center gap-3 flex-wrap">
-                                            <h3 class="text-2xl font-bold text-gray-900">{{ $address->full_name }}</h3>
-                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold" style="background-color:#f5e6e8; color:#800000;">
-                                                {{ $address->label }}
-                                            </span>
-                                            @if ($address->is_default)
-                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold text-white" style="background-color:#800000;">
-                                                    ★ Default Address
-                                                </span>
-                                            @endif
-                                        </div>
-                                        <p class="text-gray-600 mt-2 flex items-center">
-                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 00.948-.684l1.498-4.493a1 1 0 011.502-.684l1.498 4.493a1 1 0 00.948.684H19a2 2 0 012 2v2a2 2 0 01-2 2H5a2 2 0 01-2-2V5z"/>
-                                            </svg>
-                                            {{ $address->phone_number }}
-                                        </p>
+                        <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <h3 class="text-lg font-bold text-gray-900">{{ $address->full_name }}</h3>
+                                        <span class="text-gray-600">|</span>
+                                        <span class="text-gray-700">({{ $address->phone_number }})</span>
+                                    </div>
+                                    
+                                    <p class="text-gray-700 mb-3">{{ $address->street }}</p>
+                                    <p class="text-gray-600">
+                                        @if($address->barangay){{ $address->barangay }}, @endif
+                                        {{ $address->city }}, {{ $address->province }}, 
+                                        @if($address->postal_code){{ $address->postal_code }}@endif
+                                    </p>
+                                    
+                                    <div class="flex gap-2 mt-3">
+                                        @if ($address->is_default)
+                                            <span class="px-3 py-1 text-xs border border-[#8B1A1A] text-[#8B1A1A] rounded">Default</span>
+                                        @endif
+                                        @if ($address->label === 'Home')
+                                            <span class="px-3 py-1 text-xs border border-gray-400 text-gray-700 rounded">Pickup Address</span>
+                                        @endif
+                                        @if ($address->label)
+                                            <span class="px-3 py-1 text-xs border border-gray-400 text-gray-700 rounded">Return Address</span>
+                                        @endif
                                     </div>
                                 </div>
-                            </div>
-
-                            <!-- Address Details -->
-                            <div class="px-6 py-5">
-                                <div class="space-y-3">
-                                    <div class="flex items-start">
-                                        <svg class="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#800000;">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5.581m0 0H9m5.581 0a2.121 2.121 0 01-4.242 0m9.242 0H15"/>
-                                        </svg>
-                                        <div>
-                                            <p class="text-sm text-gray-600">Street Address</p>
-                                            <p class="text-gray-900 font-semibold">{{ $address->street }}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        @if ($address->barangay)
-                                            <div class="flex items-start">
-                                                <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#800000;">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 003 16.382V5.618a1 1 0 011.553-.894L9 7.882"/>
-                                                </svg>
-                                                <div>
-                                                    <p class="text-sm text-gray-600">Barangay</p>
-                                                    <p class="text-gray-900 font-semibold">{{ $address->barangay }}</p>
-                                                </div>
-                                            </div>
-                                        @endif
-                                        
-                                        <div class="flex items-start">
-                                            <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#800000;">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                                            </svg>
-                                            <div>
-                                                <p class="text-sm text-gray-600">City</p>
-                                                <p class="text-gray-900 font-semibold">{{ $address->city }}</p>
-                                            </div>
-                                        </div>
-                                        
-                                        @if ($address->province)
-                                            <div class="flex items-start">
-                                                <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#800000;">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h6a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V5z"/>
-                                                </svg>
-                                                <div>
-                                                    <p class="text-sm text-gray-600">Province</p>
-                                                    <p class="text-gray-900 font-semibold">{{ $address->province }}</p>
-                                                </div>
-                                            </div>
-                                        @endif
-                                    </div>
-                                    
-                                    @if ($address->postal_code)
-                                        <div class="flex items-start">
-                                            <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#800000;">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3v-6"/>
-                                            </svg>
-                                            <div>
-                                                <p class="text-sm text-gray-600">Postal Code</p>
-                                                <p class="text-gray-900 font-semibold">{{ $address->postal_code }}</p>
-                                            </div>
-                                        </div>
+                                
+                                <div class="flex items-start gap-2 ml-4">
+                                    <button onclick="editAddress({{ $address->id }})" class="text-[#8B1A1A] hover:text-[#6B1414] font-medium">Edit</button>
+                                    @if (!$address->is_default)
+                                        <span class="text-gray-300">|</span>
+                                        <form action="{{ route('addresses.destroy', $address) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this address?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-gray-600 hover:text-red-600 font-medium">Delete</button>
+                                        </form>
                                     @endif
                                 </div>
                             </div>
-
-                            <!-- Action Buttons -->
-                            <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex gap-3 flex-wrap">
-                                <a href="{{ route('addresses.edit', $address) }}" class="flex-1 min-w-max px-4 py-2 text-white rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 flex items-center justify-center" style="background-color:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                    </svg>
-                                    Edit
-                                </a>
-                                @if (!$address->is_default)
-                                    <form action="{{ route('addresses.setDefault', $address) }}" method="POST" class="flex-1 min-w-max">
+                            
+                            @if (!$address->is_default)
+                                <div class="mt-4 pt-4 border-t border-gray-200 text-right">
+                                    <form action="{{ route('addresses.setDefault', $address) }}" method="POST" class="inline">
                                         @csrf
-                                        <button type="submit" class="w-full px-4 py-2 text-white rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 flex items-center justify-center" style="background-color:#a0a0a0;" onmouseover="this.style.backgroundColor='#808080'" onmouseout="this.style.backgroundColor='#a0a0a0'">
-                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                                            </svg>
-                                            Set Default
+                                        <button type="submit" class="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:border-[#8B1A1A] hover:text-[#8B1A1A] transition-colors">
+                                            Set as default
                                         </button>
                                     </form>
-                                @endif
-                                <form action="{{ route('addresses.destroy', $address) }}" method="POST" class="flex-1 min-w-max" onsubmit="return confirm('Are you sure you want to delete this address?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="w-full px-4 py-2 text-white rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 flex items-center justify-center bg-red-500" onmouseover="this.style.backgroundColor='#dc2626'" onmouseout="this.style.backgroundColor='#ef4444'">
-                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                        </svg>
-                                        Delete
-                                    </button>
-                                </form>
-                            </div>
+                                </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>
             @else
-                <div class="bg-white rounded-2xl shadow-lg p-12 text-center border-2 border-dashed" style="border-color:#e0b0b0;">
-                    <div class="mb-6 flex justify-center">
-                        <div class="w-20 h-20 rounded-full flex items-center justify-center" style="background-color:#f5e6e8;">
-                            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#800000;">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
-                        </div>
-                    </div>
-                    <p class="text-gray-600 text-lg mb-6 font-medium">No addresses saved yet</p>
-                    <p class="text-gray-500 mb-8">Start by adding your first delivery address</p>
-                    <a href="{{ route('addresses.create') }}" class="inline-block px-8 py-3 text-white rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 hover:-translate-y-1" style="background-color:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
-                        <span class="flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                            </svg>
-                            Add Your First Address
-                        </span>
-                    </a>
+                <div class="bg-white rounded-lg shadow-md border border-gray-200 p-12 text-center">
+                    <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <p class="text-gray-600 text-lg mb-6">No addresses saved yet</p>
+                    <button onclick="document.getElementById('addAddressModal').classList.remove('hidden')" class="px-8 py-3 bg-[#8B1A1A] text-white rounded-lg hover:bg-[#6B1414] transition-all duration-200 shadow-md">
+                        Add Your First Address
+                    </button>
                 </div>
             @endif
         </div>
     </div>
 </div>
 
-<style>
-    @keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
+<!-- Add Address Modal -->
+<div id="addAddressModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-gray-900">New Address</h2>
+                <button onclick="document.getElementById('addAddressModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <form action="{{ route('addresses.store') }}" method="POST" class="p-6">
+            @csrf
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <input type="text" name="full_name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    <input type="tel" name="phone_number" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Region, Province, City, Barangay</label>
+                <input type="text" name="region" placeholder="Mindanao, Zamboanga Del Sur, Zamboanga City, Tumaga" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
+                <input type="text" name="postal_code" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Street Name, Building, House No.</label>
+                <input type="text" name="formatted_address" placeholder="RRM Perez Drive, (papasok na pababa, sa ika limang poste sa side ng silver gate ng tower) Sun Street, Tumaga, Zamboanga City" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Label As:</label>
+                <div class="flex gap-3">
+                    <label class="flex items-center">
+                        <input type="radio" name="label" value="Home" class="mr-2 text-[#8B1A1A] focus:ring-[#8B1A1A]">
+                        <span class="text-gray-700">Home</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="radio" name="label" value="Work" class="mr-2 text-[#8B1A1A] focus:ring-[#8B1A1A]">
+                        <span class="text-gray-700">Work</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 pt-4 border-t border-gray-200">
+                <button type="button" onclick="document.getElementById('addAddressModal').classList.add('hidden')" class="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" class="flex-1 px-6 py-3 bg-[#8B1A1A] text-white rounded-lg hover:bg-[#6B1414] transition-colors">
+                    Submit
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
-    .bg-maroon-50 { background-color: #faf5f5; }
-    .bg-maroon-100 { background-color: #f5e6e8; }
-    .border-maroon-200 { border-color: #e0b0b0; }
-    .border-maroon-600 { border-color: #800000; }
-    .text-maroon-700 { color: #8b3a56; }
+<!-- Edit Address Modal (will be populated dynamically) -->
+<div id="editAddressModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-gray-900">Edit Address</h2>
+                <button onclick="document.getElementById('editAddressModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <div id="editFormContainer"></div>
+    </div>
+</div>
 
-    div[class*="grid gap-6"] > div {
-        animation: slideIn 0.3s ease-out forwards;
-    }
+<script>
+function editAddress(addressId) {
+    // Fetch address data and populate edit modal
+    fetch(`/addresses/${addressId}/edit`)
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('editFormContainer').innerHTML = html;
+            document.getElementById('editAddressModal').classList.remove('hidden');
+        });
+}
+</script>
 
-    div[class*="grid gap-6"] > div:nth-child(2) {
-        animation-delay: 0.1s;
-    }
-
-    div[class*="grid gap-6"] > div:nth-child(3) {
-        animation-delay: 0.2s;
-    }
-</style>
 @endsection

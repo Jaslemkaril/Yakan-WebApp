@@ -183,6 +183,7 @@ class ProductController extends Controller
         // Handle new image uploads with color associations
         $imagePath = $product->image;
         $imageColors = $request->input('image_colors', []);
+        $firstNewImage = null;
         
         if ($request->hasFile('images')) {
             $imageIndex = count($allImages);
@@ -197,13 +198,18 @@ class ProductController extends Controller
                         'sort_order' => $imageIndex
                     ];
                     
-                    // First image becomes the main image if no main image exists or all were deleted
-                    if ($imagePath === null || empty($imagePath) || in_array($imagePath, $imagesToDelete)) {
-                        $imagePath = $imageName;
+                    // Track first new image
+                    if ($firstNewImage === null) {
+                        $firstNewImage = $imageName;
                     }
                     
                     $imageIndex++;
                 }
+            }
+            
+            // Update main image to first new image if new images were uploaded
+            if ($firstNewImage !== null) {
+                $imagePath = $firstNewImage;
             }
         }
         

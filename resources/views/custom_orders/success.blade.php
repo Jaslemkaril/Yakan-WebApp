@@ -31,32 +31,31 @@
                     $contactEmail = $order->email ?? optional($order->user)->email;
                     $contactPhone = $order->phone;
 
-                    // Resolve customized pattern / design preview
-                    $previewUrl = null;
-                    $candidate = $order->preview_image ?? null;
-
-                    if ($candidate) {
-                        if (str_starts_with($candidate, 'data:image')) {
-                            $previewUrl = $candidate;
-                        } elseif (str_starts_with($candidate, 'custom_orders/') || str_starts_with($candidate, 'custom_designs/')) {
-                            $previewUrl = asset('storage/' . $candidate);
-                        } elseif (str_starts_with($candidate, 'http')) {
-                            $previewUrl = $candidate;
+                    // Load patterns - check multiple sources
+                    $selectedPatterns = collect();
+                    
+                    // 1. Check design_metadata for pattern_id
+                    if (!empty($order->design_metadata) && isset($order->design_metadata['pattern_id']) && $order->design_metadata['pattern_id']) {
+                        $pattern = \App\Models\YakanPattern::find($order->design_metadata['pattern_id']);
+                        if ($pattern) {
+                            $selectedPatterns->push($pattern);
                         }
                     }
-
-                    if (!$previewUrl && $order->design_upload) {
-                        if (str_starts_with($order->design_upload, 'data:image')) {
-                            $previewUrl = $order->design_upload;
-                        } elseif (str_starts_with($order->design_upload, 'custom_orders/') || str_starts_with($order->design_upload, 'custom_designs/')) {
-                            $previewUrl = asset('storage/' . $order->design_upload);
+                    
+                    // 2. Check patterns array - could be IDs (integers) or names (strings)
+                    if ($selectedPatterns->isEmpty() && !empty($order->patterns) && is_array($order->patterns)) {
+                        // Check if first element is numeric (ID) or string (name)
+                        if (!empty($order->patterns) && is_numeric($order->patterns[0])) {
+                            // Pattern IDs
+                            $selectedPatterns = \App\Models\YakanPattern::whereIn('id', $order->patterns)->get();
                         } else {
-                            $previewUrl = asset('storage/' . ltrim($order->design_upload, '/'));
+                            // Pattern names
+                            $selectedPatterns = \App\Models\YakanPattern::whereIn('name', $order->patterns)->get();
                         }
                     }
                 @endphp
 
-                @if($previewUrl)
+                @if($selectedPatterns->count() > 0)
                     <div class="mb-6">
                         <div class="rounded-xl p-4 border-2" style="background-color:#fff5f5; border-color:#e0b0b0;">
                             <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
@@ -67,7 +66,44 @@
                                 Your Customized Pattern
                             </h4>
                             <div class="bg-white rounded-lg p-3 shadow-inner max-w-xl mx-auto">
-                                <img src="{{ $previewUrl }}" alt="Pattern Preview" class="w-full h-auto rounded-lg border-2 border-gray-200" style="max-height: 380px; object-fit: contain;">
+                                @foreach($selectedPatterns as $pattern)
+                                <div class="mb-4 last:mb-0">
+                                    <div class="text-xs font-semibold text-gray-600 mb-2">{{ $pattern->name }}</div>
+                                    @if($pattern->hasSvg())
+                                    @php
+                                        $customization = $order->customization_settings ?? [];
+                                        $scale = $customization['scale'] ?? 1;
+                                        $rotation = $customization['rotation'] ?? 0;
+                                        $opacity = $customization['opacity'] ?? 1;
+                                        $hue = $customization['hue'] ?? 0;
+                                        $saturation = $customization['saturation'] ?? 100;
+                                        $brightness = $customization['brightness'] ?? 100;
+                                        
+                                        // Build CSS filter string for color customization
+                                        $filterStyle = sprintf(
+                                            'filter: hue-rotate(%ddeg) saturate(%d%%) brightness(%d%%); opacity: %s; transform: scale(%s) rotate(%ddeg);',
+                                            $hue,
+                                            $saturation,
+                                            $brightness,
+                                            $opacity,
+                                            $scale,
+                                            $rotation
+                                        );
+                                    @endphp
+                                    <div class="w-full rounded-lg border-2 shadow-md overflow-hidden" style="border-color:#e0b0b0; max-height: 350px;">
+                                        <div class="w-full h-64 flex items-center justify-center bg-gray-50 p-4">
+                                            <div style="{{ $filterStyle }} transform-origin: center; transition: all 0.3s ease;">
+                                                {!! $pattern->getSvgContent() !!}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @else
+                                    <div class="w-full h-64 rounded-lg border-2 shadow-md flex items-center justify-center bg-gray-100" style="border-color:#e0b0b0;">
+                                        <span class="text-gray-400">No preview available</span>
+                                    </div>
+                                    @endif
+                                </div>
+                                @endforeach
                             </div>
                         </div>
                     </div>
@@ -125,13 +161,6 @@
                         <p class="text-sm text-gray-500 mb-1">Quantity (Items)</p>
                         <p class="text-lg font-semibold text-gray-900">{{ $order->quantity ?? 1 }}</p>
                     </div>
-
-                    @if($contactEmail)
-                        <div>
-                            <p class="text-sm text-gray-500 mb-1">Contact Email</p>
-                            <p class="text-base font-semibold text-gray-900">{{ $contactEmail }}</p>
-                        </div>
-                    @endif
 
                     @if($contactPhone)
                         <div>

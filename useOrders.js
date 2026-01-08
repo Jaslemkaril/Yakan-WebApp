@@ -18,22 +18,21 @@ export const useOrders = () => {
 
       // Refresh statuses from backend when we have an order id
       const normalizeStatus = (apiOrder, fallbackStatus) => {
-        // If payment is marked paid/verified and status is still pending, show payment_verified
-        if ((apiOrder.payment_status === 'paid' || apiOrder.payment_status === 'verified') && (!apiOrder.status || apiOrder.status === 'pending')) {
-          return 'payment_verified';
-        }
-        // Map backend statuses to mobile timeline keys
+        // Map backend statuses to simplified mobile timeline (4 stages)
+        // Keep 'completed' as-is so it doesn't revert to 'delivered'
         const map = {
-          pending: 'pending_payment',
-          pending_payment: 'pending_payment',
-          payment_verified: 'payment_verified',
-          confirmed: 'pending_confirmation',
+          pending: 'pending',
+          pending_payment: 'pending',
+          payment_verified: 'pending',
+          pending_confirmation: 'pending',
+          confirmed: 'processing',
           processing: 'processing',
           shipped: 'shipped',
           delivered: 'delivered',
+          completed: 'completed',
           cancelled: 'cancelled',
         };
-        return map[apiOrder.status] || fallbackStatus || 'pending_payment';
+        return map[apiOrder.status] || fallbackStatus || 'pending';
       };
 
       const refreshedOrders = await Promise.all(
@@ -54,9 +53,15 @@ export const useOrders = () => {
                 subtotal: apiOrder.subtotal ?? order.subtotal,
                 shippingFee: apiOrder.shipping_fee ?? order.shippingFee,
               };
+            } else if (res?.error?.includes('Order not found')) {
+              // Order was deleted from backend - silently ignore
+              return order;
             }
           } catch (err) {
-            console.warn('Failed to refresh order from API', err?.message || err);
+            // Silently ignore 404 errors (deleted orders) - just use cached data
+            if (!err?.message?.includes('Order not found')) {
+              console.warn('Failed to refresh order from API', err?.message || err);
+            }
           }
           return order;
         })

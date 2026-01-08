@@ -11,10 +11,11 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('orders', function (Blueprint $table) {
-            // Add user_address_id if it doesn't exist
+            // Add user_address_id if it doesn't exist (without foreign key for now)
             if (!Schema::hasColumn('orders', 'user_address_id')) {
                 $table->unsignedBigInteger('user_address_id')->nullable()->after('user_id');
-                $table->foreign('user_address_id')->references('id')->on('user_addresses')->onDelete('set null');
+                // Skip foreign key since user_addresses table doesn't exist
+                // $table->foreign('user_address_id')->references('id')->on('user_addresses')->onDelete('set null');
             }
 
             // Add tracking columns if they don't exist

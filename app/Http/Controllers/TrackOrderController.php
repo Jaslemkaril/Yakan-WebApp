@@ -13,14 +13,25 @@ class TrackOrderController extends Controller
      */
     public function index()
     {
-        // Get recent orders that are public (for guest viewing)
-        // Show last 10 recent orders with tracking numbers
-        $recentOrders = Order::with(['user', 'items.product'])
-                            ->where('payment_status', 'paid')
-                            ->whereNotNull('tracking_number')
-                            ->latest()
-                            ->limit(10)
-                            ->get();
+        // Only show recent orders if user is logged in (for their own orders)
+        // Guest users should not see any orders until they search
+        $recentOrders = collect(); // Empty collection
+        
+        if (Auth::check()) {
+            // Show only logged-in user's own recent orders
+            // Include orders with matching user_id OR matching customer_email
+            $user = Auth::user();
+            $recentOrders = Order::with(['user', 'items.product'])
+                                ->where(function($query) use ($user) {
+                                    $query->where('user_id', $user->id)
+                                          ->orWhere('customer_email', $user->email);
+                                })
+                                ->where('payment_status', 'paid')
+                                ->whereNotNull('tracking_number')
+                                ->latest()
+                                ->limit(10)
+                                ->get();
+        }
         
         return view('track-order.index', compact('recentOrders'));
     }
@@ -48,8 +59,11 @@ class TrackOrderController extends Controller
                 });
             }
         } elseif ($request->search_type === 'email') {
-            $query->whereHas('user', function($q) use ($request) {
-                $q->where('email', $request->email);
+            // Search by user email OR customer_email field
+            $query->where(function($q) use ($request) {
+                $q->whereHas('user', function($userQuery) use ($request) {
+                    $userQuery->where('email', $request->email);
+                })->orWhere('customer_email', $request->email);
             });
         }
 

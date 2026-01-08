@@ -77,10 +77,13 @@ class CustomOrder extends Model
         'last_design_update',
         'design_completion_time',
         'pattern_count',
+        'design_completion_time',
+        'pattern_count',
         'complexity_score',
+        'customization_settings',
         // NOTE: Following fields were in fillable but don't exist as DB columns:
         // 'order_name', 'category', 'size', 'priority', 'description', 'special_instructions'
-        // 'preview_image', 'customization_settings', 'complexity'
+        // 'preview_image', 'complexity'
         // Data is stored in 'specifications', 'design_upload', and 'design_metadata' instead
     ];
 
@@ -98,8 +101,10 @@ class CustomOrder extends Model
         'production_completed_at' => 'datetime',
         'out_for_delivery_at' => 'datetime',
         'delivered_at' => 'datetime',
+        'delay_notified_at' => 'datetime',
         'transfer_date' => 'date',
         'design_metadata' => 'array',
+        'customization_settings' => 'array',
         'pattern_positions' => 'array',
         'color_palette' => 'array',
         'design_modifications' => 'array',

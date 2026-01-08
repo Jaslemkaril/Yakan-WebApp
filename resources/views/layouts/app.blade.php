@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"@if(request()->routeIs('chats.*')) class="chat-page-html" style="background: linear-gradient(135deg, #800000 0%, #600000 100%) !important;"@endif>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,6 +15,9 @@
     
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
     
     @auth
     <script>
@@ -86,7 +89,7 @@
     @endauth
     
     <!-- Tailwind CSS -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <!-- Vite build disabled for Expo frontend -->
     
     @stack('styles')
     
@@ -479,7 +482,7 @@
         }
     </style>
 </head>
-<body class="antialiased{{ request()->routeIs('chats.*') ? ' chat-page' : '' }}"@if(request()->routeIs('chats.*')) style="background: linear-gradient(135deg, #800000 0%, #600000 100%) !important; min-height: 100vh !important;"@endif>
+<body class="antialiased">
     <!-- Floating Background Elements -->
     @unless(request()->routeIs('chats.*'))
     <div class="floating-element floating-1"></div>
@@ -538,7 +541,7 @@
                             </svg>
                             Support
                             @if($unreadChatCount > 0)
-                                <span style="position: absolute; top: -8px; right: -8px; background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%); color: white; font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 10px; min-width: 18px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3); z-index: 10;">
+                                <span style="position: absolute; top: -8px; right: -8px; background-color: #800000; color: white; font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 10px; min-width: 18px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3); z-index: 10;">
                                     {{ $unreadChatCount > 9 ? '9+' : $unreadChatCount }}
                                 </span>
                             @endif
@@ -548,10 +551,16 @@
 
                 <!-- Wishlist Icon -->
                 @auth
-                    <a href="{{ route('wishlist.index') }}" class="p-2 rounded-lg hover:bg-gray-100 transition-colors" title="My Wishlist">
+                    <a href="{{ route('wishlist.index') }}" class="p-2 rounded-lg hover:bg-gray-100 transition-colors relative" title="My Wishlist">
                         <svg class="w-6 h-6 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #8b3a56;" onmouseover="this.style.color='#7a3350'" onmouseout="this.style.color='#8b3a56'">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                         </svg>
+                        @php
+                            $wishlistCount = \App\Models\Wishlist::where('user_id', auth()->user()->id)->count();
+                        @endphp
+                        <span id="wishlist-count-badge" class="absolute -top-1 -right-1 text-white text-xs font-bold rounded-full flex items-center justify-center w-5 h-5 {{ $wishlistCount > 0 ? '' : 'hidden' }}" style="background-color: #800000;">
+                            {{ $wishlistCount > 99 ? '99+' : $wishlistCount }}
+                        </span>
                     </a>
                 @endauth
 
@@ -577,7 +586,7 @@
                                         $cartCount = 0;
                                     }
                                 @endphp
-                                <span id="cart-count-badge" class="cart-badge absolute -top-1 -right-1 text-white text-xs rounded-full flex items-center justify-center w-5 h-5 {{ $cartCount > 0 ? '' : 'hidden' }}" style="background-color: #800000;">
+                                <span id="cart-count-badge" class="cart-badge absolute -top-1 -right-1 text-white text-xs font-bold rounded-full flex items-center justify-center w-5 h-5 {{ $cartCount > 0 ? '' : 'hidden' }}" style="background-color: #800000;">
                                     {{ $cartCount > 99 ? '99+' : $cartCount }}
                                 </span>
                             </div>
@@ -604,6 +613,7 @@
                                 </div>
                                 <a href="{{ route('profile.edit') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
                                 <a href="{{ route('wishlist.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Wishlist</a>
+                                <a href="{{ route('addresses.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Saved Addresses</a>
                                 <a href="{{ route('orders.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Orders</a>
                                 @if(auth()->user()->role === 'admin')
                                     <a href="{{ route('admin.dashboard') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Admin Dashboard</a>
@@ -683,12 +693,12 @@
     </nav>
 
     <!-- Main Content -->
-    <main class="relative z-10{{ request()->routeIs('chats.*') ? ' chat-page-main' : '' }}"@if(request()->routeIs('chats.*')) style="background: linear-gradient(135deg, #800000 0%, #600000 100%) !important; min-height: 100vh !important;"@endif>
+    <main class="relative z-10">
         @yield('content')
     </main>
 
     <!-- Modern Footer -->
-    <footer class="@if(request()->routeIs('chats.*'))bg-gray-900 mt-0 @else bg-gray-900 text-white mt-20 @endif relative overflow-hidden"@if(request()->routeIs('chats.*')) style="background: linear-gradient(135deg, #600000 0%, #400000 100%);"@endif>
+    <footer class="bg-gray-900 text-white {{ request()->routeIs('chats.*') ? 'mt-0' : 'mt-20' }} relative overflow-hidden">
         <div class="absolute inset-0" style="background: linear-gradient(to bottom right, rgba(128, 0, 0, 0.2), rgba(96, 0, 0, 0.2));"></div>
         <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -921,19 +931,6 @@
         // Initialize both desktop and mobile search
         initSearchForm('searchForm', 'searchInput');
         initSearchForm('mobileSearchForm', 'mobileSearchInput');
-
-        // Ensure chat page styling is applied
-        if (window.location.pathname.includes('/chats')) {
-            document.documentElement.classList.add('chat-page-html');
-            document.body.classList.add('chat-page');
-            document.body.style.background = 'linear-gradient(135deg, #800000 0%, #600000 100%) !important';
-            document.body.style.minHeight = '100vh';
-            const main = document.querySelector('main');
-            if (main) {
-                main.style.background = 'linear-gradient(135deg, #800000 0%, #600000 100%) !important';
-                main.style.minHeight = '100vh';
-            }
-        }
     </script>
 </body>
 </html>

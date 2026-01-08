@@ -20,6 +20,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -148,10 +149,16 @@ class OrderController extends Controller
      * 
      * GET /api/v1/orders?status=pending_confirmation&limit=20
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request)
     {
         try {
-            $query = Order::query();
+            // Get orders with matching user_id OR matching customer_email
+            $user = Auth::user();
+            $query = Order::with(['orderItems.product', 'user'])
+                ->where(function($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                      ->orWhere('customer_email', $user->email);
+                });
 
             // Filter by status
             if ($request->has('status')) {
@@ -167,22 +174,33 @@ class OrderController extends Controller
             $limit = $request->query('limit', 20);
             $orders = $query->orderByDesc('created_at')->paginate($limit);
 
-            return response()->json([
-                'success' => true,
-                'data' => $orders->items(),
-                'pagination' => [
-                    'total' => $orders->total(),
-                    'per_page' => $orders->perPage(),
-                    'current_page' => $orders->currentPage(),
-                    'last_page' => $orders->lastPage(),
-                ],
-            ]);
+            // Return JSON for API callers, Blade view for web
+            if ($request->wantsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $orders->items(),
+                    'pagination' => [
+                        'total' => $orders->total(),
+                        'per_page' => $orders->perPage(),
+                        'current_page' => $orders->currentPage(),
+                        'last_page' => $orders->lastPage(),
+                    ],
+                ]);
+            }
+
+            // Return Blade view for web requests
+            return view('orders.index', ['orders' => $orders]);
         } catch (\Exception $e) {
             Log::error('Error fetching orders', ['error' => $e->getMessage()]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch orders',
-            ], 500);
+            
+            if ($request->wantsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to fetch orders',
+                ], 500);
+            }
+            
+            abort(500, 'Failed to fetch orders');
         }
     }
 
@@ -191,28 +209,39 @@ class OrderController extends Controller
      * 
      * GET /api/v1/orders/{id}
      */
-    public function show($id): JsonResponse
+    public function show(Request $request, $id)
     {
         try {
-            $order = Order::with('items')->find($id);
+            $order = Order::with(['orderItems.product', 'user'])->find($id);
 
             if (!$order) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Order not found',
-                ], 404);
+                if ($request->wantsJson() || $request->is('api/*')) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Order not found',
+                    ], 404);
+                }
+                abort(404);
             }
 
-            return response()->json([
-                'success' => true,
-                'data' => $this->formatOrder($order),
-            ]);
+            // Return JSON for API callers, Blade view for web
+            if ($request->wantsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $this->formatOrder($order),
+                ]);
+            }
+
+            return view('orders.show', compact('order'));
         } catch (\Exception $e) {
             Log::error('Error fetching order', ['error' => $e->getMessage()]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch order',
-            ], 500);
+            if ($request->wantsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to fetch order',
+                ], 500);
+            }
+            abort(500, 'Failed to load order');
         }
     }
 
@@ -399,6 +428,27 @@ class OrderController extends Controller
             'shippedAt' => $order->shipped_at?->toIso8601String(),
             'deliveredAt' => $order->delivered_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * Confirm order received by customer
+     * 
+     * POST /orders/{order}/confirm-received
+     */
+    public function confirmReceived(Order $order)
+    {
+        try {
+            // Update order status to completed when customer confirms receipt
+            $order->update([
+                'status' => 'completed',
+                'delivered_at' => now(),
+            ]);
+
+            return redirect()->back()->with('success', 'Order marked as received. Thank you for your confirmation!');
+        } catch (\Exception $e) {
+            Log::error('Error confirming order received: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to confirm order received. Please try again.');
+        }
     }
 
     /**

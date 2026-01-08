@@ -10,6 +10,7 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import ApiService from '../services/api';
 import API_CONFIG from '../config/config';
@@ -55,17 +56,18 @@ const ProductsScreen = ({ navigation }) => {
       console.log('🔵 Products Array Length:', productsData.length);
       
       // Transform API data to match app structure
-      const transformedProducts = productsData.map(product => ({
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        price: parseFloat(product.price),
-        category: product.category?.name || 'Uncategorized',
-        image: product.image 
-          ? { uri: `${API_CONFIG.STORAGE_BASE_URL}/products/${product.image}` }
-          : require('../assets/images/Saputangan.jpg'), // fallback image
-        stock: product.stock || 0,
-      }));
+      const transformedProducts = productsData.map(product => {
+        console.log(`[Product ${product.id}] Original image:`, product.image);
+        return {
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          price: parseFloat(product.price),
+          category: product.category?.name || 'Uncategorized',
+          image: product.image || null,
+          stock: product.stock || 0,
+        };
+      });
       
       setProducts(transformedProducts);
       const uniqueCategories = ['All', ...new Set(transformedProducts.map(p => p.category))];
@@ -138,7 +140,7 @@ const ProductsScreen = ({ navigation }) => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Products</Text>
         <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
-          <Text style={styles.cartIcon}>🛒</Text>
+          <Ionicons name="cart" size={28} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -151,7 +153,7 @@ const ProductsScreen = ({ navigation }) => {
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search products..."
@@ -200,17 +202,38 @@ const ProductsScreen = ({ navigation }) => {
               >
                 <View style={styles.productImageContainer}>
                   <Image 
-                    source={product.image}
+                    source={
+                      product.image 
+                        ? { uri: product.image.startsWith('http') 
+                            ? product.image 
+                            : product.image.startsWith('/uploads') || product.image.startsWith('/storage')
+                              ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${product.image}`
+                              : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/uploads/products/${product.image}` 
+                        }
+                        : require('../assets/images/Saputangan.jpg')
+                    }
                     style={styles.productImage}
                     resizeMode="cover"
+                    onError={(error) => {
+                      console.log('[ProductsScreen] Image load error for:', product.name);
+                      console.log('[ProductsScreen] Image path:', product.image);
+                      const attemptedUrl = product.image?.startsWith('http') 
+                        ? product.image 
+                        : product.image?.startsWith('/uploads') || product.image?.startsWith('/storage')
+                          ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${product.image}`
+                          : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/uploads/products/${product.image}`;
+                      console.log('[ProductsScreen] Attempted URL:', attemptedUrl);
+                    }}
                   />
                   <TouchableOpacity
                     style={styles.favoriteButton}
                     onPress={() => toggleFavorite(product)}
                   >
-                    <Text style={styles.favoriteIcon}>
-                      {isInWishlist(product.id) ? '❤️' : '🤍'}
-                    </Text>
+                    <Ionicons 
+                      name={isInWishlist(product.id) ? "heart" : "heart-outline"} 
+                      size={24} 
+                      color={isInWishlist(product.id) ? "#FF6B6B" : "#999"} 
+                    />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.productInfo}>
@@ -224,7 +247,7 @@ const ProductsScreen = ({ navigation }) => {
                       style={styles.cartButton}
                       onPress={() => handleAddToCart(product)}
                     >
-                      <Text style={styles.cartButtonIcon}>🛒</Text>
+                      <Ionicons name="cart" size={20} color="#fff" />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -277,9 +300,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
-  cartIcon: {
-    fontSize: 24,
-  },
   content: {
     flex: 1,
   },
@@ -298,7 +318,6 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   searchIcon: {
-    fontSize: 18,
     marginRight: 10,
   },
   searchInput: {
@@ -368,9 +387,11 @@ const styles = StyleSheet.create({
     borderRadius: 17.5,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  favoriteIcon: {
-    fontSize: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   productInfo: {
     padding: 12,
@@ -405,9 +426,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  cartButtonIcon: {
-    fontSize: 18,
   },
   emptyContainer: {
     width: '100%',

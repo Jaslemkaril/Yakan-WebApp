@@ -42,13 +42,21 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Payment Status</p>
-                        <p class="text-3xl font-bold text-gray-900">
-                            @if($order->payment_status === 'paid' || $order->payment_status === 'verified')
-                                Paid ✓
-                            @else
-                                {{ ucfirst($order->payment_status) }}
-                            @endif
-                        </p>
+                        @php
+                            $hasBankReceipt = !empty($order->bank_receipt) && $order->payment_method === 'bank_transfer';
+                            $hasProof = $hasBankReceipt || (!empty($order->payment_proof_path) && $order->payment_method === 'bank_transfer');
+                            $effectivePaymentStatus = ($hasProof && $order->payment_status === 'pending')
+                                ? 'verification_pending'
+                                : $order->payment_status;
+                            $paymentStatusLabel = [
+                                'paid' => 'Paid ✓',
+                                'verified' => 'Paid ✓',
+                                'verification_pending' => 'Awaiting Verification',
+                                'pending' => 'Pending',
+                                'failed' => 'Failed',
+                            ][$effectivePaymentStatus] ?? ucfirst(str_replace('_', ' ', $effectivePaymentStatus));
+                        @endphp
+                        <p class="text-3xl font-bold text-gray-900">{{ $paymentStatusLabel }}</p>
                     </div>
                     <div class="w-14 h-14 bg-[#800000] rounded-lg flex items-center justify-center">
                         <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,12 +86,16 @@
                             <div class="flex gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200">
                                 <!-- Product Image -->
                                 <div class="flex-shrink-0 w-20 h-20 bg-gray-200 rounded-lg overflow-hidden border border-gray-300">
-                                    @if($item->product && $item->product->image)
-                                        <img src="{{ asset('storage/' . $item->product->image) }}" alt="{{ $item->product->name }}" class="w-full h-full object-cover">
+                                    @php
+                                        // Prefer accessor that handles full URLs, storage, or uploads
+                                        $imageUrl = $item->product?->image_url ?? '';
+                                    @endphp
+                                    @if($imageUrl)
+                                        <img src="{{ $imageUrl }}" alt="{{ $item->product->name ?? 'Product' }}" class="w-full h-full object-cover">
                                     @else
                                         <div class="w-full h-full flex items-center justify-center bg-gray-300">
                                             <svg class="w-8 h-8 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
                                             </svg>
                                         </div>
                                     @endif
@@ -158,14 +170,16 @@
                         </div>
                         <div>
                             <p class="text-xs text-gray-600 font-semibold uppercase mb-2">Payment Status</p>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-[#fef2f2] text-[#800000]">
-                                @if($order->payment_status === 'paid' || $order->payment_status === 'verified')
-                                    ✓ Paid
-                                @elseif($order->payment_status === 'pending')
-                                    ⏳ Pending
-                                @else
-                                    ✕ Failed
-                                @endif
+                            @php
+                                $statusChip = match($effectivePaymentStatus) {
+                                    'paid', 'verified' => ['✓ Paid', 'bg-green-100 text-green-700'],
+                                    'verification_pending' => ['⏳ Verification Pending', 'bg-yellow-100 text-yellow-800'],
+                                    'pending' => ['⏳ Pending', 'bg-yellow-100 text-yellow-800'],
+                                    default => ['✕ Failed', 'bg-red-100 text-red-700'],
+                                };
+                            @endphp
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold {{ $statusChip[1] }}">
+                                {{ $statusChip[0] }}
                             </span>
                         </div>
                     </div>
@@ -225,10 +239,36 @@
                             <a href="{{ route('payment.online', $order->id) }}" class="block w-full text-center px-4 py-3 bg-[#800000] text-white font-semibold rounded-lg hover:bg-[#600000] transition-all duration-300 shadow-md">
                                 💳 Complete Payment
                             </a>
-                        @elseif($order->payment_status === 'pending' && $order->payment_method === 'bank_transfer')
-                            <a href="{{ route('payment.bank', $order->id) }}" class="block w-full text-center px-4 py-3 bg-[#800000] text-white font-semibold rounded-lg hover:bg-[#600000] transition-all duration-300 shadow-md">
-                                📄 Upload Receipt
-                            </a>
+                        @elseif($order->payment_method === 'bank_transfer')
+                            @php
+                                $hasReceipt = !empty($order->bank_receipt) || !empty($order->payment_proof_path);
+                                $receiptPath = $order->bank_receipt ?: $order->payment_proof_path;
+                                $receiptUrl = $receiptPath ? \Illuminate\Support\Facades\Storage::url($receiptPath) : null;
+                                $isCleared = in_array($effectivePaymentStatus, ['paid', 'verified', 'verification_pending'], true);
+                            @endphp
+
+                            @if($hasReceipt || $isCleared)
+                                <!-- Receipt uploaded or already paid/verified -->
+                                <div class="bg-green-50 border-2 border-green-500 rounded-lg p-4 text-center">
+                                    <div class="flex items-center justify-center gap-2 mb-2">
+                                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <p class="font-bold text-green-800">Receipt on File</p>
+                                    </div>
+                                    <p class="text-sm text-green-700 mb-3">Awaiting verification. You can view your uploaded receipt below.</p>
+                                    @if($hasReceipt && $receiptUrl)
+                                        <a href="{{ $receiptUrl }}" target="_blank" class="inline-block px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-all text-sm">
+                                            👁️ View Receipt
+                                        </a>
+                                    @endif
+                                </div>
+                            @else
+                                <!-- Need to upload receipt -->
+                                <a href="{{ route('payment.bank', $order->id) }}" class="block w-full text-center px-4 py-3 bg-[#800000] text-white font-semibold rounded-lg hover:bg-[#600000] transition-all duration-300 shadow-md">
+                                    📄 Upload Receipt
+                                </a>
+                            @endif
                         @endif
                     </div>
                 </div>

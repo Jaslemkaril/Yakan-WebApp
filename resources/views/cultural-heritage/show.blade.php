@@ -50,6 +50,66 @@
         border-radius: 0.5rem;
         margin: 1.5rem 0;
     }
+
+    /* Image Modal Styles */
+    .image-modal {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.95);
+        cursor: zoom-out;
+    }
+
+    .image-modal.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .image-modal img {
+        max-width: 90%;
+        max-height: 90vh;
+        object-fit: contain;
+        border-radius: 0.5rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .image-modal .close-modal {
+        position: absolute;
+        top: 2rem;
+        right: 2rem;
+        color: white;
+        font-size: 2.5rem;
+        font-weight: bold;
+        cursor: pointer;
+        z-index: 10000;
+        background: rgba(255, 255, 255, 0.2);
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    .image-modal .close-modal:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: rotate(90deg);
+    }
+
+    .featured-image {
+        cursor: zoom-in;
+        transition: transform 0.3s ease;
+    }
+
+    .featured-image:hover {
+        transform: scale(1.02);
+    }
 </style>
 @endpush
 
@@ -79,9 +139,6 @@
                     <i class="fas fa-calendar mr-1"></i>{{ $heritage->published_date->format('F d, Y') }}
                 </span>
                 @endif
-                <span class="text-gray-500 text-sm">
-                    <i class="fas fa-clock mr-1"></i>{{ $heritage->reading_time }} min read
-                </span>
             </div>
             
             <h1 class="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">{{ $heritage->title }}</h1>
@@ -108,7 +165,9 @@
         <div class="mb-12">
             <img src="{{ $heritage->image_url }}" 
                  alt="{{ $heritage->title }}" 
-                 class="w-full h-96 object-cover rounded-2xl shadow-xl">
+                 class="w-full h-auto max-h-[600px] object-contain rounded-2xl shadow-xl featured-image bg-gray-100"
+                 onclick="openImageModal(this.src, '{{ $heritage->title }}')"
+                 title="Click to view full image">
         </div>
         @endif
 
@@ -187,10 +246,38 @@
         </div>
     </section>
     @endif
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="image-modal" onclick="closeImageModal()">
+        <span class="close-modal" onclick="closeImageModal()">&times;</span>
+        <img id="modalImage" src="" alt="">
+    </div>
 @endsection
 
 @push('scripts')
 <script>
+function openImageModal(src, alt) {
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImage');
+    modal.classList.add('active');
+    modalImg.src = src;
+    modalImg.alt = alt;
+    document.body.style.overflow = 'hidden';
+}
+
+function closeImageModal() {
+    const modal = document.getElementById('imageModal');
+    modal.classList.remove('active');
+    document.body.style.overflow = 'auto';
+}
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeImageModal();
+    }
+});
+
 function copyToClipboard() {
     const url = window.location.href;
     navigator.clipboard.writeText(url).then(() => {

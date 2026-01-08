@@ -10,24 +10,30 @@ import {
   ActivityIndicator,
   Modal,
   Switch,
+  Image,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import QuickAddressSetupScreen from './QuickAddressSetupScreen';
 import useShippingFee from '../hooks/useShippingFee';
+import API_CONFIG from '../config/config';
+import ApiService from '../services/api';
 
 const CheckoutScreen = ({ navigation }) => {
-  const { cartItems, getCartTotal, clearCart, userInfo, updateUserInfo } = useCart();
+  const { cartItems, checkoutItems, getCartTotal, clearCart, userInfo, updateUserInfo } = useCart();
   const { notifyOrderCreated } = useNotification();
   const { calculateFee, loading: shippingLoading, error: shippingError } = useShippingFee();
+  
+  // Use checkoutItems if available, otherwise fall back to all cartItems
+  const itemsToCheckout = checkoutItems && checkoutItems.length > 0 ? checkoutItems : cartItems;
   
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState(null);
-  const [showQuickAddressSetup, setShowQuickAddressSetup] = useState(false);
   
   // Delivery option state: 'pickup' or 'deliver'
   const [deliveryOption, setDeliveryOption] = useState('deliver');
@@ -55,10 +61,17 @@ const CheckoutScreen = ({ navigation }) => {
     label: 'Home',
   });
 
-  // Load saved addresses on mount
+  // Load saved addresses on mount and when screen gains focus
   useEffect(() => {
     loadAddresses();
   }, []);
+
+  // Reload addresses when returning from SavedAddresses screen
+  useFocusEffect(
+    React.useCallback(() => {
+      loadAddresses();
+    }, [])
+  );
 
   // Calculate shipping fee when address or delivery option changes
   useEffect(() => {
@@ -79,45 +92,62 @@ const CheckoutScreen = ({ navigation }) => {
         return;
       }
 
-      // Get coordinates from address (if available)
-      // For now, we'll use a mapping of cities to coordinates
-      const cityCoordinates = {
-        'manila': { lat: 14.5995, lon: 120.9842 },
-        'cebu': { lat: 10.3157, lon: 123.8854 },
-        'davao': { lat: 7.1108, lon: 125.6423 },
-        'quezon city': { lat: 14.6349, lon: 121.0388 },
-        'makati': { lat: 14.5549, lon: 121.0175 },
-        'pasig': { lat: 14.5794, lon: 121.5832 },
-        'caloocan': { lat: 14.6352, lon: 120.9817 },
-        'las piñas': { lat: 14.3534, lon: 120.9234 },
-        'cavite': { lat: 14.3568, lon: 120.8853 },
-        'laguna': { lat: 14.3119, lon: 121.4944 },
-      };
-
-      const cityKey = selectedAddr.city?.toLowerCase() || '';
-      const coords = cityCoordinates[cityKey];
-
-      let result;
-      if (coords) {
-        // Use coordinates for accurate distance calculation
-        console.log('[Checkout] Sending coordinates:', coords);
-        result = await calculateFee(undefined, coords.lat, coords.lon);
-      } else {
-        // Fallback to default distance
-        console.log('[Checkout] City not found, using default distance');
-        result = await calculateFee(5);
+      // Zone-based shipping calculation (matching web implementation)
+      const cityLower = (selectedAddr.city || '').toLowerCase();
+      const provinceLower = (selectedAddr.province || '').toLowerCase();
+      const postalCode = selectedAddr.postalCode || '';
+      
+      let shippingFee = 0;
+      
+      // FREE - Zamboanga City proper (postal code starts with '7')
+      if (cityLower.includes('zamboanga') && postalCode.startsWith('7')) {
+        shippingFee = 0;
+        console.log('[Checkout] FREE shipping for Zamboanga City proper');
       }
-
-      if (result) {
-        // Convert to number in case it's a string from API
-        const fee = parseFloat(result.shipping_fee) || 50;
-        console.log('[Checkout] Calculated shipping fee:', fee, 'Distance:', result.distance_km);
-        setShippingFee(fee);
-      } else {
-        // Fallback to default fee if calculation fails
-        console.log('[Checkout] Calculation failed, using fallback fee');
-        setShippingFee(50);
+      // ₱80 - Zamboanga Peninsula (nearby)
+      else if (provinceLower.includes('zamboanga') || 
+               ['isabela', 'dipolog', 'dapitan', 'pagadian'].includes(cityLower)) {
+        shippingFee = 80;
+        console.log('[Checkout] ₱80 shipping for Zamboanga Peninsula');
       }
+      // ₱120 - Western Mindanao
+      else if (['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao'].includes(cityLower) ||
+               provinceLower.includes('barmm') || provinceLower.includes('armm')) {
+        shippingFee = 120;
+        console.log('[Checkout] ₱120 shipping for Western Mindanao');
+      }
+      // ₱150 - Other Mindanao regions
+      else if (provinceLower.includes('mindanao') ||
+               ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'].includes(cityLower)) {
+        shippingFee = 150;
+        console.log('[Checkout] ₱150 shipping for Mindanao');
+      }
+      // ₱180 - Visayas
+      else if (provinceLower.includes('visayas') ||
+               ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'].includes(cityLower)) {
+        shippingFee = 180;
+        console.log('[Checkout] ₱180 shipping for Visayas');
+      }
+      // ₱220 - Metro Manila & nearby
+      else if (cityLower.includes('manila') || provinceLower.includes('ncr') ||
+               ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'].includes(cityLower)) {
+        shippingFee = 220;
+        console.log('[Checkout] ₱220 shipping for Metro Manila');
+      }
+      // ₱250 - Northern Luzon
+      else if (provinceLower.includes('luzon') ||
+               ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'].includes(cityLower)) {
+        shippingFee = 250;
+        console.log('[Checkout] ₱250 shipping for Northern Luzon');
+      }
+      // ₱280 - Remote islands & far areas
+      else {
+        shippingFee = 280;
+        console.log('[Checkout] ₱280 shipping for remote areas');
+      }
+      
+      console.log('[Checkout] Final shipping fee:', shippingFee, 'for', cityLower, provinceLower, postalCode);
+      setShippingFee(shippingFee);
     } catch (error) {
       console.log('Error calculating shipping:', error);
       setShippingFee(50); // Fallback fee
@@ -128,28 +158,57 @@ const CheckoutScreen = ({ navigation }) => {
 
   const loadAddresses = async () => {
     try {
-      const addresses = await AsyncStorage.getItem('savedAddresses');
-      if (addresses) {
-        const parsedAddresses = JSON.parse(addresses);
-        setSavedAddresses(parsedAddresses);
+      console.log('[Checkout] Starting to load addresses using ApiService...');
+      
+      // Use ApiService just like SavedAddressesScreen does
+      const response = await ApiService.getSavedAddresses();
+      console.log('[Checkout] API Response:', JSON.stringify(response, null, 2));
+      
+      if (response.success) {
+        // Handle nested data structure - response.data might contain another data property
+        const dataArray = response.data?.data || response.data;
+        const items = Array.isArray(dataArray) ? dataArray : [];
+        console.log('[Checkout] Fetched addresses count:', items.length);
         
-        // Set default address as selected
-        const defaultAddress = parsedAddresses.find(addr => addr.isDefault);
-        if (defaultAddress) {
-          setSelectedAddressId(defaultAddress.id);
-        } else if (parsedAddresses.length > 0) {
-          // Auto-set first address as default if none exists
-          parsedAddresses[0].isDefault = true;
-          setSavedAddresses(parsedAddresses);
-          saveAddresses(parsedAddresses);
-          setSelectedAddressId(parsedAddresses[0].id);
+        if (items.length > 0) {
+          // Map API response to mobile format
+          const addresses = items.map(addr => ({
+            id: addr.id,
+            fullName: addr.full_name,
+            phoneNumber: addr.phone || addr.phone_number,
+            street: addr.street_address || addr.street,
+            barangay: addr.barangay,
+            city: addr.city,
+            province: addr.province,
+            postalCode: addr.postal_code,
+            isDefault: addr.is_default === 1 || addr.is_default === true,
+            label: addr.label || 'Home',
+          }));
+          
+          console.log('[Checkout] Mapped addresses:', JSON.stringify(addresses, null, 2));
+          setSavedAddresses(addresses);
+          
+          // Set default address as selected
+          const defaultAddress = addresses.find(addr => addr.isDefault);
+          if (defaultAddress) {
+            setSelectedAddressId(defaultAddress.id);
+            console.log('[Checkout] Set default address:', defaultAddress.id);
+          } else if (addresses.length > 0) {
+            setSelectedAddressId(addresses[0].id);
+            console.log('[Checkout] Set first address:', addresses[0].id);
+          }
+        } else {
+          console.log('[Checkout] No addresses found in API response');
+          setSavedAddresses([]);
         }
       } else {
-        // No addresses exist - show quick setup modal
-        setShowQuickAddressSetup(true);
+        console.log('[Checkout] API response not successful:', response.error);
+        setSavedAddresses([]);
       }
     } catch (error) {
-      console.log('Error loading addresses:', error);
+      console.log('[Checkout] Error loading addresses:', error.message);
+      console.log('[Checkout] Error details:', error);
+      setSavedAddresses([]);
     }
   };
 
@@ -162,7 +221,7 @@ const CheckoutScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    if (!cartItems || cartItems.length === 0) {
+    if (!itemsToCheckout || itemsToCheckout.length === 0) {
       Alert.alert(
         'Empty Cart',
         'Your cart is empty. Please add items before checking out.',
@@ -176,7 +235,7 @@ const CheckoutScreen = ({ navigation }) => {
     }
   }, []);
 
-  if (!cartItems) {
+  if (!itemsToCheckout) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#8B1A1A" />
@@ -185,7 +244,7 @@ const CheckoutScreen = ({ navigation }) => {
     );
   }
 
-  if (cartItems.length === 0) {
+  if (itemsToCheckout.length === 0) {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>Your cart is empty</Text>
@@ -200,7 +259,7 @@ const CheckoutScreen = ({ navigation }) => {
   }
 
   const shippingFeeDisplay = deliveryOption === 'pickup' ? 0 : shippingFee;
-  const subtotal = getCartTotal();
+  const subtotal = itemsToCheckout.reduce((total, item) => total + (item.price * item.quantity), 0);
   const discount = appliedCoupon ? appliedCoupon.discount : 0;
   const total = subtotal + shippingFeeDisplay - discount;
 
@@ -368,7 +427,7 @@ const CheckoutScreen = ({ navigation }) => {
     const orderData = {
       orderRef,
       date: new Date().toISOString(),
-      items: cartItems,
+      items: itemsToCheckout,
       deliveryOption: deliveryOption,
       shippingAddress: {
         fullName: selectedAddr.fullName,
@@ -402,11 +461,6 @@ const CheckoutScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <QuickAddressSetupScreen
-        visible={showQuickAddressSetup}
-        onAddressSet={handleAddressSetup}
-        onSkip={() => setShowQuickAddressSetup(false)}
-      />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>←</Text>
@@ -423,28 +477,6 @@ const CheckoutScreen = ({ navigation }) => {
             <TouchableOpacity
               style={[
                 styles.deliveryOptionCard,
-                deliveryOption === 'pickup' && styles.deliveryOptionCardSelected,
-              ]}
-              onPress={() => setDeliveryOption('pickup')}
-            >
-              <View style={[
-                styles.deliveryRadio,
-                deliveryOption === 'pickup' && styles.deliveryRadioSelected,
-              ]}>
-                {deliveryOption === 'pickup' && <View style={styles.deliveryRadioInner} />}
-              </View>
-              <View style={styles.deliveryOptionContent}>
-                <Text style={styles.deliveryOptionIcon}>🏪</Text>
-                <View>
-                  <Text style={styles.deliveryOptionTitle}>Pick Up</Text>
-                  <Text style={styles.deliveryOptionDesc}>Pick up at store location</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.deliveryOptionCard,
                 deliveryOption === 'deliver' && styles.deliveryOptionCardSelected,
               ]}
               onPress={() => setDeliveryOption('deliver')}
@@ -456,7 +488,7 @@ const CheckoutScreen = ({ navigation }) => {
                 {deliveryOption === 'deliver' && <View style={styles.deliveryRadioInner} />}
               </View>
               <View style={styles.deliveryOptionContent}>
-                <Text style={styles.deliveryOptionIcon}>🚚</Text>
+                <Ionicons name="car" size={28} color="#8B1A1A" style={styles.deliveryOptionIcon} />
                 <View>
                   <Text style={styles.deliveryOptionTitle}>Deliver</Text>
                   <Text style={styles.deliveryOptionDesc}>
@@ -465,112 +497,196 @@ const CheckoutScreen = ({ navigation }) => {
                 </View>
               </View>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.deliveryOptionCard,
+                deliveryOption === 'pickup' && styles.deliveryOptionCardSelected,
+              ]}
+              onPress={() => setDeliveryOption('pickup')}
+            >
+              <View style={[
+                styles.deliveryRadio,
+                deliveryOption === 'pickup' && styles.deliveryRadioSelected,
+              ]}>
+                {deliveryOption === 'pickup' && <View style={styles.deliveryRadioInner} />}
+              </View>
+              <View style={styles.deliveryOptionContent}>
+                <MaterialCommunityIcons name="store-24-hour" size={28} color="#8B1A1A" style={styles.deliveryOptionIcon} />
+                <View>
+                  <Text style={styles.deliveryOptionTitle}>Pick Up</Text>
+                  <Text style={styles.deliveryOptionDesc}>Pick up at store location</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Address Selection Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Address Selection</Text>
-          
-          {savedAddresses.length > 0 && (
-            <View style={styles.addressList}>
-              {savedAddresses.map((address) => (
-                <TouchableOpacity
-                  key={address.id}
-                  style={[
-                    styles.addressCard,
-                    selectedAddressId === address.id && styles.addressCardSelected,
-                  ]}
-                  onPress={() => setSelectedAddressId(address.id)}
-                >
-                  <View style={styles.addressCardHeader}>
-                    <View style={styles.addressRadioContainer}>
-                      <View style={[
-                        styles.radioButton,
-                        selectedAddressId === address.id && styles.radioButtonSelected,
-                      ]}>
-                        {selectedAddressId === address.id && (
-                          <View style={styles.radioButtonInner} />
+        {/* Store Pickup Information - Only show when pickup is selected */}
+        {deliveryOption === 'pickup' && (
+          <View style={styles.section}>
+            <View style={styles.sectionTitleContainer}>
+              <MaterialCommunityIcons name="store" size={24} color="#8B1A1A" />
+              <Text style={styles.sectionTitle}>Store Pickup Information</Text>
+            </View>
+            
+            <View style={styles.storeInfoCard}>
+              <View style={styles.storeHeaderRow}>
+                <View style={styles.storeIconContainer}>
+                  <Ionicons name="location" size={32} color="#fff" />
+                </View>
+                <Text style={styles.storeName}>Yakan Weaving Store</Text>
+              </View>
+              
+              <View style={styles.storeDetailsContainer}>
+                <View style={styles.storeDetailRow}>
+                  <View style={styles.storeDetailLabelContainer}>
+                    <Ionicons name="location-outline" size={18} color="#8B1A1A" />
+                    <Text style={styles.storeDetailLabel}>Address:</Text>
+                  </View>
+                  <Text style={styles.storeDetailText}>
+                    Yakan Village, Brgy. Upper Calarian, Zamboanga City, Philippines 7000
+                  </Text>
+                </View>
+
+                <View style={styles.storeHoursBox}>
+                  <View style={styles.storeDetailLabelContainer}>
+                    <Ionicons name="time-outline" size={18} color="#8B1A1A" />
+                    <Text style={styles.storeDetailLabel}>Store Hours</Text>
+                  </View>
+                  <Text style={styles.storeHoursText}>Monday - Saturday: 9:00 AM - 6:00 PM</Text>
+                  <Text style={styles.storeClosedText}>Closed on Sundays & Holidays</Text>
+                </View>
+
+                <View style={styles.storeDetailRow}>
+                  <View style={styles.storeDetailLabelContainer}>
+                    <Ionicons name="call-outline" size={18} color="#8B1A1A" />
+                    <Text style={styles.storeDetailLabel}>Contact Number</Text>
+                  </View>
+                  <Text style={styles.storeDetailText}>+63 917-123-4567</Text>
+                </View>
+
+                <View style={styles.importantReminders}>
+                  <View style={styles.remindersTitleContainer}>
+                    <Ionicons name="warning" size={18} color="#92400E" />
+                    <Text style={styles.remindersTitle}>Important Reminders:</Text>
+                  </View>
+                  <View style={styles.reminderItem}>
+                    <Text style={styles.reminderBullet}>•</Text>
+                    <Text style={styles.reminderText}>Bring a valid government-issued ID</Text>
+                  </View>
+                  <View style={styles.reminderItem}>
+                    <Text style={styles.reminderBullet}>•</Text>
+                    <Text style={styles.reminderText}>Present your order confirmation number</Text>
+                  </View>
+                  <View style={styles.reminderItem}>
+                    <Text style={styles.reminderBullet}>•</Text>
+                    <Text style={styles.reminderText}>Orders can be picked up 1-3 business days after confirmation</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Address Selection Section - Only show when delivery is selected */}
+        {deliveryOption === 'deliver' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Delivery Address</Text>
+            
+            {savedAddresses.length > 0 && selectedAddressId ? (
+              <View>
+                {(() => {
+                  const selectedAddress = savedAddresses.find(addr => addr.id === selectedAddressId);
+                  if (!selectedAddress) return null;
+                  
+                  return (
+                    <View key={selectedAddress.id} style={styles.selectedAddressCard}>
+                      <View style={styles.addressHeader}>
+                        <Text style={styles.addressNameWithPhone}>
+                          {selectedAddress.fullName} ({selectedAddress.phoneNumber})
+                        </Text>
+                        {selectedAddress.isDefault && (
+                          <View style={styles.defaultBadge}>
+                            <Text style={styles.defaultBadgeText}>Default</Text>
+                          </View>
                         )}
                       </View>
+                      <Text style={styles.fullAddress}>
+                        {selectedAddress.street}, {selectedAddress.barangay}, {selectedAddress.city}, {selectedAddress.province}, {selectedAddress.postalCode}
+                      </Text>
+                      <Text style={styles.fullAddress}>
+                        {selectedAddress.province}, {selectedAddress.postalCode}
+                      </Text>
                     </View>
-                    <View style={styles.addressNameSection}>
-                      <Text style={styles.addressName}>{address.fullName}</Text>
-                      <Text style={styles.addressPhone}>{address.phoneNumber}</Text>
-                    </View>
-                    <TouchableOpacity 
-                      onPress={() => handleEditAddress(address)}
-                      style={styles.editAddressButton}
-                    >
-                      <Text style={styles.editAddressText}>Edit</Text>
-                    </TouchableOpacity>
-                  </View>
-                  
-                  <Text style={styles.addressStreet}>{address.street}</Text>
-                  <Text style={styles.addressDetails}>
-                    {address.barangay && `${address.barangay}, `}
-                    {address.city && `${address.city}, `}
-                    {address.province && `${address.province}`}
-                  </Text>
-                  <Text style={styles.addressDetails}>
-                    {address.province}, {address.city}, {address.postalCode}
-                  </Text>
-
-                  <View style={styles.addressTags}>
-                    {address.isDefault && (
-                      <View style={styles.tagDefault}>
-                        <Text style={styles.tagDefaultText}>Default</Text>
-                      </View>
-                    )}
-                    {address.label && (
-                      <View style={styles.tagLabel}>
-                        <Text style={styles.tagLabelText}>{address.label}</Text>
-                      </View>
-                    )}
-                  </View>
+                  );
+                })()}
+                
+                <TouchableOpacity 
+                  style={styles.changeAddressButton}
+                  onPress={() => navigation.navigate('SavedAddresses')}
+                >
+                  <Text style={styles.changeAddressText}>Change</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-          )}
+              </View>
+            ) : (
+              <Text style={styles.noAddressText}>No saved addresses. Add one to continue.</Text>
+            )}
 
-          {/* Add New Address Button */}
-          <TouchableOpacity
-            style={styles.addAddressButton}
-            onPress={() => {
-              setIsEditingAddress(false);
-              setAddressForm({
-                fullName: '',
-                phoneNumber: '',
-                region: '',
-                province: '',
-                city: '',
-                barangay: '',
-                postalCode: '',
-                street: '',
-                isDefault: false,
-                label: 'Home',
-              });
-              setShowAddressForm(true);
-            }}
-          >
-            <Text style={styles.addAddressIcon}>+</Text>
-            <Text style={styles.addAddressText}>Add a new address</Text>
-          </TouchableOpacity>
-        </View>
+            {/* Add New Address Button */}
+            <TouchableOpacity
+              style={styles.addAddressButton}
+              onPress={() => {
+                setIsEditingAddress(false);
+                setAddressForm({
+                  fullName: '',
+                  phoneNumber: '',
+                  region: '',
+                  province: '',
+                  city: '',
+                  barangay: '',
+                  postalCode: '',
+                  street: '',
+                  isDefault: false,
+                  label: 'Home',
+                });
+                setShowAddressForm(true);
+              }}
+            >
+              <Text style={styles.addAddressIcon}>+</Text>
+              <Text style={styles.addAddressText}>Add a new address</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Order Summary Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Order Summary</Text>
-          {cartItems.map((item, index) => (
-            <View key={item.id || index} style={styles.orderItem}>
-              <Text style={styles.orderItemText}>
-                {item.name} × {item.quantity}
-              </Text>
-              <Text style={styles.orderItemPrice}>
-                ₱{(item.price * item.quantity).toFixed(2)}
-              </Text>
-            </View>
-          ))}
+          {itemsToCheckout.map((item, index) => {
+            const imageUrl = item.image 
+              ? `http://192.168.1.203:8000/uploads/products/${item.image}`
+              : 'https://via.placeholder.com/60';
+            
+            console.log('[Checkout] Product image URL:', imageUrl);
+            
+            return (
+              <View key={item.id || index} style={styles.orderItemWithImage}>
+                <Image
+                  source={{ uri: imageUrl }}
+                  style={styles.orderItemImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.orderItemDetails}>
+                  <Text style={styles.orderItemText}>
+                    {item.name} × {item.quantity}
+                  </Text>
+                  <Text style={styles.orderItemPrice}>
+                    ₱{(item.price * item.quantity).toFixed(2)}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
 
           <View style={styles.divider} />
 
@@ -1059,9 +1175,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  orderItemWithImage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+    backgroundColor: '#f9f9f9',
+    padding: 10,
+    borderRadius: 8,
+  },
+  orderItemImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  orderItemDetails: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   orderItemText: {
     fontSize: 14,
     color: '#333',
+    flex: 1,
   },
   orderItemPrice: {
     fontSize: 14,
@@ -1351,7 +1488,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   deliveryOptionIcon: {
-    fontSize: 28,
     marginRight: 12,
   },
   deliveryOptionTitle: {
@@ -1363,6 +1499,176 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 2,
+  },
+  noAddressText: {
+    textAlign: 'center',
+    color: '#666',
+    fontSize: 14,
+    marginVertical: 20,
+    fontStyle: 'italic',
+  },
+  selectedAddressCard: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+  },
+  addressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  addressNameWithPhone: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    flex: 1,
+  },
+  defaultBadge: {
+    backgroundColor: '#8B1A1A',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  defaultBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  fullAddress: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 2,
+  },
+  changeAddressButton: {
+    borderWidth: 2,
+    borderColor: '#8B1A1A',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  changeAddressText: {
+    color: '#8B1A1A',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  // Store Pickup Information Styles
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  storeInfoCard: {
+    backgroundColor: '#FFF5F5',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 10,
+  },
+  storeHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  storeIconContainer: {
+    width: 50,
+    height: 50,
+    backgroundColor: '#8B1A1A',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  storeDetailsContainer: {
+    gap: 12,
+  },
+  storeName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    flex: 1,
+  },
+  storeDetailRow: {
+    flexDirection: 'column',
+    gap: 4,
+  },
+  storeDetailLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  storeDetailLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+  storeDetailText: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 20,
+  },
+  storeHoursBox: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  storeHoursText: {
+    fontSize: 13,
+    color: '#333',
+    marginTop: 4,
+    lineHeight: 20,
+  },
+  storeClosedText: {
+    fontSize: 12,
+    color: '#8B1A1A',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  importantReminders: {
+    backgroundColor: '#FFFBEB',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+    marginTop: 4,
+  },
+  remindersTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  remindersTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#92400E',
+  },
+  reminderItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+  },
+  reminderBullet: {
+    fontSize: 13,
+    color: '#92400E',
+    marginRight: 8,
+    marginTop: 1,
+  },
+  reminderText: {
+    fontSize: 12,
+    color: '#92400E',
+    flex: 1,
+    lineHeight: 18,
   },
 });
 

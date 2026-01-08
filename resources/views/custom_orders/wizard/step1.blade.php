@@ -22,19 +22,12 @@
                     <div class="w-10 h-10 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 group-hover:scale-110">
                         2
                     </div>
-                    <span class="ml-3 font-medium text-gray-500">Design</span>
+                    <span class="ml-3 font-medium text-gray-500">Pattern</span>
                 </div>
                 <div class="w-20 h-1 bg-gray-300 rounded-full"></div>
                 <div class="flex items-center group cursor-pointer opacity-60">
                     <div class="w-10 h-10 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 group-hover:scale-110">
                         3
-                    </div>
-                    <span class="ml-3 font-medium text-gray-500">Details</span>
-                </div>
-                <div class="w-20 h-1 bg-gray-300 rounded-full"></div>
-                <div class="flex items-center group cursor-pointer opacity-60">
-                    <div class="w-10 h-10 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 group-hover:scale-110">
-                        4
                     </div>
                     <span class="ml-3 font-medium text-gray-500">Review</span>
                 </div>
@@ -43,7 +36,7 @@
     </div>
 
     <!-- Hero Section -->
-    <div class="container mx-auto px-4 py-12">
+    <div class="container mx-auto px-4 py-12 relative z-10">
         <div class="text-center">
             <h1 class="text-4xl font-bold bg-gradient-to-r from-red-700 to-red-900 bg-clip-text text-transparent mb-4">Choose Your Fabric</h1>
             <p class="text-lg text-gray-600 max-w-2xl mx-auto">Select the perfect fabric foundation for your custom Yakan pattern masterpiece</p>

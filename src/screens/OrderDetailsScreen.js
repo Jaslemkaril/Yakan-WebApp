@@ -9,7 +9,9 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
+  Image,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import colors from '../constants/colors';
 import { trackingStages } from '../constants/tracking';
@@ -17,26 +19,24 @@ import ApiService from '../services/api';
 import useOrderNotifications from '../hooks/useOrderNotifications';
 
 const normalizeStatus = (apiStatus, paymentStatus, fallback) => {
+  // Map all variations to the 4 main stages: pending, processing, shipped, delivered
+  // Keep 'completed' as-is so it doesn't revert to 'delivered'
   const map = {
-    pending: 'pending_payment',
-    pending_payment: 'pending_payment',
-    payment_verified: 'payment_verified',
-    pending_confirmation: 'pending_confirmation',
-    confirmed: 'pending_confirmation',
+    pending: 'pending',
+    pending_payment: 'pending',
+    payment_verified: 'pending',
+    pending_confirmation: 'pending',
+    confirmed: 'processing',
     processing: 'processing',
     shipped: 'shipped',
     delivered: 'delivered',
+    completed: 'completed',
     cancelled: 'cancelled',
   };
 
-  let status = map[apiStatus] || apiStatus || fallback;
+  let status = map[apiStatus] || apiStatus || fallback || 'pending';
 
-  // If payment is already paid/verified but status is still pending-ish, push to payment_verified
-  if ((paymentStatus === 'paid' || paymentStatus === 'verified') && (!status || status === 'pending' || status === 'pending_payment' || status === 'pending_confirmation')) {
-    status = 'payment_verified';
-  }
-
-  return status || 'pending_payment';
+  return status;
 };
 
 const OrderDetailsScreen = ({ navigation, route }) => {
@@ -183,6 +183,45 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     );
   };
 
+  const markAsCompleted = async () => {
+    try {
+      const backendId = order.backendOrderId || order.id;
+      if (!backendId) {
+        Alert.alert('Error', 'Order ID not found');
+        return;
+      }
+
+      // Call API to update order status to completed using PATCH /orders/{id}/status
+      const response = await ApiService.request('PATCH', `/orders/${backendId}/status`, { 
+        status: 'completed' 
+      });
+      
+      if (response?.success) {
+        // Update local state
+        setOrder(prev => ({ ...prev, status: 'completed' }));
+        
+        // Update in AsyncStorage if needed
+        const ordersJson = await AsyncStorage.getItem('pendingOrders');
+        if (ordersJson) {
+          const orders = JSON.parse(ordersJson);
+          const updatedOrders = orders.map(o => 
+            (o.backendOrderId === backendId || o.id === backendId) 
+              ? { ...o, status: 'completed' }
+              : o
+          );
+          await AsyncStorage.setItem('pendingOrders', JSON.stringify(updatedOrders));
+        }
+        
+        Alert.alert('Success', 'Order marked as completed!');
+      } else {
+        Alert.alert('Error', response?.error || 'Failed to update order status');
+      }
+    } catch (error) {
+      console.error('Error marking order as completed:', error);
+      Alert.alert('Error', 'Failed to mark order as completed');
+    }
+  };
+
   const handleReturnRequest = () => {
     Alert.alert(
       'Return Request',
@@ -240,68 +279,24 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Order Reference Card - Enhanced */}
-        <Animated.View 
-          style={[
-            styles.orderRefCard,
-            {
-              transform: [
-                { scale: scaleAnim },
-                { translateY: slideAnim }
-              ]
-            }
-          ]}
-        >
-          <View style={styles.orderRefContent}>
-            <View>
-              <Text style={styles.orderRefLabel}>Order Reference</Text>
-              <Text style={styles.orderRefNumber}>{order.orderRef}</Text>
-              <Text style={styles.orderDate}>{formatDate(order.date)}</Text>
-            </View>
-            <View style={[styles.statusBadge, { backgroundColor: trackingStages[displayStageIndex].color }]}>
-              <Text style={styles.statusText}>
-                {trackingStages[displayStageIndex].label}
-              </Text>
-            </View>
-          </View>
-          
-          {/* Progress Bar */}
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View 
-                style={[
-                  styles.progressFill,
-                  { 
-                    width: `${((currentStageIndex + 1) / trackingStages.length) * 100}%`,
-                    backgroundColor: trackingStages[displayStageIndex].color
-                  }
-                ]}
-              />
-            </View>
-            <Text style={styles.progressText}>
-              {currentStageIndex + 1} of {trackingStages.length} steps
-            </Text>
-          </View>
-        </Animated.View>
-
         {/* Status Summary Card */}
         <View style={styles.statusSummaryCard}>
           <View style={styles.statusSummaryItem}>
-            <Text style={styles.statusSummaryIcon}>📦</Text>
+            <Ionicons name="cube-outline" size={28} color={colors.primary} style={styles.statusSummaryIconStyle} />
             <Text style={styles.statusSummaryLabel}>Status</Text>
-            <Text style={styles.statusSummaryValue}>{trackingStages[displayStageIndex].label}</Text>
+            <Text style={styles.statusSummaryValue}>{trackingStages[displayStageIndex]?.label || 'Pending'}</Text>
           </View>
           <View style={styles.statusSummaryDivider} />
           <View style={styles.statusSummaryItem}>
-            <Text style={styles.statusSummaryIcon}>💰</Text>
+            <Ionicons name="cash-outline" size={28} color={colors.primary} style={styles.statusSummaryIconStyle} />
             <Text style={styles.statusSummaryLabel}>Total</Text>
             <Text style={styles.statusSummaryValue}>₱{(parseFloat(order.total) || 0).toFixed(2)}</Text>
           </View>
           <View style={styles.statusSummaryDivider} />
           <View style={styles.statusSummaryItem}>
-            <Text style={styles.statusSummaryIcon}>✓</Text>
+            <Ionicons name="checkmark-circle-outline" size={28} color={order.paymentStatus === 'paid' ? '#6B1F1F' : '#f59e0b'} style={styles.statusSummaryIconStyle} />
             <Text style={styles.statusSummaryLabel}>Payment</Text>
-            <Text style={[styles.statusSummaryValue, { color: order.paymentStatus === 'paid' ? '#22c55e' : '#f59e0b' }]}>
+            <Text style={[styles.statusSummaryValue, { color: order.paymentStatus === 'paid' ? '#6B1F1F' : '#f59e0b' }]}>
               {order.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
             </Text>
           </View>
@@ -334,20 +329,32 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                       styles.stageIndicator,
                       isCompleted && styles.stageIndicatorCompleted,
                       isCurrent && styles.stageIndicatorCurrent,
-                      { borderColor: stage.color, backgroundColor: isCompleted ? stage.color : colors.white },
+                      { 
+                        borderColor: isCompleted ? stage.color : '#E0E0E0',
+                        backgroundColor: isCompleted ? stage.color : '#F5F5F5'
+                      },
                     ]}
                   >
-                    <Text style={[styles.stageIcon, isCompleted && styles.stageIconCompleted]}>
-                      {isCompleted ? stage.icon : index + 1}
-                    </Text>
+                    {isCompleted ? (
+                      <Ionicons name="checkmark" size={20} color={colors.white} />
+                    ) : (
+                      <Text style={styles.stageIcon}>{index + 1}</Text>
+                    )}
                   </View>
 
                   {/* Stage Info */}
                   <View style={[styles.stageInfo, isCurrent && styles.stageInfoCurrent]}>
-                    <Text style={[styles.stageLabel, isCompleted && styles.stageLabelCompleted]}>
+                    <Text style={[
+                      styles.stageLabel,
+                      isCompleted && styles.stageLabelCompleted,
+                      !isCompleted && styles.stageLabelPending
+                    ]}>
                       {stage.label}
                     </Text>
-                    <Text style={styles.stageDescription}>{stage.description}</Text>
+                    <Text style={[
+                      styles.stageDescription,
+                      !isCompleted && styles.stageDescriptionPending
+                    ]}>{stage.description}</Text>
                   </View>
                 </View>
               );
@@ -357,23 +364,42 @@ const OrderDetailsScreen = ({ navigation, route }) => {
 
         {/* Items Summary - Enhanced */}
         <View style={styles.itemsSection}>
-          <Text style={styles.sectionTitle}>Items ({order.items?.length || 0})</Text>
+          <Text style={styles.sectionTitle}>Order Items</Text>
           
           {order.items && order.items.length > 0 ? (
-            order.items.map((item, index) => (
-              <View key={index} style={styles.itemCard}>
-                <View style={styles.itemHeader}>
-                  <View style={styles.itemNumberBadge}>
-                    <Text style={styles.itemNumber}>{index + 1}</Text>
+            order.items.map((item, index) => {
+              // Construct image URL from product image path
+              const imageUrl = item.product?.image 
+                ? `http://192.168.1.203:8000/uploads/products/${item.product.image}`
+                : 'https://via.placeholder.com/60?text=No+Image';
+              
+              return (
+                <View key={index} style={styles.itemCard}>
+                  <View style={styles.itemRow}>
+                    {/* Product Image */}
+                    <Image 
+                      source={{ uri: imageUrl }}
+                      style={styles.itemImage}
+                      resizeMode="cover"
+                    />
+                    
+                    {/* Product Info */}
+                    <View style={styles.itemInfo}>
+                      <Text style={styles.itemName} numberOfLines={2}>
+                        {item.product?.name || item.name || item.product_name || 'Product'}
+                      </Text>
+                      <Text style={styles.itemQuantity}>Quantity: {item.quantity}</Text>
+                    </View>
+                    
+                    {/* Price Info */}
+                    <View style={styles.itemPriceSection}>
+                      <Text style={styles.itemPrice}>₱{(parseFloat(item.price) || 0).toFixed(2)}</Text>
+                      <Text style={styles.itemPriceLabel}>₱{(parseFloat(item.price) || 0).toFixed(2)} each</Text>
+                    </View>
                   </View>
-                  <View style={styles.itemDetails}>
-                    <Text style={styles.itemName}>{item.name}</Text>
-                    <Text style={styles.itemQuantity}>Qty: {item.quantity}</Text>
-                  </View>
-                  <Text style={styles.itemPrice}>₱{(parseFloat(item.price) || 0).toFixed(2)}</Text>
                 </View>
-              </View>
-            ))
+              );
+            })
           ) : (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyText}>No items in order</Text>
@@ -449,21 +475,18 @@ const OrderDetailsScreen = ({ navigation, route }) => {
           </View>
         )}
 
-        {/* Order Received Button - Enhanced */}
-        {order.tracking_status === 'Out for Delivery' && order.status !== 'completed' && (
+        {/* Order Received/Completed Button */}
+        {order.status === 'delivered' && (
           <TouchableOpacity 
             style={styles.orderReceivedButton}
             onPress={() => {
               Alert.alert(
-                'Order Received',
-                'Confirm that you have received this order?',
+                'Confirm Order Received',
+                'Have you received your order?',
                 [
                   {
-                    text: 'Yes, Confirm',
-                    onPress: () => {
-                      Alert.alert('Success', 'Thank you for confirming! You can now leave a review.');
-                      navigation.navigate('Home');
-                    },
+                    text: 'Yes, Received',
+                    onPress: markAsCompleted,
                   },
                   {
                     text: 'Cancel',
@@ -473,35 +496,17 @@ const OrderDetailsScreen = ({ navigation, route }) => {
               );
             }}
           >
-            <Text style={styles.orderReceivedIcon}>✓</Text>
-            <Text style={styles.orderReceivedText}>Order Received - Leave Review</Text>
+            <Ionicons name="checkmark-circle" size={24} color={colors.white} />
+            <Text style={styles.orderReceivedText}>Order Received</Text>
           </TouchableOpacity>
         )}
 
-        {/* Action Buttons */}
-        <View style={styles.actionsSection}>
-          <TouchableOpacity style={styles.actionButton} onPress={handleContactSeller}>
-            <Text style={styles.actionButtonIcon}>💬</Text>
-            <Text style={styles.actionButtonText}>Contact Seller</Text>
-          </TouchableOpacity>
-
-          {currentStageIndex >= trackingStages.length - 1 && (
-            <TouchableOpacity style={styles.actionButton} onPress={handleReturnRequest}>
-              <Text style={styles.actionButtonIcon}>↩️</Text>
-              <Text style={styles.actionButtonText}>Return/Exchange</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Help Section */}
-        <TouchableOpacity style={styles.helpSection}>
-          <Text style={styles.helpIcon}>❓</Text>
-          <View style={styles.helpContent}>
-            <Text style={styles.helpText}>Need help with your order?</Text>
-            <Text style={styles.helpSubtext}>Contact our support team</Text>
+        {order.status === 'completed' && (
+          <View style={styles.orderCompletedButton}>
+            <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+            <Text style={styles.orderCompletedText}>Order Completed</Text>
           </View>
-          <Text style={styles.helpArrow}>→</Text>
-        </TouchableOpacity>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -644,7 +649,7 @@ const styles = StyleSheet.create({
   stageIcon: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: colors.text,
+    color: '#9E9E9E',
   },
   stageIconCompleted: {
     color: colors.white,
@@ -662,9 +667,15 @@ const styles = StyleSheet.create({
   stageLabelCompleted: {
     color: colors.text,
   },
+  stageLabelPending: {
+    color: '#9E9E9E',
+  },
   stageDescription: {
     fontSize: 12,
     color: colors.textLight,
+  },
+  stageDescriptionPending: {
+    color: '#BDBDBD',
   },
   itemsSection: {
     marginBottom: 20,
@@ -672,32 +683,48 @@ const styles = StyleSheet.create({
   itemCard: {
     backgroundColor: colors.white,
     borderRadius: 10,
-    padding: 12,
+    padding: 15,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  itemHeader: {
+  itemRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+  },
+  itemImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: '#F5F5F5',
+  },
+  itemInfo: {
+    flex: 1,
+    marginRight: 10,
   },
   itemName: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.text,
-    flex: 1,
-  },
-  itemPrice: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.primary,
+    marginBottom: 6,
   },
   itemQuantity: {
     fontSize: 12,
     color: colors.textLight,
-    marginBottom: 4,
+  },
+  itemPriceSection: {
+    alignItems: 'flex-end',
+  },
+  itemPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  itemPriceLabel: {
+    fontSize: 11,
+    color: colors.textLight,
   },
   itemTotal: {
     fontSize: 12,
@@ -888,23 +915,38 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   orderReceivedButton: {
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.primary,
     borderRadius: 12,
-    padding: 15,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
-  },
-  orderReceivedIcon: {
-    fontSize: 24,
-    color: colors.white,
-    marginRight: 10,
+    marginHorizontal: 15,
   },
   orderReceivedText: {
     color: colors.white,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
+    marginLeft: 10,
+  },
+  orderCompletedButton: {
+    backgroundColor: '#F0F9FF',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    marginHorizontal: 15,
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+  },
+  orderCompletedText: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 10,
   },
   // Missing styles for enhanced UI
   backBtn: {
@@ -953,8 +995,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  statusSummaryIcon: {
-    fontSize: 24,
+  statusSummaryIconStyle: {
     marginBottom: 8,
   },
   statusSummaryLabel: {

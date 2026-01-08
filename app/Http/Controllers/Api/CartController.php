@@ -200,4 +200,28 @@ class CartController extends Controller
             'message' => 'Cart cleared successfully'
         ]);
     }
+
+    /**
+     * Remove item from cart (destroy method for DELETE route)
+     */
+    public function destroy($id)
+    {
+        $cartItem = Cart::where('id', $id)
+                        ->where('user_id', Auth::id())
+                        ->first();
+
+        if (!$cartItem) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cart item not found'
+            ], 404);
+        }
+
+        $cartItem->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Item removed from cart successfully'
+        ]);
+    }
 }

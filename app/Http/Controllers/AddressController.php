@@ -38,25 +38,43 @@ class AddressController extends Controller
             'label' => 'required|string|max:50',
             'full_name' => 'required|string|max:255',
             'phone_number' => 'required|string|max:20',
-            'street' => 'required|string|max:255',
-            'barangay' => 'nullable|string|max:255',
-            'city' => 'required|string|max:255',
-            'province' => 'nullable|string|max:255',
-            'postal_code' => 'nullable|string|max:10',
+            'formatted_address' => 'required|string|max:255',
+            'region' => 'required|string|max:500',
+            'postal_code' => 'required|string|max:10',
             'is_default' => 'boolean',
         ]);
 
-        $validated['user_id'] = Auth::id();
+        // Parse region field (format: "Mindanao, Zamboanga Del Sur, Zamboanga City, Tumaga")
+        $regionParts = array_map('trim', explode(',', $validated['region']));
+        
+        // Map form fields to database columns
+        $addressData = [
+            'label' => $validated['label'],
+            'full_name' => $validated['full_name'],
+            'phone_number' => $validated['phone_number'],
+            'street' => $validated['formatted_address'],
+            'barangay' => $regionParts[3] ?? null,
+            'city' => $regionParts[2] ?? '',
+            'province' => $regionParts[1] ?? '',
+            'postal_code' => $validated['postal_code'],
+            'user_id' => Auth::id(),
+        ];
 
         // If this is the first address or marked as default, set it as default
         $existingCount = UserAddress::forUser(Auth::id())->count();
         if ($existingCount === 0 || $request->boolean('is_default')) {
-            $validated['is_default'] = true;
+            $addressData['is_default'] = true;
             // Remove default from other addresses
             UserAddress::forUser(Auth::id())->update(['is_default' => false]);
         }
 
-        $address = UserAddress::create($validated);
+        $address = UserAddress::create($addressData);
+
+        // Check if request came from checkout
+        if ($request->has('from_checkout') || str_contains($request->header('referer', ''), 'checkout')) {
+            return redirect()->route('cart.checkout')
+                ->with('success', 'Address added successfully!');
+        }
 
         return redirect()->route('addresses.index')
             ->with('success', 'Address added successfully!');
@@ -68,6 +86,8 @@ class AddressController extends Controller
     public function edit(UserAddress $address)
     {
         $this->authorize('update', $address);
+        
+        // Return just the form partial for the modal
         return view('addresses.edit', compact('address'));
     }
 
@@ -82,19 +102,38 @@ class AddressController extends Controller
             'label' => 'required|string|max:50',
             'full_name' => 'required|string|max:255',
             'phone_number' => 'required|string|max:20',
-            'street' => 'required|string|max:255',
-            'barangay' => 'nullable|string|max:255',
-            'city' => 'required|string|max:255',
-            'province' => 'nullable|string|max:255',
-            'postal_code' => 'nullable|string|max:10',
+            'formatted_address' => 'required|string|max:255',
+            'region' => 'required|string|max:500',
+            'postal_code' => 'required|string|max:10',
             'is_default' => 'boolean',
         ]);
+
+        // Parse region field (format: "Mindanao, Zamboanga Del Sur, Zamboanga City, Tumaga")
+        $regionParts = array_map('trim', explode(',', $validated['region']));
+
+        // Map form fields to database columns
+        $addressData = [
+            'label' => $validated['label'],
+            'full_name' => $validated['full_name'],
+            'phone_number' => $validated['phone_number'],
+            'street' => $validated['formatted_address'],
+            'barangay' => $regionParts[3] ?? null,
+            'city' => $regionParts[2] ?? '',
+            'province' => $regionParts[1] ?? '',
+            'postal_code' => $validated['postal_code'],
+        ];
 
         if ($request->boolean('is_default')) {
             $address->setAsDefault();
         }
 
-        $address->update($validated);
+        $address->update($addressData);
+
+        // Check if request came from checkout
+        if ($request->has('from_checkout') || str_contains($request->header('referer', ''), 'checkout')) {
+            return redirect()->route('cart.checkout')
+                ->with('success', 'Address updated successfully!');
+        }
 
         return redirect()->route('addresses.index')
             ->with('success', 'Address updated successfully!');

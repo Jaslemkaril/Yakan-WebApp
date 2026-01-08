@@ -5,9 +5,46 @@ class ApiService {
   constructor() {
     this.token = null;
     this.baseUrl = API_CONFIG.API_BASE_URL;
+    console.log(`[API Service] Initialized with base URL: ${this.baseUrl}`);
+    console.log(`[API Service] Request timeout: ${API_CONFIG.REQUEST_TIMEOUT}ms`);
   }
 
   // ==================== UTILITY METHODS ====================
+  
+  /**
+   * Test API connectivity
+   */
+  async testConnection() {
+    try {
+      console.log('[API] Testing connection to server...');
+      console.log('[API] Testing URL:', `${this.baseUrl}/products`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second test timeout
+      
+      const response = await fetch(`${this.baseUrl}/products`, {
+        method: 'GET',
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      console.log(`[API] Connection test ${response.ok ? 'SUCCESS ✓' : 'FAILED ✗'} - Status: ${response.status}`);
+      return response.ok;
+    } catch (error) {
+      console.error('[API] Connection test FAILED ✗');
+      console.error('[API] Error details:', error.message);
+      console.error('[API] Make sure:');
+      console.error('  1. Laravel server is running (php artisan serve --host=0.0.0.0 --port=8000)');
+      console.error('  2. You are on the same WiFi network as your computer');
+      console.error('  3. Windows Firewall allows port 8000');
+      console.error('  4. Your IP address is correct in config.js');
+      return false;
+    }
+  }
 
   /**
    * Set the auth token (called after login/register)
@@ -89,16 +126,32 @@ class ApiService {
       }
 
       console.log(`[API] ${method} ${endpoint}`);
+      console.log(`[API] URL: ${url}`);
       
-      // Create a timeout promise
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout')), API_CONFIG.REQUEST_TIMEOUT)
-      );
+      // Create AbortController for timeout with longer duration for mobile
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+        console.warn(`[API] ⏱️ Request timeout after ${API_CONFIG.REQUEST_TIMEOUT}ms for ${method} ${endpoint}`);
+      }, API_CONFIG.REQUEST_TIMEOUT);
       
-      const response = await Promise.race([
-        fetch(url, config),
-        timeoutPromise
-      ]);
+      // Add signal to config
+      config.signal = controller.signal;
+      
+      let response;
+      try {
+        response = await fetch(url, config);
+        clearTimeout(timeoutId);
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          console.error(`[API] ⏱️ Request timeout for ${method} ${endpoint} after ${API_CONFIG.REQUEST_TIMEOUT}ms`);
+          console.error(`[API] 💡 Try: 1) Check WiFi connection 2) Server running? 3) Restart app`);
+          throw new Error(`Connection timeout (${API_CONFIG.REQUEST_TIMEOUT/1000}s). Please check:\n1. WiFi connection\n2. Server is running\n3. Both on same network`);
+        }
+        console.error(`[API] ❌ Network error for ${method} ${endpoint}:`, error.message);
+        throw new Error('Network error - Unable to reach server. Please check your WiFi connection and ensure the server is running.');
+      }
       
       console.log(`[API] Response status: ${response.status}`);
       
@@ -137,7 +190,12 @@ class ApiService {
         status: response.status,
       };
     } catch (error) {
-      console.error(`[API Error] ${method} ${endpoint}:`, error);
+      // Don't log 404 errors as errors - they're expected for deleted resources
+      if (error.message?.includes('Order not found')) {
+        console.log(`[API] Resource not found: ${endpoint}`);
+      } else {
+        console.error(`[API Error] ${method} ${endpoint}:`, error);
+      }
       return {
         success: false,
         error: error.message,
@@ -332,7 +390,10 @@ class ApiService {
       : data;
     
     console.log('[API] Shipping fee payload:', JSON.stringify(payload));
-    return this.request('POST', '/shipping/calculate-fee', payload);
+    
+    // Build query string for GET request
+    const queryParams = new URLSearchParams(payload).toString();
+    return this.request('GET', `/shipping/calculate-fee?${queryParams}`);
   }
 
   // ==================== PAYMENT ENDPOINTS ====================
@@ -509,12 +570,111 @@ class ApiService {
   }
 
   /**
+   * Respond to price quote
+   */
+  async respondToQuote(chatId, response, quoteMessageId) {
+    console.log('[ChatAPI] Responding to quote:', response);
+    const endpoint = `/chats/${chatId}/respond-quote`;
+    return await this.request('POST', endpoint, { 
+      response, 
+      quote_message_id: quoteMessageId 
+    });
+  }
+
+  /**
    * Update chat status
    */
   async updateChatStatus(chatId, status) {
     console.log('[ChatAPI] Updating chat status with token:', this.token ? 'present' : 'missing');
     const endpoint = API_CONFIG.ENDPOINTS.CHAT.UPDATE_STATUS.replace(':id', chatId);
     return await this.request('PATCH', endpoint, { status });
+  }
+
+  // ==================== WISHLIST ENDPOINTS ====================
+
+  /**
+   * Get user's wishlist items
+   */
+  async getWishlist() {
+    console.log('[WishlistAPI] Fetching wishlist...');
+    return await this.request('GET', '/wishlist');
+  }
+
+  /**
+   * Add item to wishlist
+   */
+  async addToWishlist(productId, type = 'product') {
+    console.log('[WishlistAPI] Adding to wishlist:', productId);
+    return await this.request('POST', '/wishlist/add', { 
+      type, 
+      id: productId 
+    });
+  }
+
+  /**
+   * Remove item from wishlist
+   */
+  async removeFromWishlist(productId, type = 'product') {
+    console.log('[WishlistAPI] Removing from wishlist:', productId);
+    return await this.request('POST', '/wishlist/remove', { 
+      type, 
+      id: productId 
+    });
+  }
+
+  /**
+   * Check if item is in wishlist
+   */
+  async checkWishlist(productId, type = 'product') {
+    return await this.request('POST', '/wishlist/check', { 
+      type, 
+      id: productId 
+    });
+  }
+
+  // ==================== CART ENDPOINTS ====================
+
+  /**
+   * Get user's cart items
+   */
+  async getCart() {
+    console.log('[CartAPI] Fetching cart...');
+    return await this.request('GET', '/cart');
+  }
+
+  /**
+   * Add item to cart
+   */
+  async addToCart(productId, quantity = 1) {
+    console.log('[CartAPI] Adding to cart:', productId, quantity);
+    return await this.request('POST', '/cart', { 
+      product_id: productId,
+      quantity 
+    });
+  }
+
+  /**
+   * Update cart item quantity
+   */
+  async updateCartItem(cartId, quantity) {
+    console.log('[CartAPI] Updating cart item:', cartId, quantity);
+    return await this.request('PUT', `/cart/${cartId}`, { quantity });
+  }
+
+  /**
+   * Remove item from cart
+   */
+  async removeFromCart(cartId) {
+    console.log('[CartAPI] Removing from cart:', cartId);
+    return await this.request('DELETE', `/cart/${cartId}`);
+  }
+
+  /**
+   * Clear entire cart
+   */
+  async clearCart() {
+    console.log('[CartAPI] Clearing cart');
+    return await this.request('DELETE', '/cart');
   }
 
   // ==================== POLLING/REAL-TIME METHODS ====================

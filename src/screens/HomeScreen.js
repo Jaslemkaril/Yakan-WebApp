@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import BottomNav from '../components/BottomNav';
 import colors from '../constants/colors';
@@ -38,6 +39,7 @@ export default function HomeScreen({ navigation }) {
     try {
       setLoading(true);
       console.log('🏠 HomeScreen: Fetching products from API...');
+      console.log('🏠 HomeScreen: API Base URL:', API_CONFIG.API_BASE_URL);
       
       const response = await ApiService.getProducts();
       
@@ -60,7 +62,12 @@ export default function HomeScreen({ navigation }) {
         featured: index < 2, // First 2 products are featured
         category: product.category?.name || 'Uncategorized',
         image: product.image 
-          ? { uri: `${API_CONFIG.STORAGE_BASE_URL}/products/${product.image}` }
+          ? { uri: product.image.startsWith('http') 
+              ? product.image 
+              : product.image.startsWith('/uploads') || product.image.startsWith('/storage')
+                ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${product.image}`
+                : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/uploads/products/${product.image}` 
+            }
           : require('../assets/images/Saputangan.jpg'),
         stock: product.stock || 0,
       }));
@@ -188,9 +195,11 @@ export default function HomeScreen({ navigation }) {
           style={styles.featuredFavoriteButton}
           onPress={() => toggleFavorite(product)}
         >
-          <Text style={styles.favoriteIcon}>
-            {isInWishlist(product.id) ? '❤️' : '🤍'}
-          </Text>
+          <Ionicons 
+            name={isInWishlist(product.id) ? "heart" : "heart-outline"} 
+            size={24} 
+            color={isInWishlist(product.id) ? "#FF6B6B" : "#999"} 
+          />
         </TouchableOpacity>
       </View>
       <View style={styles.featuredInfo}>
@@ -217,9 +226,11 @@ export default function HomeScreen({ navigation }) {
           style={styles.favoriteButton}
           onPress={() => toggleFavorite(product)}
         >
-          <Text style={styles.favoriteIcon}>
-            {isInWishlist(product.id) ? '❤️' : '🤍'}
-          </Text>
+          <Ionicons 
+            name={isInWishlist(product.id) ? "heart" : "heart-outline"} 
+            size={24} 
+            color={isInWishlist(product.id) ? "#FF6B6B" : "#999"} 
+          />
         </TouchableOpacity>
       </View>
       <View style={styles.productInfo}>
@@ -233,7 +244,7 @@ export default function HomeScreen({ navigation }) {
             style={styles.cartButton}
             onPress={() => handleAddToCart(product)}
           >
-            <Text style={styles.cartIcon}>🛒</Text>
+            <Ionicons name="cart" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
@@ -257,13 +268,13 @@ export default function HomeScreen({ navigation }) {
                   onPress={handleMenuPress}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.menuIcon}>☰</Text>
+                  <Ionicons name="menu" size={28} color="#fff" />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.heroCartButton}
                   onPress={() => navigation.navigate('Cart')}
                 >
-                  <Text style={styles.heroCartIcon}>🛒</Text>
+                  <Ionicons name="cart" size={28} color="#fff" />
                   {getCartCount() > 0 && (
                     <View style={styles.heroBadge}>
                       <Text style={styles.heroBadgeText}>{getCartCount()}</Text>
@@ -562,10 +573,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 22,
   },
-  menuIcon: {
-    fontSize: 24,
-    color: colors.white,
-  },
   heroCartButton: {
     width: 44,
     height: 44,
@@ -574,9 +581,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 22,
     position: 'relative',
-  },
-  heroCartIcon: {
-    fontSize: 22,
   },
   heroBadge: {
     position: 'absolute',
@@ -791,9 +795,11 @@ const styles = StyleSheet.create({
     borderRadius: 17.5,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  favoriteIcon: {
-    fontSize: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   productInfo: {
     padding: 12,
@@ -828,9 +834,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  cartIcon: {
-    fontSize: 18,
   },
   // MENU MODAL STYLES
   menuOverlay: {

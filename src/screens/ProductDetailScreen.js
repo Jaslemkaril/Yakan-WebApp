@@ -10,8 +10,10 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import colors from '../constants/colors';
+import API_CONFIG from '../config/config';
 
 const { width } = Dimensions.get('window');
 
@@ -95,9 +97,11 @@ export default function ProductDetailScreen({ route, navigation }) {
           style={styles.favoriteButton}
           onPress={handleFavoriteToggle}
         >
-          <Text style={styles.favoriteIcon}>
-            {isFavorite ? '❤️' : '🤍'}
-          </Text>
+          <Ionicons 
+            name={isFavorite ? "heart" : "heart-outline"} 
+            size={28} 
+            color={isFavorite ? "#FF6B6B" : "#999"} 
+          />
         </TouchableOpacity>
       </View>
 
@@ -105,9 +109,24 @@ export default function ProductDetailScreen({ route, navigation }) {
         {/* Product Image */}
         <View style={styles.imageContainer}>
           <Image 
-            source={product.image}
+            source={
+              product.image 
+                ? (typeof product.image === 'object' && product.image.uri)
+                  ? product.image  // Already transformed with {uri: ...}
+                  : { uri: product.image.startsWith('http')
+                      ? product.image
+                      : product.image.startsWith('/uploads') || product.image.startsWith('/storage')
+                        ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${product.image}`
+                        : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/uploads/products/${product.image}`
+                    }
+                : require('../assets/images/Saputangan.jpg')
+            }
             style={styles.productImage}
             resizeMode="cover"
+            onError={(error) => {
+              console.log('[ProductDetail] Image load error:', error);
+              console.log('[ProductDetail] Product image:', product.image);
+            }}
           />
         </View>
 

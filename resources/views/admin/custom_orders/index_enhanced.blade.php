@@ -204,7 +204,7 @@
         </div>
         
         @if($orders->count() > 0)
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto overflow-y-visible">
             <table class="w-full">
                 <thead>
                     <tr>
@@ -233,7 +233,62 @@
                             </div>
                         </td>
                         <td class="px-6 py-4">
-                            @if($order->design_upload)
+                            @php
+                                // Try to load pattern for SVG display
+                                $patternModel = null;
+                                if (!empty($order->design_metadata) && isset($order->design_metadata['pattern_id'])) {
+                                    $patternModel = \App\Models\YakanPattern::find($order->design_metadata['pattern_id']);
+                                } elseif (!empty($order->patterns) && is_array($order->patterns)) {
+                                    if (!empty($order->patterns) && is_numeric($order->patterns[0])) {
+                                        $patternModel = \App\Models\YakanPattern::find($order->patterns[0]);
+                                    } elseif (!empty($order->patterns)) {
+                                        $patternModel = \App\Models\YakanPattern::where('name', $order->patterns[0])->first();
+                                    }
+                                }
+                            @endphp
+                            
+                            @if($patternModel && $patternModel->hasSvg())
+                                {{-- Display pattern SVG --}}
+                                @php
+                                    $customization = $order->customization_settings ?? [];
+                                    $scale = $customization['scale'] ?? 1;
+                                    $rotation = $customization['rotation'] ?? 0;
+                                    $opacity = $customization['opacity'] ?? 1;
+                                    $hue = $customization['hue'] ?? 0;
+                                    $saturation = $customization['saturation'] ?? 100;
+                                    $brightness = $customization['brightness'] ?? 100;
+                                    
+                                    $filterStyle = sprintf(
+                                        'filter: hue-rotate(%ddeg) saturate(%d%%) brightness(%d%%); opacity: %s; transform: scale(%s) rotate(%ddeg);',
+                                        $hue, $saturation, $brightness, $opacity, $scale, $rotation
+                                    );
+                                @endphp
+                                <div class="relative group">
+                                    <div class="w-16 h-16 rounded-lg shadow-sm flex items-center justify-center bg-gray-50 p-1 overflow-hidden" style="border: 2px solid #e0b0b0;">
+                                        <div class="w-full h-full flex items-center justify-center">
+                                            <div style="{{ $filterStyle }} transform-origin: center; width: 100%; height: 100%; max-width: 100%; max-height: 100%;">
+                                                {!! $patternModel->getSvgContent() !!}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @if($order->design_method === 'pattern')
+                                        <span class="absolute -top-1 -right-1 w-5 h-5 text-white text-xs rounded-full flex items-center justify-center" title="Pattern: {{ $patternModel->name }}" style="background-color: #800000;">
+                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                                            </svg>
+                                        </span>
+                                    @endif
+                                    {{-- Hover preview with pattern name --}}
+                                    <div class="absolute left-0 top-0 w-64 h-64 bg-white rounded-lg shadow-2xl p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none overflow-hidden" style="border: 2px solid #e0b0b0; z-index: 9999;">
+                                        <div class="w-full h-56 flex items-center justify-center bg-gray-50 p-4 rounded overflow-hidden">
+                                            <div style="{{ $filterStyle }} transform-origin: center; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                                                {!! $patternModel->getSvgContent() !!}
+                                            </div>
+                                        </div>
+                                        <p class="text-xs text-center font-semibold text-gray-700 mt-2">{{ $patternModel->name }}</p>
+                                    </div>
+                                </div>
+                            @elseif($order->design_upload)
                                 <div class="relative group">
                                     @if(str_starts_with($order->design_upload, 'data:image'))
                                         {{-- Base64 image --}}

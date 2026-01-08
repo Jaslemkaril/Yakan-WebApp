@@ -1,13 +1,13 @@
 // src/components/BottomNav.js
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { Home, ShoppingBag, User, MessageCircle, Inbox } from 'lucide-react-native';
+import { Home, ShoppingBag, User, MessageCircle, Scissors } from 'lucide-react-native';
 
 const BottomNav = ({ navigation, activeRoute }) => {
   const navItems = [
     { route: 'Home', icon: Home, label: 'Home' },
     { route: 'Products', icon: ShoppingBag, label: 'Products' },
-    { route: 'Orders', icon: Inbox, label: 'Orders' },
+    { route: 'CustomOrder', icon: Scissors, label: 'Custom' },
     { route: 'Chat', icon: MessageCircle, label: 'Chat' },
     { route: 'Account', icon: User, label: 'Profile' },
   ];

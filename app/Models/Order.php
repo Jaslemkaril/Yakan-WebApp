@@ -24,6 +24,7 @@ class Order extends Model
         'subtotal',
         'shipping_fee',
         'discount',
+        'discount_amount',
         'total',
         'total_amount',
         'delivery_type',
@@ -36,6 +37,14 @@ class Order extends Model
         'payment_reference',
         'payment_proof_path',
         'payment_verified_at',
+        'bank_receipt',
+        'gcash_receipt',
+        'tracking_history',
+        'tracking_status',
+        'coupon_id',
+        'coupon_code',
+        'user_address_id',
+        'customer_notes',
         'status',
         'notes',
         'admin_notes',
@@ -52,6 +61,7 @@ class Order extends Model
         'discount' => 'decimal:2',
         'total' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'tracking_history' => 'array',
         'payment_verified_at' => 'datetime',
         'confirmed_at' => 'datetime',
         'shipped_at' => 'datetime',
@@ -73,6 +83,14 @@ class Order extends Model
      * Get the order items
      */
     public function items(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * Alias for items() relationship
+     */
+    public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
     }
@@ -127,5 +145,40 @@ class Order extends Model
     public function scopeWithStatus($query, string $status)
     {
         return $query->where('status', $status);
+    }
+
+    /**
+     * Append a tracking event to the order's history
+     */
+    public function appendTrackingEvent(string $status, string $date = null): void
+    {
+        $history = $this->tracking_history ?? [];
+        
+        // Handle case where tracking_history is a string (not properly cast)
+        if (is_string($history)) {
+            $history = json_decode($history, true) ?? [];
+        }
+        
+        $history[] = [
+            'status' => $status,
+            'date' => $date ?? now()->format('Y-m-d h:i A'),
+        ];
+        $this->tracking_history = $history;
+    }
+
+    /**
+     * Get the display customer name (from user relationship or customer_name field)
+     */
+    public function getDisplayCustomerName(): string
+    {
+        return $this->user ? $this->user->name : ($this->customer_name ?? 'N/A');
+    }
+
+    /**
+     * Get the display customer email (from user relationship or customer_email field)
+     */
+    public function getDisplayCustomerEmail(): string
+    {
+        return $this->user ? $this->user->email : ($this->customer_email ?? 'N/A');
     }
 }

@@ -165,18 +165,21 @@ class Product extends Model
             $imagePath = 'products/' . $imagePath;
         }
         
+        // Generate full absolute URL for API/mobile access
+        $baseUrl = config('app.url');
+        
         // Check if file exists in new uploads directory
         if (file_exists(public_path('uploads/' . $imagePath))) {
-            return asset('uploads/' . $imagePath);
+            return $baseUrl . '/uploads/' . $imagePath;
         }
         
         // Check if file exists in storage directory
         if (file_exists(public_path('storage/' . $imagePath))) {
-            return asset('storage/' . $imagePath);
+            return $baseUrl . '/storage/' . $imagePath;
         }
         
-        // Default to uploads for new paths
-        return asset('uploads/' . $imagePath);
+        // Default to storage for compatibility
+        return $baseUrl . '/storage/' . $imagePath;
     }
 
     /**

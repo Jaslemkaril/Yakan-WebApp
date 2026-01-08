@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,19 +8,54 @@ import {
   Image,
   Dimensions,
   Alert,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useCart } from '../context/CartContext';
 import colors from '../constants/colors';
 import BottomNav from '../components/BottomNav';
+import ApiService from '../services/api';
+import API_CONFIG from '../config/config';
 
 const { width } = Dimensions.get('window');
 
 export default function WishlistScreen({ navigation }) {
-  const { wishlistItems, removeFromWishlist, addToCart, isLoggedIn } = useCart();
+  const { addToCart, isLoggedIn, wishlistItems, removeFromWishlist, fetchWishlist } = useCart();
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const handleRemoveFromWishlist = (productId) => {
-    removeFromWishlist(productId);
-    Alert.alert('Success', 'Item removed from wishlist');
+  useEffect(() => {
+    setLoading(false);
+  }, []);
+
+  // Refresh wishlist when screen comes into focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      console.log('[WishlistScreen] Screen focused, refreshing wishlist');
+      if (isLoggedIn) {
+        fetchWishlist();
+      }
+    });
+    
+    return unsubscribe;
+  }, [navigation, isLoggedIn]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    if (isLoggedIn) {
+      await fetchWishlist();
+    }
+    setRefreshing(false);
+  };
+
+  const handleRemoveFromWishlist = async (productId) => {
+    try {
+      await removeFromWishlist(productId);
+      Alert.alert('Success', 'Item removed from wishlist');
+    } catch (error) {
+      console.error('[Wishlist] Remove error:', error);
+      Alert.alert('Error', 'Failed to remove item');
+    }
   };
 
   const handleAddToCart = (product) => {
@@ -38,6 +73,30 @@ export default function WishlistScreen({ navigation }) {
       { text: 'View Cart', onPress: () => navigation.navigate('Cart') },
     ]);
   };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backIcon}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Wishlist</Text>
+          <View style={styles.backButton} />
+        </View>
+
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.emptySubtext}>Loading wishlist...</Text>
+        </View>
+
+        <BottomNav navigation={navigation} />
+      </View>
+    );
+  }
 
   if (wishlistItems.length === 0) {
     return (
@@ -83,42 +142,63 @@ export default function WishlistScreen({ navigation }) {
         <View style={styles.backButton} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {wishlistItems.map((product) => (
-          <View key={product.id} style={styles.wishlistItem}>
-            <Image
-              source={product.image}
-              style={styles.productImage}
-              resizeMode="cover"
-            />
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[colors.primary]}
+          />
+        }
+      >
+        {wishlistItems.map((product) => {
+          // Handle image URL - use /uploads/products/ path
+          const imageUri = product.image?.startsWith('http') 
+            ? product.image 
+            : product.image?.startsWith('/uploads') || product.image?.startsWith('/storage')
+              ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${product.image}`
+              : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/uploads/products/${product.image}`;
 
-            <View style={styles.productInfo}>
-              <Text style={styles.productName} numberOfLines={2}>
-                {product.name}
-              </Text>
-              <Text style={styles.productDescription} numberOfLines={2}>
-                {product.description}
-              </Text>
-              <Text style={styles.productPrice}>₱{product.price.toFixed(2)}</Text>
+          return (
+            <View key={product.id} style={styles.wishlistItem}>
+              <Image
+                source={{ uri: imageUri }}
+                style={styles.productImage}
+                resizeMode="cover"
+              />
 
-              <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  style={styles.addToCartBtn}
-                  onPress={() => handleAddToCart(product)}
-                >
-                  <Text style={styles.addToCartText}>Add to Cart</Text>
-                </TouchableOpacity>
+              <View style={styles.productInfo}>
+                <Text style={styles.productName} numberOfLines={2}>
+                  {product.name || 'Unknown Product'}
+                </Text>
+                <Text style={styles.productDescription} numberOfLines={2}>
+                  {product.description || ''}
+                </Text>
+                <Text style={styles.productPrice}>
+                  ₱{(product.price || 0).toFixed(2)}
+                </Text>
 
-                <TouchableOpacity
-                  style={styles.removeBtn}
-                  onPress={() => handleRemoveFromWishlist(product.id)}
-                >
-                  <Text style={styles.removeText}>Remove</Text>
-                </TouchableOpacity>
+                <View style={styles.actionButtons}>
+                  <TouchableOpacity
+                    style={styles.addToCartBtn}
+                    onPress={() => handleAddToCart(product)}
+                  >
+                    <Text style={styles.addToCartText}>Add to Cart</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.removeBtn}
+                    onPress={() => handleRemoveFromWishlist(product.id)}
+                  >
+                    <Text style={styles.removeText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </ScrollView>
 
       <BottomNav navigation={navigation} />

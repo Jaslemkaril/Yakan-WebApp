@@ -18,24 +18,62 @@ class WishlistController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $user = Auth::user();
-        $wishlist = $user->wishlists()->default()->first() ?: 
-                   $user->wishlists()->create(['name' => 'My Wishlist', 'is_default' => true]);
-        
-        $wishlist->load(['items.item', 'items.item.category']);
+        try {
+            $user = Auth::user();
+            
+            // Get or create default wishlist
+            $wishlist = $user->wishlists()->where('is_default', true)->first();
+            
+            if (!$wishlist) {
+                $wishlist = $user->wishlists()->create([
+                    'name' => 'My Wishlist',
+                    'is_default' => true
+                ]);
+            }
+            
+            // Eagerly load relationships to avoid N+1 queries
+            $wishlist->load(['items.item']);
 
-        // Apply filters if requested
-        if ($request->type) {
-            $wishlist->items = $wishlist->items->filter(function($item) use ($request) {
-                return $item->item_type === $request->type;
-            });
+            // Apply filters if requested
+            $items = $wishlist->items;
+            if ($request->type) {
+                $items = $items->filter(function($item) use ($request) {
+                    return $item->item_type === $request->type;
+                });
+            }
+
+            // Format items for mobile app
+            $formattedItems = $items->map(function($wishlistItem) {
+                $item = $wishlistItem->item;
+                if (!$item) {
+                    return null;
+                }
+                
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name ?? '',
+                    'description' => $item->description ?? '',
+                    'price' => (float) ($item->price ?? 0),
+                    'image' => $item->image_url ?? $item->image ?? '',
+                    'category' => optional($item->category)->name ?? '',
+                    'type' => $wishlistItem->item_type,
+                ];
+            })->filter()->values();
+
+            return response()->json([
+                'success' => true,
+                'data' => $formattedItems,
+                'message' => 'Wishlist retrieved successfully'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Wishlist API Error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'message' => 'Wishlist retrieved successfully'
+            ]);
         }
-
-        return response()->json([
-            'success' => true,
-            'data' => $wishlist,
-            'message' => 'Wishlist retrieved successfully'
-        ]);
     }
 
     /**

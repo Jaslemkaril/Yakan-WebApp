@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Step 2: Upload Reference Image - Custom Order')
+@section('title', 'Optional: Upload Reference Image - Custom Order')
 
 @section('content')
 <div class="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-100 py-8">
@@ -13,19 +13,14 @@
                     <div class="w-10 h-10 bg-green-600 text-white rounded-full flex items-center justify-center font-semibold">✓</div>
                     <span class="ml-2 font-medium text-green-600">Fabric</span>
                 </div>
-                <div class="w-16 h-1 bg-green-600"></div>
-                <div class="flex items-center">
-                    <div class="w-10 h-10 bg-red-700 text-white rounded-full flex items-center justify-center font-semibold">2</div>
-                    <span class="ml-2 font-medium" style="color:#800000;">Reference</span>
-                </div>
                 <div class="w-16 h-1 bg-gray-300"></div>
                 <div class="flex items-center">
-                    <div class="w-10 h-10 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center font-semibold">3</div>
+                    <div class="w-10 h-10 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center font-semibold">2</div>
                     <span class="ml-2 text-gray-500">Patterns</span>
                 </div>
                 <div class="w-16 h-1 bg-gray-300"></div>
                 <div class="flex items-center">
-                    <div class="w-10 h-10 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center font-semibold">4</div>
+                    <div class="w-10 h-10 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center font-semibold">3</div>
                     <span class="ml-2 text-gray-500">Details</span>
                 </div>
             </div>

@@ -12,7 +12,7 @@ class CulturalHeritageController extends Controller
      */
     public function index(Request $request)
     {
-        $query = CulturalHeritage::published()->ordered();
+        $query = CulturalHeritage::where('is_published', true)->orderBy('order', 'asc');
 
         // Filter by category if specified
         if ($request->filled('category')) {
@@ -21,23 +21,17 @@ class CulturalHeritageController extends Controller
 
         $heritages = $query->get();
         
-        // Get featured/main content - prioritize "Evelyn Otong Hamja"
-        $featured = CulturalHeritage::published()
-            ->where('slug', 'evelyn-otong-hamja')
+        // Get featured/main content - prioritize "Yakan Weaving"
+        $featured = CulturalHeritage::where('is_published', true)
+            ->where('slug', 'yakan-weaving-living-heritage')
             ->first();
         
-        // If Evelyn Otong Hamja doesn't exist or isn't published, use first ordered item
+        // If featured doesn't exist, use first ordered item
         if (!$featured) {
             $featured = $heritages->first();
         }
-        
-        // Get categories with counts
-        $categories = CulturalHeritage::published()
-            ->select('category', \DB::raw('count(*) as count'))
-            ->groupBy('category')
-            ->get();
 
-        return view('cultural-heritage.index', compact('heritages', 'featured', 'categories'));
+        return view('cultural-heritage.index', compact('heritages', 'featured'));
     }
 
     /**
@@ -46,14 +40,14 @@ class CulturalHeritageController extends Controller
     public function show($slug)
     {
         $heritage = CulturalHeritage::where('slug', $slug)
-                                   ->published()
+                                   ->where('is_published', true)
                                    ->firstOrFail();
 
         // Get related content (same category, different item)
-        $related = CulturalHeritage::published()
+        $related = CulturalHeritage::where('is_published', true)
                                   ->where('category', $heritage->category)
                                   ->where('id', '!=', $heritage->id)
-                                  ->ordered()
+                                  ->orderBy('order', 'asc')
                                   ->limit(3)
                                   ->get();
 

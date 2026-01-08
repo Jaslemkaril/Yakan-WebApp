@@ -71,18 +71,47 @@
                     </h3>
                     <div class="bg-gray-50 rounded-lg p-4">
                         <div class="space-y-2">
+                            @php
+                                // Build full name from user's account
+                                $fullName = $user->name;
+                                if ($user->first_name && $user->last_name) {
+                                    $fullName = trim($user->first_name . ' ' . ($user->middle_initial ? $user->middle_initial . '. ' : '') . $user->last_name);
+                                }
+                            @endphp
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Name:</span>
-                                <span class="font-medium">{{ $user->name }}</span>
+                                <span class="font-medium">{{ $fullName }}</span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Email:</span>
                                 <span class="font-medium">{{ $user->email }}</span>
                             </div>
-                            @if($user->phone)
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">Phone:</span>
-                                    <span class="font-medium">{{ $user->phone }}</span>
+                            @if(isset($defaultAddress) && $defaultAddress)
+                                @if($defaultAddress->phone_number)
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Phone:</span>
+                                        <span class="font-medium">{{ $defaultAddress->phone_number }}</span>
+                                    </div>
+                                @endif
+                                <div class="pt-3 mt-3 border-t border-gray-200">
+                                    <div class="flex items-start">
+                                        <svg class="w-4 h-4 text-blue-600 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                        <div class="flex-1">
+                                            <div class="flex items-center mb-1">
+                                                <span class="font-semibold text-gray-700 text-sm">{{ $defaultAddress->label ?? 'Default Address' }}</span>
+                                                @if($defaultAddress->is_default)
+                                                    <span class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">Default</span>
+                                                @endif
+                                            </div>
+                                            @if($defaultAddress->full_name)
+                                                <p class="text-sm text-gray-700 font-medium">{{ $defaultAddress->full_name }}</p>
+                                            @endif
+                                            <p class="text-sm text-gray-600 mt-1">{{ $defaultAddress->formatted_address }}</p>
+                                        </div>
+                                    </div>
                                 </div>
                             @endif
                         </div>

@@ -75,7 +75,15 @@ class AuthController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'user' => $user,
+                    'user' => [
+                        'id' => $user->id,
+                        'first_name' => $user->first_name,
+                        'last_name' => $user->last_name,
+                        'name' => $user->first_name . ' ' . $user->last_name,
+                        'email' => $user->email,
+                        'role' => $user->role,
+                        'created_at' => $user->created_at,
+                    ],
                     'token' => $token
                 ]
             ]);
@@ -125,7 +133,15 @@ class AuthController extends Controller
                 return response()->json([
                     'success' => true,
                     'data' => [
-                        'user' => $user,
+                        'user' => [
+                            'id' => $user->id,
+                            'first_name' => $user->first_name,
+                            'last_name' => $user->last_name,
+                            'name' => $user->first_name . ' ' . $user->last_name,
+                            'email' => $user->email,
+                            'role' => $user->role,
+                            'created_at' => $user->created_at,
+                        ],
                         'token' => $token
                     ]
                 ]);
@@ -165,9 +181,19 @@ class AuthController extends Controller
 
     public function user(Request $request): JsonResponse
     {
+        $user = $request->user();
+        
         return response()->json([
             'success' => true,
-            'data' => $request->user()
+            'data' => [
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'name' => $user->first_name . ' ' . $user->last_name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'created_at' => $user->created_at,
+            ]
         ]);
     }
 }

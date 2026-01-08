@@ -8,8 +8,11 @@
         </svg>
         
         <!-- Animated Badge -->
-        <span id="notification-badge" class="absolute -top-2 -right-2 bg-gradient-to-br from-red-500 via-red-600 to-red-700 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg animate-pulse z-20 {{ auth()->user()->notifications()->count() === 0 ? 'hidden' : '' }}">
-            {{ auth()->user()->notifications()->count() > 9 ? '9+' : auth()->user()->notifications()->count() }}
+        @php
+            $unreadNotificationCount = auth()->user()->notifications()->whereNull('read_at')->count();
+        @endphp
+        <span id="notification-badge" class="absolute -top-2 -right-2 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg z-20 {{ $unreadNotificationCount === 0 ? 'hidden' : '' }}" style="background-color: #800000;">
+            {{ $unreadNotificationCount > 9 ? '9+' : $unreadNotificationCount }}
         </span>
     </button>
 
@@ -32,11 +35,11 @@
                     </div>
                     <div>
                         <h3 class="font-bold text-lg tracking-wide">Notifications</h3>
-                        <p class="text-xs text-white/70 font-medium">{{ auth()->user()->notifications()->count() }} new update{{ auth()->user()->notifications()->count() !== 1 ? 's' : '' }}</p>
+                        <p class="text-xs text-white/70 font-medium">{{ $unreadNotificationCount }} new update{{ $unreadNotificationCount !== 1 ? 's' : '' }}</p>
                     </div>
                 </div>
                 <span class="bg-white/20 px-4 py-2 rounded-full text-sm font-bold backdrop-blur-sm border border-white/30 shadow-lg">
-                    {{ auth()->user()->notifications()->count() }}
+                    {{ $unreadNotificationCount }}
                 </span>
             </div>
         </div>
@@ -44,9 +47,14 @@
         <!-- Notifications List with Premium Scroll -->
         <div class="max-h-96 overflow-y-auto scrollbar-premium">
             @forelse(auth()->user()->notifications()->orderBy('created_at', 'desc')->take(6)->get() as $index => $notification)
-                <div class="p-4 border-b border-gray-100 hover:bg-gradient-to-r hover:from-maroon-50 hover:to-transparent transition duration-300 cursor-pointer group relative overflow-hidden" style="animation: slideInDown 0.4s ease-out {{ $index * 0.08 }}s both;">
+                <div onclick="markNotificationAsRead({{ $notification->id }})" class="p-4 border-b border-gray-100 hover:bg-gradient-to-r hover:from-maroon-50 hover:to-transparent transition duration-300 cursor-pointer group relative overflow-hidden {{ $notification->read_at ? 'opacity-60' : '' }}" style="animation: slideInDown 0.4s ease-out {{ $index * 0.08 }}s both;">
                     <!-- Left accent bar -->
-                    <div class="absolute left-0 top-0 w-1.5 h-full bg-gradient-to-b from-maroon-400 via-maroon-500 to-transparent opacity-0 group-hover:opacity-100 transition duration-300"></div>
+                    <div class="absolute left-0 top-0 w-1.5 h-full bg-gradient-to-b from-maroon-400 via-maroon-500 to-transparent {{ $notification->read_at ? 'opacity-50' : 'opacity-0' }} group-hover:opacity-100 transition duration-300"></div>
+                    
+                    <!-- Unread indicator -->
+                    @if(!$notification->read_at)
+                        <div class="absolute top-4 right-4 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></div>
+                    @endif
                     
                     <!-- Hover background glow -->
                     <div class="absolute inset-0 bg-gradient-to-r from-maroon-500/0 via-maroon-500/0 to-maroon-500/0 group-hover:from-maroon-500/5 group-hover:via-maroon-500/3 group-hover:to-transparent transition duration-300"></div>
@@ -212,4 +220,39 @@
     .from-maroon-400 { --tw-gradient-from: #b30000; }
     .hover\:bg-maroon-50:hover { background-color: #faf8f8; }
 </style>
+
+<script>
+function markNotificationAsRead(notificationId) {
+    fetch(`/notifications/${notificationId}/read`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update badge count
+            const badge = document.getElementById('notification-badge');
+            if (badge) {
+                const currentCount = parseInt(badge.textContent.replace('+', ''));
+                const newCount = Math.max(0, currentCount - 1);
+                
+                if (newCount === 0) {
+                    badge.classList.add('hidden');
+                } else {
+                    badge.textContent = newCount > 9 ? '9+' : newCount;
+                }
+            }
+            
+            // Reload page after a short delay to update UI
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        }
+    })
+    .catch(error => console.error('Error marking notification as read:', error));
+}
+</script>
 @endauth

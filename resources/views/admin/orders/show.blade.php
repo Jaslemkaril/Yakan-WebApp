@@ -8,7 +8,7 @@
     <div class="mb-8">
         <div class="flex items-center justify-between mb-6">
             <div class="flex items-center space-x-4">
-                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg" style="background: linear-gradient(to bottom right, #800000, #A05050);">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                     </svg>
@@ -32,8 +32,8 @@
         <!-- Customer Info Card -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div class="flex items-center mb-4">
-                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3" style="background-color: rgba(128, 0, 0, 0.1);">
+                    <svg class="w-5 h-5" style="color: #800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                     </svg>
                 </div>
@@ -51,8 +51,8 @@
         <!-- Order Status Card -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div class="flex items-center mb-4">
-                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3" style="background-color: rgba(128, 0, 0, 0.1);">
+                    <svg class="w-5 h-5" style="color: #800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
@@ -65,8 +65,8 @@
                         {{ $order->status == 'pending' ? 'bg-yellow-500' : '' }}
                         {{ $order->status == 'processing' ? 'bg-blue-500' : '' }}
                         {{ $order->status == 'shipped' ? 'bg-indigo-500' : '' }}
-                        {{ $order->status == 'delivered' ? 'bg-green-600' : '' }}
-                        {{ $order->status == 'completed' ? 'bg-green-700' : '' }}
+                        {{ $order->status == 'delivered' ? 'bg-gray-900' : '' }}
+                        {{ $order->status == 'completed' ? 'bg-gray-900' : '' }}
                         {{ $order->status == 'cancelled' ? 'bg-red-600' : '' }}">
                         {{ $order->status == 'completed' ? 'Order Received' : ucfirst($order->status) }}
                     </span>
@@ -75,9 +75,10 @@
                     <span class="text-sm text-gray-600">Payment:</span>
                     <span class="px-3 py-1 rounded-full text-xs font-medium text-white
                         {{ $order->payment_status == 'pending' ? 'bg-yellow-500' : '' }}
-                        {{ $order->payment_status == 'paid' ? 'bg-green-600' : '' }}
-                        {{ $order->payment_status == 'refunded' ? 'bg-purple-600' : '' }}">
-                        {{ ucfirst($order->payment_status) }}
+                        {{ in_array($order->payment_status, ['paid', 'verified']) ? 'bg-gray-900' : '' }}
+                        {{ $order->payment_status == 'refunded' ? 'bg-purple-600' : '' }}
+                        {{ $order->payment_status == 'failed' ? 'bg-red-600' : '' }}">
+                        {{ in_array($order->payment_status, ['paid', 'verified']) ? 'Paid' : ucfirst($order->payment_status) }}
                     </span>
                 </div>
             </div>
@@ -86,8 +87,8 @@
         <!-- Order Summary Card -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div class="flex items-center mb-4">
-                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3" style="background-color: rgba(128, 0, 0, 0.1);">
+                    <svg class="w-5 h-5" style="color: #800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
@@ -115,8 +116,8 @@
         <!-- Payment Information -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div class="flex items-center mb-4">
-                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3" style="background-color: rgba(128, 0, 0, 0.1);">
+                    <svg class="w-5 h-5" style="color: #800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
                     </svg>
                 </div>
@@ -138,9 +139,10 @@
                     <span class="text-sm text-gray-600">Status:</span>
                     <span class="px-2 py-1 rounded-full text-xs font-medium
                         {{ $order->payment_status == 'pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                        {{ $order->payment_status == 'paid' ? 'bg-green-100 text-green-800' : '' }}
-                        {{ $order->payment_status == 'refunded' ? 'bg-purple-100 text-purple-800' : '' }}">
-                        {{ ucfirst($order->payment_status) }}
+                        {{ in_array($order->payment_status, ['paid', 'verified']) ? 'bg-gray-900 text-white' : '' }}
+                        {{ $order->payment_status == 'refunded' ? 'bg-purple-100 text-purple-800' : '' }}
+                        {{ $order->payment_status == 'failed' ? 'bg-red-100 text-red-800' : '' }}">
+                        {{ in_array($order->payment_status, ['paid', 'verified']) ? 'Paid' : ucfirst($order->payment_status) }}
                     </span>
                 </div>
 
@@ -151,7 +153,7 @@
                             <span class="text-sm font-medium text-gray-700">GCash Receipt:</span>
                             @if($order->gcash_receipt)
                                 <button type="button" onclick="viewAdminReceipt('{{ asset('storage/' . $order->gcash_receipt) }}')" 
-                                    class="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                                    class="inline-flex items-center px-3 py-2 text-white rounded-lg transition-colors text-sm font-medium" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#A05050'" onmouseout="this.style.backgroundColor='#800000'">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -166,13 +168,16 @@
                 @endif
 
                 <!-- Bank Transfer Receipt -->
-                @if($order->payment_method === 'bank_transfer' || $order->bank_receipt)
+                @if($order->payment_method === 'bank_transfer' || $order->bank_receipt || $order->payment_proof_path)
                     <div class="mt-4 pt-4 border-t border-gray-200">
                         <div class="flex items-center justify-between">
                             <span class="text-sm font-medium text-gray-700">Bank Transfer Receipt:</span>
-                            @if($order->bank_receipt)
-                                <button type="button" onclick="viewAdminReceipt('{{ asset('uploads/' . $order->bank_receipt) }}')" 
-                                    class="inline-flex items-center px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">
+                            @php
+                                $receiptPath = $order->bank_receipt ?: $order->payment_proof_path;
+                            @endphp
+                            @if($receiptPath)
+                                <button type="button" onclick="viewAdminReceipt('{{ asset('storage/' . $receiptPath) }}')" 
+                                    class="inline-flex items-center px-3 py-2 text-white rounded-lg transition-colors text-sm font-medium" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#A05050'" onmouseout="this.style.backgroundColor='#800000'">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -191,8 +196,8 @@
         <!-- Delivery Information -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div class="flex items-center mb-4">
-                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3" style="background-color: rgba(128, 0, 0, 0.1);">
+                    <svg class="w-5 h-5" style="color: #800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                     </svg>
@@ -328,26 +333,26 @@
 
         <div class="space-y-3">
             @foreach($adminNotifications as $notification)
-                <div class="flex items-start p-4 bg-gradient-to-r {{ strpos($notification->title, 'Confirmed by Customer') !== false ? 'from-green-50 to-emerald-50 border-l-4 border-green-500' : 'from-blue-50 to-cyan-50 border-l-4 border-blue-500' }} rounded-lg">
+                <div class="flex items-start p-4 bg-gradient-to-r {{ strpos($notification->title, 'Confirmed by Customer') !== false ? 'from-green-50 to-emerald-50 border-l-4 border-green-500' : 'rounded-lg' }}" style="{{ strpos($notification->title, 'Confirmed by Customer') === false ? 'background: linear-gradient(to right, #fff5f5, #ffe5e5); border-left: 4px solid #A05050;' : '' }}">
                     <div class="flex-shrink-0 mt-1">
                         @if(strpos($notification->title, 'Confirmed by Customer') !== false)
                             <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
                         @else
-                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5" style="color: #A05050;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                         @endif
                     </div>
                     <div class="ml-4 flex-1">
-                        <p class="font-semibold {{ strpos($notification->title, 'Confirmed by Customer') !== false ? 'text-green-900' : 'text-blue-900' }}">
+                        <p class="font-semibold" style="{{ strpos($notification->title, 'Confirmed by Customer') !== false ? 'color: #065f46;' : 'color: #800000;' }}">
                             {{ $notification->title }}
                         </p>
-                        <p class="text-sm {{ strpos($notification->title, 'Confirmed by Customer') !== false ? 'text-green-700' : 'text-blue-700' }} mt-1">
+                        <p class="text-sm mt-1" style="{{ strpos($notification->title, 'Confirmed by Customer') !== false ? 'color: #047857;' : 'color: #A05050;' }}">
                             {{ $notification->message }}
                         </p>
-                        <p class="text-xs {{ strpos($notification->title, 'Confirmed by Customer') !== false ? 'text-green-600' : 'text-blue-600' }} mt-2">
+                        <p class="text-xs mt-2" style="{{ strpos($notification->title, 'Confirmed by Customer') !== false ? 'color: #059669;' : 'color: #C08080;' }}">
                             {{ $notification->created_at->diffForHumans() }}
                         </p>
                     </div>
@@ -361,8 +366,8 @@
     @if($order->tracking_history)
     <div class="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div class="flex items-center mb-6">
-            <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
-                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3" style="background-color: rgba(128, 0, 0, 0.1);">
+                <svg class="w-5 h-5" style="color: #800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
             </div>
@@ -373,12 +378,12 @@
         </div>
 
         <div class="relative">
-            <div class="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+            <div class="absolute left-6 top-0 bottom-0 w-0.5" style="background-color: #e0b0b0;"></div>
             <div class="space-y-6">
                 @foreach(is_array($order->tracking_history) ? $order->tracking_history : json_decode($order->tracking_history, true) ?? [] as $index => $event)
                     <div class="relative flex items-start">
-                        <div class="flex-shrink-0 w-12 h-12 rounded-full bg-indigo-100 border-4 border-white flex items-center justify-center relative z-10">
-                            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-full border-4 border-white flex items-center justify-center relative z-10" style="background-color: rgba(160, 80, 80, 0.2);">
+                            <svg class="w-5 h-5" style="color: #800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                             </svg>
                         </div>
@@ -419,35 +424,104 @@
                 </div>
             </div>
         @endif
+    </div>
 
-        <!-- Admin Notes -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center mb-4">
-                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                    </svg>
+    <!-- Order Progress Tracker -->
+    <div class="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center mb-6">
+            <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            <h3 class="text-base font-semibold text-gray-900">Order Progress</h3>
+        </div>
+        
+        <div class="relative px-4">
+            <!-- Progress Line Background -->
+            <div class="absolute top-8 left-0 right-0 h-0.5 bg-gray-200" style="margin: 0 4rem;"></div>
+            <!-- Active Progress Line -->
+            <div class="absolute top-8 left-0 h-0.5 bg-blue-600 transition-all duration-500" style="margin-left: 4rem; width: 
+                @if($order->status == 'pending') 0%
+                @elseif($order->status == 'processing') calc(33.33% - 2.67rem)
+                @elseif($order->status == 'shipped') calc(66.66% - 5.33rem)
+                @elseif($order->status == 'delivered') calc(100% - 8rem)
+                @else 0%
+                @endif;"></div>
+            
+            <!-- Progress Steps -->
+            <div class="relative flex justify-between items-start">
+                <!-- Pending -->
+                <div class="flex flex-col items-center" style="width: 25%;">
+                    <div class="w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 {{ in_array($order->status, ['pending', 'processing', 'shipped', 'delivered']) ? 'shadow-lg' : 'bg-gray-300' }}" style="{{ in_array($order->status, ['pending', 'processing', 'shipped', 'delivered']) ? 'background-color: #800000;' : '' }}">
+                        <svg class="w-8 h-8 {{ in_array($order->status, ['pending', 'processing', 'shipped', 'delivered']) ? 'text-white' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                        </svg>
+                    </div>
+                    <p class="text-xs font-medium mt-2 {{ $order->status == 'pending' ? 'text-red-900' : 'text-gray-600' }}">Pending</p>
                 </div>
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-900">Admin Notes</h3>
-                    <p class="text-sm text-gray-500">Internal notes (not visible to customer)</p>
+
+                <!-- Processing -->
+                <div class="flex flex-col items-center" style="width: 25%;">
+                    <div class="w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 {{ in_array($order->status, ['processing', 'shipped', 'delivered']) ? 'shadow-lg' : 'bg-gray-300' }}" style="{{ in_array($order->status, ['processing', 'shipped', 'delivered']) ? 'background-color: #800000;' : '' }}">
+                        <svg class="w-8 h-8 {{ in_array($order->status, ['processing', 'shipped', 'delivered']) ? 'text-white' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </div>
+                    <p class="text-xs font-medium mt-2 {{ $order->status == 'processing' ? 'text-red-900' : 'text-gray-600' }}">Processing</p>
+                </div>
+
+                <!-- Shipped -->
+                <div class="flex flex-col items-center" style="width: 25%;">
+                    <div class="w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 {{ in_array($order->status, ['shipped', 'delivered']) ? 'shadow-lg' : 'bg-gray-300' }}" style="{{ in_array($order->status, ['shipped', 'delivered']) ? 'background-color: #800000;' : '' }}">
+                        <svg class="w-8 h-8 {{ in_array($order->status, ['shipped', 'delivered']) ? 'text-white' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
+                        </svg>
+                    </div>
+                    <p class="text-xs font-medium mt-2 {{ $order->status == 'shipped' ? 'text-red-900' : 'text-gray-600' }}">Shipping</p>
+                </div>
+
+                <!-- Delivered -->
+                <div class="flex flex-col items-center" style="width: 25%;">
+                    <div class="w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 {{ $order->status == 'delivered' ? 'shadow-lg' : 'bg-gray-300' }}" style="{{ $order->status == 'delivered' ? 'background-color: #800000;' : '' }}">
+                        <svg class="w-8 h-8 {{ $order->status == 'delivered' ? 'text-white' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                    <p class="text-xs font-medium mt-2" style="{{ $order->status == 'delivered' ? 'color: #800000;' : 'color: #6B7280;' }}">Delivered</p>
                 </div>
             </div>
-            
-            <form action="{{ route('admin.orders.update-notes', $order->id) }}" method="POST">
-                @csrf
-                @method('PATCH')
-                <textarea name="admin_notes" rows="4" 
-                          class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
-                          placeholder="Add internal notes about this order...">{{ old('admin_notes', $order->admin_notes) }}</textarea>
-                <button type="submit" class="mt-3 w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-200 flex items-center justify-center">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                    </svg>
-                    Save Admin Notes
-                </button>
-            </form>
         </div>
+
+        <!-- Status Box -->
+        <div class="mt-6 rounded-lg p-4" style="background-color: #fff5f5; border: 1px solid #e0b0b0;">
+            <div class="text-center">
+                <span class="text-sm text-gray-600">Status: </span>
+                <span class="text-sm font-bold 
+                    {{ $order->status == 'pending' ? 'text-yellow-600' : '' }}
+                    {{ $order->status == 'processing' ? 'text-red-900' : '' }}
+                    {{ $order->status == 'shipped' ? 'text-red-900' : '' }}
+                    {{ $order->status == 'delivered' ? 'text-red-900' : '' }}
+                    {{ $order->status == 'cancelled' ? 'text-red-600' : '' }}">
+                    @if($order->status == 'delivered')
+                        Completed
+                    @else
+                        {{ ucfirst($order->status) }}
+                    @endif
+                </span>
+            </div>
+        </div>
+
+        @if($order->status == 'cancelled')
+            <div class="mt-4 bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                <div class="flex items-center justify-center">
+                    <svg class="w-5 h-5 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="text-sm font-semibold text-red-700">This order has been cancelled</span>
+                </div>
+            </div>
+        @endif
     </div>
 
     <!-- Actions Section -->
@@ -455,36 +529,100 @@
         <!-- Update Status Form -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div class="flex items-center mb-4">
-                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3" style="background-color: rgba(128, 0, 0, 0.1);">
+                    <svg class="w-5 h-5" style="color: #800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                     </svg>
                 </div>
                 <h3 class="text-lg font-semibold text-gray-900">Update Order Status</h3>
             </div>
-            <form action="{{ route('admin.orders.quickUpdateStatus', $order->id) }}" method="POST" class="space-y-4">
-                @csrf
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Order Status</label>
-                    <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                        <option value="pending" {{ $order->status == 'pending' ? 'selected' : '' }} {{ in_array($order->status, ['processing', 'shipped', 'delivered', 'cancelled']) ? 'disabled' : '' }}>🕐 Pending</option>
-                        <option value="processing" {{ $order->status == 'processing' ? 'selected' : '' }} {{ in_array($order->status, ['shipped', 'delivered', 'cancelled']) ? 'disabled' : '' }}>⚙️ Processing</option>
-                        <option value="shipped" {{ $order->status == 'shipped' ? 'selected' : '' }} {{ in_array($order->status, ['delivered', 'cancelled']) ? 'disabled' : '' }}>🚚 Shipped</option>
-                        <option value="delivered" {{ $order->status == 'delivered' ? 'selected' : '' }} {{ $order->status == 'cancelled' ? 'disabled' : '' }}>✅ Delivered</option>
-                        <option value="cancelled" {{ $order->status == 'cancelled' ? 'selected' : '' }}>❌ Cancelled</option>
-                    </select>
+            
+            <div class="space-y-3">
+                <div class="bg-gray-50 rounded-lg p-3 mb-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Current Status:</span>
+                        <span class="px-3 py-1 rounded-full text-xs font-medium text-white
+                            {{ $order->status == 'pending' ? 'bg-yellow-500' : '' }}
+                            {{ $order->status == 'processing' ? 'bg-red-900' : '' }}
+                            {{ $order->status == 'shipped' ? 'bg-indigo-500' : '' }}
+                            {{ $order->status == 'delivered' ? 'bg-gray-900' : '' }}
+                            {{ $order->status == 'completed' ? 'bg-green-600' : '' }}
+                            {{ $order->status == 'cancelled' ? 'bg-red-600' : '' }}">
+                            @if($order->status == 'pending')
+                                Pending
+                            @elseif($order->status == 'processing')
+                                Processing
+                            @elseif($order->status == 'shipped')
+                                Shipped
+                            @elseif($order->status == 'delivered')
+                                Delivered
+                            @elseif($order->status == 'completed')
+                                Completed
+                            @elseif($order->status == 'cancelled')
+                                Cancelled
+                            @endif
+                        </span>
+                    </div>
                 </div>
-                <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium">
-                    Update Status
-                </button>
-            </form>
+
+                @if($order->status == 'pending')
+                    <form action="{{ route('admin.orders.quickUpdateStatus', $order->id) }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="status" value="processing">
+                        <button type="submit" class="w-full text-white px-4 py-3 rounded-lg transition-colors duration-200 font-medium flex items-center justify-center" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#A05050'" onmouseout="this.style.backgroundColor='#800000'">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            Mark as Processing
+                        </button>
+                    </form>
+                @elseif($order->status == 'processing')
+                    <form action="{{ route('admin.orders.quickUpdateStatus', $order->id) }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="status" value="shipped">
+                        <button type="submit" class="w-full text-white px-4 py-3 rounded-lg transition-colors duration-200 font-medium flex items-center justify-center" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#A05050'" onmouseout="this.style.backgroundColor='#800000'">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                            </svg>
+                            Mark as Shipped
+                        </button>
+                    </form>
+                @elseif($order->status == 'shipped')
+                    <form action="{{ route('admin.orders.quickUpdateStatus', $order->id) }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="status" value="delivered">
+                        <button type="submit" class="w-full bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Mark as Delivered
+                        </button>
+                    </form>
+                @elseif($order->status == 'delivered' || $order->status == 'completed')
+                    <div class="text-center py-4">
+                        <svg class="w-12 h-12 text-green-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p class="text-sm font-medium text-gray-700">Order Completed</p>
+                        <p class="text-xs text-gray-500 mt-1">This order has been delivered</p>
+                    </div>
+                @elseif($order->status == 'cancelled')
+                    <div class="text-center py-4">
+                        <svg class="w-12 h-12 text-red-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p class="text-sm font-medium text-gray-700">Order Cancelled</p>
+                        <p class="text-xs text-gray-500 mt-1">This order has been cancelled</p>
+                    </div>
+                @endif
+            </div>
         </div>
 
         <!-- Actions Card -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div class="flex items-center mb-4">
-                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3" style="background-color: rgba(128, 0, 0, 0.1);">
+                    <svg class="w-5 h-5" style="color: #800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                     </svg>
                 </div>
@@ -496,7 +634,7 @@
                 <form action="{{ route('admin.orders.refund', $order->id) }}" method="POST">
                     @csrf
                     @method('PUT')
-                    <button type="submit" onclick="return confirm('Are you sure you want to refund this order? This action cannot be undone.');" class="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors duration-200 font-medium flex items-center justify-center">
+                    <button type="submit" onclick="return confirm('Are you sure you want to refund this order? This action cannot be undone.');" class="w-full text-white px-4 py-2 rounded-lg transition-colors duration-200 font-medium flex items-center justify-center" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#A05050'" onmouseout="this.style.backgroundColor='#800000'">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
                         </svg>
@@ -506,7 +644,7 @@
                 @endif
                 
                 <!-- Download Invoice -->
-                <a href="{{ route('admin.orders.invoice', $order->id) }}" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium flex items-center justify-center inline-block text-center">
+                <a href="{{ route('admin.orders.invoice', $order->id) }}" class="w-full bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors duration-200 font-medium flex items-center justify-center inline-block text-center">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
@@ -526,6 +664,37 @@
                 </form>
                 @endif
             </div>
+        </div>
+    </div>
+
+    <!-- Admin Notes Section -->
+    <div class="mt-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center mb-4">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3" style="background-color: rgba(128, 0, 0, 0.1);">
+                    <svg class="w-5 h-5" style="color: #800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Admin Notes</h3>
+                    <p class="text-sm text-gray-500">Internal notes (not visible to customer)</p>
+                </div>
+            </div>
+            
+            <form action="{{ route('admin.orders.update-notes', $order->id) }}" method="POST">
+                @csrf
+                @method('PATCH')
+                <textarea name="admin_notes" rows="4" 
+                          class="w-full border border-gray-300 rounded-lg px-4 py-2 resize-none" style="outline: none;" onfocus="this.style.borderColor='#800000'; this.style.boxShadow='0 0 0 3px rgba(128, 0, 0, 0.1)';" onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='none';"
+                          placeholder="Add internal notes about this order...">{{ old('admin_notes', $order->admin_notes) }}</textarea>
+                <button type="submit" class="mt-3 w-full text-white py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#A05050'" onmouseout="this.style.backgroundColor='#800000'">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    Save Admin Notes
+                </button>
+            </form>
         </div>
     </div>
 

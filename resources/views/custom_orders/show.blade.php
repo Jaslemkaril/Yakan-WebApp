@@ -143,6 +143,34 @@
             </div>
         </div>
 
+        {{-- Production Delay Alert - MOVED TO TOP for better visibility --}}
+        @if($order->is_delayed && $order->delay_reason)
+            <div class="w-full rounded-lg p-3 mb-4 shadow-md border-2" style="background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%); border-color:#ef5350;">
+                <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background-color:#f44336;">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-sm font-bold mb-1" style="color:#c62828;">Production Delay Notice</h3>
+                        <div class="bg-white bg-opacity-70 rounded p-2 border border-red-400">
+                            <p class="text-xs font-semibold text-gray-800 mb-0.5">Reason for Delay:</p>
+                            <p class="text-xs text-gray-700">{{ $order->delay_reason }}</p>
+                            @if($order->delay_notified_at)
+                                <p class="text-xs text-gray-600 mt-1 pt-1 border-t border-red-300">
+                                    Notified on {{ $order->delay_notified_at->format('M d, Y \a\t h:i A') }}
+                                </p>
+                            @endif
+                        </div>
+                        <p class="text-xs text-gray-600 mt-1 italic">We apologize for the inconvenience. Our team is working to resolve this as quickly as possible.</p>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         @php
             $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
             $showDeliveryBanner = false;
@@ -198,15 +226,17 @@
         @endphp
 
         @if($showDeliveryBanner)
-            <div class="mb-6 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-4 flex items-start gap-3">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center bg-blue-500 text-white flex-shrink-0">
-                    <span class="text-xl">{{ $deliveryIcon }}</span>
+            <div class="mb-4 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-300 rounded-lg p-3 flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gray-800 text-white flex-shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
                 </div>
                 <div class="flex-1">
-                    <p class="text-sm font-semibold text-blue-900">{{ $deliveryLabel }}</p>
-                    <p class="text-sm text-blue-800 mt-1">{{ $deliveryDescription }}</p>
+                    <p class="text-sm font-semibold text-gray-900">{{ $deliveryLabel }}</p>
+                    <p class="text-xs text-gray-700 mt-0.5">{{ $deliveryDescription }}</p>
                     @if($order->delivery_address && $deliveryType === 'delivery')
-                        <p class="text-xs text-blue-700 mt-1">Destination: <span class="font-medium">{{ $order->delivery_address }}</span></p>
+                        <p class="text-xs text-gray-600 mt-0.5">Destination: <span class="font-medium">{{ $order->delivery_address }}</span></p>
                     @endif
                 </div>
             </div>
@@ -238,9 +268,21 @@
                         <div class="flex items-start">
                             <div class="w-20 h-20 rounded-xl flex items-center justify-center mr-4 flex-shrink-0 overflow-hidden shadow-md border-2" style="background-color:#fff5f5; border-color:#800000;">
                                 @php
-                                    // Resolve primary image: custom design if available, else product image/initial
+                                    // Load pattern model if available
+                                    $patternModel = null;
+                                    if (!empty($order->design_metadata) && isset($order->design_metadata['pattern_id'])) {
+                                        $patternModel = \App\Models\YakanPattern::find($order->design_metadata['pattern_id']);
+                                    } elseif (!empty($order->patterns) && is_array($order->patterns)) {
+                                        if (is_numeric($order->patterns[0])) {
+                                            $patternModel = \App\Models\YakanPattern::find($order->patterns[0]);
+                                        } else {
+                                            $patternModel = \App\Models\YakanPattern::where('name', $order->patterns[0])->first();
+                                        }
+                                    }
+
+                                    // Fallback to design_upload image
                                     $designUrl = null;
-                                    if ($order->design_upload) {
+                                    if (!$patternModel && $order->design_upload) {
                                         if (str_starts_with($order->design_upload, 'data:image')) {
                                             $designUrl = $order->design_upload;
                                         } elseif (str_starts_with($order->design_upload, 'custom_orders/') || str_starts_with($order->design_upload, 'custom_designs/')) {
@@ -251,7 +293,27 @@
                                     }
                                 @endphp
 
-                                @if($designUrl)
+                                @if($patternModel && $patternModel->hasSvg())
+                                    @php
+                                        $customization = $order->customization_settings ?? [];
+                                        $scale = $customization['scale'] ?? 1;
+                                        $rotation = $customization['rotation'] ?? 0;
+                                        $opacity = $customization['opacity'] ?? 1;
+                                        $hue = $customization['hue'] ?? 0;
+                                        $saturation = $customization['saturation'] ?? 100;
+                                        $brightness = $customization['brightness'] ?? 100;
+                                        
+                                        $filterStyle = sprintf(
+                                            'filter: hue-rotate(%ddeg) saturate(%d%%) brightness(%d%%); opacity: %s; transform: scale(%s) rotate(%ddeg);',
+                                            $hue, $saturation, $brightness, $opacity, $scale, $rotation
+                                        );
+                                    @endphp
+                                    <div class="w-full h-full flex items-center justify-center">
+                                        <div style="{{ $filterStyle }} transform-origin: center;">
+                                            {!! $patternModel->getSvgContent() !!}
+                                        </div>
+                                    </div>
+                                @elseif($designUrl)
                                     <img src="{{ $designUrl }}" alt="Custom design preview" class="w-full h-full object-cover">
                                 @elseif(isset($order->product) && $order->product->image)
                                     <img src="{{ asset('storage/' . $order->product->image) }}" alt="{{ $order->product->name }}" class="w-full h-full object-cover">
@@ -320,34 +382,94 @@
                         </h2>
                     </div>
                     <div class="p-6">
-                        <!-- Pattern Preview Image -->
+                        <!-- Pattern Preview -->
                         @php
-                            $previewUrl = null;
-                            $candidate = $order->preview_image ?? null;
-
-                            if ($candidate) {
-                                if (str_starts_with($candidate, 'data:image')) {
-                                    $previewUrl = $candidate;
-                                } elseif (str_starts_with($candidate, 'custom_orders/') || str_starts_with($candidate, 'custom_designs/')) {
-                                    $previewUrl = asset('storage/' . $candidate);
-                                } elseif (str_starts_with($candidate, 'http')) {
-                                    $previewUrl = $candidate;
+                            // Load pattern model for SVG display
+                            $patternPreviewModel = null;
+                            if (!empty($order->design_metadata) && isset($order->design_metadata['pattern_id'])) {
+                                $patternPreviewModel = \App\Models\YakanPattern::find($order->design_metadata['pattern_id']);
+                            } elseif (!empty($order->patterns) && is_array($order->patterns)) {
+                                if (is_numeric($order->patterns[0])) {
+                                    $patternPreviewModel = \App\Models\YakanPattern::find($order->patterns[0]);
+                                } else {
+                                    $patternPreviewModel = \App\Models\YakanPattern::where('name', $order->patterns[0])->first();
                                 }
                             }
 
-                            // Fallback to design_upload if preview_image is empty
-                            if (!$previewUrl && $order->design_upload) {
-                                if (str_starts_with($order->design_upload, 'data:image')) {
-                                    $previewUrl = $order->design_upload;
-                                } elseif (str_starts_with($order->design_upload, 'custom_orders/') || str_starts_with($order->design_upload, 'custom_designs/')) {
-                                    $previewUrl = asset('storage/' . $order->design_upload);
-                                } else {
-                                    $previewUrl = asset('storage/' . ltrim($order->design_upload, '/'));
+                            // Fallback to preview_image or design_upload
+                            $previewUrl = null;
+                            if (!$patternPreviewModel) {
+                                $candidate = $order->preview_image ?? null;
+                                if ($candidate) {
+                                    if (str_starts_with($candidate, 'data:image')) {
+                                        $previewUrl = $candidate;
+                                    } elseif (str_starts_with($candidate, 'custom_orders/') || str_starts_with($candidate, 'custom_designs/')) {
+                                        $previewUrl = asset('storage/' . $candidate);
+                                    } elseif (str_starts_with($candidate, 'http')) {
+                                        $previewUrl = $candidate;
+                                    }
+                                }
+
+                                if (!$previewUrl && $order->design_upload) {
+                                    if (str_starts_with($order->design_upload, 'data:image')) {
+                                        $previewUrl = $order->design_upload;
+                                    } elseif (str_starts_with($order->design_upload, 'custom_orders/') || str_starts_with($order->design_upload, 'custom_designs/')) {
+                                        $previewUrl = asset('storage/' . $order->design_upload);
+                                    } else {
+                                        $previewUrl = asset('storage/' . ltrim($order->design_upload, '/'));
+                                    }
                                 }
                             }
                         @endphp
 
-                        @if($previewUrl)
+                        @if($patternPreviewModel && $patternPreviewModel->hasSvg())
+                        <div class="mb-6">
+                            <div class="rounded-xl p-4 border-2" style="background-color:#fff5f5; border-color:#e0b0b0;">
+                                <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                                    <svg class="w-5 h-5 mr-2" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                    </svg>
+                                    Your Customized Pattern Preview - {{ $patternPreviewModel->name }}
+                                </h3>
+                                @php
+                                    $customization = $order->customization_settings ?? [];
+                                    $scale = $customization['scale'] ?? 1;
+                                    $rotation = $customization['rotation'] ?? 0;
+                                    $opacity = $customization['opacity'] ?? 1;
+                                    $hue = $customization['hue'] ?? 0;
+                                    $saturation = $customization['saturation'] ?? 100;
+                                    $brightness = $customization['brightness'] ?? 100;
+                                    
+                                    $filterStyle = sprintf(
+                                        'filter: hue-rotate(%ddeg) saturate(%d%%) brightness(%d%%); opacity: %s; transform: scale(%s) rotate(%ddeg);',
+                                        $hue, $saturation, $brightness, $opacity, $scale, $rotation
+                                    );
+                                @endphp
+                                <div class="bg-white rounded-lg p-3 shadow-inner flex items-center justify-center overflow-hidden" style="max-height: 400px; position: relative;">
+                                    <div style="{{ $filterStyle }} transform-origin: center; max-width: 100%; max-height: 100%;">
+                                        {!! $patternPreviewModel->getSvgContent() !!}
+                                    </div>
+                                </div>
+                                @if(isset($order->customization_settings) && is_array($order->customization_settings))
+                                <div class="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                                    <div class="bg-white rounded px-2 py-1">
+                                        <span class="text-gray-500">Scale:</span>
+                                        <span class="font-semibold text-gray-800">{{ $order->customization_settings['scale'] ?? 1 }}x</span>
+                                    </div>
+                                    <div class="bg-white rounded px-2 py-1">
+                                        <span class="text-gray-500">Rotation:</span>
+                                        <span class="font-semibold text-gray-800">{{ $order->customization_settings['rotation'] ?? 0 }}°</span>
+                                    </div>
+                                    <div class="bg-white rounded px-2 py-1">
+                                        <span class="text-gray-500">Opacity:</span>
+                                        <span class="font-semibold text-gray-800">{{ round(($order->customization_settings['opacity'] ?? 0.85) * 100) }}%</span>
+                                    </div>
+                                </div>
+                                @endif
+                            </div>
+                        </div>
+                        @elseif($previewUrl)
                         <div class="mb-6">
                             <div class="rounded-xl p-4 border-2" style="background-color:#fff5f5; border-color:#e0b0b0;">
                                 <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
@@ -385,6 +507,24 @@
                         
                         <div class="space-y-4">
                             @foreach($order->patterns as $index => $pattern)
+                                @php
+                                    // Try to get the actual pattern model for this pattern
+                                    $patternModel = null;
+                                    $patternName = 'Unknown Pattern';
+                                    
+                                    if (is_array($pattern) && isset($pattern['name'])) {
+                                        $patternName = $pattern['name'];
+                                        $patternModel = \App\Models\YakanPattern::where('name', $pattern['name'])->first();
+                                    } elseif (is_numeric($pattern)) {
+                                        $patternModel = \App\Models\YakanPattern::find($pattern);
+                                    } elseif (is_string($pattern)) {
+                                        $patternModel = \App\Models\YakanPattern::where('name', $pattern)->first();
+                                    }
+                                    
+                                    if ($patternModel) {
+                                        $patternName = $patternModel->name;
+                                    }
+                                @endphp
                                 <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-4 border border-red-200">
                                     <div class="flex items-start justify-between">
                                         <div class="flex items-start space-x-3">
@@ -392,7 +532,7 @@
                                                 <span class="text-xs font-bold text-red-700">{{ $index + 1 }}</span>
                                             </div>
                                             <div class="flex-1">
-                                                <div class="font-semibold text-gray-800 capitalize">{{ $pattern['name'] ?? 'Unknown Pattern' }}</div>
+                                                <div class="font-semibold text-gray-800 capitalize">{{ $patternName }}</div>
                                                 <div class="text-sm text-gray-600 mt-1">Traditional Yakan motif</div>
                                                 @if(isset($pattern['colors']) && is_array($pattern['colors']) && count($pattern['colors']) > 0)
                                                     <div class="flex items-center mt-3 space-x-3">
@@ -720,6 +860,7 @@
 
         <!-- Action Buttons -->
         <div class="mt-8">
+            
             {{-- Pending Status - Waiting for Admin --}}
             @if($order->status === 'pending')
                 <div class="w-full rounded-2xl p-8 text-center shadow-lg border-2" style="background-color:#fff5f5; border-color:#e0b0b0;">
@@ -808,46 +949,140 @@
             
             {{-- Approved Status - Waiting for Payment --}}
             @elseif($order->status === 'approved' && !in_array($order->payment_status, ['paid', 'pending', 'pending_verification']))
-                <div class="w-full rounded-2xl p-8 text-center shadow-lg border-2" style="background-color:#fff5f5; border-color:#e0b0b0;">
-                    <div class="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center shadow-md" style="background-color:#800000;">
-                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-full rounded-2xl p-8 shadow-2xl border-2" style="background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%); border-color:#800000;">
+                    <div class="w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg animate-pulse" style="background: linear-gradient(135deg, #800000 0%, #600000 100%);">
+                        <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                     </div>
-                    <h3 class="text-2xl font-bold mb-2" style="color:#800000;">Quote Accepted!</h3>
-                    <p class="text-gray-700 mb-6 max-w-md mx-auto">You've accepted the quote. Please proceed with payment to start production.</p>
+                    <h3 class="text-3xl font-bold mb-3" style="color:#800000;">🎉 Quote Accepted!</h3>
+                    <p class="text-gray-700 mb-6 max-w-2xl mx-auto text-lg">Congratulations! You've accepted the quote. Complete your payment now to start production of your custom Yakan masterpiece!</p>
+                    
                     @if($order->final_price)
-                        <div class="bg-white rounded-xl p-4 border-2 mb-6 inline-block" style="border-color:#e0b0b0;">
-                            <p class="text-sm text-gray-600 mb-1">Amount to Pay</p>
-                            <p class="text-4xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
+                        <div class="bg-white rounded-2xl p-6 border-2 mb-6 max-w-md mx-auto shadow-lg" style="border-color:#e0b0b0;">
+                            <p class="text-sm font-semibold text-gray-600 mb-2 uppercase tracking-wide">Total Amount to Pay</p>
+                            <p class="text-5xl font-black mb-3" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
+                            <p class="text-xs text-gray-500">Order #{{ $order->id }}</p>
                         </div>
                     @endif
-                    <div>
-                        <a href="{{ route('custom_orders.payment', $order) }}" class="inline-flex items-center justify-center text-white font-bold py-4 px-10 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" style="background-color:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
-                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+                    <!-- Next Steps Guide -->
+                    <div class="bg-white rounded-2xl p-6 border-2 mb-8 max-w-3xl mx-auto text-left shadow-lg" style="border-color:#e0b0b0;">
+                        <h4 class="font-bold text-lg mb-4 flex items-center gap-2" style="color:#800000;">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            Next Steps (Susunod na Gawin):
+                        </h4>
+                        <div class="space-y-3">
+                            <div class="flex items-start gap-3">
+                                <span class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background-color:#800000;">1</span>
+                                <div>
+                                    <p class="font-semibold text-gray-900">Click "Proceed to Payment" button</p>
+                                    <p class="text-sm text-gray-600">Choose your preferred payment method (GCash or Bank Transfer)</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background-color:#800000;">2</span>
+                                <div>
+                                    <p class="font-semibold text-gray-900">Follow the payment instructions</p>
+                                    <p class="text-sm text-gray-600">You'll see payment details and account information</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background-color:#800000;">3</span>
+                                <div>
+                                    <p class="font-semibold text-gray-900">Upload your payment receipt</p>
+                                    <p class="text-sm text-gray-600">Take a screenshot or photo of your payment confirmation</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background-color:#800000;">4</span>
+                                <div>
+                                    <p class="font-semibold text-gray-900">Wait for admin verification</p>
+                                    <p class="text-sm text-gray-600">We'll verify your payment and start production (usually within 24 hours)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <a href="{{ route('custom_orders.payment', $order) }}" class="inline-flex items-center justify-center text-white font-bold py-5 px-12 rounded-xl transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105 text-lg" style="background: linear-gradient(135deg, #800000 0%, #600000 100%);">
+                            <svg class="w-7 h-7 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
                             </svg>
                             Proceed to Payment
                         </a>
+                        <p class="text-sm text-gray-500 mt-2">Secure payment • Your order will start production once verified</p>
                     </div>
                 </div>
             
             {{-- Approved Status - Payment Pending Verification --}}
             @elseif($order->status === 'approved' && in_array($order->payment_status, ['pending', 'pending_verification']))
-                <div class="w-full rounded-2xl p-8 text-center shadow-lg border-2" style="background-color:#fff5f5; border-color:#e0b0b0;">
-                    <div class="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center shadow-md" style="background-color:#800000;">
-                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-full rounded-2xl p-8 text-center shadow-2xl border-2" style="background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%); border-color:#f59e0b;">
+                    <div class="w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                        <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                     </div>
-                    <h3 class="text-2xl font-bold mb-2" style="color:#800000;">Payment Submitted!</h3>
-                    <p class="text-gray-700 mb-6 max-w-md mx-auto">Your payment proof is being verified. We'll notify you once approved.</p>
+                    <h3 class="text-3xl font-bold mb-3 text-amber-900">✅ Payment Receipt Submitted!</h3>
+                    <p class="text-gray-700 mb-6 max-w-2xl mx-auto text-lg">Thank you! Your payment proof has been received and is currently being verified by our admin team. You'll receive a notification once approved.</p>
+                    
                     @if($order->final_price)
-                        <div class="bg-white rounded-xl p-4 border-2 inline-block" style="border-color:#e0b0b0;">
-                            <p class="text-sm text-gray-600 mb-1">Amount Submitted</p>
-                            <p class="text-4xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
+                        <div class="bg-white rounded-2xl p-6 border-2 mb-6 max-w-md mx-auto shadow-lg" style="border-color:#fbbf24;">
+                            <p class="text-sm font-semibold text-amber-700 mb-2 uppercase tracking-wide">Amount Submitted</p>
+                            <p class="text-5xl font-black mb-3 text-amber-600">₱{{ number_format($order->final_price, 2) }}</p>
+                            <p class="text-xs text-gray-500">Order #{{ $order->id }}</p>
                         </div>
                     @endif
+
+                    <!-- What's Happening Now -->
+                    <div class="bg-white rounded-2xl p-6 border-2 mb-6 max-w-3xl mx-auto text-left shadow-lg" style="border-color:#fbbf24;">
+                        <h4 class="font-bold text-lg mb-4 flex items-center gap-2 text-amber-900">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            What Happens Next?
+                        </h4>
+                        <div class="space-y-4">
+                            <div class="flex items-start gap-3 p-3 bg-amber-50 rounded-lg">
+                                <svg class="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <div>
+                                    <p class="font-semibold text-gray-900">Admin is verifying your payment</p>
+                                    <p class="text-sm text-gray-600">We're checking your receipt and transaction details</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+                                <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                                </svg>
+                                <div>
+                                    <p class="font-semibold text-gray-900">You'll get notified</p>
+                                    <p class="text-sm text-gray-600">Once verified, we'll send you an email and app notification</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg">
+                                <svg class="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+                                </svg>
+                                <div>
+                                    <p class="font-semibold text-gray-900">Production will begin</p>
+                                    <p class="text-sm text-gray-600">Our master craftsmen will start weaving your custom Yakan fabric</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg max-w-2xl mx-auto">
+                        <p class="text-sm text-amber-800 flex items-center gap-2">
+                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span><strong>Estimated verification time:</strong> Within 24 hours (usually much faster!)</span>
+                        </p>
+                    </div>
                 </div>
 
             {{-- Processing Status - Payment Accepted --}}

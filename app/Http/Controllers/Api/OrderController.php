@@ -10,8 +10,18 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         try {
+            // Get authenticated user (required now)
+            $user = $request->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authentication required to create an order'
+                ], 401);
+            }
+
             $validated = $request->validate([
-                'customer_name' => 'required|string|max:255',
+                'customer_name' => 'nullable|string|max:255',
                 'customer_email' => 'nullable|email',
                 'customer_phone' => 'required|string|max:20',
                 'shipping_address' => 'required|string',
@@ -24,7 +34,7 @@ class OrderController extends Controller
                 'discount' => 'nullable|numeric|min:0',
                 'total' => 'required|numeric|min:0',
                 'total_amount' => 'nullable|numeric|min:0',
-                'delivery_type' => 'nullable|string|in:pickup,delivery',
+                'delivery_type' => 'nullable|string|in:pickup,deliver',
                 'notes' => 'nullable|string',
                 'items' => 'required|array|min:1',
                 'items.*.product_id' => 'required|integer|exists:products,id',
@@ -56,11 +66,16 @@ class OrderController extends Controller
 
             $orderRef = 'ORD-' . strtoupper(uniqid());
 
+            // Use authenticated user's info (always available now)
+            $customerName = $validated['customer_name'] ?? $user->name;
+            $customerEmail = $validated['customer_email'] ?? $user->email;
+
             $order = Order::create([
                 'order_ref' => $orderRef,
                 'tracking_number' => $orderRef,
-                'customer_name' => $validated['customer_name'],
-                'customer_email' => $validated['customer_email'] ?? 'mobile@user.com',
+                'user_id' => $user->id,  // Always link to authenticated user
+                'customer_name' => $customerName,
+                'customer_email' => $customerEmail,
                 'customer_phone' => $validated['customer_phone'],
                 'shipping_address' => $validated['shipping_address'],
                 'delivery_address' => $validated['delivery_address'],
@@ -71,7 +86,7 @@ class OrderController extends Controller
                 'shipping_fee' => $validated['shipping_fee'] ?? 0,
                 'discount' => $validated['discount'] ?? 0,
                 'total_amount' => $validated['total'] ?? $validated['total_amount'],
-                'delivery_type' => $validated['delivery_type'] ?? 'delivery',
+                'delivery_type' => $validated['delivery_type'] ?? 'deliver',
                 'status' => $orderStatus,
                 'notes' => $validated['notes'] ?? null,
                 'source' => 'mobile',
@@ -102,7 +117,10 @@ class OrderController extends Controller
 
     public function index()
     {
-        $orders = Order::with('items')->latest()->get();
+        $orders = Order::with(['items.product' => function($query) {
+            $query->select('id', 'name', 'image');
+        }])->latest()->get();
+        
         return response()->json([
             'success' => true,
             'data' => $orders,
@@ -112,7 +130,10 @@ class OrderController extends Controller
 
     public function show($id)
     {
-        $order = Order::with('items')->find($id);
+        $order = Order::with(['items.product' => function($query) {
+            $query->select('id', 'name', 'image');
+        }])->find($id);
+        
         if (!$order) {
             return response()->json([
                 'success' => false,
@@ -138,7 +159,7 @@ class OrderController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'required|string|in:pending,confirmed,shipped,delivered,cancelled'
+            'status' => 'required|string|in:pending,confirmed,processing,shipped,delivered,completed,cancelled'
         ]);
 
         $order->update(['status' => $validated['status']]);

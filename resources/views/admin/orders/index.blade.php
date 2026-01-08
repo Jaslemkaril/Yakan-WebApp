@@ -345,8 +345,8 @@
                         <tr>
                             <td class="font-semibold text-[#800000]">#{{ $order->id }}</td>
                             <td>
-                                <div class="font-medium text-gray-900">{{ $order->user->name ?? 'N/A' }}</div>
-                                <div class="text-xs text-gray-500">{{ $order->user->email ?? 'N/A' }}</div>
+                                <div class="font-medium text-gray-900">{{ $order->user->name ?? $order->customer_name ?? 'N/A' }}</div>
+                                <div class="text-xs text-gray-500">{{ $order->user->email ?? $order->customer_email ?? 'N/A' }}</div>
                             </td>
                             <td class="font-semibold text-gray-900">₱{{ number_format($order->total_amount, 2) }}</td>
                             <td>

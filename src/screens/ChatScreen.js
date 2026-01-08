@@ -13,6 +13,7 @@ import {
   ScrollView,
   Animated,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { useCart } from '../context/CartContext';
 import ApiService from '../services/api';
@@ -180,6 +181,35 @@ export default function ChatScreen({ navigation }) {
     }
   };
 
+  const handleRespondToQuote = async (chatId, response, quoteMessageId) => {
+    Alert.alert(
+      response === 'accepted' ? 'Accept Quote?' : 'Decline Quote?',
+      `Are you sure you want to ${response === 'accepted' ? 'accept' : 'decline'} this price quote?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            setSending(true);
+            try {
+              const result = await ApiService.respondToQuote(chatId, response, quoteMessageId);
+              if (result.success) {
+                Alert.alert('Success', `Quote ${response} successfully!`);
+                await fetchChatMessages(chatId);
+              } else {
+                Alert.alert('Error', result.error || 'Failed to respond to quote');
+              }
+            } catch (error) {
+              Alert.alert('Error', 'Failed to respond to quote');
+            } finally {
+              setSending(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleCloseChat = async () => {
     try {
       const response = await ApiService.updateChatStatus(selectedChat.id, 'closed');
@@ -266,32 +296,67 @@ export default function ChatScreen({ navigation }) {
           ref={flatListRef}
           data={messages}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <View
-              style={[
-                styles.messageBubble,
-                item.sender_type === 'user'
-                  ? styles.userMessage
-                  : styles.adminMessage,
-              ]}
-            >
-              <Text style={[
-                styles.messageText,
-                item.sender_type === 'user' ? styles.userMessageText : styles.adminMessageText
-              ]}>
-                {item.message}
-              </Text>
-              <Text style={[
-                styles.messageTime,
-                item.sender_type === 'user' ? styles.userMessageTime : styles.adminMessageTime
-              ]}>
-                {new Date(item.created_at).toLocaleTimeString([], { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </Text>
-            </View>
-          )}
+          renderItem={({ item }) => {
+            const isPriceQuote = item.sender_type === 'admin' && item.message.includes('PRICE QUOTE');
+            const hasResponded = messages.some(msg => 
+              msg.sender_type === 'user' && 
+              msg.created_at > item.created_at &&
+              (msg.message.includes('accepted the price quote') || msg.message.includes('declined the price quote'))
+            );
+
+            return (
+              <View>
+                <View
+                  style={[
+                    styles.messageBubble,
+                    item.sender_type === 'user'
+                      ? styles.userMessage
+                      : styles.adminMessage,
+                  ]}
+                >
+                  {item.image_url && (
+                    <Image 
+                      source={{ uri: item.image_url }}
+                      style={styles.messageImage}
+                      resizeMode="cover"
+                    />
+                  )}
+                  <Text style={[
+                    styles.messageText,
+                    item.sender_type === 'user' ? styles.userMessageText : styles.adminMessageText
+                  ]}>
+                    {item.message}
+                  </Text>
+                  <Text style={[
+                    styles.messageTime,
+                    item.sender_type === 'user' ? styles.userMessageTime : styles.adminMessageTime
+                  ]}>
+                    {new Date(item.created_at).toLocaleTimeString([], { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </Text>
+                </View>
+                
+                {isPriceQuote && !hasResponded && (
+                  <View style={styles.quoteButtonsContainer}>
+                    <TouchableOpacity
+                      style={[styles.quoteButton, styles.acceptButton]}
+                      onPress={() => handleRespondToQuote(selectedChat.id, 'accepted', item.id)}
+                    >
+                      <Text style={styles.quoteButtonText}>✓ Accept Price</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.quoteButton, styles.declineButton]}
+                      onPress={() => handleRespondToQuote(selectedChat.id, 'declined', item.id)}
+                    >
+                      <Text style={styles.quoteButtonText}>✗ Decline</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            );
+          }}
           onContentSizeChange={() =>
             flatListRef.current?.scrollToEnd({ animated: true })
           }
@@ -743,6 +808,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     maxWidth: '85%',
   },
+  messageImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
   userMessage: {
     alignSelf: 'flex-end',
     backgroundColor: colors.primary,
@@ -828,6 +899,36 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  quoteButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  quoteButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    minWidth: 120,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  acceptButton: {
+    backgroundColor: '#16a34a',
+  },
+  declineButton: {
+    backgroundColor: '#dc2626',
+  },
+  quoteButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   formHeader: {
     flexDirection: 'row',
