@@ -1,0 +1,93 @@
+===========================================
+    YAKAN E-COMMERCE - QUICK REFERENCE
+===========================================
+
+📍 AT SCHOOL (30 MIN BEFORE):
+
+1. GET NEW IP:
+   Run in PowerShell: ipconfig
+   Look for: IPv4 Address under Wi-Fi
+   Example: 192.168.100.50
+
+2. UPDATE CONFIG:
+   File: src\config\config.js
+   Line 11: const MACHINE_IP = 'YOUR_NEW_IP';
+   Save the file!
+
+3. RUN SETUP SCRIPT:
+   .\school-setup.ps1
+
+4. START SERVERS:
+   
+   Terminal 1 (Laravel):
+   php artisan serve --host=0.0.0.0 --port=8000
+   
+   Terminal 2 (Expo):
+   npm start
+
+5. TEST:
+   - Scan QR on phone
+   - Check products load
+   - Try adding to cart
+
+===========================================
+    BACKUP PLAN (If WiFi fails)
+===========================================
+
+OPTION 1: Mobile Hotspot
+- Enable hotspot on your phone
+- Connect laptop to hotspot
+- Update IP in config.js
+- Use DIFFERENT phone to test
+
+OPTION 2: USB Tethering
+- Connect phone via USB
+- Enable USB tethering
+- Get new IP with ipconfig
+- Update config.js
+
+===========================================
+    DEMO FEATURES TO SHOW
+===========================================
+
+MOBILE APP:
+✓ Browse products
+✓ Search & filter
+✓ Add to cart
+✓ Register/Login
+✓ Place order
+✓ Upload payment receipt
+✓ Chat with admin (with IMAGE upload!)
+✓ Track orders
+
+WEB ADMIN:
+✓ Manage products
+✓ View orders
+✓ Chat with customers
+✓ Send price quotes
+
+===========================================
+    EMERGENCY COMMANDS
+===========================================
+
+Check if server running:
+netstat -ano | Select-String ":8000"
+
+Kill port 8000:
+Get-Process -Id (Get-NetTCPConnection -LocalPort 8000).OwningProcess | Stop-Process -Force
+
+Test API:
+Invoke-WebRequest -Uri "http://YOUR_IP:8000/api/v1/products"
+
+===========================================
+    CONTACT INFO
+===========================================
+
+Current Home IP: 192.168.1.203
+Config File: src\config\config.js (Line 11)
+Laravel Port: 8000
+Expo Port: 8081
+
+===========================================
+        YOU GOT THIS! 🚀
+===========================================

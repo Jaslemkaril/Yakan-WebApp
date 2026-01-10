@@ -13,6 +13,7 @@ class FabricType extends Model
     protected $fillable = [
         'name',
         'description',
+        'icon',
         'base_price_per_meter',
         'material_composition',
         'weight_gsm',
@@ -32,6 +33,14 @@ class FabricType extends Model
     ];
 
     /**
+     * Scope to get only active fabric types
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    /**
      * Get pattern compatibilities for this fabric type
      */
     public function patternCompatibilities(): HasMany
@@ -49,14 +58,6 @@ class FabricType extends Model
             ->wherePivot('is_active', true)
             ->orderBy('pivot_is_recommended', 'desc')
             ->orderBy('name');
-    }
-
-    /**
-     * Scope for active fabrics
-     */
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
     }
 
     /**

@@ -143,9 +143,12 @@
                                 </div>
 
                                 <!-- Latest Message Preview -->
-                                @if($chat->latestMessage())
+                                @php
+                                    $latestMsg = $chat->messages->first();
+                                @endphp
+                                @if($latestMsg)
                                     <div class="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-100 group-hover:bg-red-50 group-hover:border-red-100 transition">
-                                        <p class="text-sm text-gray-700 line-clamp-2 leading-relaxed">{{ Str::limit($chat->latestMessage()->message, 120) }}</p>
+                                        <p class="text-sm text-gray-700 line-clamp-2 leading-relaxed">{{ Str::limit($latestMsg->message, 120) }}</p>
                                     </div>
                                 @endif
 

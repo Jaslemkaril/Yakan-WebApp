@@ -858,10 +858,34 @@
         @endif
     </a>
 
-    <a href="{{ route('admin.patterns.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ request()->routeIs('admin.patterns.*') ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
-        <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
-        <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Patterns</span>
-    </a>
+    <!-- Patterns Menu with Submenu -->
+    <div class="patterns-submenu-container">
+        <button type="button" class="patterns-toggle menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group w-full text-left {{ request()->routeIs('admin.patterns.*', 'admin.fabric_types.*', 'admin.intended_uses.*') ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+            <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
+            <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Patterns</span>
+            <svg class="patterns-chevron w-4 h-4 transition-transform flex-shrink-0 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+            </svg>
+        </button>
+        
+        <!-- Submenu Items -->
+        <div class="patterns-submenu bg-transparent max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+            <a href="{{ route('admin.patterns.index') }}" class="menu-item nav-link flex items-center space-x-3 px-8 py-2 rounded-lg group {{ request()->routeIs('admin.patterns.index', 'admin.patterns.create', 'admin.patterns.edit') ? 'nav-link-active' : '' }}" style="color: white; margin-top: 4px;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.6);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                <span class="sidebar-text text-sm" style="color: rgba(255,255,255,0.8);">All Patterns</span>
+            </a>
+            
+            <a href="{{ route('admin.patterns_management.index') }}#fabric-types" class="menu-item nav-link flex items-center space-x-3 px-8 py-2 rounded-lg group {{ request()->routeIs('admin.patterns_management.index') ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.6);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+                <span class="sidebar-text text-sm" style="color: rgba(255,255,255,0.8);">Fabric Types</span>
+            </a>
+            
+            <a href="{{ route('admin.patterns_management.index') }}#intended-uses" class="menu-item nav-link flex items-center space-x-3 px-8 py-2 rounded-lg group {{ request()->routeIs('admin.patterns_management.index') ? 'nav-link-active' : '' }}" style="color: white; margin-bottom: 4px;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.6);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span class="sidebar-text text-sm" style="color: rgba(255,255,255,0.8);">Intended Uses</span>
+            </a>
+        </div>
+    </div>
 
     <a href="{{ route('admin.custom_orders.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ request()->routeIs('admin.custom_orders.*') ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
         <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
@@ -877,6 +901,7 @@
         <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
         <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Coupons</span>
     </a>
+
 
     <a href="{{ route('admin.cultural-heritage.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ request()->routeIs('admin.cultural-heritage.*') ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
         <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C6.5 6.253 2 10.998 2 17s4.5 10.747 10 10.747c5.5 0 10-4.998 10-10.747S17.5 6.253 12 6.253z"/></svg>
@@ -908,15 +933,15 @@
         <span class="sidebar-text font-medium text-gray-700 group-hover:text-gray-900">Analytics</span>
     </a> -->
     
-    <!-- Settings placeholder - can be added later -->
-    <div class="pt-4 mt-4 border-t border-gray-200">
+    <!-- Settings Section -->
+    <div class="pt-4 mt-4 border-t" style="border-color: rgba(255,255,255,0.1);">
         <div class="px-4 py-2">
-            <span class="sidebar-text text-xs font-semibold text-gray-400 uppercase tracking-wider">System</span>
+            <span class="sidebar-text text-xs font-semibold" style="color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.05em;">System</span>
         </div>
-        <!-- <a href="{{ route('admin.settings.general') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 group {{ request()->routeIs('admin.settings.*') ? 'nav-link-active' : '' }}">
-            <i class="fas fa-cog text-gray-400 group-hover:text-gray-600 w-5"></i>
-            <span class="sidebar-text font-medium text-gray-500 group-hover:text-gray-700">Settings</span>
-        </a> -->
+        <a href="{{ route('admin.settings.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ request()->routeIs('admin.settings.*') ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+            <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Settings</span>
+        </a>
     </div>
 
     <!-- Divider -->
@@ -1110,6 +1135,32 @@
     <!-- Responsive Sidebar JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Handle Patterns submenu toggle
+            const patternsToggle = document.querySelector('.patterns-toggle');
+            const patternsSubmenu = document.querySelector('.patterns-submenu');
+            const patternsChevron = document.querySelector('.patterns-chevron');
+            
+            if (patternsToggle && patternsSubmenu) {
+                // Check if current page is one of the pattern routes - if so, expand by default
+                const isPatternRoute = document.querySelector('.patterns-toggle').classList.contains('nav-link-active');
+                if (isPatternRoute) {
+                    patternsSubmenu.style.maxHeight = patternsSubmenu.scrollHeight + 'px';
+                    patternsChevron.style.transform = 'rotate(180deg)';
+                }
+                
+                patternsToggle.addEventListener('click', function() {
+                    const isOpen = patternsSubmenu.style.maxHeight && patternsSubmenu.style.maxHeight !== '0px';
+                    
+                    if (isOpen) {
+                        patternsSubmenu.style.maxHeight = '0px';
+                        patternsChevron.style.transform = 'rotate(0deg)';
+                    } else {
+                        patternsSubmenu.style.maxHeight = patternsSubmenu.scrollHeight + 'px';
+                        patternsChevron.style.transform = 'rotate(180deg)';
+                    }
+                });
+            }
+            
             // Handle window resize events for manual adjustments if needed
             let resizeTimer;
             window.addEventListener('resize', function() {

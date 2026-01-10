@@ -116,13 +116,13 @@ class CustomOrder extends Model
         'pattern_count' => 'integer',
     ];
 
-    protected $with = ['product', 'user'];
+    protected $with = ['product', 'user', 'fabricType', 'intendedUse'];
 
     protected static function booted()
     {
         static::addGlobalScope('withRelations', function ($query) {
             // Only load essential relationships by default
-            $query->with(['user:id,name,email', 'product:id,name,price,image']);
+            $query->with(['user:id,name,email', 'product:id,name,price,image', 'fabricType:id,name', 'intendedUse:id,name']);
         });
     }
 
@@ -151,13 +151,19 @@ class CustomOrder extends Model
     }
 
     /**
-     * Get fabric type (if fabric_type_id exists in future)
+     * Get fabric type relationship
      */
     public function fabricType()
     {
-        // For now, return null since we're storing fabric_type as string
-        // This can be updated later to use a relationship
-        return null;
+        return $this->belongsTo(FabricType::class, 'fabric_type');
+    }
+
+    /**
+     * Get intended use relationship
+     */
+    public function intendedUse()
+    {
+        return $this->belongsTo(IntendedUse::class, 'intended_use');
     }
 
     /**
@@ -187,16 +193,25 @@ class CustomOrder extends Model
     }
 
     /**
-     * Get intended use label
+     * Get intended use label (from relationship)
      */
     public function getIntendedUseLabelAttribute(): string
     {
-        return match($this->intended_use) {
-            'clothing' => 'Clothing & Garments',
-            'home_decor' => 'Home Decor',
-            'crafts' => 'Crafts & Accessories',
-            default => ucfirst($this->intended_use ?? 'Other')
-        };
+        if ($this->intendedUse) {
+            return $this->intendedUse->name;
+        }
+        return 'Unknown';
+    }
+
+    /**
+     * Get fabric type name (from relationship)
+     */
+    public function getFabricTypeNameAttribute(): string
+    {
+        if ($this->fabricType) {
+            return $this->fabricType->name;
+        }
+        return 'Unknown';
     }
 
     /**

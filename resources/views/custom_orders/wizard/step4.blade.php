@@ -72,6 +72,107 @@
             </div>
         @endif
 
+        {{-- Calculate pricing early so it's available for all sections --}}
+        @php
+            $patternCount = isset($selectedPatterns) ? $selectedPatterns->count() : 0;
+            
+            // Get price per meter and pattern fee from the first selected pattern
+            $pricePerMeterValue = 500; // default fallback
+            $patternFee = 0;
+            
+            if ($patternCount > 0 && isset($selectedPatterns)) {
+                foreach ($selectedPatterns as $pattern) {
+                    // Use each pattern's individual price_per_meter (for fabric)
+                    $pricePerMeterValue = $pattern->price_per_meter ?? 500; // Take from first pattern
+                    // Use each pattern's individual pattern_price (for pattern fee)
+                    $patternFee += ($pattern->pattern_price ?? 0);
+                }
+            }
+            
+            // Calculate fabric cost
+            $fabricCost = 0;
+            if (isset($wizardData['fabric']['quantity_meters'])) {
+                $fabricMeters = (float) $wizardData['fabric']['quantity_meters'];
+                $fabricCost = $fabricMeters * $pricePerMeterValue;
+            }
+            
+            // Get fabric type name from ID
+            $fabricTypeName = '—';
+            if (isset($wizardData['fabric']['type'])) {
+                $fabricTypeId = $wizardData['fabric']['type'];
+                $fabricType = \App\Models\FabricType::find($fabricTypeId);
+                $fabricTypeName = $fabricType ? $fabricType->name : $fabricTypeId;
+            }
+            
+            // Get intended use name from ID
+            $intendedUseName = '—';
+            if (isset($wizardData['fabric']['intended_use'])) {
+                $intendedUseId = $wizardData['fabric']['intended_use'];
+                $intendedUse = \App\Models\IntendedUse::find($intendedUseId);
+                $intendedUseName = $intendedUse ? $intendedUse->name : $intendedUseId;
+            }
+            
+            // Get production days from selected pattern
+            $productionDays = 7; // default fallback
+            if ($patternCount > 0 && isset($selectedPatterns)) {
+                // Get the production days from the first selected pattern
+                $firstPattern = $selectedPatterns->first();
+                $productionDays = $firstPattern->production_days ?? 7;
+            }
+            
+            // Apply priority production multiplier if addon is selected
+            $hasPriorityProduction = session('wizard.details.addons') && in_array('priority_production', session('wizard.details.addons'));
+            $actualProductionDays = $hasPriorityProduction ? ceil($productionDays * 0.5) : $productionDays;
+            
+            // Get quality check days from system settings
+            $qualityCheckDays = \App\Models\SystemSetting::get('quality_check_days', 1);
+            
+            // Calculate shipping days based on delivery address (zone-based from Zamboanga City)
+            $shippingDays = 2; // default fallback
+            $defaultAddress = auth()->user()->addresses->where('is_default', true)->first();
+            
+            if ($defaultAddress) {
+                $city = strtolower($defaultAddress->city ?? '');
+                $region = strtolower($defaultAddress->province ?? $defaultAddress->region ?? '');
+                $postalCode = $defaultAddress->postal_code ?? '';
+                
+                // Shipping days from Zamboanga City origin
+                if (str_contains($city, 'zamboanga') && str_starts_with($postalCode, '7')) {
+                    $shippingDays = 1; // Zamboanga City proper
+                }
+                elseif (str_contains($region, 'zamboanga') || 
+                        in_array($city, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
+                    $shippingDays = 2; // Zamboanga Peninsula (nearby)
+                }
+                elseif (in_array($city, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) ||
+                        str_contains($region, 'barmm') || str_contains($region, 'armm')) {
+                    $shippingDays = 3; // Western Mindanao
+                }
+                elseif (str_contains($region, 'mindanao') ||
+                        in_array($city, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'])) {
+                    $shippingDays = 4; // Other Mindanao regions
+                }
+                elseif (str_contains($region, 'visayas') ||
+                        in_array($city, ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'])) {
+                    $shippingDays = 4; // Visayas
+                }
+                elseif (str_contains($city, 'manila') || str_contains($region, 'ncr') ||
+                        in_array($city, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'])) {
+                    $shippingDays = 5; // Metro Manila & nearby (closer to Luzon)
+                }
+                elseif (str_contains($region, 'luzon') ||
+                        in_array($city, ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'])) {
+                    $shippingDays = 6; // Northern Luzon (farthest)
+                }
+                else {
+                    $shippingDays = 7; // Remote islands & far areas (absolute farthest)
+                }
+            }
+            
+            // Calculate pattern fees based on difficulty and admin settings
+            // REMOVED - now using each pattern's individual pattern_price which is set above
+        @endphp
+
         <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             <!-- Left Column - Order Summary -->
@@ -100,8 +201,8 @@
                                 <h4 class="font-bold text-xl text-gray-900">{{ isset($product) ? $product->name : 'Custom Yakan Fabric' }}</h4>
                                 <p class="text-sm text-gray-600 mt-2">{{ isset($product) ? $product->description : 'Premium fabric with authentic Yakan patterns' }}</p>
                                 <div class="flex items-center space-x-4 mt-3">
-                                    <span class="text-sm text-gray-500 font-medium">Base Price:</span>
-                                    <span class="font-bold text-lg" style="color:#800000;">₱{{ isset($product) ? number_format($product->price, 2) : '1,300.00' }}</span>
+                                    <span class="text-sm text-gray-500 font-medium">Pattern Fee:</span>
+                                    <span class="font-bold text-lg" style="color:#800000;">₱{{ isset($patternFee) ? number_format($patternFee, 2) : '0.00' }}</span>
                                 </div>
                             </div>
                         </div>
@@ -115,9 +216,9 @@
                                 Fabric Details
                             </h5>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                <div class="flex items-center"><span class="text-gray-500 font-medium w-28">Type:</span><span class="ml-2 text-gray-900">{{ $wizardData['fabric']['type'] ?? '—' }}</span></div>
-                                <div class="flex items-center"><span class="text-gray-500 font-medium w-28">Quantity:</span><span class="ml-2 text-gray-900">{{ $wizardData['fabric']['quantity_meters'] ?? '—' }} m</span></div>
-                                <div class="flex items-center"><span class="text-gray-500 font-medium w-28">Use:</span><span class="ml-2 text-gray-900">{{ $wizardData['fabric']['intended_use'] ?? '—' }}</span></div>
+                                <div class="flex items-center"><span class="text-gray-500 font-medium w-28">Type:</span><span class="ml-2 text-gray-900">{{ $fabricTypeName ?? '—' }}</span></div>
+                                <div class="flex items-center"><span class="text-gray-500 font-medium w-28">Meters:</span><span class="ml-2 text-gray-900">{{ $wizardData['fabric']['quantity_meters'] ?? '—' }} m</span></div>
+                                <div class="flex items-center"><span class="text-gray-500 font-medium w-28">Use:</span><span class="ml-2 text-gray-900">{{ $intendedUseName ?? '—' }}</span></div>
                             </div>
                         </div>
 
@@ -239,8 +340,19 @@
                                 $customerName      = $fullName;
                                 $customerEmail     = $user->email;
                                 $customerPhone     = data_get($wizardData, 'details.customer_phone') ?? ($defaultAddress ? $defaultAddress->phone_number : null);
-                                $deliveryAddress   = data_get($wizardData, 'details.delivery_address') ?? ($defaultAddress ? $defaultAddress->formatted_address : null);
-                                $deliveryType      = data_get($wizardData, 'details.delivery_type');
+                                $deliveryType      = data_get($wizardData, 'details.delivery_type') ?? 'delivery';
+                                $deliveryAddressText = '';
+                                
+                                if ($deliveryType === 'delivery' && $defaultAddress) {
+                                    $addressParts = array_filter([
+                                        $defaultAddress->street ?? null,
+                                        $defaultAddress->barangay ?? null,
+                                        $defaultAddress->city ?? null,
+                                        $defaultAddress->province ?? null,
+                                        $defaultAddress->postal_code ?? null,
+                                    ]);
+                                    $deliveryAddressText = implode(', ', $addressParts);
+                                }
                             @endphp
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -267,23 +379,24 @@
 
                                 <div class="flex items-center">
                                     <span class="text-gray-500 font-medium w-24">Delivery</span>
-                                    <span class="ml-2 text-gray-900 font-medium">
+                                    <span class="ml-2 text-gray-900 font-medium" id="deliveryTypeDisplay">
                                         @if($deliveryType === 'pickup')
-                                            Store Pickup
-                                        @elseif($deliveryType === 'delivery')
-                                            Delivery
+                                            🏪 Store Pickup
                                         @else
-                                            -
+                                            🚚 Delivery
                                         @endif
                                     </span>
                                 </div>
 
-                                @if($deliveryAddress && $deliveryType === 'delivery')
-                                    <div class="md:col-span-2">
-                                        <div class="flex items-start">
-                                            <span class="text-gray-500 font-medium w-24">Address</span>
-                                            <span class="ml-2 text-gray-900 whitespace-pre-line">{{ $deliveryAddress }}</span>
-                                        </div>
+                                @if($deliveryType === 'delivery' && $deliveryAddressText)
+                                    <div class="md:col-span-2" id="deliveryAddressRow">
+                                        <span class="text-gray-500 font-medium block mb-1">Delivery Address</span>
+                                        <span class="ml-2 text-gray-900 font-medium text-sm leading-relaxed block">{{ $deliveryAddressText }}</span>
+                                    </div>
+                                @elseif($deliveryType === 'delivery')
+                                    <div class="md:col-span-2 hidden" id="deliveryAddressRow">
+                                        <span class="text-gray-500 font-medium block mb-1">Delivery Address</span>
+                                        <span class="ml-2 text-gray-900 font-medium text-sm leading-relaxed block">{{ $deliveryAddressText }}</span>
                                     </div>
                                 @endif
 
@@ -333,37 +446,81 @@
                     </div>
                     
                     @php
-                        $patternCount = isset($selectedPatterns) ? $selectedPatterns->count() : 0;
-                        $basePrice = isset($product) ? (float) ($product->price ?? 1300) : 1300;
+                        // Calculate shipping fee based on selected address (same logic as checkout)
+                        $shippingFee = 0;
+                        $selectedAddressForShipping = $defaultAddress;
                         
-                        // Add fabric cost (₱500 per meter)
-                        $fabricCost = 0;
-                        if (isset($wizardData['fabric']['quantity_meters'])) {
-                            $fabricMeters = (float) $wizardData['fabric']['quantity_meters'];
-                            $fabricCost = $fabricMeters * 500;
+                        if ($selectedAddressForShipping) {
+                            $city = strtolower($selectedAddressForShipping->city ?? '');
+                            $region = strtolower($selectedAddressForShipping->province ?? $selectedAddressForShipping->region ?? '');
+                            $postalCode = $selectedAddressForShipping->postal_code ?? '';
+                            
+                            // Regional-based shipping (Professional Philippine courier rates)
+                            
+                            // FREE - Zamboanga City proper
+                            if (str_contains($city, 'zamboanga') && str_starts_with($postalCode, '7')) {
+                                $shippingFee = 0;
+                            }
+                            // ₱80 - Zamboanga Peninsula (nearby)
+                            elseif (str_contains($region, 'zamboanga') || 
+                                    in_array($city, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
+                                $shippingFee = 80;
+                            }
+                            // ₱120 - Western Mindanao
+                            elseif (in_array($city, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) ||
+                                    str_contains($region, 'barmm') || str_contains($region, 'armm')) {
+                                $shippingFee = 120;
+                            }
+                            // ₱150 - Other Mindanao regions
+                            elseif (str_contains($region, 'mindanao') ||
+                                    in_array($city, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'])) {
+                                $shippingFee = 150;
+                            }
+                            // ₱180 - Visayas
+                            elseif (str_contains($region, 'visayas') ||
+                                    in_array($city, ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'])) {
+                                $shippingFee = 180;
+                            }
+                            // ₱220 - Metro Manila & nearby
+                            elseif (str_contains($city, 'manila') || str_contains($region, 'ncr') ||
+                                    in_array($city, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'])) {
+                                $shippingFee = 220;
+                            }
+                            // ₱250 - Northern Luzon
+                            elseif (str_contains($region, 'luzon') ||
+                                    in_array($city, ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'])) {
+                                $shippingFee = 250;
+                            }
+                            // ₱280 - Remote islands & far areas
+                            else {
+                                $shippingFee = 280;
+                            }
                         }
                         
-                        $patternFee = $patternCount * 200;
                         $addons = session('wizard.details.addons') ?? [];
                         $addonsTotal = collect($addons)->sum(function($addon) {
                             return $addon == 'priority_production' ? 500 : ($addon == 'gift_wrapping' ? 150 : ($addon == 'extra_patterns' ? 200 : 100));
                         });
-                        $finalTotal = $basePrice + $fabricCost + $patternFee + $addonsTotal;
+                        $finalTotal = $patternFee + $fabricCost + $shippingFee + $addonsTotal;
                     @endphp
                     <div class="space-y-4">
-                        <div class="flex justify-between items-center pb-3 border-b border-gray-100">
-                            <span class="text-gray-600 font-medium">Base Price</span>
-                            <span class="font-medium text-gray-900">₱{{ number_format($basePrice, 2) }}</span>
+                        <div class="flex justify-between items-center pb-3 border-b border-gray-100" id="patternFeeRow">
+                            <span class="text-gray-600 font-medium">Pattern Fee</span>
+                            <span class="font-medium text-gray-900" id="patternFeeDisplay">₱{{ number_format($patternFee, 2) }}</span>
                         </div>
                         @if($fabricCost > 0)
-                        <div class="flex justify-between items-center pb-3 border-b border-gray-100">
-                            <span class="text-gray-600 font-medium">Fabric Cost ({{ $wizardData['fabric']['quantity_meters'] }}m × ₱500)</span>
-                            <span class="font-medium text-gray-900">₱{{ number_format($fabricCost, 2) }}</span>
+                        <div class="flex justify-between items-center pb-3 border-b border-gray-100" id="fabricCostRow">
+                            <span class="text-gray-600 font-medium">Fabric Cost ({{ $wizardData['fabric']['quantity_meters'] }}m × ₱{{ number_format($pricePerMeterValue, 2) }})</span>
+                            <span class="font-medium text-gray-900" id="fabricCostDisplay">₱{{ number_format($fabricCost, 2) }}</span>
                         </div>
                         @endif
-                        <div class="flex justify-between items-center pb-3 border-b border-gray-100">
-                            <span class="text-gray-600 font-medium">Pattern Fees ({{ $patternCount }})</span>
-                            <span class="font-medium text-gray-900">₱{{ number_format($patternFee, 2) }}</span>
+                        <div class="flex justify-between items-center pb-3 border-b border-gray-100" id="shippingFeeRow">
+                            <span class="text-gray-600 font-medium">Shipping Fee</span>
+                            @if($shippingFee == 0)
+                                <span class="font-medium text-green-600" id="shippingFeeDisplay">FREE</span>
+                            @else
+                                <span class="font-medium text-gray-900" id="shippingFeeDisplay">₱{{ number_format($shippingFee, 2) }}</span>
+                            @endif
                         </div>
                         @if(!empty($addons))
                             @foreach($addons as $addon)
@@ -376,9 +533,19 @@
                         <div class="border-t-2 border-gray-200 pt-4 mt-4">
                             <div class="flex justify-between items-center">
                                 <span class="text-xl font-bold text-gray-900">Final Total</span>
-                                <span class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($finalTotal, 2) }}</span>
+                                <span class="text-2xl font-bold" style="color:#800000;" id="finalTotalDisplay">₱{{ number_format($finalTotal, 2) }}</span>
                             </div>
                         </div>
+                    </div>
+                    
+                    <!-- Store base prices for JavaScript calculations -->
+                    <div style="display: none;" id="priceData" 
+                        data-base-price="{{ $patternFee }}"
+                        data-fabric-cost-base="{{ $fabricCost }}"
+                        data-shipping-fee="{{ $shippingFee }}"
+                        data-addons-total="{{ $addonsTotal }}"
+                        data-price-per-meter="{{ $pricePerMeterValue }}"
+                        data-fabric-meters="{{ $wizardData['fabric']['quantity_meters'] ?? 0 }}">
                     </div>
                 </div>
 
@@ -410,7 +577,7 @@
                             </div>
                             <div>
                                 <p class="font-bold text-gray-900">Design Production</p>
-                                <p class="text-sm text-gray-600">{{ session('wizard.details.addons') && in_array('priority_production', session('wizard.details.addons')) ? '3-5 days' : '7-10 days' }}</p>
+                                <p class="text-sm text-gray-600">{{ $actualProductionDays }} day{{ $actualProductionDays != 1 ? 's' : '' }}</p>
                             </div>
                         </div>
                         
@@ -420,7 +587,7 @@
                             </div>
                             <div>
                                 <p class="font-bold text-gray-900">Quality Check</p>
-                                <p class="text-sm text-gray-600">1-2 days</p>
+                                <p class="text-sm text-gray-600">{{ $qualityCheckDays }} day{{ $qualityCheckDays != 1 ? 's' : '' }}</p>
                             </div>
                         </div>
                         
@@ -430,14 +597,14 @@
                             </div>
                             <div>
                                 <p class="font-bold text-gray-900">Shipping</p>
-                                <p class="text-sm text-gray-600">2-3 days</p>
+                                <p class="text-sm text-gray-600">{{ $shippingDays }} day{{ $shippingDays != 1 ? 's' : '' }}</p>
                             </div>
                         </div>
                     </div>
                     
                     <div class="mt-6 p-4 rounded-xl border-2" style="background: linear-gradient(to right, #f5e6e8, #e8ccd1); border-color:#8b3a56;">
                         <p class="text-sm font-bold" style="color:#8b3a56;">Estimated Delivery</p>
-                        <p class="text-xl font-bold" style="color:#8b3a56;">{{ session('wizard.details.addons') && in_array('priority_production', session('wizard.details.addons')) ? date('M d, Y', strtotime('+10 days')) : date('M d, Y', strtotime('+17 days')) }}</p>
+                        <p class="text-xl font-bold" style="color:#8b3a56;">{{ date('M d, Y', strtotime('+' . ($actualProductionDays + $qualityCheckDays + $shippingDays) . ' days')) }}</p>
                     </div>
                 </div>
 
@@ -623,6 +790,51 @@
                     
                     <script>
                     document.getElementById('submitOrderForm').addEventListener('submit', function(e) {
+                        const deliveryType = document.querySelector('input[name="delivery_type"]:checked')?.value;
+                        const quantity = document.getElementById('quantity').value;
+                        
+                        // Validate delivery type
+                        if (!deliveryType) {
+                            e.preventDefault();
+                            alert('Please select a delivery option (Delivery or Pickup)');
+                            return false;
+                        }
+                        
+                        // If delivery type is 'delivery', validate address selection
+                        if (deliveryType === 'delivery') {
+                            const selectedAddress = document.querySelector('input[name="address_id"]:checked');
+                            const hasUserAddresses = {{ $userAddresses->count() > 0 ? 'true' : 'false' }};
+                            
+                            if (hasUserAddresses && !selectedAddress) {
+                                e.preventDefault();
+                                alert('Please select a delivery address from your saved addresses');
+                                return false;
+                            }
+                            
+                            if (!hasUserAddresses) {
+                                // Manual address form - validate all required fields
+                                const house = document.getElementById('delivery_house')?.value?.trim();
+                                const street = document.getElementById('delivery_street')?.value?.trim();
+                                const barangay = document.getElementById('delivery_barangay')?.value?.trim();
+                                const city = document.getElementById('delivery_city')?.value?.trim();
+                                const province = document.getElementById('delivery_province')?.value?.trim();
+                                
+                                if (!house || !street || !barangay || !city || !province) {
+                                    e.preventDefault();
+                                    alert('Please fill in all required delivery address fields');
+                                    return false;
+                                }
+                            }
+                        }
+                        
+                        // Validate quantity
+                        if (!quantity || quantity < 1) {
+                            e.preventDefault();
+                            alert('Please enter a valid quantity (minimum 1)');
+                            return false;
+                        }
+                        
+                        // All validation passed, disable button and show submitting message
                         const btn = document.getElementById('submitBtn');
                         const btnText = document.getElementById('submitBtnText');
                         btn.disabled = true;
@@ -841,6 +1053,87 @@ function showNotification(message, type = 'info') {
         }, 300);
     }, 3000);
 }
+
+// Handle quantity changes for dynamic pricing
+document.addEventListener('DOMContentLoaded', function() {
+    const quantityInput = document.getElementById('quantity');
+    const priceData = document.getElementById('priceData');
+    
+    if (quantityInput && priceData) {
+        // Get base prices from data attributes
+        const basePrice = parseFloat(priceData.dataset.basePrice) || 0;
+        const fabricCostBase = parseFloat(priceData.dataset.fabricCostBase) || 0;
+        const shippingFee = parseFloat(priceData.dataset.shippingFee) || 0;
+        const addonsTotal = parseFloat(priceData.dataset.addonsTotal) || 0;
+        
+        // Listen to quantity input changes
+        quantityInput.addEventListener('change', updatePrices);
+        quantityInput.addEventListener('input', updatePrices);
+        
+        function formatCurrency(amount) {
+            return '₱' + parseFloat(amount).toLocaleString('en-PH', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+        
+        function updatePrices() {
+            const quantity = parseInt(quantityInput.value) || 1;
+            
+            // Calculate new prices (multiply base prices by quantity)
+            const newPatternFee = basePrice * quantity;
+            const newFabricCost = fabricCostBase * quantity;
+            const newFinalTotal = (newPatternFee + newFabricCost + shippingFee + addonsTotal);
+            
+            // Update Pattern Fee display
+            const patternFeeDisplay = document.getElementById('patternFeeDisplay');
+            if (patternFeeDisplay) {
+                patternFeeDisplay.textContent = formatCurrency(newPatternFee);
+            }
+            
+            // Update Fabric Cost display if it exists
+            const fabricCostDisplay = document.getElementById('fabricCostDisplay');
+            if (fabricCostDisplay && newFabricCost > 0) {
+                fabricCostDisplay.textContent = formatCurrency(newFabricCost);
+            }
+            
+            // Update Final Total display
+            const finalTotalDisplay = document.getElementById('finalTotalDisplay');
+            if (finalTotalDisplay) {
+                finalTotalDisplay.textContent = formatCurrency(newFinalTotal);
+            }
+        }
+    }
+    
+    // Handle delivery option toggle to update Customer Information display
+    const deliveryRadios = document.querySelectorAll('input[name="delivery_type"]');
+    const deliveryTypeDisplay = document.getElementById('deliveryTypeDisplay');
+    const deliveryAddressRow = document.getElementById('deliveryAddressRow');
+    
+    if (deliveryRadios.length > 0) {
+        deliveryRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (deliveryTypeDisplay) {
+                    if (this.value === 'pickup') {
+                        deliveryTypeDisplay.innerHTML = '🏪 Store Pickup';
+                    } else {
+                        deliveryTypeDisplay.innerHTML = '🚚 Delivery';
+                    }
+                }
+                
+                // Show/hide delivery address row based on selection
+                if (deliveryAddressRow) {
+                    if (this.value === 'pickup') {
+                        deliveryAddressRow.classList.add('hidden');
+                    } else {
+                        deliveryAddressRow.classList.remove('hidden');
+                    }
+                }
+            });
+        });
+    }
+});
+
 </script>
 
 @push('styles')

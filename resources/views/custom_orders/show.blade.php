@@ -719,12 +719,213 @@
                                         <p class="text-sm font-medium text-gray-700 mb-1">Quoted Price</p>
                                         <p class="text-3xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
                                         <p class="text-xs mt-1 font-semibold" style="color:#800000;">⏳ Awaiting your decision</p>
+                                        
+                                        {{-- Pricing Breakdown --}}
+                                        @php
+                                            // Get patterns
+                                            $patternIds = $order->patterns;
+                                            if (is_string($patternIds)) {
+                                                $patternIds = json_decode($patternIds, true) ?? [];
+                                            }
+                                            
+                                            $patterns = \App\Models\YakanPattern::whereIn('id', (array)$patternIds)->get();
+                                            
+                                            // Use each pattern's individual price
+                                            $totalPatternFee = 0;
+                                            $pricePerMeter = 0;
+                                            foreach ($patterns as $pattern) {
+                                                $totalPatternFee += ($pattern->pattern_price ?? 0);
+                                                $pricePerMeter = $pattern->price_per_meter ?? 0; // Use first pattern's rate
+                                            }
+                                            
+                                            $fabricCost = ($order->fabric_quantity_meters ?? 0) * $pricePerMeter;
+                                            
+                                            // Calculate shipping based on delivery address (zone-based from Zamboanga City)
+                                            $shippingFee = 100; // default
+                                            $address = strtolower($order->delivery_address ?? '');
+                                            $city = '';
+                                            $province = '';
+                                            
+                                            // If no delivery address, try user's default address
+                                            if (!$order->delivery_address && $order->user) {
+                                                $userDefaultAddr = $order->user->addresses()->where('is_default', true)->first();
+                                                if ($userDefaultAddr) {
+                                                    $address = strtolower($userDefaultAddr->formatted_address ?? $userDefaultAddr->city . ', ' . $userDefaultAddr->province);
+                                                    $city = strtolower($userDefaultAddr->city ?? '');
+                                                    $province = strtolower($userDefaultAddr->province ?? '');
+                                                }
+                                            }
+                                            
+                                            if ($address || $city) {
+                                                // ₱0 - Zamboanga City proper
+                                                if (str_contains($address, 'zamboanga') || str_contains($city, 'zamboanga')) {
+                                                    $shippingFee = 0;
+                                                }
+                                                // ₱100 - Zamboanga Peninsula & nearby
+                                                elseif (str_contains($province, 'zamboanga') || 
+                                                        in_array($city, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
+                                                    $shippingFee = 100;
+                                                }
+                                                // ₱120 - Western Mindanao
+                                                elseif (in_array($city, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) ||
+                                                        str_contains($province, 'barmm') || str_contains($province, 'armm')) {
+                                                    $shippingFee = 120;
+                                                }
+                                                // ₱150 - Other Mindanao regions
+                                                elseif (str_contains($province, 'mindanao') ||
+                                                        in_array($city, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'])) {
+                                                    $shippingFee = 150;
+                                                }
+                                                // ₱180 - Visayas
+                                                elseif (str_contains($province, 'visayas') ||
+                                                        in_array($city, ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'])) {
+                                                    $shippingFee = 180;
+                                                }
+                                                // ₱220 - Metro Manila & nearby
+                                                elseif (str_contains($city, 'manila') || str_contains($province, 'ncr') ||
+                                                        in_array($city, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'])) {
+                                                    $shippingFee = 220;
+                                                }
+                                                // ₱250 - Northern Luzon
+                                                elseif (str_contains($province, 'luzon') ||
+                                                        in_array($city, ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'])) {
+                                                    $shippingFee = 250;
+                                                }
+                                                // ₱280 - Remote islands & far areas
+                                                else {
+                                                    $shippingFee = 280;
+                                                }
+                                            }
+                                        @endphp
+                                        
+                                        <div class="mt-3 bg-gray-50 rounded-lg p-3 border border-gray-200 text-xs">
+                                            <div class="space-y-1 text-gray-700">
+                                                <div class="flex justify-between">
+                                                    <span>Pattern Fee{{ $order->quantity > 1 ? ' (× ' . $order->quantity . ')' : '' }}:</span>
+                                                    <span class="font-semibold">₱{{ number_format($totalPatternFee * $order->quantity, 2) }}</span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span>Fabric ({{ $order->fabric_quantity_meters }}m × ₱{{ number_format($pricePerMeter, 2) }}){{ $order->quantity > 1 ? ' × ' . $order->quantity : '' }}:</span>
+                                                    <span class="font-semibold">₱{{ number_format($fabricCost * $order->quantity, 2) }}</span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span>Shipping:</span>
+                                                    <span class="font-semibold">{{ $shippingFee == 0 ? 'FREE' : '₱' . number_format($shippingFee, 2) }}</span>
+                                                </div>
+                                                <div class="border-t border-gray-300 pt-1 mt-1 flex justify-between font-bold text-gray-900">
+                                                    <span>Total:</span>
+                                                    <span style="color:#800000;">₱{{ number_format(($totalPatternFee * $order->quantity) + ($fabricCost * $order->quantity) + $shippingFee, 2) }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 @elseif($order->status === 'approved' && $order->final_price)
                                     <div>
                                         <p class="text-sm font-medium text-gray-700 mb-1">Agreed Price</p>
                                         <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
                                         <p class="text-xs mt-1 font-semibold text-emerald-600">✓ Quote accepted</p>
+                                        
+                                        {{-- Pricing Breakdown for Approved Orders --}}
+                                        @php
+                                            // Get patterns
+                                            $approvedPatternIds = $order->patterns;
+                                            if (is_string($approvedPatternIds)) {
+                                                $approvedPatternIds = json_decode($approvedPatternIds, true) ?? [];
+                                            }
+                                            
+                                            $approvedPatterns = \App\Models\YakanPattern::whereIn('id', (array)$approvedPatternIds)->get();
+                                            
+                                            // Use each pattern's individual price
+                                            $approvedTotalPatternFee = 0;
+                                            $approvedPricePerMeter = 0;
+                                            foreach ($approvedPatterns as $pattern) {
+                                                $approvedTotalPatternFee += ($pattern->pattern_price ?? 0);
+                                                $approvedPricePerMeter = $pattern->price_per_meter ?? 0; // Use first pattern's rate
+                                            }
+                                            
+                                            $approvedFabricCost = ($order->fabric_quantity_meters ?? 0) * $approvedPricePerMeter;
+                                            
+                                            // Calculate shipping for approved order
+                                            $approvedShippingFee = 100; // default
+                                            $approvedAddress = strtolower($order->delivery_address ?? '');
+                                            $approvedCity = '';
+                                            $approvedProvince = '';
+                                            
+                                            // If no delivery address, try user's default address
+                                            if (!$order->delivery_address && $order->user) {
+                                                $userDefaultAddr = $order->user->addresses()->where('is_default', true)->first();
+                                                if ($userDefaultAddr) {
+                                                    $approvedAddress = strtolower($userDefaultAddr->formatted_address ?? $userDefaultAddr->city . ', ' . $userDefaultAddr->province);
+                                                    $approvedCity = strtolower($userDefaultAddr->city ?? '');
+                                                    $approvedProvince = strtolower($userDefaultAddr->province ?? '');
+                                                }
+                                            }
+                                            
+                                            if ($approvedAddress || $approvedCity) {
+                                                if (str_contains($approvedAddress, 'zamboanga') || str_contains($approvedCity, 'zamboanga')) {
+                                                    $approvedShippingFee = 0;
+                                                } elseif (str_contains($approvedProvince, 'zamboanga') || in_array($approvedCity, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
+                                                    $approvedShippingFee = 100;
+                                                } elseif (in_array($approvedCity, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) || str_contains($approvedProvince, 'barmm') || str_contains($approvedProvince, 'armm')) {
+                                                    $approvedShippingFee = 120;
+                                                } elseif (str_contains($approvedProvince, 'mindanao') || in_array($approvedCity, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'])) {
+                                                    $approvedShippingFee = 150;
+                                                } elseif (str_contains($approvedProvince, 'visayas') || in_array($approvedCity, ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'])) {
+                                                    $approvedShippingFee = 180;
+                                                } elseif (str_contains($approvedCity, 'manila') || str_contains($approvedProvince, 'ncr') || in_array($approvedCity, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'])) {
+                                                    $approvedShippingFee = 220;
+                                                } elseif (str_contains($approvedProvince, 'luzon') || in_array($approvedCity, ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'])) {
+                                                    $approvedShippingFee = 250;
+                                                } else {
+                                                    $approvedShippingFee = 280;
+                                                }
+                                            }
+                                        @endphp
+                                        
+                                        <div class="mt-3 bg-gray-50 rounded-lg p-3 border border-gray-200 text-xs">
+                                            <div class="space-y-1 text-gray-700">
+                                                <div class="flex justify-between">
+                                                    <span>Pattern Fee{{ $order->quantity > 1 ? ' (× ' . $order->quantity . ')' : '' }}:</span>
+                                                    <span class="font-semibold">₱{{ number_format($approvedTotalPatternFee * $order->quantity, 2) }}</span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span>Fabric ({{ $order->fabric_quantity_meters }}m × ₱{{ number_format($approvedPricePerMeter, 2) }}){{ $order->quantity > 1 ? ' × ' . $order->quantity : '' }}:</span>
+                                                    <span class="font-semibold">₱{{ number_format($approvedFabricCost * $order->quantity, 2) }}</span>
+                                                </div>
+                                                <div class="flex justify-between">
+                                                    <span>Shipping:</span>
+                                                    <span class="font-semibold">{{ $approvedShippingFee == 0 ? 'FREE' : '₱' . number_format($approvedShippingFee, 2) }}</span>
+                                                </div>
+                                                <div class="border-t border-gray-300 pt-1 mt-1 flex justify-between font-bold text-gray-900">
+                                                    <span>Subtotal:</span>
+                                                    <span>₱{{ number_format(($approvedTotalPatternFee * $order->quantity) + ($approvedFabricCost * $order->quantity) + $approvedShippingFee, 2) }}</span>
+                                                </div>
+                                                <div class="border-t-2 border-gray-400 pt-1 mt-1 flex justify-between font-bold" style="color:#800000;">
+                                                    <span>Final Quoted Price:</span>
+                                                    <span>₱{{ number_format($order->final_price, 2) }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        {{-- Admin Notes --}}
+                                        @if($order->admin_notes || $order->approved_at)
+                                        <div class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs">
+                                            <div class="flex items-start gap-2">
+                                                <svg class="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zm-11-1a1 1 0 11-2 0 1 1 0 012 0zM8 7a1 1 0 000 2h6a1 1 0 000-2H8zm0 4a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+                                                </svg>
+                                                <div class="flex-1">
+                                                    <p class="font-semibold text-blue-900 mb-1">Admin Notes on Quote</p>
+                                                    @if($order->admin_notes)
+                                                        <p class="text-blue-800 mb-2 italic">{{ $order->admin_notes }}</p>
+                                                    @endif
+                                                    @if($order->approved_at)
+                                                        <p class="text-xs text-blue-700">Quote provided on {{ $order->approved_at->format('M d, Y \a\t h:i A') }}</p>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                        @endif
                                     </div>
                                 @elseif($order->status === 'in_production' && $order->final_price)
                                     <div>
@@ -776,7 +977,7 @@
                             <div class="pt-3 border-t border-gray-200 mt-3 space-y-2 text-sm">
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm font-medium text-gray-600">Fabric Type</span>
-                                    <span class="text-sm font-semibold text-gray-900">{{ $order->fabric_type }}</span>
+                                    <span class="text-sm font-semibold text-gray-900">{{ $order->fabric_type_name }}</span>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <span class="text-sm font-medium text-gray-600">Fabric Quantity</span>

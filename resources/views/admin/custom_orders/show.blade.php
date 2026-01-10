@@ -128,7 +128,7 @@
                                 <div class="space-y-3">
                                     <div class="flex justify-between items-center py-3 px-3 bg-white rounded-lg border border-[#e0b0b0]">
                                         <span class="text-sm font-bold text-[#800000]">Fabric Type:</span>
-                                        <span class="text-sm text-gray-800 font-semibold">{{ $order->fabric_type }}</span>
+                                        <span class="text-sm text-gray-800 font-semibold">{{ $order->fabric_type_name }}</span>
                                     </div>
                                     <div class="flex justify-between items-center py-3 px-3 bg-white rounded-lg border border-[#e0b0b0]">
                                         <span class="text-sm font-bold text-[#800000]">Quantity:</span>

@@ -51,6 +51,6 @@ class Chat extends Model
      */
     public function latestMessage()
     {
-        return $this->messages()->latest()->first();
+        return $this->messages()->orderBy('created_at', 'desc')->first();
     }
 }

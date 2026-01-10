@@ -57,64 +57,36 @@
                     <h3 class="text-xl font-bold text-gray-900">Choose Fabric Type</h3>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Cotton Option -->
-                    <label class="fabric-option group relative bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-xl p-6 cursor-pointer hover:border-red-700 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1" 
-                           onclick="selectFabricOption('cotton')">
-                        <input type="radio" name="fabric_type" value="cotton" class="sr-only">
-                        <div class="text-center">
-                            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-red-200 transition-colors">
-                                <svg class="w-8 h-8 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                                </svg>
-                            </div>
-                            <h4 class="font-bold text-lg text-gray-900 mb-2">Cotton</h4>
-                            <p class="text-sm text-gray-600">Soft, breathable, and comfortable for everyday wear</p>
-                        </div>
-                    </label>
-
-                    <!-- Silk Option -->
-                    <label class="fabric-option group relative bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-xl p-6 cursor-pointer hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1" style="--hover-border-color:#800000;" 
-                           onclick="selectFabricOption('silk')">
-                        <input type="radio" name="fabric_type" value="silk" class="sr-only">
-                        <div class="text-center">
-                            <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors" style="background-color:#fff5f5;">
-                                <svg class="w-8 h-8" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
-                                </svg>
-                            </div>
-                            <h4 class="font-bold text-lg text-gray-900 mb-2">Silk</h4>
-                            <p class="text-sm text-gray-600">Luxurious, smooth, and perfect for special occasions</p>
-                        </div>
-                    </label>
-
-                    <!-- Linen Option -->
-                    <label class="fabric-option group relative bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-xl p-6 cursor-pointer hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1" style="--hover-border-color:#800000;" 
-                           onclick="selectFabricOption('linen')">
-                        <input type="radio" name="fabric_type" value="linen" class="sr-only">
-                        <div class="text-center">
-                            <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors" style="background-color:#fff5f5;">
-                                <svg class="w-8 h-8" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                                </svg>
-                            </div>
-                            <h4 class="font-bold text-lg text-gray-900 mb-2">Linen</h4>
-                            <p class="text-sm text-gray-600">Lightweight, durable, and great for warm weather</p>
-                        </div>
-                    </label>
-                </div>
+                @if($fabricTypes->isEmpty())
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center text-yellow-800">
+                        <p>No fabric types available at the moment. Please try again later.</p>
+                    </div>
+                @else
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        @foreach($fabricTypes as $type)
+                            <label class="fabric-option group relative bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-xl p-6 cursor-pointer hover:border-red-700 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1" 
+                                   onclick="selectFabricOption('{{ $type->id }}')">
+                                <input type="radio" name="fabric_type" value="{{ $type->id }}" class="sr-only">
+                                <div class="text-center">
+                                    <h4 class="font-bold text-lg text-gray-900 mb-2">{{ $type->name }}</h4>
+                                    <p class="text-sm text-gray-600">{{ $type->description ?? 'Premium fabric option' }}</p>
+                                </div>
+                            </label>
+                        @endforeach
+                    </div>
+                @endif
             </div>
 
             <!-- Quantity and Specifications -->
-            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 mb-8">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 mb-8 max-w-2xl mx-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Quantity -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
                             </svg>
-                            Quantity (meters)
+                            Meters
                         </label>
                         <input type="number" 
                                id="fabric_quantity_meters" 
@@ -125,6 +97,9 @@
                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-red-700 focus:ring-red-700" 
                                value="{{ old('fabric_quantity_meters', 2) }}" 
                                required>
+                        <p class="text-xs text-gray-500 mt-2">
+                            <span id="priceInfo">Price will be calculated after you select a pattern in the next step</span>
+                        </p>
                     </div>
 
                     <!-- Intended Use -->
@@ -140,27 +115,25 @@
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-700 focus:border-transparent"
                                 required>
                             <option value="">Select intended use</option>
-                            <option value="clothing">Clothing</option>
-                            <option value="home_decor">Home Decor</option>
-                            <option value="crafts">Crafts</option>
+                            @foreach($intendedUses as $use)
+                                <option value="{{ $use->id }}">{{ $use->name }}</option>
+                            @endforeach
                         </select>
                     </div>
                 </div>
 
                 <!-- Special Requirements -->
-                <div class="mt-6">
+                <div class="mt-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                         <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
- 
-                        </ .414- .414 .414 .4 .4.
-                    </svg>
-                    Special Requirements (Optional)
-                </label>
-                <textarea name="special_requirements" 
-                          rows="3" 
-                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent" style="--tw-ring-color:#800000;"
-                          placeholder="Any special requirements or preferences..."></textarea>
+                        </svg>
+                        Special Requirements (Optional)
+                    </label>
+                    <textarea name="special_requirements" 
+                              rows="3" 
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent" style="--tw-ring-color:#800000;"
+                              placeholder="Any special requirements or preferences..."></textarea>
                 </div>
             </div>
 
@@ -293,6 +266,45 @@ document.getElementById('fabricSelectionForm').addEventListener('submit', functi
     submitBtn.innerHTML = '<span class="flex items-center"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Processing...</span>';
     
     showNotification('Processing your fabric selection...', 'info');
+});
+
+// Update fabric cost dynamically based on selected pattern's price_per_meter
+document.addEventListener('DOMContentLoaded', function() {
+    const meterInput = document.getElementById('fabric_quantity_meters');
+    const priceInfo = document.getElementById('priceInfo');
+    
+    function updatePriceInfo() {
+        try {
+            // Get selected pattern data from sessionStorage
+            const wizardDataStr = sessionStorage.getItem('wizard_data');
+            if (wizardDataStr) {
+                const wizardData = JSON.parse(wizardDataStr);
+                const meters = parseFloat(meterInput.value) || 0;
+                
+                // If pattern is selected, show dynamic price
+                if (wizardData.pattern && wizardData.pattern.selected_ids && wizardData.pattern.selected_ids.length > 0) {
+                    // We don't have direct access to pattern data here, so show this message
+                    priceInfo.innerHTML = '<em>Pattern-specific pricing will be applied at checkout</em>';
+                } else {
+                    priceInfo.innerHTML = '<strong>Select a pattern first</strong> to see pricing based on that pattern';
+                }
+            }
+        } catch (e) {
+            console.log('Pattern data not yet available');
+        }
+    }
+    
+    if (meterInput) {
+        // Check for pattern selection periodically
+        setInterval(updatePriceInfo, 500);
+        
+        // Update on meter change
+        meterInput.addEventListener('input', updatePriceInfo);
+        meterInput.addEventListener('change', updatePriceInfo);
+        
+        // Initial check
+        updatePriceInfo();
+    }
 });
 </script>
 @endpush

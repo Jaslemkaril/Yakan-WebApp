@@ -143,14 +143,11 @@
                 <button onclick="filterPatterns('traditional')" class="category-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors">
                     Traditional
                 </button>
-                <button onclick="filterPatterns('geometric')" class="category-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors">
-                    Geometric
+                <button onclick="filterPatterns('modern')" class="category-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors">
+                    Modern
                 </button>
-                <button onclick="filterPatterns('floral')" class="category-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors">
-                    Nature & Floral
-                </button>
-                <button onclick="filterPatterns('abstract')" class="category-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors">
-                    Symbolic
+                <button onclick="filterPatterns('contemporary')" class="category-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors">
+                    Contemporary
                 </button>
             </div>
         </div>
@@ -508,9 +505,17 @@
                                         {{ $pattern->estimated_days }} days
                                     </span>
                                 </div>
-                                <span class="font-bold" style="color:#800000;">
-                                    ×{{ number_format($pattern->base_price_multiplier, 2) }}
-                                </span>
+                                <div class="text-right">
+                                    <div class="font-bold" style="color:#800000;">
+                                        @php
+                                            $patternFee = $pattern->pattern_price ?? 0;
+                                        @endphp
+                                        ₱{{ number_format($patternFee, 2) }}
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        Per meter: <span style="color:#800000; font-semibold;">₱{{ number_format($pattern->price_per_meter ?? 0, 2) }}</span>
+                                    </p>
+                                </div>
                             </div>
                         </div>
                         

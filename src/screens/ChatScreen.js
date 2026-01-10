@@ -14,7 +14,9 @@ import {
   Animated,
   RefreshControl,
   Image,
+  SafeAreaView,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useCart } from '../context/CartContext';
 import ApiService from '../services/api';
 import colors from '../constants/colors';
@@ -31,9 +33,12 @@ export default function ChatScreen({ navigation }) {
   const [showNewChatForm, setShowNewChatForm] = useState(false);
   const [newChatSubject, setNewChatSubject] = useState('');
   const [newChatMessage, setNewChatMessage] = useState('');
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const { isLoggedIn } = useCart();
   const flatListRef = useRef(null);
   const scaleAnim = useRef(new Animated.Value(0)).current;
+  const previousMessageCount = useRef(0);
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -44,13 +49,15 @@ export default function ChatScreen({ navigation }) {
   }, [isLoggedIn]);
 
   useEffect(() => {
-    if (selectedChat) {
+    if (selectedChat?.id) {
       // Immediately fetch messages when chat is selected
-      fetchChatMessages(selectedChat.id);
+      fetchChatMessages(selectedChat.id, true);
       
       // When viewing a chat, poll for new messages more frequently
       const messageInterval = setInterval(() => {
-        fetchChatMessages(selectedChat.id);
+        if (selectedChat?.id) {
+          fetchChatMessages(selectedChat.id);
+        }
       }, 1500); // Poll every 1.5 seconds for new messages
       
       return () => {
@@ -58,7 +65,7 @@ export default function ChatScreen({ navigation }) {
         clearInterval(messageInterval);
       };
     }
-  }, [selectedChat]);
+  }, [selectedChat?.id]);
 
   useEffect(() => {
     Animated.spring(scaleAnim, {
@@ -78,6 +85,12 @@ export default function ChatScreen({ navigation }) {
         const chatsData = response.data?.data || response.data || [];
         const chatCount = Array.isArray(chatsData) ? chatsData.length : 0;
         console.log(`[ChatScreen] Fetched ${chatCount} chats`);
+        
+        // Log each chat to see its structure
+        chatsData.forEach((chat, index) => {
+          console.log(`[ChatScreen] Chat ${index}:`, JSON.stringify(chat, null, 2));
+        });
+        
         setChats(chatsData);
         setLoading(false);
       } else {
@@ -92,7 +105,7 @@ export default function ChatScreen({ navigation }) {
     }
   };
 
-  const fetchChatMessages = async (chatId) => {
+  const fetchChatMessages = async (chatId, shouldAutoScroll = false) => {
     try {
       console.log('[ChatScreen] Fetching messages for chat:', chatId);
       const response = await ApiService.getChat(chatId);
@@ -104,13 +117,20 @@ export default function ChatScreen({ navigation }) {
         const newMessages = chatData?.messages || [];
         const messageCount = Array.isArray(newMessages) ? newMessages.length : 0;
         console.log(`[ChatScreen] Fetched ${messageCount} messages for chat ${chatId}`);
+        
+        // Only auto-scroll if: 1) explicitly requested, 2) new messages arrived, 3) user isn't scrolling
+        const hasNewMessages = messageCount > previousMessageCount.current;
+        previousMessageCount.current = messageCount;
+        
         setMessages(newMessages);
         setSelectedChat(chatData);
         
-        // Auto-scroll to latest message
-        setTimeout(() => {
-          flatListRef.current?.scrollToEnd({ animated: true });
-        }, 100);
+        // Auto-scroll only when needed
+        if ((shouldAutoScroll || hasNewMessages) && !isUserScrolling) {
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        }
       } else {
         console.error('[ChatScreen] Failed to fetch messages:', response?.error || 'Unknown error');
       }
@@ -121,31 +141,60 @@ export default function ChatScreen({ navigation }) {
 
   const handleSelectChat = (chat) => {
     setSelectedChat(chat);
-    fetchChatMessages(chat.id);
+    setIsUserScrolling(false);
+    previousMessageCount.current = 0;
+    fetchChatMessages(chat.id, true);
   };
 
   const handleRefreshMessages = async () => {
     setRefreshing(true);
+    setIsUserScrolling(false);
     try {
-      await fetchChatMessages(selectedChat.id);
+      await fetchChatMessages(selectedChat.id, true);
     } finally {
       setRefreshing(false);
     }
   };
 
+  const handlePickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please allow access to your photos to upload images.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setSelectedImage(result.assets[0]);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
   const handleSendMessage = async () => {
-    if (!newMessage.trim()) {
-      Alert.alert('Error', 'Please enter a message');
+    if (!newMessage.trim() && !selectedImage) {
+      Alert.alert('Error', 'Please enter a message or select an image');
       return;
     }
 
     setSending(true);
     try {
-      const response = await ApiService.sendChatMessage(selectedChat.id, newMessage);
+      const response = await ApiService.sendChatMessage(selectedChat.id, newMessage, selectedImage);
       if (response.success) {
         setNewMessage('');
-        // Immediately fetch updated messages
-        await fetchChatMessages(selectedChat.id);
+        setSelectedImage(null);
+        setIsUserScrolling(false);
+        // Immediately fetch updated messages and scroll to bottom
+        await fetchChatMessages(selectedChat.id, true);
       } else {
         Alert.alert('Error', response.error || 'Failed to send message');
       }
@@ -225,54 +274,59 @@ export default function ChatScreen({ navigation }) {
 
   if (!isLoggedIn) {
     return (
-      <View style={styles.container}>
-        <View style={styles.centerContent}>
-          <Text style={styles.emptyIcon}>💬</Text>
-          <Text style={styles.title}>Login Required</Text>
-          <Text style={styles.subtitle}>Please login to access chat</Text>
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={() => navigation.navigate('Login')}
-          >
-            <Text style={styles.loginButtonText}>Go to Login</Text>
-          </TouchableOpacity>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <View style={styles.centerContent}>
+            <Text style={styles.emptyIcon}>💬</Text>
+            <Text style={styles.title}>Login Required</Text>
+            <Text style={styles.subtitle}>Please login to access chat</Text>
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => navigation.navigate('Login')}
+            >
+              <Text style={styles.loginButtonText}>Go to Login</Text>
+            </TouchableOpacity>
+          </View>
+          <BottomNav navigation={navigation} activeRoute="Chat" />
         </View>
-        <BottomNav navigation={navigation} activeRoute="Chat" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading chats...</Text>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <View style={styles.centerContent}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Loading chats...</Text>
+          </View>
+          <BottomNav navigation={navigation} activeRoute="Chat" />
         </View>
-        <BottomNav navigation={navigation} activeRoute="Chat" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   // Show chat detail view
   if (selectedChat) {
     return (
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={styles.chatHeader}>
-          <TouchableOpacity 
-            style={styles.backButtonContainer}
-            onPress={() => {
-              console.log('[ChatScreen] Back button pressed, clearing selectedChat');
-              setSelectedChat(null);
-              setMessages([]);
-            }}
-          >
-            <Text style={styles.backButton}>← Back</Text>
-          </TouchableOpacity>
-          <View style={styles.chatHeaderInfo}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <View style={styles.chatHeader}>
+            <TouchableOpacity 
+              style={styles.backButtonContainer}
+              onPress={() => {
+                console.log('[ChatScreen] Back button pressed, clearing selectedChat');
+                setSelectedChat(null);
+                setMessages([]);
+                setIsUserScrolling(false);
+                previousMessageCount.current = 0;
+                fetchChats(); // Refresh the chat list
+              }}
+            >
+              <Text style={styles.backButton}>← Back</Text>
+            </TouchableOpacity>
+            <View style={styles.chatHeaderInfo}>
             <Text style={styles.chatSubject} numberOfLines={1}>{selectedChat.subject}</Text>
             <View style={styles.statusBadge}>
               <View style={[
@@ -290,129 +344,158 @@ export default function ChatScreen({ navigation }) {
               <Text style={styles.closeButton}>✕</Text>
             </TouchableOpacity>
           )}
-        </View>
+          </View>
 
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => {
-            const isPriceQuote = item.sender_type === 'admin' && item.message.includes('PRICE QUOTE');
-            const hasResponded = messages.some(msg => 
-              msg.sender_type === 'user' && 
-              msg.created_at > item.created_at &&
-              (msg.message.includes('accepted the price quote') || msg.message.includes('declined the price quote'))
-            );
+          <FlatList
+            style={styles.messagesFlatList}
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => {
+              const isPriceQuote = item.sender_type === 'admin' && item.message.includes('PRICE QUOTE');
+              const hasResponded = messages.some(msg => 
+                msg.sender_type === 'user' && 
+                msg.created_at > item.created_at &&
+                (msg.message.includes('accepted the price quote') || msg.message.includes('declined the price quote'))
+              );
 
-            return (
-              <View>
-                <View
-                  style={[
-                    styles.messageBubble,
-                    item.sender_type === 'user'
-                      ? styles.userMessage
-                      : styles.adminMessage,
+              return (
+                <View>
+                  <View
+                    style={[
+                      styles.messageBubble,
+                      item.sender_type === 'user'
+                        ? styles.userMessage
+                        : styles.adminMessage,
                   ]}
                 >
-                  {item.image_url && (
-                    <Image 
-                      source={{ uri: item.image_url }}
-                      style={styles.messageImage}
-                      resizeMode="cover"
-                    />
+                    {item.image_url && (
+                      <Image 
+                        source={{ uri: item.image_url }}
+                        style={styles.messageImage}
+                        resizeMode="cover"
+                      />
+                    )}
+                    <Text style={[
+                      styles.messageText,
+                      item.sender_type === 'user' ? styles.userMessageText : styles.adminMessageText
+                    ]}>
+                      {item.message}
+                    </Text>
+                    <Text style={[
+                      styles.messageTime,
+                      item.sender_type === 'user' ? styles.userMessageTime : styles.adminMessageTime
+                    ]}>
+                      {new Date(item.created_at).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </Text>
+                  </View>
+                  
+                  {isPriceQuote && !hasResponded && (
+                    <View style={styles.quoteButtonsContainer}>
+                      <TouchableOpacity
+                        style={[styles.quoteButton, styles.acceptButton]}
+                        onPress={() => handleRespondToQuote(selectedChat.id, 'accepted', item.id)}
+                      >
+                        <Text style={styles.quoteButtonText}>✓ Accept Price</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.quoteButton, styles.declineButton]}
+                        onPress={() => handleRespondToQuote(selectedChat.id, 'declined', item.id)}
+                      >
+                        <Text style={styles.quoteButtonText}>✗ Decline</Text>
+                      </TouchableOpacity>
+                    </View>
                   )}
-                  <Text style={[
-                    styles.messageText,
-                    item.sender_type === 'user' ? styles.userMessageText : styles.adminMessageText
-                  ]}>
-                    {item.message}
-                  </Text>
-                  <Text style={[
-                    styles.messageTime,
-                    item.sender_type === 'user' ? styles.userMessageTime : styles.adminMessageTime
-                  ]}>
-                    {new Date(item.created_at).toLocaleTimeString([], { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </Text>
                 </View>
-                
-                {isPriceQuote && !hasResponded && (
-                  <View style={styles.quoteButtonsContainer}>
+              );
+            }}
+            contentContainerStyle={styles.messagesList}
+            onScroll={() => setIsUserScrolling(true)}
+            onScrollBeginDrag={() => setIsUserScrolling(true)}
+            onMomentumScrollEnd={() => {
+              // Reset scrolling flag after a delay to allow new messages to auto-scroll
+              setTimeout(() => setIsUserScrolling(false), 2000);
+            }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefreshMessages}
+                tintColor={colors.primary}
+              />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyMessages}>
+                <Text style={styles.emptyMessagesText}>No messages yet</Text>
+              </View>
+            }
+          />
+
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+          >
+            {selectedChat.status === 'open' && (
+              <View style={styles.inputContainer}>
+                <TouchableOpacity
+                  style={styles.imagePickerButton}
+                  onPress={handlePickImage}
+                  disabled={sending}
+                >
+                  <Text style={styles.imagePickerIcon}>+</Text>
+                </TouchableOpacity>
+                {selectedImage && (
+                  <View style={styles.selectedImagePreview}>
+                    <Image
+                      source={{ uri: selectedImage.uri }}
+                      style={styles.selectedImageThumbnail}
+                    />
                     <TouchableOpacity
-                      style={[styles.quoteButton, styles.acceptButton]}
-                      onPress={() => handleRespondToQuote(selectedChat.id, 'accepted', item.id)}
+                      style={styles.removeImageButton}
+                      onPress={() => setSelectedImage(null)}
                     >
-                      <Text style={styles.quoteButtonText}>✓ Accept Price</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.quoteButton, styles.declineButton]}
-                      onPress={() => handleRespondToQuote(selectedChat.id, 'declined', item.id)}
-                    >
-                      <Text style={styles.quoteButtonText}>✗ Decline</Text>
+                      <Text style={styles.removeImageIcon}>×</Text>
                     </TouchableOpacity>
                   </View>
                 )}
+                <TextInput
+                  style={styles.input}
+                  placeholder="Type your message..."
+                  placeholderTextColor="#999"
+                  value={newMessage}
+                  onChangeText={setNewMessage}
+                  multiline
+                  maxLength={500}
+                  editable={!sending}
+                />
+                <TouchableOpacity
+                  style={[styles.sendButton, sending && styles.sendButtonDisabled]}
+                  onPress={handleSendMessage}
+                  disabled={sending}
+                >
+                  {sending ? (
+                    <ActivityIndicator color={colors.white} size="small" />
+                  ) : (
+                    <Text style={styles.sendButtonIcon}>➤</Text>
+                  )}
+                </TouchableOpacity>
               </View>
-            );
-          }}
-          onContentSizeChange={() =>
-            flatListRef.current?.scrollToEnd({ animated: true })
-          }
-          contentContainerStyle={styles.messagesList}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefreshMessages}
-              tintColor={colors.primary}
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyMessages}>
-              <Text style={styles.emptyMessagesText}>No messages yet</Text>
-            </View>
-          }
-        />
+            )}
+          </KeyboardAvoidingView>
 
-        {selectedChat.status === 'open' && (
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Type your message..."
-              placeholderTextColor="#999"
-              value={newMessage}
-              onChangeText={setNewMessage}
-              multiline
-              maxLength={500}
-              editable={!sending}
-            />
-            <TouchableOpacity
-              style={[styles.sendButton, sending && styles.sendButtonDisabled]}
-              onPress={handleSendMessage}
-              disabled={sending}
-            >
-              {sending ? (
-                <ActivityIndicator color={colors.white} size="small" />
-              ) : (
-                <Text style={styles.sendButtonIcon}>➤</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <BottomNav navigation={navigation} activeRoute="Chat" />
-      </KeyboardAvoidingView>
+          <BottomNav navigation={navigation} activeRoute="Chat" />
+        </View>
+      </SafeAreaView>
     );
   }
 
   // Show new chat form
   if (showNewChatForm) {
     return (
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
         <View style={styles.formHeader}>
           <TouchableOpacity 
             style={styles.backButtonContainer}
@@ -424,7 +507,12 @@ export default function ChatScreen({ navigation }) {
           <View style={{ width: 40 }} />
         </View>
 
-        <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        >
+          <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.formSection}>
             <Text style={styles.label}>Subject *</Text>
             <TextInput
@@ -469,15 +557,18 @@ export default function ChatScreen({ navigation }) {
             )}
           </TouchableOpacity>
         </ScrollView>
+        </KeyboardAvoidingView>
 
         <BottomNav navigation={navigation} activeRoute="Chat" />
-      </KeyboardAvoidingView>
+      </View>
+      </SafeAreaView>
     );
   }
 
   // Show chats list
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Messages</Text>
@@ -527,7 +618,28 @@ export default function ChatScreen({ navigation }) {
                     {item.subject}
                   </Text>
                   <Text style={styles.chatItemPreview} numberOfLines={1}>
-                    {item.latestMessage?.message || 'No messages yet'}
+                    {(() => {
+                      // Try different possible structures for latest message
+                      let lastMsg = null;
+                      
+                      // First try the direct latest_message property
+                      if (item.latest_message?.message) {
+                        lastMsg = item.latest_message.message;
+                      } else if (item.latestMessage?.message) {
+                        lastMsg = item.latestMessage.message;
+                      } else if (item.messages && Array.isArray(item.messages) && item.messages.length > 0) {
+                        // Sort messages by created_at or id to get the most recent
+                        const sortedMessages = [...item.messages].sort((a, b) => {
+                          const timeA = new Date(a.created_at).getTime();
+                          const timeB = new Date(b.created_at).getTime();
+                          return timeB - timeA; // Descending order (newest first)
+                        });
+                        lastMsg = sortedMessages[0]?.message;
+                      }
+                      
+                      console.log(`[ChatScreen] Chat "${item.subject}" preview:`, lastMsg);
+                      return lastMsg || 'Start conversation';
+                    })()}
                   </Text>
                 </View>
               </View>
@@ -555,10 +667,15 @@ export default function ChatScreen({ navigation }) {
 
       <BottomNav navigation={navigation} activeRoute="Chat" />
     </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.white,
+  },
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
@@ -574,20 +691,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: colors.white,
+    paddingTop: 50,
+    paddingBottom: 16,
+    backgroundColor: '#8B1A1A',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#8B1A1A',
   },
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: colors.text,
+    color: '#fff',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 13,
-    color: '#999',
+    color: 'rgba(255, 255, 255, 0.8)',
     fontWeight: '500',
   },
   emptyIcon: {
@@ -603,10 +721,10 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: colors.primary,
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: colors.primary,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -614,12 +732,13 @@ const styles = StyleSheet.create({
   },
   newChatButtonIcon: {
     fontSize: 28,
-    color: colors.white,
+    color: '#8B1A1A',
     fontWeight: 'bold',
   },
   chatsList: {
     paddingHorizontal: 12,
     paddingVertical: 12,
+    paddingBottom: 80,
   },
   chatItem: {
     backgroundColor: colors.white,
@@ -745,18 +864,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingTop: 50,
+    paddingBottom: 12,
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
   backButtonContainer: {
-    padding: 8,
+    padding: 12,
+    marginRight: 8,
   },
   backButton: {
-    fontSize: 16,
+    fontSize: 18,
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   chatHeaderInfo: {
     flex: 1,
@@ -797,9 +918,13 @@ const styles = StyleSheet.create({
     color: '#f44336',
     fontWeight: 'bold',
   },
+  messagesFlatList: {
+    flex: 1,
+  },
   messagesList: {
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: 20,
   },
   messageBubble: {
     marginVertical: 6,
@@ -855,11 +980,53 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 10,
     backgroundColor: colors.white,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
+  },
+  imagePickerButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  imagePickerIcon: {
+    fontSize: 24,
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
+  selectedImagePreview: {
+    position: 'relative',
+    marginRight: 8,
+  },
+  selectedImageThumbnail: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeImageIcon: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   input: {
     flex: 1,

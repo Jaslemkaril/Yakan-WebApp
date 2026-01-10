@@ -427,7 +427,7 @@
                             <!-- Subtotal Row -->
                             <div class="flex justify-between items-center py-3 border-b border-gray-100">
                                 <span class="text-gray-600 font-medium subtotal-items">Subtotal ({{ count($cartItems) }} items)</span>
-                                <span class="font-bold text-gray-900 order-subtotal text-lg">₱{{ number_format($subtotal ?? $total, 2) }}</span>
+                                <span class="font-bold text-gray-900 order-subtotal text-lg">₱{{ number_format($total, 2) }}</span>
                             </div>
 
                             <!-- Coupon Section -->

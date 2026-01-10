@@ -22,7 +22,18 @@
     </div>
 
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        <form method="POST" action="{{ route('admin.patterns.update', $pattern) }}" enctype="multipart/form-data" class="space-y-6">
+        @if ($errors->any())
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <strong>Please fix the following errors:</strong>
+                <ul>
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <form method="POST" action="{{ route('admin.patterns.update', $pattern) }}" enctype="multipart/form-data" class="space-y-6" id="patternForm">
             @csrf
             @method('PATCH')
 
@@ -47,7 +58,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Difficulty Level *</label>
-                        <select name="difficulty_level" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500">
+                        <select name="difficulty_level" id="difficulty_level" onchange="updatePriceByDifficulty()" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500">
                             <option value="">Select Difficulty</option>
                             <option value="simple" {{ old('difficulty_level', $pattern->difficulty_level) == 'simple' ? 'selected' : '' }}>Simple</option>
                             <option value="medium" {{ old('difficulty_level', $pattern->difficulty_level) == 'medium' ? 'selected' : '' }}>Medium</option>
@@ -60,6 +71,21 @@
                         <input type="text" name="base_color" value="{{ old('base_color', $pattern->base_color) }}" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500" />
                         @error('base_color') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Production Time (Days) *</label>
+                        <input type="number" min="1" max="180" name="production_days" value="{{ old('production_days', $pattern->production_days) }}" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500" placeholder="e.g., 14" />
+                        @error('production_days') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Pattern Price (₱) *</label>
+                        <input type="number" step="0.01" min="0" name="pattern_price" value="{{ old('pattern_price', $pattern->pattern_price) }}" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500" placeholder="e.g., 1500" />
+                        @error('pattern_price') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Price Per Meter (₱) *</label>
+                        <input type="number" step="0.01" min="0" name="price_per_meter" value="{{ old('price_per_meter', $pattern->price_per_meter) }}" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500" placeholder="e.g., 500" />
+                        @error('price_per_meter') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                    </div>
                 </div>
                 <div class="mt-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -68,20 +94,15 @@
                 </div>
             </div>
 
-            <!-- Pricing & Settings -->
+            <!-- Settings -->
             <div class="bg-white rounded-xl shadow-lg p-6">
-                <h2 class="text-xl font-black text-gray-900 mb-4">Pricing & Settings</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Base Price Multiplier</label>
-                        <input type="number" step="0.01" min="0" max="10" name="base_price_multiplier" value="{{ old('base_price_multiplier', $pattern->base_price_multiplier) }}" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500" />
-                        @error('base_price_multiplier') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-                    </div>
-                    <div class="flex items-center mt-6">
-                        <input type="checkbox" name="is_active" value="1" class="rounded" @checked(old('is_active', $pattern->is_active)) />
-                        <span class="ml-2 text-sm font-medium text-gray-700">Active</span>
-                    </div>
+                <h2 class="text-xl font-black text-gray-900 mb-4">Settings</h2>
+                <div class="flex items-center mb-3">
+                    <input type="hidden" name="is_active" value="0" />
+                    <input type="checkbox" name="is_active" value="1" class="rounded" @checked(old('is_active', $pattern->is_active)) />
+                    <span class="ml-2 text-sm font-medium text-gray-700">Active</span>
                 </div>
+                <p class="text-xs text-gray-600">✓ Each pattern has its own individual price set above</p>
             </div>
 
             <!-- Tags -->
@@ -105,15 +126,7 @@
                         @foreach($pattern->media as $media)
                             <div class="relative group">
                                 <img src="{{ $media->url }}" alt="{{ $media->alt_text ?? $pattern->name }}" class="w-full h-32 object-cover rounded-lg" />
-                                <form action="{{ route('admin.patterns.destroy', $pattern) }}" method="POST" class="absolute top-2 right-2" onsubmit="return confirm('Remove this media?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                        </svg>
-                                    </button>
-                                </form>
+                                <div class="absolute top-2 right-2 text-xs bg-green-500 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">Saved</div>
                             </div>
                         @endforeach
                     </div>
@@ -136,15 +149,36 @@
             </div>
 
             <!-- Actions -->
-            <div class="flex justify-end gap-4">
-                <a href="{{ route('admin.patterns.index') }}" class="px-6 py-3 bg-gray-200 text-gray-700 font-black rounded-lg hover:bg-gray-300 transition-colors">Cancel</a>
-                <button type="submit" class="px-6 py-3 bg-maroon-600 text-white font-black rounded-lg hover:bg-maroon-700 transition-colors">Update Pattern</button>
+            <div class="flex justify-end gap-4 bg-white rounded-xl shadow-lg p-6">
+                <a href="{{ route('admin.patterns.index') }}" class="px-6 py-3 bg-gray-400 text-white font-black rounded-lg hover:bg-gray-500 transition-colors">Cancel</a>
+                <button type="submit" form="patternForm" class="px-8 py-3 text-white font-black rounded-lg hover:opacity-90 transition-all shadow-lg" style="background-color: #800000;">Save Pattern</button>
             </div>
         </form>
     </div>
 </div>
 
 <script>
+// Auto-update price based on difficulty level
+function updatePriceByDifficulty() {
+    const difficultyLevel = document.getElementById('difficulty_level').value;
+    const priceInput = document.querySelector('input[name="base_price_multiplier"]');
+    
+    const priceMap = {
+        'simple': 1300,
+        'medium': 1950,
+        'complex': 2600
+    };
+    
+    if (priceInput && priceMap[difficultyLevel]) {
+        priceInput.value = priceMap[difficultyLevel];
+    }
+}
+
+// Set initial price on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updatePriceByDifficulty();
+});
+
 document.getElementById('media-upload').addEventListener('change', function(e) {
     const preview = document.getElementById('media-preview');
     preview.innerHTML = '';

@@ -109,11 +109,11 @@
                                 @endif
                             </div>
                             <div class="flex gap-2 mt-4">
-                                <a href="{{ route('admin.patterns.edit', $pattern) }}" class="flex-1 text-center px-3 py-1 bg-maroon-600 text-white text-sm rounded-lg hover:bg-maroon-700 transition-colors">Edit</a>
-                                <form action="{{ route('admin.patterns.destroy', $pattern) }}" method="POST" onsubmit="return confirm('Are you sure?')">
+                                <a href="{{ route('admin.patterns.edit', $pattern) }}" class="flex-1 text-center px-3 py-2 border-2 border-maroon-600 text-maroon-600 text-sm font-bold rounded-lg hover:bg-maroon-50 transition-colors" style="border-color: #800000; color: #800000;">Edit</a>
+                                <form action="{{ route('admin.patterns.destroy', $pattern) }}" method="POST" onsubmit="return confirm('Are you sure?')" class="flex-1">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="flex-1 px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors">Delete</button>
+                                    <button type="submit" class="w-full px-3 py-2 bg-maroon-600 text-white text-sm font-bold rounded-lg hover:bg-maroon-700 transition-colors" style="background-color: #800000;">Delete</button>
                                 </form>
                             </div>
                         </div>

@@ -327,7 +327,7 @@
                         <td class="px-6 py-4">
                             <div class="text-sm">
                                 @if($order->fabric_type)
-                                    <p class="font-medium text-gray-900">{{ ucfirst($order->fabric_type) }}</p>
+                                    <p class="font-medium text-gray-900">{{ $order->fabric_type_name }}</p>
                                     <p class="text-gray-500">{{ $order->formatted_fabric_quantity ?? $order->fabric_quantity_meters . ' m' }}</p>
                                 @else
                                     <p class="text-gray-500">N/A</p>

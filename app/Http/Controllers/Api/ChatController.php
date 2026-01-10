@@ -20,16 +20,17 @@ class ChatController extends Controller
             $user = $request->user();
             
             $chats = Chat::where('user_id', $user->id)
-                ->with(['messages' => function($query) {
-                    $query->latest()->limit(1);
-                }])
                 ->orderBy('updated_at', 'desc')
                 ->get();
 
             // Transform chats for mobile app
             $transformedChats = $chats->map(function($chat) {
-                $latestMessage = $chat->messages->first();
-                $unreadCount = $chat->messages()
+                // Get the actual latest message by querying directly
+                $latestMessage = ChatMessage::where('chat_id', $chat->id)
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+                    
+                $unreadCount = ChatMessage::where('chat_id', $chat->id)
                     ->where('sender_type', 'admin')
                     ->where('is_read', false)
                     ->count();
@@ -46,7 +47,7 @@ class ChatController extends Controller
                         'sender_type' => $latestMessage->sender_type,
                     ] : null,
                     'unread_count' => $unreadCount,
-                    'messages_count' => $chat->messages()->count(),
+                    'messages_count' => ChatMessage::where('chat_id', $chat->id)->count(),
                 ];
             });
 
@@ -183,7 +184,8 @@ class ChatController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'message' => 'required|string',
+                'message' => 'nullable|string',
+                'image' => 'nullable|image|mimes:jpeg,jpg,png,gif|max:5120', // 5MB max
             ]);
 
             if ($validator->fails()) {
@@ -191,6 +193,14 @@ class ChatController extends Controller
                     'success' => false,
                     'message' => 'Validation failed',
                     'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            // Check if at least message or image is provided
+            if (!$request->message && !$request->hasFile('image')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Either message or image is required',
                 ], 422);
             }
 
@@ -207,11 +217,21 @@ class ChatController extends Controller
                 ], 404);
             }
 
+            $imagePath = null;
+            
+            // Handle image upload
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $imageName = 'chat_' . time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('chat_images', $imageName, 'public');
+            }
+
             // Create message
             $message = ChatMessage::create([
                 'chat_id' => $chat->id,
                 'sender_type' => 'user',
-                'message' => $request->message,
+                'message' => $request->message ?? '',
+                'image_path' => $imagePath,
                 'is_read' => false,
             ]);
 
@@ -225,6 +245,7 @@ class ChatController extends Controller
                     'id' => $message->id,
                     'message' => $message->message,
                     'sender_type' => $message->sender_type,
+                    'image_url' => $imagePath ? url('storage/' . $imagePath) : null,
                     'created_at' => $message->created_at->toISOString(),
                 ],
             ], 201);

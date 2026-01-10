@@ -66,7 +66,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Difficulty Level *</label>
-                        <select name="difficulty_level" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500">
+                        <select name="difficulty_level" id="difficulty_level" onchange="updatePriceByDifficulty()" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500">
                             <option value="simple" {{ old('difficulty_level', 'simple') == 'simple' ? 'selected' : '' }}>Simple</option>
                             <option value="medium" {{ old('difficulty_level') == 'medium' ? 'selected' : '' }}>Medium</option>
                             <option value="complex" {{ old('difficulty_level') == 'complex' ? 'selected' : '' }}>Complex</option>
@@ -78,6 +78,21 @@
                         <input type="text" name="base_color" value="{{ old('base_color') }}" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500" />
                         @error('base_color') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Production Time (Days) *</label>
+                        <input type="number" min="1" max="180" name="production_days" value="{{ old('production_days', 14) }}" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500" placeholder="e.g., 14" />
+                        @error('production_days') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Pattern Price (₱) *</label>
+                        <input type="number" step="0.01" min="0" name="pattern_price" value="{{ old('pattern_price', 0) }}" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500" placeholder="e.g., 1500" />
+                        @error('pattern_price') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Price Per Meter (₱) *</label>
+                        <input type="number" step="0.01" min="0" name="price_per_meter" value="{{ old('price_per_meter', 0) }}" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500" placeholder="e.g., 500" />
+                        @error('price_per_meter') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                    </div>
                 </div>
                 <div class="mt-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -86,20 +101,15 @@
                 </div>
             </div>
 
-            <!-- Pricing & Settings -->
+            <!-- Settings -->
             <div class="bg-white rounded-xl shadow-lg p-6">
-                <h2 class="text-xl font-black text-gray-900 mb-4">Pricing & Settings</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Base Price Multiplier</label>
-                        <input type="number" step="0.01" min="0" max="10" name="base_price_multiplier" value="{{ old('base_price_multiplier') }}" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500" />
-                        @error('base_price_multiplier') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-                    </div>
-                    <div class="flex items-center mt-6">
-                        <input type="checkbox" name="is_active" value="1" class="rounded" @checked(old('is_active', true)) />
-                        <span class="ml-2 text-sm font-medium text-gray-700">Active</span>
-                    </div>
+                <h2 class="text-xl font-black text-gray-900 mb-4">Settings</h2>
+                <div class="flex items-center mb-3">
+                    <input type="hidden" name="is_active" value="0" />
+                    <input type="checkbox" name="is_active" value="1" class="rounded" @checked(old('is_active', true)) />
+                    <span class="ml-2 text-sm font-medium text-gray-700">Active</span>
                 </div>
+                <p class="text-xs text-gray-600">✓ Each pattern now has its own individual price set above</p>
             </div>
 
             <!-- Tags -->
@@ -187,6 +197,27 @@
 <script>
 // Debug logging
 console.log('Pattern create form script loaded');
+
+// Auto-update price based on difficulty level
+function updatePriceByDifficulty() {
+    const difficultyLevel = document.getElementById('difficulty_level').value;
+    const priceInput = document.querySelector('input[name="base_price_multiplier"]');
+    
+    const priceMap = {
+        'simple': 1300,
+        'medium': 1950,
+        'complex': 2600
+    };
+    
+    if (priceInput && priceMap[difficultyLevel]) {
+        priceInput.value = priceMap[difficultyLevel];
+    }
+}
+
+// Set initial price on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updatePriceByDifficulty();
+});
 
 // SVG upload handler
 function handleSvgUpload(e) {

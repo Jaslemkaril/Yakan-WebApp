@@ -13,11 +13,14 @@ class YakanPattern extends Model
         'description',
         'category',
         'difficulty_level',
+        'production_days',
         'pattern_data',
         'svg_path',
         'base_color',
         'color_variations',
         'base_price_multiplier',
+        'pattern_price',
+        'price_per_meter',
         'is_active',
         'popularity_score',
     ];
@@ -26,6 +29,8 @@ class YakanPattern extends Model
         'pattern_data' => 'array',
         'color_variations' => 'array',
         'base_price_multiplier' => 'decimal:2',
+        'pattern_price' => 'decimal:2',
+        'price_per_meter' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 
@@ -57,6 +62,11 @@ class YakanPattern extends Model
 
     public function getEstimatedDaysAttribute(): int
     {
+        // Return production_days from database if set, otherwise fallback to difficulty-based estimation
+        if ($this->production_days) {
+            return $this->production_days;
+        }
+
         $days = [
             'simple' => 7,
             'medium' => 14,

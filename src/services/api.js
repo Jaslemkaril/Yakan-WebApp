@@ -103,11 +103,15 @@ class ApiService {
       const url = `${this.baseUrl}${endpoint}`;
       
       const headers = {
-        'Content-Type': isFormData ? 'multipart/form-data' : 'application/json',
         'Accept': 'application/json',
         'ngrok-skip-browser-warning': 'true',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       };
+
+      // Don't set Content-Type for FormData - let React Native handle it with boundary
+      if (!isFormData) {
+        headers['Content-Type'] = 'application/json';
+      }
 
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -563,9 +567,40 @@ class ApiService {
   /**
    * Send message in chat
    */
-  async sendChatMessage(chatId, message) {
+  async sendChatMessage(chatId, message, image = null) {
     console.log('[ChatAPI] Sending message with token:', this.token ? 'present' : 'missing');
+    console.log('[ChatAPI] Message:', message);
+    console.log('[ChatAPI] Image:', image ? 'present' : 'null');
+    
     const endpoint = API_CONFIG.ENDPOINTS.CHAT.SEND_MESSAGE.replace(':id', chatId);
+    
+    if (image) {
+      // Use FormData for image upload
+      const formData = new FormData();
+      
+      // Add message if present
+      if (message && message.trim()) {
+        formData.append('message', message.trim());
+        console.log('[ChatAPI] Added message to FormData:', message.trim());
+      }
+      
+      const uriParts = image.uri.split('.');
+      const fileType = uriParts[uriParts.length - 1];
+      
+      const imageData = {
+        uri: image.uri,
+        name: `chat_image_${Date.now()}.${fileType}`,
+        type: `image/${fileType}`,
+      };
+      
+      console.log('[ChatAPI] Image data:', imageData);
+      formData.append('image', imageData);
+      
+      console.log('[ChatAPI] Sending FormData with image');
+      return await this.request('POST', endpoint, formData, true);
+    }
+    
+    console.log('[ChatAPI] Sending text-only message');
     return await this.request('POST', endpoint, { message });
   }
 

@@ -145,7 +145,7 @@
                     @if($order->isFabricOrder())
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Fabric Type</p>
-                            <p class="text-lg font-semibold text-gray-900">{{ $order->fabric_type }}</p>
+                            <p class="text-lg font-semibold text-gray-900">{{ $order->fabric_type_name }}</p>
                         </div>
                         <div>
                             <p class="text-sm text-gray-500 mb-1">Fabric Quantity</p>

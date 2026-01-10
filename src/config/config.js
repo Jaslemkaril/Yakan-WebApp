@@ -9,7 +9,7 @@ const getApiBaseUrl = () => {
   // For iOS Simulator, use localhost
   // For physical devices, use your machine's local IP
   
-  const MACHINE_IP = '192.168.0.122'; // ⚠️ UPDATE THIS WITH YOUR COMPUTER'S IP
+  const MACHINE_IP = '192.168.47.5'; // ⚠️ SCHOOL IP - Updated for presentation
   const PORT = '8000';
   
   // Try multiple URLs in order of preference
@@ -21,7 +21,7 @@ const getApiBaseUrl = () => {
 };
 
 const getStorageBaseUrl = () => {
-  const MACHINE_IP = '192.168.0.122';
+  const MACHINE_IP = '192.168.47.5';
   const PORT = '8000';
   
   // return `http://10.0.2.2:${PORT}/storage`; // Android Emulator

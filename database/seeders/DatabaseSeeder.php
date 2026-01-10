@@ -18,6 +18,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AdminUserSeederUpdated::class,
             YakanPatternSeeder::class,
+            FabricTypeSeeder::class,
+            IntendedUseSeeder::class,
         ]);
     }
 }

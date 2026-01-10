@@ -542,6 +542,37 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::post('/products/{product}/toggle-status', [AdminProductController::class, 'toggleStatus'])->name('products.toggleStatus');
     Route::post('/products/bulk-delete', [AdminProductController::class, 'bulkDelete'])->name('products.bulkDelete');
 
+    // System Settings
+    Route::get('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings.index');
+    Route::post('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('settings.update');
+
+    // Combined Patterns & Types Management
+    Route::get('/patterns-management', [\App\Http\Controllers\Admin\PatternsManagementController::class, 'index'])->name('patterns_management.index');
+
+    // Fabric Types Management
+    Route::resource('fabric-types', \App\Http\Controllers\Admin\FabricTypeController::class, ['names' => [
+        'index' => 'fabric_types.index',
+        'create' => 'fabric_types.create',
+        'store' => 'fabric_types.store',
+        'show' => 'fabric_types.show',
+        'edit' => 'fabric_types.edit',
+        'update' => 'fabric_types.update',
+        'destroy' => 'fabric_types.destroy',
+    ]]);
+    Route::patch('/fabric-types/{fabricType}', [\App\Http\Controllers\Admin\FabricTypeController::class, 'update'])->name('fabric_types.patch');
+    Route::post('/fabric-types/{fabricType}/toggle-active', [\App\Http\Controllers\Admin\FabricTypeController::class, 'toggleActive'])->name('fabric_types.toggle');
+
+    // Intended Uses Management
+    Route::get('/intended-uses', [\App\Http\Controllers\Admin\IntendedUseController::class, 'index'])->name('intended_uses.index');
+    Route::get('/intended-uses/create', [\App\Http\Controllers\Admin\IntendedUseController::class, 'create'])->name('intended_uses.create');
+    Route::post('/intended-uses', [\App\Http\Controllers\Admin\IntendedUseController::class, 'store'])->name('intended_uses.store');
+    Route::get('/intended-uses/{intendedUse}', [\App\Http\Controllers\Admin\IntendedUseController::class, 'show'])->name('intended_uses.show');
+    Route::get('/intended-uses/{intendedUse}/edit', [\App\Http\Controllers\Admin\IntendedUseController::class, 'edit'])->name('intended_uses.edit');
+    Route::put('/intended-uses/{intendedUse}', [\App\Http\Controllers\Admin\IntendedUseController::class, 'update'])->name('intended_uses.update');
+    Route::patch('/intended-uses/{intendedUse}', [\App\Http\Controllers\Admin\IntendedUseController::class, 'update'])->name('intended_uses.patch');
+    Route::delete('/intended-uses/{intendedUse}', [\App\Http\Controllers\Admin\IntendedUseController::class, 'destroy'])->name('intended_uses.destroy');
+    Route::post('/intended-uses/{intendedUse}/toggle-active', [\App\Http\Controllers\Admin\IntendedUseController::class, 'toggleActive'])->name('intended_uses.toggle');
+
     // Cultural Heritage Management
     Route::resource('cultural-heritage', \App\Http\Controllers\Admin\CulturalHeritageController::class);
     Route::post('/cultural-heritage/{id}/toggle-status', [\App\Http\Controllers\Admin\CulturalHeritageController::class, 'toggleStatus'])->name('cultural-heritage.toggleStatus');

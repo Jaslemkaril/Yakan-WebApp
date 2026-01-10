@@ -484,11 +484,24 @@ class CustomOrderController extends Controller
                 throw $dbEx;
             }
 
-            // For fabric orders, we don't need products or categories
-            // Just return the fabric selection view
-            \Log::info('Loading fabric selection step');
+            // Load active fabric types and intended uses
+            $fabricTypes = \App\Models\FabricType::active()->get();
+            $intendedUses = \App\Models\IntendedUse::active()->get();
             
-            return view('custom_orders.wizard.step1');
+            // Get price per meter from settings
+            $pricePerMeter = \App\Models\SystemSetting::get('price_per_meter', 200);
+            
+            \Log::info('Loading fabric selection step', [
+                'fabric_types_count' => $fabricTypes->count(),
+                'intended_uses_count' => $intendedUses->count(),
+                'price_per_meter' => $pricePerMeter
+            ]);
+            
+            return view('custom_orders.wizard.step1', [
+                'fabricTypes' => $fabricTypes,
+                'intendedUses' => $intendedUses,
+                'pricePerMeter' => $pricePerMeter
+            ]);
             
         } catch (\Exception $e) {
             \Log::error('createStep1 error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
@@ -535,9 +548,9 @@ class CustomOrderController extends Controller
 
             // Validate fabric selection instead of product
             $request->validate([
-                'fabric_type' => 'required|string',
+                'fabric_type' => 'required|integer|exists:fabric_types,id',
                 'fabric_quantity_meters' => 'required|numeric|min:0.5|max:100',
-                'intended_use' => 'required|string|in:clothing,home_decor,crafts',
+                'intended_use' => 'required|integer|exists:intended_uses,id',
             ]);
 
             // Get fabric type details (for now using string, can be updated to use FabricType model later)
@@ -735,6 +748,7 @@ class CustomOrderController extends Controller
             // Load all active patterns from database
             $patterns = \App\Models\YakanPattern::with('media')
                 ->where('is_active', true)
+                ->orderBy('created_at', 'desc')
                 ->orderBy('popularity_score', 'desc')
                 ->orderBy('name', 'asc')
                 ->get();
@@ -933,6 +947,12 @@ class CustomOrderController extends Controller
         try {
             $wizardData = $request->session()->get('wizard');
             
+            // Load system settings for pricing
+            $pricePerMeter = \App\Models\SystemSetting::get('price_per_meter', 500);
+            $patternFeeSimple = \App\Models\SystemSetting::get('pattern_fee_simple', 0);
+            $patternFeeMedium = \App\Models\SystemSetting::get('pattern_fee_medium', 0);
+            $patternFeeComplex = \App\Models\SystemSetting::get('pattern_fee_complex', 0);
+            
             // If main session is lost, try to restore from backup
             if (!$wizardData && $request->session()->has('wizard_backup')) {
                 $wizardData = $request->session()->get('wizard_backup');
@@ -988,6 +1008,10 @@ class CustomOrderController extends Controller
                     'wizardData' => $wizardData,
                     'userAddresses' => $userAddresses,
                     'defaultAddress' => $defaultAddress,
+                    'pricePerMeter' => $pricePerMeter,
+                    'patternFeeSimple' => $patternFeeSimple,
+                    'patternFeeMedium' => $patternFeeMedium,
+                    'patternFeeComplex' => $patternFeeComplex,
                 ]);
             }
 
@@ -1020,6 +1044,10 @@ class CustomOrderController extends Controller
                 'wizardData' => $wizardData,
                 'userAddresses' => $userAddresses,
                 'defaultAddress' => $defaultAddress,
+                'pricePerMeter' => $pricePerMeter,
+                'patternFeeSimple' => $patternFeeSimple,
+                'patternFeeMedium' => $patternFeeMedium,
+                'patternFeeComplex' => $patternFeeComplex,
             ]);
         } catch (\Exception $e) {
             \Log::error('createStep4 error', [
@@ -1053,43 +1081,43 @@ class CustomOrderController extends Controller
             'full_session_data' => $request->session()->get('wizard')
         ]);
         
-        // Add basic validation
-        $validated = $request->validate([
-            'quantity' => 'required|integer|min:1',
-            'specifications' => 'nullable|string|max:1000',
-            'delivery_type' => 'required|in:delivery,pickup',
-            'address_id' => 'required_if:delivery_type,delivery|nullable|integer|exists:user_addresses,id',
-            'delivery_zip' => 'nullable|string|max:20',
-            'delivery_landmark' => 'nullable|string|max:255',
-        ]);
-        
-        $wizardData = $request->session()->get('wizard');
-
-        if (!$wizardData) {
-            \Log::error('No wizard data in session');
-            return redirect()->route('custom_orders.create.step1')
-                ->with('error', 'Session expired. Please start your custom order again.');
-        }
-
-        $isProductFlow = isset($wizardData['product']);
-        $isFabricFlow = isset($wizardData['fabric']);
-        $details      = $wizardData['details'] ?? [];
-
-        if (!$isProductFlow && !$isFabricFlow) {
-            \Log::error('Neither product nor fabric flow detected', ['wizard_data' => $wizardData]);
-            return redirect()->route('custom_orders.create.step1')
-                ->with('error', 'Please select a fabric first.');
-        }
-
-        // Require a design selection for both flows
-        if (!isset($wizardData['pattern']) && !isset($wizardData['design'])) {
-            \Log::error('No pattern or design in wizard data', ['wizard_data' => $wizardData]);
-            return $isProductFlow
-                ? redirect()->route('custom_orders.create.product.customize')->with('error', 'Please customize your design first.')
-                : redirect()->route('custom_orders.create.pattern')->with('error', 'Please select a pattern first.');
-        }
-
         try {
+            // Add basic validation - INSIDE the try block so we can catch exceptions
+            $validated = $request->validate([
+                'quantity' => 'required|integer|min:1',
+                'specifications' => 'nullable|string|max:1000',
+                'delivery_type' => 'required|in:delivery,pickup',
+                'address_id' => 'required_if:delivery_type,delivery|nullable|integer|exists:user_addresses,id',
+                'delivery_zip' => 'nullable|string|max:20',
+                'delivery_landmark' => 'nullable|string|max:255',
+            ]);
+            
+            $wizardData = $request->session()->get('wizard');
+
+            if (!$wizardData) {
+                \Log::error('No wizard data in session');
+                return redirect()->route('custom_orders.create.step1')
+                    ->with('error', 'Session expired. Please start your custom order again.');
+            }
+
+            $isProductFlow = isset($wizardData['product']);
+            $isFabricFlow = isset($wizardData['fabric']);
+            $details      = $wizardData['details'] ?? [];
+
+            if (!$isProductFlow && !$isFabricFlow) {
+                \Log::error('Neither product nor fabric flow detected', ['wizard_data' => $wizardData]);
+                return redirect()->route('custom_orders.create.step1')
+                    ->with('error', 'Please select a fabric first.');
+            }
+
+            // Require a design selection for both flows
+            if (!isset($wizardData['pattern']) && !isset($wizardData['design'])) {
+                \Log::error('No pattern or design in wizard data', ['wizard_data' => $wizardData]);
+                return $isProductFlow
+                    ? redirect()->route('custom_orders.create.product.customize')->with('error', 'Please customize your design first.')
+                    : redirect()->route('custom_orders.create.pattern')->with('error', 'Please select a pattern first.');
+            }
+
             // Ensure user is authenticated
             if (!auth()->check()) {
                 \Log::error('User not authenticated in completeWizard', [
@@ -1103,34 +1131,145 @@ class CustomOrderController extends Controller
 
             $userId = auth()->id();
             \Log::info('Creating order for user', ['user_id' => $userId]);
+            \Log::info('Wizard data at order creation', [
+                'isProductFlow' => $isProductFlow,
+                'fabric_quantity' => $wizardData['fabric']['quantity_meters'] ?? 'MISSING',
+                'fabric_type' => $wizardData['fabric']['type'] ?? 'MISSING',
+                'pattern_data' => isset($wizardData['pattern']) ? 'EXISTS' : 'MISSING'
+            ]);
 
-            // Calculate base price
-            $basePrice = 1300;
+            // Calculate base price dynamically based on order components
+            $basePrice = 0;
+            $patternFee = 0;
+            $fabricCost = 0;
+            $shippingFee = 0;
+            
             if ($isProductFlow) {
+                // Product-based flow
                 $product = \App\Models\Product::find($wizardData['product']['id'] ?? null);
                 if ($product) {
                     $basePrice = $product->price;
                 }
             } else {
-                // For fabric flow, base price calculation
-                // Priority is optional since step3 might be skipped
-                if (isset($details['priority'])) {
-                    switch ($wizardData['details']['priority']) {
-                        case 'priority':
-                            $basePrice += 200;
-                            break;
-                        case 'express':
-                            $basePrice += 500;
-                            break;
+                // Fabric-based flow - calculate from components
+                
+                // 1. Calculate pattern fee based on selected patterns
+                if (isset($wizardData['pattern'])) {
+                    // Use each pattern's individual price
+                    $patternIds = [];
+                    if (isset($wizardData['pattern']['selected_ids']) && !empty($wizardData['pattern']['selected_ids'])) {
+                        $patternIds = $wizardData['pattern']['selected_ids'];
+                    } elseif (isset($wizardData['pattern']['id'])) {
+                        $patternIds = [$wizardData['pattern']['id']];
+                    }
+                    
+                    // Calculate total pattern fee from each pattern's individual price
+                    if (!empty($patternIds)) {
+                        $patterns = \App\Models\YakanPattern::whereIn('id', $patternIds)->get();
+                        foreach ($patterns as $pattern) {
+                            // Use pattern's individual price_per_meter (which is the pattern fee)
+                            $patternFee += ($pattern->pattern_price ?? 0);
+                        }
                     }
                 }
                 
-                // Add cost based on fabric quantity
+                // 2. Calculate fabric cost (quantity × price per meter from the pattern)
                 if (isset($wizardData['fabric']['quantity_meters'])) {
                     $meters = (float) $wizardData['fabric']['quantity_meters'];
-                    // Add ₱500 per meter
-                    $basePrice += ($meters * 500);
+                    // Get price per meter from the first selected pattern
+                    $pricePerMeter = 0;
+                    if (!empty($patternIds)) {
+                        $pattern = \App\Models\YakanPattern::find($patternIds[0]);
+                        if ($pattern) {
+                            $pricePerMeter = $pattern->price_per_meter ?? 0;
+                        }
+                    }
+                    $fabricCost = $meters * $pricePerMeter;
+                    \Log::info('Fabric cost calculated', [
+                        'meters' => $meters,
+                        'pricePerMeter' => $pricePerMeter,
+                        'fabricCost' => $fabricCost
+                    ]);
+                } else {
+                    \Log::warning('Fabric quantity_meters NOT found in wizardData', [
+                        'fabric_data' => $wizardData['fabric'] ?? 'NO FABRIC KEY'
+                    ]);
                 }
+                
+                // 3. Calculate shipping fee based on delivery address
+                $shippingFee = 100; // default
+                
+                // Get delivery address from form
+                $deliveryCity = $addrCity ?? null;
+                $deliveryProvince = $addrProvince ?? null;
+                
+                // If no form delivery address, use user's default address
+                if (!$deliveryCity) {
+                    $defaultAddress = auth()->user()->addresses->where('is_default', true)->first();
+                    if ($defaultAddress) {
+                        $deliveryCity = $defaultAddress->city;
+                        $deliveryProvince = $defaultAddress->province ?? $defaultAddress->region;
+                    }
+                }
+                
+                // Determine shipping based on location (from Zamboanga City origin)
+                if ($deliveryCity) {
+                    $city = strtolower($deliveryCity);
+                    $province = strtolower($deliveryProvince ?? '');
+                    
+                    // ₱0 - Zamboanga City proper
+                    if (str_contains($city, 'zamboanga')) {
+                        $shippingFee = 0;
+                    }
+                    // ₱100 - Zamboanga Peninsula & nearby
+                    elseif (str_contains($province, 'zamboanga') || 
+                            in_array($city, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
+                        $shippingFee = 100;
+                    }
+                    // ₱120 - Western Mindanao
+                    elseif (in_array($city, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) ||
+                            str_contains($province, 'barmm') || str_contains($province, 'armm')) {
+                        $shippingFee = 120;
+                    }
+                    // ₱150 - Other Mindanao regions
+                    elseif (str_contains($province, 'mindanao') ||
+                            in_array($city, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'])) {
+                        $shippingFee = 150;
+                    }
+                    // ₱180 - Visayas
+                    elseif (str_contains($province, 'visayas') ||
+                            in_array($city, ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'])) {
+                        $shippingFee = 180;
+                    }
+                    // ₱220 - Metro Manila & nearby
+                    elseif (str_contains($city, 'manila') || str_contains($province, 'ncr') ||
+                            in_array($city, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'])) {
+                        $shippingFee = 220;
+                    }
+                    // ₱250 - Northern Luzon
+                    elseif (str_contains($province, 'luzon') ||
+                            in_array($city, ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'])) {
+                        $shippingFee = 250;
+                    }
+                    // ₱280 - Remote islands & far areas
+                    else {
+                        $shippingFee = 280;
+                    }
+                }
+                
+                // Calculate total from components
+                // Pattern fee and fabric cost are per unit, so multiply by quantity
+                // Shipping stays the same regardless of quantity
+                $formQuantity = $validated['quantity'];
+                $basePrice = ($patternFee + $fabricCost) * $formQuantity + $shippingFee;
+                
+                \Log::info('Price calculation complete', [
+                    'quantity' => $formQuantity,
+                    'patternFee' => $patternFee,
+                    'fabricCost' => $fabricCost,
+                    'shippingFee' => $shippingFee,
+                    'basePrice' => $basePrice
+                ]);
             }
 
             // Handle pattern-based vs visual design
@@ -1278,13 +1417,28 @@ class CustomOrderController extends Controller
                 
                 // Add fabric details to specifications if empty
                 if (empty($specifications)) {
+                    // Look up fabric type and intended use names from IDs
+                    $fabricTypeId = $wizardData['fabric']['type'] ?? null;
+                    $fabricTypeName = 'N/A';
+                    if ($fabricTypeId) {
+                        $fabricType = \App\Models\FabricType::find($fabricTypeId);
+                        $fabricTypeName = $fabricType ? $fabricType->name : $fabricTypeId;
+                    }
+                    
+                    $intendedUseId = $wizardData['fabric']['intended_use'] ?? null;
+                    $intendedUseName = 'N/A';
+                    if ($intendedUseId) {
+                        $intendedUse = \App\Models\IntendedUse::find($intendedUseId);
+                        $intendedUseName = $intendedUse ? $intendedUse->name : $intendedUseId;
+                    }
+                    
                     $specifications = "Custom Fabric Order\n";
-                    $specifications .= "Fabric Type: " . ($wizardData['fabric']['type'] ?? 'N/A') . "\n";
+                    $specifications .= "Fabric Type: " . $fabricTypeName . "\n";
                     $specifications .= "Quantity: " . ($wizardData['fabric']['quantity_meters'] ?? 0) . " meters\n";
-                    $specifications .= "Intended Use: " . ($wizardData['fabric']['intended_use'] ?? 'N/A');
+                    $specifications .= "Intended Use: " . $intendedUseName;
                 }
                 
-                $customOrder = CustomOrder::create([
+                $orderData = [
                     'user_id' => $userId,
                     'product_id' => null, // No product for fabric orders
                     'specifications' => $specifications,
@@ -1311,7 +1465,11 @@ class CustomOrderController extends Controller
                     'delivery_address' => $formDeliveryAddr ?: ($details['delivery_address'] ?? null),
                     'phone' => $details['customer_phone'] ?? null,
                     'email' => $details['customer_email'] ?? null,
-                ]);
+                ];
+                
+                \Log::info('About to create fabric order', ['orderData' => $orderData]);
+                
+                $customOrder = CustomOrder::create($orderData);
                 
                 \Log::info('Fabric order created successfully', [
                     'order_id' => $customOrder->id,
@@ -1358,10 +1516,23 @@ class CustomOrderController extends Controller
             // Redirect to success page
             return redirect()->route('custom_orders.success', ['order' => $customOrder->id]);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::warning('Validation failed in completeWizard:', [
+                'errors' => $e->errors(),
+                'request_data' => $request->all()
+            ]);
+            
+            // Re-throw so Laravel handles it with proper error display
+            throw $e;
+            
         } catch (\Exception $e) {
             \Log::error('Error completing wizard:', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error_message' => $e->getMessage(),
+                'error_code' => $e->getCode(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
             ]);
 
             return redirect()->back()
@@ -2052,15 +2223,21 @@ class CustomOrderController extends Controller
             $designImage = $request->design_image; // Base64 image data
             $designMetadata = json_decode($request->design_metadata, true);
             
-            // Calculate base price based on priority
-            $basePrice = 1300; // Base price
-            switch ($request->priority) {
-                case 'priority':
-                    $basePrice += 200;
-                    break;
-                case 'express':
-                    $basePrice += 500;
-                    break;
+            // Calculate base price dynamically (visual design)
+            // Using default complexity for visual designs
+            $patternFeeSimple = \App\Models\SystemSetting::get('pattern_fee_simple', 1200);
+            $patternFeeMedium = \App\Models\SystemSetting::get('pattern_fee_medium', 1900);
+            $patternFeeComplex = \App\Models\SystemSetting::get('pattern_fee_complex', 2500);
+            
+            // Default to medium complexity for visual designs
+            $basePrice = $patternFeeMedium;
+            
+            // If complexity is detected from metadata, use that
+            $complexity = $this->calculateComplexityFromMetadata($designMetadata);
+            if ($complexity === 'complex') {
+                $basePrice = $patternFeeComplex;
+            } elseif ($complexity === 'simple') {
+                $basePrice = $patternFeeSimple;
             }
 
             // Save design image
