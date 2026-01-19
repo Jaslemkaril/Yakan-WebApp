@@ -322,19 +322,72 @@ class CustomOrder extends Model
 
     /**
      * Admin quotes price for the custom order
+     * @param float $price Total price
+     * @param string|array|null $adminNotes Notes or price breakdown array
      */
-    public function quotePrice(float $price, string $adminNotes = null): bool
+    public function quotePrice(float $price, string|array $adminNotes = null): bool
     {
-        if (!$this->isPendingReview()) {
+        // Allow quoting for pending orders OR updating existing quotes
+        if (!in_array($this->status, ['pending', 'price_quoted'])) {
             return false;
         }
 
         $this->final_price = $price;
-        $this->admin_notes = $adminNotes;
+        
+        // If adminNotes is an array, it's a price breakdown - store as JSON
+        if (is_array($adminNotes)) {
+            $this->admin_notes = json_encode($adminNotes);
+        } else {
+            $this->admin_notes = $adminNotes;
+        }
+        
         $this->price_quoted_at = now();
         $this->status = 'price_quoted';
         
         return $this->save();
+    }
+
+    /**
+     * Get price breakdown from admin_notes if available
+     * @return array|null
+     */
+    public function getPriceBreakdown(): ?array
+    {
+        if (empty($this->admin_notes)) {
+            return null;
+        }
+
+        // Try to decode as JSON (price breakdown)
+        $decoded = json_decode($this->admin_notes, true);
+        
+        // Check if it's a valid price breakdown structure
+        if (is_array($decoded) && isset($decoded['breakdown'])) {
+            return $decoded;
+        }
+
+        return null;
+    }
+
+    /**
+     * Get admin notes text (excluding price breakdown JSON)
+     * @return string|null
+     */
+    public function getAdminNotesText(): ?string
+    {
+        if (empty($this->admin_notes)) {
+            return null;
+        }
+
+        // Try to decode as JSON
+        $decoded = json_decode($this->admin_notes, true);
+        
+        // If it's a price breakdown, return the notes field from it
+        if (is_array($decoded) && isset($decoded['breakdown'])) {
+            return $decoded['notes'] ?? null;
+        }
+
+        // Otherwise return as plain text
+        return $this->admin_notes;
     }
 
     /**

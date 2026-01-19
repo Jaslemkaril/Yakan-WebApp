@@ -138,12 +138,55 @@ class AdminCustomOrderController extends Controller
     {
         $request->validate([
             'price' => 'required|numeric|min:0',
-            'notes' => 'nullable|string'
+            'notes' => 'nullable|string',
+            // Price breakdown fields (optional)
+            'material_cost' => 'nullable|numeric|min:0',
+            'pattern_fee' => 'nullable|numeric|min:0',
+            'labor_cost' => 'nullable|numeric|min:0',
+            'delivery_fee' => 'nullable|numeric|min:0',
+            'discount' => 'nullable|numeric|min:0',
         ]);
 
         try {
+            // Build price breakdown if any breakdown fields are provided
+            $hasBreakdown = $request->filled('material_cost') || 
+                           $request->filled('pattern_fee') || 
+                           $request->filled('labor_cost') || 
+                           $request->filled('delivery_fee') ||
+                           $request->filled('discount');
+
+            $adminNotes = $request->notes;
+
+            if ($hasBreakdown) {
+                // Create price breakdown structure
+                $breakdown = [];
+                
+                if ($request->filled('material_cost') && $request->material_cost > 0) {
+                    $breakdown['material_cost'] = (float) $request->material_cost;
+                }
+                if ($request->filled('pattern_fee') && $request->pattern_fee > 0) {
+                    $breakdown['pattern_fee'] = (float) $request->pattern_fee;
+                }
+                if ($request->filled('labor_cost') && $request->labor_cost > 0) {
+                    $breakdown['labor_cost'] = (float) $request->labor_cost;
+                }
+                if ($request->filled('delivery_fee') && $request->delivery_fee > 0) {
+                    $breakdown['delivery_fee'] = (float) $request->delivery_fee;
+                }
+                if ($request->filled('discount') && $request->discount > 0) {
+                    $breakdown['discount'] = (float) $request->discount;
+                }
+
+                // Store as structured data
+                $adminNotes = [
+                    'breakdown' => $breakdown,
+                    'notes' => $request->notes,
+                    'quoted_at' => now()->toISOString(),
+                ];
+            }
+
             // Use model method for business logic
-            $success = $order->quotePrice($request->price, $request->notes);
+            $success = $order->quotePrice($request->price, $adminNotes);
             
             if ($success) {
                 // Auto-progression: Update status to price_quoted
@@ -156,6 +199,7 @@ class AdminCustomOrderController extends Controller
                 \Log::info('Price quoted for custom order (auto-progressed to price_quoted)', [
                     'order_id' => $order->id,
                     'price' => $request->price,
+                    'has_breakdown' => $hasBreakdown,
                     'user_id' => $order->user_id
                 ]);
                 
@@ -176,11 +220,11 @@ class AdminCustomOrderController extends Controller
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Order is not in pending status'
+                    'message' => 'Order cannot be quoted in its current status'
                 ], 422);
             }
 
-            return redirect()->back()->with('error', 'Order is not in pending status');
+            return redirect()->back()->with('error', 'Order cannot be quoted in its current status');
             
         } catch (\Exception $e) {
             \Log::error('Quote price error', [

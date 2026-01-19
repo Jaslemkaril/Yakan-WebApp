@@ -498,32 +498,102 @@
                 </h2>
                 
                 <div class="space-y-4" id="adminActions">
-                    {{-- 1. Quote Final Price (First) --}}
-                    @if($order->status === 'pending' || !$order->final_price)
+                    {{-- 1. Quote Final Price (Show for pending, or allow editing for price_quoted status) --}}
+                    @if(in_array($order->status, ['pending', 'price_quoted']))
+                    @php
+                        $existingBreakdown = $order->getPriceBreakdown();
+                        $breakdown = $existingBreakdown['breakdown'] ?? [];
+                    @endphp
                     <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
                         <label class="block text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
                             <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
-                            Quote Final Price
+                            {{ $order->final_price ? 'Update Price Breakdown' : 'Quote Price Breakdown' }}
                         </label>
                         <form id="priceForm" data-order-id="{{ $order->id }}">
                             @csrf
-                            <div class="relative mb-2">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₱</span>
-                                <input type="number" name="price" step="0.01" min="0" 
-                                       value="{{ $order->final_price ?? $order->estimated_price }}"
-                                       class="w-full border-2 border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 rounded-lg pl-8 pr-4 py-2.5 transition-all font-medium" 
-                                       placeholder="0.00" required>
+                            
+                            {{-- Price Breakdown Fields --}}
+                            <div class="space-y-2 mb-3">
+                                {{-- Material Cost --}}
+                                <div class="flex items-center gap-2">
+                                    <label class="text-xs text-gray-600 w-28 flex-shrink-0">Material Cost</label>
+                                    <div class="relative flex-1">
+                                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₱</span>
+                                        <input type="number" name="material_cost" id="material_cost" step="0.01" min="0" 
+                                               value="{{ $breakdown['material_cost'] ?? '' }}"
+                                               class="w-full border border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-200 rounded-lg pl-6 pr-3 py-2 text-sm transition-all" 
+                                               placeholder="0.00" onchange="calculateTotal()" oninput="calculateTotal()">
+                                    </div>
+                                </div>
+                                
+                                {{-- Pattern/Customization Fee --}}
+                                <div class="flex items-center gap-2">
+                                    <label class="text-xs text-gray-600 w-28 flex-shrink-0">Pattern Fee</label>
+                                    <div class="relative flex-1">
+                                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₱</span>
+                                        <input type="number" name="pattern_fee" id="pattern_fee" step="0.01" min="0" 
+                                               value="{{ $breakdown['pattern_fee'] ?? '' }}"
+                                               class="w-full border border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-200 rounded-lg pl-6 pr-3 py-2 text-sm transition-all" 
+                                               placeholder="0.00" onchange="calculateTotal()" oninput="calculateTotal()">
+                                    </div>
+                                </div>
+                                
+                                {{-- Labor/Production Cost --}}
+                                <div class="flex items-center gap-2">
+                                    <label class="text-xs text-gray-600 w-28 flex-shrink-0">Labor Cost</label>
+                                    <div class="relative flex-1">
+                                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₱</span>
+                                        <input type="number" name="labor_cost" id="labor_cost" step="0.01" min="0" 
+                                               value="{{ $breakdown['labor_cost'] ?? '' }}"
+                                               class="w-full border border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-200 rounded-lg pl-6 pr-3 py-2 text-sm transition-all" 
+                                               placeholder="0.00" onchange="calculateTotal()" oninput="calculateTotal()">
+                                    </div>
+                                </div>
+                                
+                                {{-- Delivery Fee --}}
+                                <div class="flex items-center gap-2">
+                                    <label class="text-xs text-gray-600 w-28 flex-shrink-0">Delivery Fee</label>
+                                    <div class="relative flex-1">
+                                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₱</span>
+                                        <input type="number" name="delivery_fee" id="delivery_fee" step="0.01" min="0" 
+                                               value="{{ $breakdown['delivery_fee'] ?? '' }}"
+                                               class="w-full border border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-200 rounded-lg pl-6 pr-3 py-2 text-sm transition-all" 
+                                               placeholder="0.00" onchange="calculateTotal()" oninput="calculateTotal()">
+                                    </div>
+                                </div>
+                                
+                                {{-- Discount (optional) --}}
+                                <div class="flex items-center gap-2">
+                                    <label class="text-xs text-gray-600 w-28 flex-shrink-0">Discount</label>
+                                    <div class="relative flex-1">
+                                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-red-400 text-sm">-₱</span>
+                                        <input type="number" name="discount" id="discount" step="0.01" min="0" 
+                                               value="{{ $breakdown['discount'] ?? '' }}"
+                                               class="w-full border border-gray-300 focus:border-red-400 focus:ring-1 focus:ring-red-200 rounded-lg pl-7 pr-3 py-2 text-sm transition-all text-red-600" 
+                                               placeholder="0.00" onchange="calculateTotal()" oninput="calculateTotal()">
+                                    </div>
+                                </div>
                             </div>
+                            
+                            {{-- Total (Auto-calculated) --}}
+                            <div class="bg-white rounded-lg p-3 mb-3 border-2 border-green-300">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-bold text-gray-700">Total Quoted Price</span>
+                                    <span class="text-2xl font-bold text-green-600" id="totalDisplay">₱{{ $order->final_price ? number_format($order->final_price, 2) : '0.00' }}</span>
+                                </div>
+                                <input type="hidden" name="price" id="price" value="{{ $order->final_price ?? 0 }}">
+                            </div>
+                            
                             <textarea name="notes" rows="2" 
                                       class="w-full border-2 border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 rounded-lg px-4 py-2.5 mb-3 transition-all text-sm" 
-                                      placeholder="Add pricing notes or details (optional)"></textarea>
+                                      placeholder="Add pricing notes or details (optional)">{{ $existingBreakdown['notes'] ?? $order->getAdminNotesText() }}</textarea>
                             <button type="submit" id="priceBtn" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 px-4 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
-                                <span>Send Quote to Customer</span>
+                                <span>{{ $order->final_price ? 'Update Quote' : 'Send Quote to Customer' }}</span>
                             </button>
                         </form>
                     </div>
@@ -1257,6 +1327,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const orderId = this.dataset.orderId;
             const formData = new FormData(this);
             
+            // Validate that at least one price field has a value
+            const totalPrice = parseFloat(formData.get('price')) || 0;
+            if (totalPrice <= 0) {
+                showMessage('❌ Please enter at least one cost component to calculate the total price.', 'error');
+                return;
+            }
+            
             setButtonLoading(button, true);
             
             try {
@@ -1269,7 +1346,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     body: JSON.stringify({
                         price: formData.get('price'),
-                        notes: formData.get('notes')
+                        notes: formData.get('notes'),
+                        material_cost: formData.get('material_cost') || 0,
+                        pattern_fee: formData.get('pattern_fee') || 0,
+                        labor_cost: formData.get('labor_cost') || 0,
+                        delivery_fee: formData.get('delivery_fee') || 0,
+                        discount: formData.get('discount') || 0
                     })
                 });
                 
@@ -1292,6 +1374,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 setButtonLoading(button, false);
             }
         });
+    }
+    
+    // Calculate Total Price from breakdown fields
+    window.calculateTotal = function() {
+        const materialCost = parseFloat(document.getElementById('material_cost')?.value) || 0;
+        const patternFee = parseFloat(document.getElementById('pattern_fee')?.value) || 0;
+        const laborCost = parseFloat(document.getElementById('labor_cost')?.value) || 0;
+        const deliveryFee = parseFloat(document.getElementById('delivery_fee')?.value) || 0;
+        const discount = parseFloat(document.getElementById('discount')?.value) || 0;
+        
+        const total = materialCost + patternFee + laborCost + deliveryFee - discount;
+        const finalTotal = Math.max(0, total); // Ensure non-negative
+        
+        // Update display
+        const totalDisplay = document.getElementById('totalDisplay');
+        const priceInput = document.getElementById('price');
+        
+        if (totalDisplay) {
+            totalDisplay.textContent = '₱' + finalTotal.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        if (priceInput) {
+            priceInput.value = finalTotal.toFixed(2);
+        }
+    };
+    
+    // Initialize total calculation on page load
+    if (document.getElementById('priceForm')) {
+        calculateTotal();
     }
     
     // Payment Verification - Confirm Payment Button

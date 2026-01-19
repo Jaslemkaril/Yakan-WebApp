@@ -104,7 +104,28 @@
                             </p>
                             <div class="rounded-2xl px-5 py-3 {{ $message->sender_type === 'user' ? 'message-user' : 'message-support' }}">
                                 @if($message->image_path)
-                                    <img src="{{ asset('storage/' . $message->image_path) }}" alt="Chat image" class="max-w-xs rounded-lg mb-3 shadow-md border border-gray-200">
+                                    @php
+                                        // Handle different image path formats
+                                        $imagePath = $message->image_path;
+                                        if (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://')) {
+                                            $chatImageUrl = $imagePath;
+                                        } elseif (str_starts_with($imagePath, 'data:image')) {
+                                            $chatImageUrl = $imagePath;
+                                        } else {
+                                            $chatImageUrl = asset('storage/' . $imagePath);
+                                        }
+                                    @endphp
+                                    <a href="{{ $chatImageUrl }}" target="_blank" class="block mb-3">
+                                        <img src="{{ $chatImageUrl }}" 
+                                             alt="Attached image" 
+                                             class="max-w-full rounded-xl shadow-md border-2 {{ $message->sender_type === 'user' ? 'border-white/30' : 'border-gray-200' }}"
+                                             style="max-height: 250px; object-fit: contain; cursor: pointer;"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <div class="hidden items-center gap-2 px-4 py-3 bg-red-50 rounded-lg text-red-700 text-sm">
+                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                            Image could not be loaded
+                                        </div>
+                                    </a>
                                 @endif
                                 <p class="break-words leading-relaxed whitespace-pre-line">{{ $message->message }}</p>
                             </div>

@@ -30,18 +30,18 @@
     .conversation-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 24px; }
     .conversation-card h3 { color: #1f2937; font-weight: 600; margin-bottom: 16px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
     
-    .messages-container { background: #f9fafb; border-radius: 8px; padding: 16px; max-height: 400px; overflow-y: auto; }
-    .message { margin-bottom: 16px; max-width: 80%; }
+    .messages-container { background: #f9fafb; border-radius: 12px; padding: 20px; min-height: 350px; max-height: 500px; overflow-y: auto; }
+    .message { margin-bottom: 20px; max-width: 75%; }
     .message-user { margin-left: 0; }
     .message-admin { margin-left: auto; }
-    .message-bubble { padding: 12px 16px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .message-bubble { padding: 14px 18px; border-radius: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
     .message-user .message-bubble { background: white; color: #1f2937; border: 1px solid #e5e7eb; border-bottom-left-radius: 4px; }
     .message-admin .message-bubble { background: linear-gradient(135deg, #8B0000 0%, #6B0000 100%); color: white; border-bottom-right-radius: 4px; }
-    .message-sender { font-size: 0.7rem; font-weight: 600; margin-bottom: 4px; }
+    .message-sender { font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
     .message-user .message-sender { color: #6b7280; }
-    .message-admin .message-sender { color: rgba(255,255,255,0.8); }
-    .message-text { font-size: 0.875rem; line-height: 1.5; word-break: break-word; }
-    .message-time { font-size: 0.65rem; margin-top: 6px; opacity: 0.7; }
+    .message-admin .message-sender { color: rgba(255,255,255,0.85); }
+    .message-text { font-size: 0.9rem; line-height: 1.6; word-break: break-word; white-space: pre-wrap; }
+    .message-time { font-size: 0.7rem; margin-top: 8px; opacity: 0.7; }
     .message-user .message-time { color: #9ca3af; }
     .message-admin .message-time { color: rgba(255,255,255,0.7); }
     
@@ -148,10 +148,38 @@
                 <div class="message message-{{ $message->sender_type === 'user' ? 'user' : 'admin' }}">
                     <div class="message-bubble">
                         <p class="message-sender">
-                            {{ $message->sender_type === 'user' ? ($message->user?->name ?? 'Customer') : 'Admin' }}
+                            @if($message->sender_type === 'user')
+                                <span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 50%; color: white; font-size: 10px; font-weight: bold;">{{ strtoupper(substr($message->user?->name ?? 'C', 0, 1)) }}</span>
+                                {{ $message->user?->name ?? 'Customer' }}
+                            @else
+                                <span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; background: rgba(255,255,255,0.2); border-radius: 50%; font-size: 10px;">👤</span>
+                                Admin
+                            @endif
                         </p>
                         @if($message->image_path)
-                            <img src="{{ asset('storage/' . $message->image_path) }}" alt="Chat image" style="max-width: 200px; border-radius: 8px; margin-bottom: 8px;">
+                            @php
+                                // Handle different image path formats
+                                $imagePath = $message->image_path;
+                                if (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://')) {
+                                    $imageUrl = $imagePath;
+                                } elseif (str_starts_with($imagePath, 'data:image')) {
+                                    $imageUrl = $imagePath;
+                                } else {
+                                    $imageUrl = asset('storage/' . $imagePath);
+                                }
+                            @endphp
+                            <a href="{{ $imageUrl }}" target="_blank" style="display: block; margin-bottom: 10px;">
+                                <img src="{{ $imageUrl }}" 
+                                     alt="Chat image" 
+                                     style="max-width: 250px; max-height: 200px; border-radius: 12px; object-fit: cover; border: 2px solid rgba(255,255,255,0.3); box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; transition: transform 0.2s;"
+                                     onmouseover="this.style.transform='scale(1.02)'"
+                                     onmouseout="this.style.transform='scale(1)'"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div style="display: none; align-items: center; gap: 8px; padding: 12px; background: #fee2e2; border-radius: 8px; color: #991b1b; font-size: 0.8rem;">
+                                    <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                    Image unavailable
+                                </div>
+                            </a>
                         @endif
                         <p class="message-text">{{ $message->message }}</p>
                         <p class="message-time">{{ $message->created_at->format('M d, Y H:i') }}</p>

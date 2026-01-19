@@ -44,6 +44,8 @@ class CustomOrderResource extends JsonResource
             'additional_notes' => $this->additional_notes,
             'estimated_price' => $this->estimated_price,
             'final_price' => $this->final_price,
+            'price_breakdown' => $this->getPriceBreakdown(),
+            'admin_notes_text' => $this->getAdminNotesText(),
             
             // Admin fields
             'admin_notes' => $this->when(!is_null($this->admin_notes), $this->admin_notes),

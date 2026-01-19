@@ -720,104 +720,52 @@
                                         <p class="text-3xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
                                         <p class="text-xs mt-1 font-semibold" style="color:#800000;">⏳ Awaiting your decision</p>
                                         
-                                        {{-- Pricing Breakdown --}}
+                                        {{-- Price Breakdown from Admin --}}
                                         @php
-                                            // Get patterns
-                                            $patternIds = $order->patterns;
-                                            if (is_string($patternIds)) {
-                                                $patternIds = json_decode($patternIds, true) ?? [];
-                                            }
-                                            
-                                            $patterns = \App\Models\YakanPattern::whereIn('id', (array)$patternIds)->get();
-                                            
-                                            // Use each pattern's individual price
-                                            $totalPatternFee = 0;
-                                            $pricePerMeter = 0;
-                                            foreach ($patterns as $pattern) {
-                                                $totalPatternFee += ($pattern->pattern_price ?? 0);
-                                                $pricePerMeter = $pattern->price_per_meter ?? 0; // Use first pattern's rate
-                                            }
-                                            
-                                            $fabricCost = ($order->fabric_quantity_meters ?? 0) * $pricePerMeter;
-                                            
-                                            // Calculate shipping based on delivery address (zone-based from Zamboanga City)
-                                            $shippingFee = 100; // default
-                                            $address = strtolower($order->delivery_address ?? '');
-                                            $city = '';
-                                            $province = '';
-                                            
-                                            // If no delivery address, try user's default address
-                                            if (!$order->delivery_address && $order->user) {
-                                                $userDefaultAddr = $order->user->addresses()->where('is_default', true)->first();
-                                                if ($userDefaultAddr) {
-                                                    $address = strtolower($userDefaultAddr->formatted_address ?? $userDefaultAddr->city . ', ' . $userDefaultAddr->province);
-                                                    $city = strtolower($userDefaultAddr->city ?? '');
-                                                    $province = strtolower($userDefaultAddr->province ?? '');
-                                                }
-                                            }
-                                            
-                                            if ($address || $city) {
-                                                // ₱0 - Zamboanga City proper
-                                                if (str_contains($address, 'zamboanga') || str_contains($city, 'zamboanga')) {
-                                                    $shippingFee = 0;
-                                                }
-                                                // ₱100 - Zamboanga Peninsula & nearby
-                                                elseif (str_contains($province, 'zamboanga') || 
-                                                        in_array($city, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
-                                                    $shippingFee = 100;
-                                                }
-                                                // ₱120 - Western Mindanao
-                                                elseif (in_array($city, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) ||
-                                                        str_contains($province, 'barmm') || str_contains($province, 'armm')) {
-                                                    $shippingFee = 120;
-                                                }
-                                                // ₱150 - Other Mindanao regions
-                                                elseif (str_contains($province, 'mindanao') ||
-                                                        in_array($city, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'])) {
-                                                    $shippingFee = 150;
-                                                }
-                                                // ₱180 - Visayas
-                                                elseif (str_contains($province, 'visayas') ||
-                                                        in_array($city, ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'])) {
-                                                    $shippingFee = 180;
-                                                }
-                                                // ₱220 - Metro Manila & nearby
-                                                elseif (str_contains($city, 'manila') || str_contains($province, 'ncr') ||
-                                                        in_array($city, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'])) {
-                                                    $shippingFee = 220;
-                                                }
-                                                // ₱250 - Northern Luzon
-                                                elseif (str_contains($province, 'luzon') ||
-                                                        in_array($city, ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'])) {
-                                                    $shippingFee = 250;
-                                                }
-                                                // ₱280 - Remote islands & far areas
-                                                else {
-                                                    $shippingFee = 280;
-                                                }
-                                            }
+                                            $priceBreakdown = $order->getPriceBreakdown();
                                         @endphp
                                         
+                                        @if($priceBreakdown && isset($priceBreakdown['breakdown']) && count($priceBreakdown['breakdown']) > 0)
                                         <div class="mt-3 bg-gray-50 rounded-lg p-3 border border-gray-200 text-xs">
-                                            <div class="space-y-1 text-gray-700">
+                                            <p class="font-semibold text-gray-700 mb-2">Price Breakdown:</p>
+                                            <div class="space-y-1 text-gray-600">
+                                                @if(isset($priceBreakdown['breakdown']['material_cost']) && $priceBreakdown['breakdown']['material_cost'] > 0)
                                                 <div class="flex justify-between">
-                                                    <span>Pattern Fee{{ $order->quantity > 1 ? ' (× ' . $order->quantity . ')' : '' }}:</span>
-                                                    <span class="font-semibold">₱{{ number_format($totalPatternFee * $order->quantity, 2) }}</span>
+                                                    <span>Material Cost:</span>
+                                                    <span class="font-semibold">₱{{ number_format($priceBreakdown['breakdown']['material_cost'], 2) }}</span>
                                                 </div>
+                                                @endif
+                                                @if(isset($priceBreakdown['breakdown']['pattern_fee']) && $priceBreakdown['breakdown']['pattern_fee'] > 0)
                                                 <div class="flex justify-between">
-                                                    <span>Fabric ({{ $order->fabric_quantity_meters }}m × ₱{{ number_format($pricePerMeter, 2) }}){{ $order->quantity > 1 ? ' × ' . $order->quantity : '' }}:</span>
-                                                    <span class="font-semibold">₱{{ number_format($fabricCost * $order->quantity, 2) }}</span>
+                                                    <span>Pattern Fee:</span>
+                                                    <span class="font-semibold">₱{{ number_format($priceBreakdown['breakdown']['pattern_fee'], 2) }}</span>
                                                 </div>
+                                                @endif
+                                                @if(isset($priceBreakdown['breakdown']['labor_cost']) && $priceBreakdown['breakdown']['labor_cost'] > 0)
                                                 <div class="flex justify-between">
-                                                    <span>Shipping:</span>
-                                                    <span class="font-semibold">{{ $shippingFee == 0 ? 'FREE' : '₱' . number_format($shippingFee, 2) }}</span>
+                                                    <span>Labor Cost:</span>
+                                                    <span class="font-semibold">₱{{ number_format($priceBreakdown['breakdown']['labor_cost'], 2) }}</span>
                                                 </div>
-                                                <div class="border-t border-gray-300 pt-1 mt-1 flex justify-between font-bold text-gray-900">
+                                                @endif
+                                                @if(isset($priceBreakdown['breakdown']['delivery_fee']) && $priceBreakdown['breakdown']['delivery_fee'] > 0)
+                                                <div class="flex justify-between">
+                                                    <span>Delivery Fee:</span>
+                                                    <span class="font-semibold">₱{{ number_format($priceBreakdown['breakdown']['delivery_fee'], 2) }}</span>
+                                                </div>
+                                                @endif
+                                                @if(isset($priceBreakdown['breakdown']['discount']) && $priceBreakdown['breakdown']['discount'] > 0)
+                                                <div class="flex justify-between text-green-600">
+                                                    <span>Discount:</span>
+                                                    <span class="font-semibold">-₱{{ number_format($priceBreakdown['breakdown']['discount'], 2) }}</span>
+                                                </div>
+                                                @endif
+                                                <div class="border-t border-gray-300 pt-1 mt-1 flex justify-between font-bold" style="color:#800000;">
                                                     <span>Total:</span>
-                                                    <span style="color:#800000;">₱{{ number_format(($totalPatternFee * $order->quantity) + ($fabricCost * $order->quantity) + $shippingFee, 2) }}</span>
+                                                    <span>₱{{ number_format($order->final_price, 2) }}</span>
                                                 </div>
                                             </div>
                                         </div>
+                                        @endif
                                     </div>
                                 @elseif($order->status === 'approved' && $order->final_price)
                                     <div>
@@ -825,90 +773,55 @@
                                         <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
                                         <p class="text-xs mt-1 font-semibold text-emerald-600">✓ Quote accepted</p>
                                         
-                                        {{-- Pricing Breakdown for Approved Orders --}}
+                                        {{-- Price Breakdown from Admin --}}
                                         @php
-                                            // Get patterns
-                                            $approvedPatternIds = $order->patterns;
-                                            if (is_string($approvedPatternIds)) {
-                                                $approvedPatternIds = json_decode($approvedPatternIds, true) ?? [];
-                                            }
-                                            
-                                            $approvedPatterns = \App\Models\YakanPattern::whereIn('id', (array)$approvedPatternIds)->get();
-                                            
-                                            // Use each pattern's individual price
-                                            $approvedTotalPatternFee = 0;
-                                            $approvedPricePerMeter = 0;
-                                            foreach ($approvedPatterns as $pattern) {
-                                                $approvedTotalPatternFee += ($pattern->pattern_price ?? 0);
-                                                $approvedPricePerMeter = $pattern->price_per_meter ?? 0; // Use first pattern's rate
-                                            }
-                                            
-                                            $approvedFabricCost = ($order->fabric_quantity_meters ?? 0) * $approvedPricePerMeter;
-                                            
-                                            // Calculate shipping for approved order
-                                            $approvedShippingFee = 100; // default
-                                            $approvedAddress = strtolower($order->delivery_address ?? '');
-                                            $approvedCity = '';
-                                            $approvedProvince = '';
-                                            
-                                            // If no delivery address, try user's default address
-                                            if (!$order->delivery_address && $order->user) {
-                                                $userDefaultAddr = $order->user->addresses()->where('is_default', true)->first();
-                                                if ($userDefaultAddr) {
-                                                    $approvedAddress = strtolower($userDefaultAddr->formatted_address ?? $userDefaultAddr->city . ', ' . $userDefaultAddr->province);
-                                                    $approvedCity = strtolower($userDefaultAddr->city ?? '');
-                                                    $approvedProvince = strtolower($userDefaultAddr->province ?? '');
-                                                }
-                                            }
-                                            
-                                            if ($approvedAddress || $approvedCity) {
-                                                if (str_contains($approvedAddress, 'zamboanga') || str_contains($approvedCity, 'zamboanga')) {
-                                                    $approvedShippingFee = 0;
-                                                } elseif (str_contains($approvedProvince, 'zamboanga') || in_array($approvedCity, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
-                                                    $approvedShippingFee = 100;
-                                                } elseif (in_array($approvedCity, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) || str_contains($approvedProvince, 'barmm') || str_contains($approvedProvince, 'armm')) {
-                                                    $approvedShippingFee = 120;
-                                                } elseif (str_contains($approvedProvince, 'mindanao') || in_array($approvedCity, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'])) {
-                                                    $approvedShippingFee = 150;
-                                                } elseif (str_contains($approvedProvince, 'visayas') || in_array($approvedCity, ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'])) {
-                                                    $approvedShippingFee = 180;
-                                                } elseif (str_contains($approvedCity, 'manila') || str_contains($approvedProvince, 'ncr') || in_array($approvedCity, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'])) {
-                                                    $approvedShippingFee = 220;
-                                                } elseif (str_contains($approvedProvince, 'luzon') || in_array($approvedCity, ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'])) {
-                                                    $approvedShippingFee = 250;
-                                                } else {
-                                                    $approvedShippingFee = 280;
-                                                }
-                                            }
+                                            $approvedBreakdown = $order->getPriceBreakdown();
                                         @endphp
                                         
+                                        @if($approvedBreakdown && isset($approvedBreakdown['breakdown']) && count($approvedBreakdown['breakdown']) > 0)
                                         <div class="mt-3 bg-gray-50 rounded-lg p-3 border border-gray-200 text-xs">
-                                            <div class="space-y-1 text-gray-700">
+                                            <p class="font-semibold text-gray-700 mb-2">Price Breakdown:</p>
+                                            <div class="space-y-1 text-gray-600">
+                                                @if(isset($approvedBreakdown['breakdown']['material_cost']) && $approvedBreakdown['breakdown']['material_cost'] > 0)
                                                 <div class="flex justify-between">
-                                                    <span>Pattern Fee{{ $order->quantity > 1 ? ' (× ' . $order->quantity . ')' : '' }}:</span>
-                                                    <span class="font-semibold">₱{{ number_format($approvedTotalPatternFee * $order->quantity, 2) }}</span>
+                                                    <span>Material Cost:</span>
+                                                    <span class="font-semibold">₱{{ number_format($approvedBreakdown['breakdown']['material_cost'], 2) }}</span>
                                                 </div>
+                                                @endif
+                                                @if(isset($approvedBreakdown['breakdown']['pattern_fee']) && $approvedBreakdown['breakdown']['pattern_fee'] > 0)
                                                 <div class="flex justify-between">
-                                                    <span>Fabric ({{ $order->fabric_quantity_meters }}m × ₱{{ number_format($approvedPricePerMeter, 2) }}){{ $order->quantity > 1 ? ' × ' . $order->quantity : '' }}:</span>
-                                                    <span class="font-semibold">₱{{ number_format($approvedFabricCost * $order->quantity, 2) }}</span>
+                                                    <span>Pattern Fee:</span>
+                                                    <span class="font-semibold">₱{{ number_format($approvedBreakdown['breakdown']['pattern_fee'], 2) }}</span>
                                                 </div>
+                                                @endif
+                                                @if(isset($approvedBreakdown['breakdown']['labor_cost']) && $approvedBreakdown['breakdown']['labor_cost'] > 0)
                                                 <div class="flex justify-between">
-                                                    <span>Shipping:</span>
-                                                    <span class="font-semibold">{{ $approvedShippingFee == 0 ? 'FREE' : '₱' . number_format($approvedShippingFee, 2) }}</span>
+                                                    <span>Labor Cost:</span>
+                                                    <span class="font-semibold">₱{{ number_format($approvedBreakdown['breakdown']['labor_cost'], 2) }}</span>
                                                 </div>
-                                                <div class="border-t border-gray-300 pt-1 mt-1 flex justify-between font-bold text-gray-900">
-                                                    <span>Subtotal:</span>
-                                                    <span>₱{{ number_format(($approvedTotalPatternFee * $order->quantity) + ($approvedFabricCost * $order->quantity) + $approvedShippingFee, 2) }}</span>
+                                                @endif
+                                                @if(isset($approvedBreakdown['breakdown']['delivery_fee']) && $approvedBreakdown['breakdown']['delivery_fee'] > 0)
+                                                <div class="flex justify-between">
+                                                    <span>Delivery Fee:</span>
+                                                    <span class="font-semibold">₱{{ number_format($approvedBreakdown['breakdown']['delivery_fee'], 2) }}</span>
                                                 </div>
-                                                <div class="border-t-2 border-gray-400 pt-1 mt-1 flex justify-between font-bold" style="color:#800000;">
-                                                    <span>Final Quoted Price:</span>
+                                                @endif
+                                                @if(isset($approvedBreakdown['breakdown']['discount']) && $approvedBreakdown['breakdown']['discount'] > 0)
+                                                <div class="flex justify-between text-green-600">
+                                                    <span>Discount:</span>
+                                                    <span class="font-semibold">-₱{{ number_format($approvedBreakdown['breakdown']['discount'], 2) }}</span>
+                                                </div>
+                                                @endif
+                                                <div class="border-t border-gray-300 pt-1 mt-1 flex justify-between font-bold" style="color:#800000;">
+                                                    <span>Total:</span>
                                                     <span>₱{{ number_format($order->final_price, 2) }}</span>
                                                 </div>
                                             </div>
                                         </div>
+                                        @endif
                                         
                                         {{-- Admin Notes --}}
-                                        @if($order->admin_notes || $order->approved_at)
+                                        @if($order->getAdminNotesText() || $order->approved_at)
                                         <div class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs">
                                             <div class="flex items-start gap-2">
                                                 <svg class="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -1089,20 +1002,77 @@
                     </div>
                     
                     <div class="bg-white rounded-xl p-6 mb-6 shadow-md border" style="border-color:#e0b0b0;">
-                        <div class="text-center mb-4">
-                            <p class="text-sm font-medium text-gray-600 mb-2">Quoted Amount</p>
-                            <p class="text-5xl font-extrabold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
-                        </div>
+                        @php
+                            $priceBreakdown = $order->getPriceBreakdown();
+                            $adminNotesText = $order->getAdminNotesText();
+                        @endphp
                         
-                        @if($order->admin_notes)
+                        @if($priceBreakdown && isset($priceBreakdown['breakdown']) && count($priceBreakdown['breakdown']) > 0)
+                            {{-- Price Breakdown Display --}}
+                            <div class="mb-4">
+                                <p class="text-sm font-semibold text-gray-600 mb-3 text-center">Price Breakdown</p>
+                                <div class="space-y-2">
+                                    @if(isset($priceBreakdown['breakdown']['material_cost']) && $priceBreakdown['breakdown']['material_cost'] > 0)
+                                    <div class="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg">
+                                        <span class="text-sm text-gray-700">Material Cost</span>
+                                        <span class="text-sm font-semibold text-gray-900">₱{{ number_format($priceBreakdown['breakdown']['material_cost'], 2) }}</span>
+                                    </div>
+                                    @endif
+                                    
+                                    @if(isset($priceBreakdown['breakdown']['pattern_fee']) && $priceBreakdown['breakdown']['pattern_fee'] > 0)
+                                    <div class="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg">
+                                        <span class="text-sm text-gray-700">Pattern / Customization Fee</span>
+                                        <span class="text-sm font-semibold text-gray-900">₱{{ number_format($priceBreakdown['breakdown']['pattern_fee'], 2) }}</span>
+                                    </div>
+                                    @endif
+                                    
+                                    @if(isset($priceBreakdown['breakdown']['labor_cost']) && $priceBreakdown['breakdown']['labor_cost'] > 0)
+                                    <div class="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg">
+                                        <span class="text-sm text-gray-700">Labor / Production Cost</span>
+                                        <span class="text-sm font-semibold text-gray-900">₱{{ number_format($priceBreakdown['breakdown']['labor_cost'], 2) }}</span>
+                                    </div>
+                                    @endif
+                                    
+                                    @if(isset($priceBreakdown['breakdown']['delivery_fee']) && $priceBreakdown['breakdown']['delivery_fee'] > 0)
+                                    <div class="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg">
+                                        <span class="text-sm text-gray-700">Delivery Fee</span>
+                                        <span class="text-sm font-semibold text-gray-900">₱{{ number_format($priceBreakdown['breakdown']['delivery_fee'], 2) }}</span>
+                                    </div>
+                                    @endif
+                                    
+                                    @if(isset($priceBreakdown['breakdown']['discount']) && $priceBreakdown['breakdown']['discount'] > 0)
+                                    <div class="flex justify-between items-center py-2 px-3 bg-green-50 rounded-lg">
+                                        <span class="text-sm text-green-700">Discount</span>
+                                        <span class="text-sm font-semibold text-green-600">-₱{{ number_format($priceBreakdown['breakdown']['discount'], 2) }}</span>
+                                    </div>
+                                    @endif
+                                </div>
+                                
+                                {{-- Total --}}
+                                <div class="mt-3 pt-3 border-t-2" style="border-color:#e0b0b0;">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-lg font-bold" style="color:#800000;">Total</span>
+                                        <span class="text-3xl font-extrabold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        @else
+                            {{-- Simple price display (no breakdown) --}}
+                            <div class="text-center mb-4">
+                                <p class="text-sm font-medium text-gray-600 mb-2">Quoted Amount</p>
+                                <p class="text-5xl font-extrabold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
+                            </div>
+                        @endif
+                        
+                        @if($adminNotesText)
                             <div class="mt-4 rounded-lg p-4 border-2" style="background-color:#fff5f5; border-color:#e0b0b0;">
                                 <div class="flex items-start">
                                     <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
                                     <div>
-                                        <p class="text-sm font-semibold mb-1" style="color:#800000;">Requirements from Admin:</p>
-                                        <p class="text-sm text-gray-700 whitespace-pre-line">{{ $order->admin_notes }}</p>
+                                        <p class="text-sm font-semibold mb-1" style="color:#800000;">Notes from Admin:</p>
+                                        <p class="text-sm text-gray-700 whitespace-pre-line">{{ $adminNotesText }}</p>
                                     </div>
                                 </div>
                             </div>
