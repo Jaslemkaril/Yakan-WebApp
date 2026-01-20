@@ -56,7 +56,7 @@ return new class extends Migration {
                 'delivered',
                 'cancelled',
                 'refunded'
-            ])->default('pending_confirmation')->index();
+            ])->default('pending_confirmation');
             
             // Additional info
             $table->text('notes')->nullable();
