@@ -71,3 +71,49 @@ Route::prefix('v1')->group(function () {
         Route::get('/admin/orders', [OrderController::class, 'adminIndex']);
     });
 });
+
+
+// ===================== SETUP ROUTES (Remove after initial setup) =====================
+Route::get('/setup/create-admin', function () {
+    try {
+        $existingAdmin = \App\Models\User::where('email', 'admin@yakan.com')->first();
+        
+        if ($existingAdmin) {
+            return response()->json([
+                'status' => 'exists',
+                'message' => 'Admin user already exists!',
+                'credentials' => [
+                    'email' => 'admin@yakan.com',
+                    'note' => 'Use your existing password'
+                ]
+            ]);
+        }
+        
+        $admin = \App\Models\User::create([
+            'name' => 'Admin User',
+            'first_name' => 'Admin',
+            'last_name' => 'User',
+            'email' => 'admin@yakan.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('admin123'),
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Admin user created successfully!',
+            'credentials' => [
+                'email' => 'admin@yakan.com',
+                'password' => 'admin123',
+                'note' => 'Please change this password after first login!'
+            ],
+            'login_url' => url('/admin/login')
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Failed to create admin',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
