@@ -10,15 +10,18 @@ class WelcomeController extends Controller
 {
     public function index()
     {
-        // Check if database has data
+        // Check if database has data (only seed once in production)
+        // This helps with Railway deployments where database might be ephemeral
         $hasProducts = Product::where('status', 'active')->exists();
 
-        if (!$hasProducts) {
-            // Seed database if empty
+        if (!$hasProducts && config('app.env') === 'production') {
+            // Only auto-seed in production on Railway (ephemeral filesystem)
             try {
                 \Artisan::call('db:seed', ['--force' => true]);
+                // Refresh query after seeding
+                $hasProducts = true;
             } catch (\Exception $e) {
-                // Log error but continue
+                // Log error but continue - don't break the homepage
                 \Log::error('Failed to seed database: ' . $e->getMessage());
             }
         }

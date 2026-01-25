@@ -95,11 +95,13 @@ class ProductSeeder extends Seeder
         ];
 
         foreach ($products as $productData) {
-            // Use sku instead of slug for uniqueness check
-            $sku = 'YKN-' . strtoupper(substr(md5($productData['name']), 0, 8));
+            // Check if product with same name and category already exists
             Product::firstOrCreate(
-                ['sku' => $sku], 
-                array_merge($productData, ['sku' => $sku])
+                [
+                    'name' => $productData['name'],
+                    'category_id' => $productData['category_id']
+                ], 
+                $productData
             );
         }
 
