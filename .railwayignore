@@ -11,6 +11,11 @@ phpunit.xml
 webpack.mix.js
 package.json
 package-lock.json
+vite.config.js
+postcss.config.js
+tailwind.config.js
+tsconfig.json
+.eslintrc.json
 /public/hot
 /public/storage
 /storage/*.key

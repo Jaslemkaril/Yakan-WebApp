@@ -310,6 +310,27 @@ If you encounter issues:
 
 Railway's free tier has strict resource limits, particularly memory constraints during the build process. This section provides optimization strategies to ensure successful deployments within these limits.
 
+### Important: Node.js is NOT Used
+
+**This is a pure Laravel PHP backend API.** The repository contains `package.json` with React Native/Expo dependencies for development/mobile app purposes, but these are NOT needed for the Railway deployment.
+
+**Railway Configuration:**
+- `nixpacks.toml` explicitly disables Node.js providers
+- `.railwayignore` excludes all npm-related files (`package.json`, `package-lock.json`, `vite.config.js`, etc.)
+- Build process uses **only PHP and Composer** - no npm/node installation
+- Frontend assets (if any) are pre-built and committed to the repository
+
+**Expected Build Behavior:**
+- ✅ No npm install or npm ci commands should run
+- ✅ No Node.js packages installed
+- ✅ Only Composer dependencies are installed
+- ✅ Build logs show PHP setup only
+
+If you see npm errors during deployment, verify that:
+1. The `nixpacks.toml` file contains `[providers]` section with `nodejs = false`
+2. The `.railwayignore` file excludes npm files
+3. You're deploying from the correct branch
+
 ### Common Free Tier Issues
 
 #### Out of Memory (OOM) Errors
@@ -326,22 +347,33 @@ Railway's free tier has strict resource limits, particularly memory constraints 
 #### 1. Nixpacks Configuration
 
 The repository includes an optimized `nixpacks.toml` that:
+- **Disables Node.js completely** via `[providers]` section
 - Uses minimal nixPkgs (only essential PHP extensions)
-- Installs only git via apt (reduces apt-get memory usage)
+- Installs only necessary packages to reduce memory usage
 - Uses `--no-dev --prefer-dist` flags for composer
 - Pre-caches Laravel configurations during build phase
 
 **Key optimizations:**
 ```toml
+# Explicitly disable Node.js - this is a pure PHP backend
+[providers]
+nodejs = false
+
 [phases.setup]
-nixPkgs = ["php82", "php82Extensions.mbstring", "php82Extensions.pdo", "php82Extensions.pdo_mysql"]
-aptPkgs = ["git"]  # Only essential packages
+nixPkgs = ["php82", "php82Packages.composer", "php82Extensions.mbstring", "php82Extensions.pdo", "php82Extensions.pdo_mysql", "git"]
 
 [phases.install]
 cmds = [
-    "composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist"
+    "composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts"
 ]
 ```
+
+**Why Node.js is disabled:**
+- This Laravel application is a pure PHP backend API
+- The `package.json` file contains development dependencies only (React Native/Expo for mobile app)
+- No npm/node packages are needed for production deployment
+- Disabling Node.js reduces build time and memory usage
+- Railway's auto-detection would otherwise try to run npm commands and fail
 
 #### 2. Build Size Reduction
 
@@ -443,6 +475,35 @@ LOG_LEVEL=error
 2. Check DB_* environment variables are correctly set
 3. Ensure database user has proper permissions
 4. Use `--force` flag for production migrations
+
+#### NPM/Node.js Errors (Should Not Occur)
+
+**Error:** `npm ci` can only install packages when your package.json and package-lock.json are in sync
+
+**Error:** `Missing: @typescript-eslint/eslint-plugin@6.21.0 from lock file`
+
+**Root Cause:** Railway's auto-detection is incorrectly treating this as a Node.js app when it's actually a pure Laravel PHP backend.
+
+**Solutions:**
+1. Verify `nixpacks.toml` contains:
+   ```toml
+   [providers]
+   nodejs = false
+   ```
+2. Verify `.railwayignore` excludes npm files:
+   ```
+   package.json
+   package-lock.json
+   vite.config.js
+   node_modules/
+   ```
+3. Clear Railway build cache and redeploy
+4. Check deploy logs to confirm no npm commands are running
+
+**Expected Behavior:**
+- ✅ Build should show "PHP" as the detected runtime, not "Node.js"
+- ✅ No npm/node installation in build logs
+- ✅ Only Composer install should run
 
 ### Performance Monitoring
 
