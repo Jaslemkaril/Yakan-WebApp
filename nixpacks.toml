@@ -1,31 +1,11 @@
 [phases.setup]
-nixPkgs = ['php82', 'php82Packages.composer', 'nodejs_20']
+nixPkgs = ["php82", "php82Packages.composer", "nodejs_20"]
 
 [phases.install]
-cmds = [
-    'composer install --no-dev --optimize-autoloader'
-]
+cmds = ["composer install --no-dev --optimize-autoloader"]
 
 [phases.build]
-cmds = [
-    'php artisan config:clear',
-    'php artisan cache:clear',
-    'php artisan view:clear',
-    'php artisan route:clear'
-]
+cmds = ["composer install --no-dev --optimize-autoloader"]
 
 [start]
-cmd = '''
-mkdir -p /app/storage/framework/{cache,sessions,views} && \
-mkdir -p /app/storage/logs && \
-touch /app/storage/database.sqlite && \
-chmod -R 775 /app/storage && \
-chmod 666 /app/storage/database.sqlite && \
-php artisan config:clear && \
-php artisan migrate --force && \
-php artisan storage:link --force && \
-php artisan config:cache && \
-php artisan route:cache && \
-php artisan view:cache && \
-php artisan serve --host=0.0.0.0 --port=$PORT
-'''
+cmd = "php artisan config:cache && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT"
