@@ -84,3 +84,9 @@ composer.lock
 # Build files
 /public/build
 /public/mix-manifest.json
+
+# SQLite database files (legacy - no longer used)
+/database/*.sqlite
+/database/*.sqlite-journal
+*.sqlite
+*.sqlite-journal

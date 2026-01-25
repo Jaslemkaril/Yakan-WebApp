@@ -12,10 +12,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // SQLite doesn't support ENUM, so we'll use a string column with check constraint
-        // For now, we'll just ensure the column exists as string
+        // For MySQL, we handle the ENUM at the application level
+        // The status column should already exist from the original table creation
         if (Schema::hasColumn('custom_orders', 'status')) {
-            // Column already exists, no need to modify for SQLite
+            // Column already exists, no modification needed
             return;
         }
         
@@ -29,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // No need to reverse for SQLite
+        // No reversal needed
     }
 };
