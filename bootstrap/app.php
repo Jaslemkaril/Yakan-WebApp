@@ -35,5 +35,15 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // When in production with debug mode enabled, show detailed JSON errors
+        $exceptions->renderable(function (\Throwable $e) {
+            if (app()->environment('production') && config('app.debug')) {
+                return response()->json([
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                ], 500);
+            }
+        });
     })->create();
