@@ -6,8 +6,19 @@
 
 // Load Laravel
 require __DIR__ . '/../../vendor/autoload.php';
-$app = require_once __DIR__ . '/../../bootstrap/app.php';
-$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
+
+try {
+    $app = require_once __DIR__ . '/../../bootstrap/app.php';
+    $app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
+} catch (Exception $e) {
+    echo "❌ Error: Failed to load Laravel application\n";
+    echo "Message: " . $e->getMessage() . "\n";
+    echo "\nPlease ensure:\n";
+    echo "- You are running this from the project root directory\n";
+    echo "- Composer dependencies are installed (run: composer install)\n";
+    echo "- .env file is configured properly\n";
+    exit(1);
+}
 
 use Illuminate\Support\Facades\DB;
 
