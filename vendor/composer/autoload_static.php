@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit74ec7c37f911b558395cabd1dc3ba0d7
+class ComposerStaticInit423eadf526c3518bc04099cb0849ae6f
 {
     public static $files = array (
         '6e3fae29631ef280660b3cdad06f25a8' => __DIR__ . '/..' . '/symfony/deprecation-contracts/function.php',
@@ -41,6 +41,7 @@ class ComposerStaticInit74ec7c37f911b558395cabd1dc3ba0d7
         'c72349b1fe8d0deeedd3a52e8aa814d8' => __DIR__ . '/..' . '/mockery/mockery/library/helpers.php',
         'ce9671a430e4846b44e1c68c7611f9f5' => __DIR__ . '/..' . '/mockery/mockery/library/Mockery.php',
         'a1cfe24d14977df6878b9bf804af2d1c' => __DIR__ . '/..' . '/nunomaduro/collision/src/Adapters/Phpunit/Autoload.php',
+        '9b38cf48e83f5d8f60375221cd213eee' => __DIR__ . '/..' . '/phpstan/phpstan/bootstrap.php',
         'ec07570ca5a812141189b1fa81503674' => __DIR__ . '/..' . '/phpunit/phpunit/src/Framework/Assert/Functions.php',
         'b4e3f29b106af37a2bb239f73cdf68c7' => __DIR__ . '/../..' . '/app/helpers.php',
     );
@@ -584,6 +585,7 @@ class ComposerStaticInit74ec7c37f911b558395cabd1dc3ba0d7
     );
 
     public static $classMap = array (
+        'App\\Console\\Commands\\DiagnoseDatabase' => __DIR__ . '/../..' . '/app/Console/Commands/DiagnoseDatabase.php',
         'App\\Console\\Commands\\TestCustomOrder' => __DIR__ . '/../..' . '/app/Console/Commands/TestCustomOrder.php',
         'App\\Console\\Commands\\TestStep1' => __DIR__ . '/../..' . '/app/Console/Commands/TestStep1.php',
         'App\\Events\\OrderCreated' => __DIR__ . '/../..' . '/app/Events/OrderCreated.php',
@@ -599,16 +601,21 @@ class ComposerStaticInit74ec7c37f911b558395cabd1dc3ba0d7
         'App\\Http\\Controllers\\Admin\\CustomOrderAnalyticsController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/CustomOrderAnalyticsController.php',
         'App\\Http\\Controllers\\Admin\\CustomOrderController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/CustomOrderController.php',
         'App\\Http\\Controllers\\Admin\\DashboardController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/DashboardController.php',
+        'App\\Http\\Controllers\\Admin\\FabricTypeController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/FabricTypeController.php',
+        'App\\Http\\Controllers\\Admin\\IntendedUseController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/IntendedUseController.php',
         'App\\Http\\Controllers\\Admin\\InventoryController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/InventoryController.php',
         'App\\Http\\Controllers\\Admin\\OrderController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/OrderController.php',
         'App\\Http\\Controllers\\Admin\\PatternController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/PatternController.php',
+        'App\\Http\\Controllers\\Admin\\PatternsManagementController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/PatternsManagementController.php',
         'App\\Http\\Controllers\\Admin\\ProductController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/ProductController.php',
         'App\\Http\\Controllers\\Admin\\ReportController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/ReportController.php',
+        'App\\Http\\Controllers\\Admin\\SettingsController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/SettingsController.php',
         'App\\Http\\Controllers\\Admin\\TestController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/TestController.php',
         'App\\Http\\Controllers\\Admin\\UserManagementController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/UserManagementController.php',
         'App\\Http\\Controllers\\Api\\AddressController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/AddressController.php',
         'App\\Http\\Controllers\\Api\\AuthController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/AuthController.php',
         'App\\Http\\Controllers\\Api\\CartController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/CartController.php',
+        'App\\Http\\Controllers\\Api\\ChatController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/ChatController.php',
         'App\\Http\\Controllers\\Api\\CulturalHeritageController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/CulturalHeritageController.php',
         'App\\Http\\Controllers\\Api\\CustomOrderController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/CustomOrderController.php',
         'App\\Http\\Controllers\\Api\\NotificationController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/NotificationController.php',
@@ -680,6 +687,7 @@ class ComposerStaticInit74ec7c37f911b558395cabd1dc3ba0d7
         'App\\Http\\Requests\\CustomOrderRequest' => __DIR__ . '/../..' . '/app/Http/Requests/CustomOrderRequest.php',
         'App\\Http\\Requests\\ProfileUpdateRequest' => __DIR__ . '/../..' . '/app/Http/Requests/ProfileUpdateRequest.php',
         'App\\Http\\Resources\\CustomOrderResource' => __DIR__ . '/../..' . '/app/Http/Resources/CustomOrderResource.php',
+        'App\\Mail\\CustomOrderDelayNotification' => __DIR__ . '/../..' . '/app/Mail/CustomOrderDelayNotification.php',
         'App\\Mail\\CustomOrder\\NewOrderNotification' => __DIR__ . '/../..' . '/app/Mail/CustomOrder/NewOrderNotification.php',
         'App\\Mail\\CustomOrder\\OrderApprovedNotification' => __DIR__ . '/../..' . '/app/Mail/CustomOrder/OrderApprovedNotification.php',
         'App\\Mail\\CustomOrder\\OrderCompletedNotification' => __DIR__ . '/../..' . '/app/Mail/CustomOrder/OrderCompletedNotification.php',
@@ -687,6 +695,7 @@ class ComposerStaticInit74ec7c37f911b558395cabd1dc3ba0d7
         'App\\Mail\\CustomOrder\\OrderRejectedNotification' => __DIR__ . '/../..' . '/app/Mail/CustomOrder/OrderRejectedNotification.php',
         'App\\Mail\\CustomOrder\\PriceQuotedNotification' => __DIR__ . '/../..' . '/app/Mail/CustomOrder/PriceQuotedNotification.php',
         'App\\Mail\\OtpVerificationMail' => __DIR__ . '/../..' . '/app/Mail/OtpVerificationMail.php',
+        'App\\Models\\Address' => __DIR__ . '/../..' . '/app/Models/Address.php',
         'App\\Models\\Admin' => __DIR__ . '/../..' . '/app/Models/Admin.php',
         'App\\Models\\AdminNotification' => __DIR__ . '/../..' . '/app/Models/AdminNotification.php',
         'App\\Models\\Cart' => __DIR__ . '/../..' . '/app/Models/Cart.php',
@@ -699,6 +708,7 @@ class ComposerStaticInit74ec7c37f911b558395cabd1dc3ba0d7
         'App\\Models\\CulturalHeritage' => __DIR__ . '/../..' . '/app/Models/CulturalHeritage.php',
         'App\\Models\\CustomOrder' => __DIR__ . '/../..' . '/app/Models/CustomOrder.php',
         'App\\Models\\FabricType' => __DIR__ . '/../..' . '/app/Models/FabricType.php',
+        'App\\Models\\IntendedUse' => __DIR__ . '/../..' . '/app/Models/IntendedUse.php',
         'App\\Models\\Inventory' => __DIR__ . '/../..' . '/app/Models/Inventory.php',
         'App\\Models\\Notification' => __DIR__ . '/../..' . '/app/Models/Notification.php',
         'App\\Models\\Order' => __DIR__ . '/../..' . '/app/Models/Order.php',
@@ -711,6 +721,7 @@ class ComposerStaticInit74ec7c37f911b558395cabd1dc3ba0d7
         'App\\Models\\ProductionScheduler' => __DIR__ . '/../..' . '/app/Models/ProductionScheduler.php',
         'App\\Models\\RecentView' => __DIR__ . '/../..' . '/app/Models/RecentView.php',
         'App\\Models\\Review' => __DIR__ . '/../..' . '/app/Models/Review.php',
+        'App\\Models\\SystemSetting' => __DIR__ . '/../..' . '/app/Models/SystemSetting.php',
         'App\\Models\\User' => __DIR__ . '/../..' . '/app/Models/User.php',
         'App\\Models\\UserAddress' => __DIR__ . '/../..' . '/app/Models/UserAddress.php',
         'App\\Models\\Wishlist' => __DIR__ . '/../..' . '/app/Models/Wishlist.php',
@@ -855,17 +866,22 @@ class ComposerStaticInit74ec7c37f911b558395cabd1dc3ba0d7
         'Cron\\MinutesField' => __DIR__ . '/..' . '/dragonmantank/cron-expression/src/Cron/MinutesField.php',
         'Cron\\MonthField' => __DIR__ . '/..' . '/dragonmantank/cron-expression/src/Cron/MonthField.php',
         'Database\\Factories\\UserFactory' => __DIR__ . '/../..' . '/database/factories/UserFactory.php',
+        'Database\\Seeders\\AdminUserSeeder' => __DIR__ . '/../..' . '/database/seeders/AdminUserSeeder.php',
         'Database\\Seeders\\AdminUserSeederUpdated' => __DIR__ . '/../..' . '/database/seeders/AdminUserSeederUpdated.php',
         'Database\\Seeders\\CategorySeeder' => __DIR__ . '/../..' . '/database/seeders/CategorySeeder.php',
         'Database\\Seeders\\CategorySlugSeeder' => __DIR__ . '/../..' . '/database/seeders/CategorySlugSeeder.php',
         'Database\\Seeders\\CouponSeeder' => __DIR__ . '/../..' . '/database/seeders/CouponSeeder.php',
+        'Database\\Seeders\\CulturalHeritageSeeder' => __DIR__ . '/../..' . '/database/seeders/CulturalHeritageSeeder.php',
         'Database\\Seeders\\DatabaseSeeder' => __DIR__ . '/../..' . '/database/seeders/DatabaseSeeder.php',
         'Database\\Seeders\\FabricTypeSeeder' => __DIR__ . '/../..' . '/database/seeders/FabricTypeSeeder.php',
+        'Database\\Seeders\\IntendedUseSeeder' => __DIR__ . '/../..' . '/database/seeders/IntendedUseSeeder.php',
         'Database\\Seeders\\InventorySeeder' => __DIR__ . '/../..' . '/database/seeders/InventorySeeder.php',
         'Database\\Seeders\\OrderSeeder' => __DIR__ . '/../..' . '/database/seeders/OrderSeeder.php',
+        'Database\\Seeders\\PatternSeeder' => __DIR__ . '/../..' . '/database/seeders/PatternSeeder.php',
         'Database\\Seeders\\PatternTagSeeder' => __DIR__ . '/../..' . '/database/seeders/PatternTagSeeder.php',
         'Database\\Seeders\\ProductSeeder' => __DIR__ . '/../..' . '/database/seeders/ProductSeeder.php',
         'Database\\Seeders\\SampleDataSeeder' => __DIR__ . '/../..' . '/database/seeders/SampleDataSeeder.php',
+        'Database\\Seeders\\SystemSettingsSeeder' => __DIR__ . '/../..' . '/database/seeders/SystemSettingsSeeder.php',
         'Database\\Seeders\\TestUserSeeder' => __DIR__ . '/../..' . '/database/seeders/TestUserSeeder.php',
         'Database\\Seeders\\UserSeeder' => __DIR__ . '/../..' . '/database/seeders/UserSeeder.php',
         'Database\\Seeders\\YakanPatternSeeder' => __DIR__ . '/../..' . '/database/seeders/YakanPatternSeeder.php',
@@ -7818,9 +7834,9 @@ class ComposerStaticInit74ec7c37f911b558395cabd1dc3ba0d7
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInit74ec7c37f911b558395cabd1dc3ba0d7::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInit74ec7c37f911b558395cabd1dc3ba0d7::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInit74ec7c37f911b558395cabd1dc3ba0d7::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInit423eadf526c3518bc04099cb0849ae6f::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInit423eadf526c3518bc04099cb0849ae6f::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInit423eadf526c3518bc04099cb0849ae6f::$classMap;
 
         }, null, ClassLoader::class);
     }

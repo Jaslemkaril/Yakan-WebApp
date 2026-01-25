@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'laravel/laravel',
-        'pretty_version' => 'dev-main',
-        'version' => 'dev-main',
-        'reference' => 'f4ba0a4e522a6a99bb47a6acc5d7685000ce940a',
+        'pretty_version' => 'dev-copilot/update-dependencies-and-warnings',
+        'version' => 'dev-copilot/update-dependencies-and-warnings',
+        'reference' => 'f69768e55b3aae5d952f3e407497e88ed84e13e0',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -428,9 +428,9 @@
             'dev_requirement' => false,
         ),
         'laravel/laravel' => array(
-            'pretty_version' => 'dev-main',
-            'version' => 'dev-main',
-            'reference' => 'f4ba0a4e522a6a99bb47a6acc5d7685000ce940a',
+            'pretty_version' => 'dev-copilot/update-dependencies-and-warnings',
+            'version' => 'dev-copilot/update-dependencies-and-warnings',
+            'reference' => 'f69768e55b3aae5d952f3e407497e88ed84e13e0',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -720,6 +720,15 @@
             'install_path' => __DIR__ . '/../phpseclib/phpseclib',
             'aliases' => array(),
             'dev_requirement' => false,
+        ),
+        'phpstan/phpstan' => array(
+            'pretty_version' => '1.12.32',
+            'version' => '1.12.32.0',
+            'reference' => '2770dcdf5078d0b0d53f94317e06affe88419aa8',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../phpstan/phpstan',
+            'aliases' => array(),
+            'dev_requirement' => true,
         ),
         'phpunit/php-code-coverage' => array(
             'pretty_version' => '11.0.11',
