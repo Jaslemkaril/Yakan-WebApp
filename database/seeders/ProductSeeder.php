@@ -5,30 +5,20 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\Product;
 use App\Models\Category;
-use Illuminate\Support\Facades\DB;
 
 class ProductSeeder extends Seeder
 {
     public function run(): void
     {
-        // Disable foreign key checks
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        
-        // Clear existing products
-        DB::table('products')->truncate();
-        
-        // Re-enable foreign key checks
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-
         // Get or create categories
         $categories = [
-            'Saputangan' => Category::firstOrCreate(['name' => 'Saputangan']),
-            'Pinantupan' => Category::firstOrCreate(['name' => 'Pinantupan']),
-            'Birey-Birey' => Category::firstOrCreate(['name' => 'Birey-Birey']),
-            'Sinaluan' => Category::firstOrCreate(['name' => 'Sinaluan']),
+            'Saputangan' => Category::firstOrCreate(['slug' => 'saputangan'], ['name' => 'Saputangan']),
+            'Pinantupan' => Category::firstOrCreate(['slug' => 'pinantupan'], ['name' => 'Pinantupan']),
+            'Birey-Birey' => Category::firstOrCreate(['slug' => 'birey-birey'], ['name' => 'Birey-Birey']),
+            'Sinaluan' => Category::firstOrCreate(['slug' => 'sinaluan'], ['name' => 'Sinaluan']),
         ];
 
-        // Mobile app products
+        // Products data
         $products = [
             [
                 'name' => 'Saputangan',
@@ -37,6 +27,7 @@ class ProductSeeder extends Seeder
                 'category_id' => $categories['Saputangan']->id,
                 'image' => 'saputangan.jpg',
                 'stock' => 50,
+                'status' => 'active',
             ],
             [
                 'name' => 'Pinantupan',
@@ -45,6 +36,7 @@ class ProductSeeder extends Seeder
                 'category_id' => $categories['Pinantupan']->id,
                 'image' => 'pinantupan.jpg',
                 'stock' => 45,
+                'status' => 'active',
             ],
             [
                 'name' => 'Birey-Birey',
@@ -53,6 +45,7 @@ class ProductSeeder extends Seeder
                 'category_id' => $categories['Birey-Birey']->id,
                 'image' => 'birey.jpg',
                 'stock' => 40,
+                'status' => 'active',
             ],
             [
                 'name' => 'Saputangan Classic',
@@ -61,6 +54,7 @@ class ProductSeeder extends Seeder
                 'category_id' => $categories['Saputangan']->id,
                 'image' => 'saputangan-classic.jpg',
                 'stock' => 35,
+                'status' => 'active',
             ],
             [
                 'name' => 'Sinaluan',
@@ -69,6 +63,7 @@ class ProductSeeder extends Seeder
                 'category_id' => $categories['Sinaluan']->id,
                 'image' => 'sinaluan.jpg',
                 'stock' => 30,
+                'status' => 'active',
             ],
             [
                 'name' => 'Pinantupan Premium',
@@ -77,6 +72,7 @@ class ProductSeeder extends Seeder
                 'category_id' => $categories['Pinantupan']->id,
                 'image' => 'pinantupan-premium.jpg',
                 'stock' => 25,
+                'status' => 'active',
             ],
             [
                 'name' => 'Birey-Birey Deluxe',
@@ -85,6 +81,7 @@ class ProductSeeder extends Seeder
                 'category_id' => $categories['Birey-Birey']->id,
                 'image' => 'birey-deluxe.jpg',
                 'stock' => 28,
+                'status' => 'active',
             ],
             [
                 'name' => 'Sinaluan Premium',
@@ -93,11 +90,19 @@ class ProductSeeder extends Seeder
                 'category_id' => $categories['Sinaluan']->id,
                 'image' => 'sinaluan-premium.jpg',
                 'stock' => 20,
+                'status' => 'active',
             ],
         ];
 
-        foreach ($products as $product) {
-            Product::create($product);
+        foreach ($products as $productData) {
+            // Check if product with same name and category already exists
+            Product::firstOrCreate(
+                [
+                    'name' => $productData['name'],
+                    'category_id' => $productData['category_id']
+                ], 
+                $productData
+            );
         }
 
         $this->command->info('Products seeded successfully!');

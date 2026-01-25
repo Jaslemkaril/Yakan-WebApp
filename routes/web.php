@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Artisan;
 
 // Fallback route for storage files when symlink doesn't exist
 Route::get('/storage/{path}', function ($path) {
@@ -942,6 +943,38 @@ Route::prefix('track-order')->name('track-order.')->group(function () {
     Route::get('/{trackingNumber}', [App\Http\Controllers\TrackOrderController::class, 'show'])->name('show');
     Route::get('/{trackingNumber}/history', [App\Http\Controllers\TrackOrderController::class, 'getHistory'])->name('history');
 });
+
+// Diagnostic routes (only in debug mode)
+if (config('app.debug')) {
+    Route::get('/debug/db', function() {
+        $connection = config('database.default');
+        $data = [
+            'connection' => $connection,
+            'env_db_connection' => env('DB_CONNECTION'),
+            'cached' => app()->configurationIsCached(),
+        ];
+
+        // Only add SQLite-specific info if using SQLite
+        if ($connection === 'sqlite') {
+            $database = config('database.connections.sqlite.database');
+            $data['database'] = $database;
+            $data['file_exists'] = file_exists($database);
+            $data['writable'] = is_writable(dirname($database));
+        }
+
+        return response()->json($data);
+    });
+
+    Route::get('/debug/seed', function() {
+        // Only allow in local/testing environment for safety
+        if (!in_array(config('app.env'), ['local', 'testing'])) {
+            abort(403, 'Seeding via web interface not allowed in this environment');
+        }
+        
+        Artisan::call('db:seed', ['--force' => true]);
+        return 'Database seeded!';
+    });
+}
 
 // Fallback 404
 Route::fallback(function () {

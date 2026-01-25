@@ -9,11 +9,15 @@ class CategorySeeder extends Seeder
 {
     public function run(): void
     {
-        Category::insert([
-            ['name' => 'Apparel', 'slug' => 'apparel'],
-            ['name' => 'Electronics', 'slug' => 'electronics'],
-            ['name' => 'Accessories', 'slug' => 'accessories'],
-            ['name' => 'Home & Living', 'slug' => 'home-living'],
-        ]);
+        $categories = [
+            ['name' => 'Saputangan', 'slug' => 'saputangan'],
+            ['name' => 'Pinantupan', 'slug' => 'pinantupan'],
+            ['name' => 'Birey-Birey', 'slug' => 'birey-birey'],
+            ['name' => 'Sinaluan', 'slug' => 'sinaluan'],
+        ];
+
+        foreach ($categories as $category) {
+            Category::firstOrCreate(['slug' => $category['slug']], $category);
+        }
     }
 }
