@@ -1,8 +1,7 @@
 <?php
 require __DIR__ . '/../../vendor/autoload.php';
 $app = require __DIR__ . '/../../bootstrap/app.php';
-$kernel = $app->make('Illuminate\Contracts\Http\Kernel');
-$response = $kernel->handle($request = \Illuminate\Http\Request::capture());
+$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
 echo "=== CHECKING ALL CUSTOM ORDERS FOR QUANTITY PRICE MISMATCH ===\n\n";
 
