@@ -110,12 +110,14 @@ For production environments (like Railway):
 
 - **Option 1**: Use SQLite with persistent volume
   - Set `DB_CONNECTION=sqlite`
-  - Mount `/app/storage` as a volume
+  - Set `DB_DATABASE=/app/storage/database.sqlite` in production `.env`
+  - Mount `/app/storage` as a persistent volume to preserve data across deployments
   
 - **Option 2**: Use managed MySQL service
-  - Add MySQL database service
-  - Configure environment variables
-  - See `RAILWAY_FIX_DATABASE.md` for details
+  - Add MySQL database service in Railway dashboard
+  - Configure environment variables: `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`
+  - Use Railway's provided MySQL connection variables
+  - For detailed Railway setup instructions, see `RAILWAY_FIX_DATABASE.md`
 
 ## Database Backups
 
