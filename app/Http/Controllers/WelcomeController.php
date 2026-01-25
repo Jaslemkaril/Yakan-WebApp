@@ -10,6 +10,19 @@ class WelcomeController extends Controller
 {
     public function index()
     {
+        // Check if database has data
+        $hasProducts = Product::where('status', 'active')->exists();
+
+        if (!$hasProducts) {
+            // Seed database if empty
+            try {
+                \Artisan::call('db:seed', ['--force' => true]);
+            } catch (\Exception $e) {
+                // Log error but continue
+                \Log::error('Failed to seed database: ' . $e->getMessage());
+            }
+        }
+
         // Latest 8 active products
         $latestProducts = Product::where('status', 'active')
             ->latest()

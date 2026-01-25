@@ -943,6 +943,25 @@ Route::prefix('track-order')->name('track-order.')->group(function () {
     Route::get('/{trackingNumber}/history', [App\Http\Controllers\TrackOrderController::class, 'getHistory'])->name('history');
 });
 
+// Diagnostic routes (only in debug mode)
+if (config('app.debug')) {
+    Route::get('/debug/db', function() {
+        return response()->json([
+            'connection' => config('database.default'),
+            'database' => config('database.connections.' . config('database.default') . '.database'),
+            'file_exists' => file_exists(config('database.connections.sqlite.database')),
+            'writable' => is_writable(dirname(config('database.connections.sqlite.database'))),
+            'env_db_connection' => env('DB_CONNECTION'),
+            'cached' => app()->configurationIsCached(),
+        ]);
+    });
+
+    Route::get('/debug/seed', function() {
+        \Artisan::call('db:seed', ['--force' => true]);
+        return 'Database seeded!';
+    });
+}
+
 // Fallback 404
 Route::fallback(function () {
     return response()->view('errors.404', [], 404);
