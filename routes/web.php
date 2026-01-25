@@ -421,17 +421,6 @@ Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->gr
     Route::get('/analytics', [\App\Http\Controllers\CustomOrderController::class, 'userAnalytics'])->name('custom_orders.user_analytics');
 });
 
-    // Reviews
-Route::prefix('products/{product}/reviews')->name('reviews.')->group(function () {
-    Route::get('/', [ReviewController::class, 'index'])->name('index');
-    Route::get('/create', [ReviewController::class, 'create'])->name('create');
-    Route::post('/', [ReviewController::class, 'store'])->name('store');
-    Route::patch('/{review}/helpful', [ReviewController::class, 'helpful'])->name('helpful');
-    Route::get('/{review}/edit', [ReviewController::class, 'edit'])->name('edit');
-    Route::patch('/{review}', [ReviewController::class, 'update'])->name('update');
-    Route::delete('/{review}', [ReviewController::class, 'destroy'])->name('destroy');
-});
-
 });
 
 // Track Order - Redirect old routes to new implementation
