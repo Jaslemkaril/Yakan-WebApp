@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -93,6 +94,21 @@ Route::get('/api/documentation', function() {
         'documentation' => url('/api/documentation'),
     ]);
 })->name('api.documentation');
+
+// Health check route for diagnostics
+Route::get('/health-check', function() {
+    return response()->json([
+        'status' => 'ok',
+        'app_env' => config('app.env'),
+        'app_debug' => config('app.debug'),
+        'database' => DB::connection()->getDatabaseName(),
+        'storage_path' => storage_path(),
+        'view_cache' => is_dir(storage_path('framework/views')),
+        'routes_cached' => app()->routesAreCached(),
+        'config_cached' => app()->configurationIsCached(),
+    ]);
+})->name('health.check');
+
 Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::get('/search/live', [SearchController::class, 'liveSearch'])->name('search.live');
 Route::get('/contact', [WelcomeController::class, 'contact'])->name('contact');
