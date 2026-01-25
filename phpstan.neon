@@ -1,0 +1,10 @@
+parameters:
+    level: 5
+    paths:
+        - app
+        - routes
+    excludePaths:
+        - vendor
+        - storage
+        - bootstrap/cache
+    checkMissingIterableValueType: false
