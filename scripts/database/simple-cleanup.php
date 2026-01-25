@@ -9,7 +9,7 @@ echo "Cleanup Test Data from Database\n";
 echo "========================================\n\n";
 
 // Connect to SQLite database
-$db = new PDO('sqlite:database/database.sqlite');
+$db = new PDO('sqlite:' . __DIR__ . '/../../database/database.sqlite');
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 echo "Connected to database.\n\n";
