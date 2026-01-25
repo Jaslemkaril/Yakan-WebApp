@@ -76,7 +76,10 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 | Welcome / Landing Page
 |--------------------------------------------------------------------------
 */
-Route::get('/', function() {
+Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
+
+// API documentation route
+Route::get('/api/documentation', function() {
     return response()->json([
         'app' => 'Yakan E-commerce API',
         'version' => '1.0.0',
@@ -89,7 +92,7 @@ Route::get('/', function() {
         ],
         'documentation' => url('/api/documentation'),
     ]);
-})->name('welcome');
+})->name('api.documentation');
 Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::get('/search/live', [SearchController::class, 'liveSearch'])->name('search.live');
 Route::get('/contact', [WelcomeController::class, 'contact'])->name('contact');
