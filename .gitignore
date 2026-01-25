@@ -1,9 +1,25 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
+# Laravel specific
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+
 # dependencies
 node_modules/
 
-# Expo
+# Expo (for mobile app)
 .expo/
 dist/
 web-build/
@@ -32,6 +48,7 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
 
 # typescript
 *.tsbuildinfo
@@ -39,3 +56,31 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# User uploaded content
+/storage/app/public/*
+!/storage/app/public/.gitignore
+/public/uploads/*
+!/public/uploads/.gitignore
+
+# Laravel logs
+/storage/logs/*.log
+
+# Composer
+composer.phar
+composer.lock
+
+# Testing
+/coverage
+/.phpunit.cache
+
+# Build files
+/public/build
+/public/mix-manifest.json
