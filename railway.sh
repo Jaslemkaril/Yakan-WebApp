@@ -19,6 +19,8 @@ php artisan view:cache
 
 # Create storage link
 echo "🔗 Creating storage link..."
-php artisan storage:link || true
+if ! php artisan storage:link 2>/dev/null; then
+    echo "⚠️  Storage link already exists or failed to create (this is usually safe to ignore)"
+fi
 
 echo "✅ Deployment complete!"
