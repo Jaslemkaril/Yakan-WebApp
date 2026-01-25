@@ -1102,3 +1102,48 @@ Intended Use: Home Decor","patterns":["6"],"quantity":1,"estimated_price":3500.0
 [2026-01-19 09:27:59] local.INFO: DashboardController - User: user@yakan.com, Role: user  
 [2026-01-19 09:27:59] local.INFO: DashboardController - Regular user, showing user dashboard  
 [2026-01-19 09:29:32] local.INFO: CustomOrder show access attempt {"order_id":24,"order_user_id":3,"authenticated_user_id":3,"is_authenticated":true,"user_email":"user@yakan.com","matches":true} 
+[2026-01-25 16:27:49] local.ERROR: SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select * from `system_settings` where `key` = price_per_meter limit 1) {"exception":"[object] (Illuminate\\Database\\QueryException(code: 2002): SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select * from `system_settings` where `key` = price_per_meter limit 1) at /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connection.php:824)
+[stacktrace]
+#0 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connection.php(978): Illuminate\\Database\\Connection->runQueryCallback()
+#1 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connection.php(957): Illuminate\\Database\\Connection->tryAgainIfCausedByLostConnection()
+#2 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connection.php(780): Illuminate\\Database\\Connection->handleQueryException()
+#3 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connection.php(397): Illuminate\\Database\\Connection->run()
+#4 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(3188): Illuminate\\Database\\Connection->select()
+#5 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(3173): Illuminate\\Database\\Query\\Builder->runSelect()
+#6 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(3763): Illuminate\\Database\\Query\\Builder->Illuminate\\Database\\Query\\{closure}()
+#7 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(3172): Illuminate\\Database\\Query\\Builder->onceWithColumns()
+#8 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Builder.php(902): Illuminate\\Database\\Query\\Builder->get()
+#9 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Builder.php(884): Illuminate\\Database\\Eloquent\\Builder->getModels()
+#10 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Concerns/BuildsQueries.php(366): Illuminate\\Database\\Eloquent\\Builder->get()
+#11 /home/runner/work/Yakan-WebApp/Yakan-WebApp/app/Models/SystemSetting.php(17): Illuminate\\Database\\Eloquent\\Builder->first()
+#12 /home/runner/work/Yakan-WebApp/Yakan-WebApp/scripts/database/check_settings.php(8): App\\Models\\SystemSetting::get()
+#13 {main}
+
+[previous exception] [object] (PDOException(code: 2002): SQLSTATE[HY000] [2002] Connection refused at /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connectors/Connector.php:66)
+[stacktrace]
+#0 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connectors/Connector.php(66): PDO->__construct()
+#1 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connectors/Connector.php(85): Illuminate\\Database\\Connectors\\Connector->createPdoConnection()
+#2 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connectors/Connector.php(48): Illuminate\\Database\\Connectors\\Connector->tryAgainIfCausedByLostConnection()
+#3 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connectors/MySqlConnector.php(24): Illuminate\\Database\\Connectors\\Connector->createConnection()
+#4 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connectors/ConnectionFactory.php(184): Illuminate\\Database\\Connectors\\MySqlConnector->connect()
+#5 [internal function]: Illuminate\\Database\\Connectors\\ConnectionFactory->Illuminate\\Database\\Connectors\\{closure}()
+#6 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connection.php(1234): call_user_func()
+#7 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connection.php(1270): Illuminate\\Database\\Connection->getPdo()
+#8 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connection.php(511): Illuminate\\Database\\Connection->getReadPdo()
+#9 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connection.php(406): Illuminate\\Database\\Connection->getPdoForSelect()
+#10 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connection.php(811): Illuminate\\Database\\Connection->Illuminate\\Database\\{closure}()
+#11 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connection.php(978): Illuminate\\Database\\Connection->runQueryCallback()
+#12 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connection.php(957): Illuminate\\Database\\Connection->tryAgainIfCausedByLostConnection()
+#13 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connection.php(780): Illuminate\\Database\\Connection->handleQueryException()
+#14 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Connection.php(397): Illuminate\\Database\\Connection->run()
+#15 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(3188): Illuminate\\Database\\Connection->select()
+#16 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(3173): Illuminate\\Database\\Query\\Builder->runSelect()
+#17 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(3763): Illuminate\\Database\\Query\\Builder->Illuminate\\Database\\Query\\{closure}()
+#18 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Query/Builder.php(3172): Illuminate\\Database\\Query\\Builder->onceWithColumns()
+#19 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Builder.php(902): Illuminate\\Database\\Query\\Builder->get()
+#20 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Eloquent/Builder.php(884): Illuminate\\Database\\Eloquent\\Builder->getModels()
+#21 /home/runner/work/Yakan-WebApp/Yakan-WebApp/vendor/laravel/framework/src/Illuminate/Database/Concerns/BuildsQueries.php(366): Illuminate\\Database\\Eloquent\\Builder->get()
+#22 /home/runner/work/Yakan-WebApp/Yakan-WebApp/app/Models/SystemSetting.php(17): Illuminate\\Database\\Eloquent\\Builder->first()
+#23 /home/runner/work/Yakan-WebApp/Yakan-WebApp/scripts/database/check_settings.php(8): App\\Models\\SystemSetting::get()
+#24 {main}
+"} 

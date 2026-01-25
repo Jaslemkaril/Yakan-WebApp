@@ -1,6 +1,6 @@
 <?php
-require 'vendor/autoload.php';
-$app = require 'bootstrap/app.php';
+require __DIR__ . '/../../vendor/autoload.php';
+$app = require __DIR__ . '/../../bootstrap/app.php';
 $kernel = $app->make('Illuminate\Contracts\Http\Kernel');
 $response = $kernel->handle($request = \Illuminate\Http\Request::capture());
 
