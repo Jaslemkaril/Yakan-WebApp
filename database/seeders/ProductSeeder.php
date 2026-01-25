@@ -22,7 +22,6 @@ class ProductSeeder extends Seeder
         $products = [
             [
                 'name' => 'Saputangan',
-                'slug' => 'saputangan',
                 'description' => 'The Saputangan is a square piece of woven cloth usually measuring no less than standard size with traditional Yakan patterns.',
                 'price' => 50.00,
                 'category_id' => $categories['Saputangan']->id,
@@ -32,7 +31,6 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Pinantupan',
-                'slug' => 'pinantupan',
                 'description' => 'Pinantupan uses simple patterns like flowers and diamonds and are also used for special occasions and traditional celebrations.',
                 'price' => 50.00,
                 'category_id' => $categories['Pinantupan']->id,
@@ -42,7 +40,6 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Birey-Birey',
-                'slug' => 'birey-birey',
                 'description' => 'Birey-birey is a traditional handwoven textile pattern that resembles the sections of rice fields.',
                 'price' => 50.00,
                 'category_id' => $categories['Birey-Birey']->id,
@@ -52,7 +49,6 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Saputangan Classic',
-                'slug' => 'saputangan-classic',
                 'description' => 'Classic design with traditional Yakan patterns and vibrant colors, perfect for everyday use.',
                 'price' => 60.00,
                 'category_id' => $categories['Saputangan']->id,
@@ -62,7 +58,6 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Sinaluan',
-                'slug' => 'sinaluan',
                 'description' => 'Sinaluan features intricate geometric patterns representing Yakan heritage and craftsmanship.',
                 'price' => 75.00,
                 'category_id' => $categories['Sinaluan']->id,
@@ -72,7 +67,6 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Pinantupan Premium',
-                'slug' => 'pinantupan-premium',
                 'description' => 'Premium quality Pinantupan with detailed floral patterns and superior weaving technique.',
                 'price' => 85.00,
                 'category_id' => $categories['Pinantupan']->id,
@@ -82,7 +76,6 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Birey-Birey Deluxe',
-                'slug' => 'birey-birey-deluxe',
                 'description' => 'Deluxe version of Birey-Birey with enhanced colors and intricate detailing.',
                 'price' => 70.00,
                 'category_id' => $categories['Birey-Birey']->id,
@@ -92,7 +85,6 @@ class ProductSeeder extends Seeder
             ],
             [
                 'name' => 'Sinaluan Premium',
-                'slug' => 'sinaluan-premium',
                 'description' => 'Premium Sinaluan with extra fine weaving and exclusive color combinations.',
                 'price' => 95.00,
                 'category_id' => $categories['Sinaluan']->id,
@@ -103,9 +95,11 @@ class ProductSeeder extends Seeder
         ];
 
         foreach ($products as $productData) {
+            // Use sku instead of slug for uniqueness check
+            $sku = 'YKN-' . strtoupper(substr(md5($productData['name']), 0, 8));
             Product::firstOrCreate(
-                ['slug' => $productData['slug']], 
-                $productData
+                ['sku' => $sku], 
+                array_merge($productData, ['sku' => $sku])
             );
         }
 
