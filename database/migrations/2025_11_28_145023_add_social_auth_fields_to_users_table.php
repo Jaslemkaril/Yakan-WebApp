@@ -25,8 +25,6 @@ return new class extends Migration
             if (!Schema::hasColumn('users', 'avatar')) {
                 $table->string('avatar')->nullable()->after('provider_token');
             }
-            
-            // Index already exists from previous migration, skip for SQLite
         });
     }
 

@@ -954,14 +954,6 @@ if (config('app.debug')) {
             'cached' => app()->configurationIsCached(),
         ];
 
-        // Only add SQLite-specific info if using SQLite
-        if ($connection === 'sqlite') {
-            $database = config('database.connections.sqlite.database');
-            $data['database'] = $database;
-            $data['file_exists'] = file_exists($database);
-            $data['writable'] = is_writable(dirname($database));
-        }
-
         return response()->json($data);
     });
 

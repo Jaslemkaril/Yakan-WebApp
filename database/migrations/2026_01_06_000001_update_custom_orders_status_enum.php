@@ -10,10 +10,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Skip for SQLite - enum changes are handled in the original table creation
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement("ALTER TABLE custom_orders MODIFY status ENUM('pending','price_quoted','approved','rejected','processing','in_production','production_complete','out_for_delivery','delivered','completed','cancelled') DEFAULT 'pending'");
-        }
+        DB::statement("ALTER TABLE custom_orders MODIFY status ENUM('pending','price_quoted','approved','rejected','processing','in_production','production_complete','out_for_delivery','delivered','completed','cancelled') DEFAULT 'pending'");
     }
 
     /**
@@ -21,9 +18,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Skip for SQLite
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement("ALTER TABLE custom_orders MODIFY status ENUM('pending','price_quoted','approved','rejected','processing','in_production','completed','cancelled') DEFAULT 'pending'");
-        }
+        DB::statement("ALTER TABLE custom_orders MODIFY status ENUM('pending','price_quoted','approved','rejected','processing','in_production','completed','cancelled') DEFAULT 'pending'");
     }
 };
