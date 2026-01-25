@@ -2,7 +2,7 @@
 # This explicitly disables Node.js/npm to prevent Railway from treating this as a Node.js app
 
 [providers]
-# Disable all Node.js providers - this is a pure PHP backend
+# Disable Node.js provider - this is a pure PHP backend
 nodejs = false
 
 [phases.setup]
