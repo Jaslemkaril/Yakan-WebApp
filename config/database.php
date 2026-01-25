@@ -16,6 +16,11 @@ return [
     |
     */
 
+    /*
+     * Default database connection.
+     * If DB_CONNECTION is set in .env, that value is used.
+     * Otherwise, defaults to 'mysql' for production, 'sqlite' for local development.
+     */
     'default' => env('DB_CONNECTION', env('APP_ENV') === 'production' ? 'mysql' : 'sqlite'),
 
     /*

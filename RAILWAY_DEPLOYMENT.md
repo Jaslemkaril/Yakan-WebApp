@@ -147,7 +147,9 @@ railway link
 railway run php artisan migrate --force
 ```
 
-**Option B: Add to Build Process**
+**Option B: Add to Build Process (Advanced)**
+
+**Warning:** Running migrations automatically during build can cause issues if the database isn't ready yet or if migrations fail. Use this approach with caution.
 
 Update your `composer.json` to include migrations in the deployment:
 
@@ -163,6 +165,8 @@ Update your `composer.json` to include migrations in the deployment:
   }
 }
 ```
+
+**Note:** Railway's deployment hooks are a safer alternative for running migrations.
 
 ### 7. Verify Deployment
 
@@ -207,7 +211,7 @@ After deployment completes:
 
 **Solutions:**
 1. Check Deploy Logs for specific error messages
-2. Ensure `APP_DEBUG=true` temporarily to see detailed errors
+2. **If absolutely necessary for troubleshooting**, temporarily set `APP_DEBUG=true` to see detailed errors, then **immediately** set it back to `false` after identifying the issue (never leave debug mode enabled in production as it exposes sensitive information)
 3. Verify all required environment variables are set
 4. Check file permissions for storage and cache directories
 
