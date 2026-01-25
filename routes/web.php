@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Artisan;
 
 // Fallback route for storage files when symlink doesn't exist
 Route::get('/storage/{path}', function ($path) {
@@ -970,7 +971,7 @@ if (config('app.debug')) {
             abort(403, 'Seeding via web interface not allowed in this environment');
         }
         
-        \Artisan::call('db:seed', ['--force' => true]);
+        Artisan::call('db:seed', ['--force' => true]);
         return 'Database seeded!';
     });
 }

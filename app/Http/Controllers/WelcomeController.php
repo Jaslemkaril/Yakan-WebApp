@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 
 class WelcomeController extends Controller
 {
@@ -12,17 +14,17 @@ class WelcomeController extends Controller
     {
         // Check if database has data (only seed once in production)
         // This helps with Railway deployments where database might be ephemeral
-        $hasProducts = Product::where('status', 'active')->exists();
+        $hasActiveProducts = Product::where('status', 'active')->exists();
 
-        if (!$hasProducts && config('app.env') === 'production') {
+        if (!$hasActiveProducts && config('app.env') === 'production') {
             // Only auto-seed in production on Railway (ephemeral filesystem)
             try {
-                \Artisan::call('db:seed', ['--force' => true]);
+                Artisan::call('db:seed', ['--force' => true]);
                 // Refresh query after seeding
-                $hasProducts = true;
+                $hasActiveProducts = true;
             } catch (\Exception $e) {
                 // Log error but continue - don't break the homepage
-                \Log::error('Failed to seed database: ' . $e->getMessage());
+                Log::error('Failed to seed database: ' . $e->getMessage());
             }
         }
 

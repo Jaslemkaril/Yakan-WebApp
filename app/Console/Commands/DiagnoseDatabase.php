@@ -29,7 +29,16 @@ class DiagnoseDatabase extends Command
             DB::connection()->getPdo();
             $this->info("✓ Connection successful");
 
-            $tables = DB::select("SELECT name FROM sqlite_master WHERE type='table'");
+            // Get table count based on connection type
+            if ($connection === 'sqlite') {
+                $tables = DB::select("SELECT name FROM sqlite_master WHERE type='table'");
+            } elseif (in_array($connection, ['mysql', 'mariadb'])) {
+                $tables = DB::select("SHOW TABLES");
+            } elseif ($connection === 'pgsql') {
+                $tables = DB::select("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
+            } else {
+                $tables = [];
+            }
             $this->info("Tables: " . count($tables));
 
             $users = DB::table('users')->count();
