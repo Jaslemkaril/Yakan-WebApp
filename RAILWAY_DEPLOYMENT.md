@@ -215,6 +215,44 @@ After deployment completes:
 3. Verify all required environment variables are set
 4. Check file permissions for storage and cache directories
 
+### SSL Certificate Errors
+
+If you see errors like:
+```
+Err:3 http://deb.debian.org/debian bookworm-updates InRelease
+  Certificate verification failed: The certificate is NOT trusted.
+process `sh -c apt-get update && apt-get install -y ca-certificates git unzip zip` 
+did not complete successfully: exit code: 137
+```
+
+**Solution:** Ensure `nixpacks.toml` does NOT use `aptPkgs`. All packages should be installed via `nixPkgs` instead.
+
+**Why this happens:**
+- Railway's build environment sometimes has SSL certificate issues with Debian repositories
+- The apt-get command fails when trying to update package lists
+- Exit code 137 often indicates the process was killed due to memory constraints
+- Nix packages don't have this problem and are more reliable on Railway
+
+**Fix:**
+```toml
+[phases.setup]
+# Only use Nix packages - avoid apt-get completely
+nixPkgs = [
+    "php82", 
+    "php82Packages.composer", 
+    "php82Extensions.mbstring", 
+    "php82Extensions.pdo", 
+    "php82Extensions.pdo_mysql",
+    "git"  # Git is available via Nix, no need for apt
+]
+# DO NOT use aptPkgs = ["git"] - this causes SSL errors
+```
+
+**What changed:**
+- Removed `aptPkgs` line completely
+- Added `"git"` to the `nixPkgs` array instead
+- Git, PHP, and all required extensions are available via Nix
+
 ## Environment Differences
 
 ### Production (Railway)

@@ -1,10 +1,17 @@
 [phases.setup]
-nixPkgs = ["php82", "php82Packages.composer", "php82Extensions.mbstring", "php82Extensions.pdo", "php82Extensions.pdo_mysql"]
-aptPkgs = ["git"]
+# Only use Nix packages - avoid apt-get completely
+nixPkgs = [
+    "php82", 
+    "php82Packages.composer", 
+    "php82Extensions.mbstring", 
+    "php82Extensions.pdo", 
+    "php82Extensions.pdo_mysql",
+    "git"  # Git is available via Nix, no need for apt
+]
 
 [phases.install]
 cmds = [
-    "composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist"
+    "composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts"
 ]
 
 [phases.build]
@@ -15,4 +22,4 @@ cmds = [
 ]
 
 [start]
-cmd = "php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"
+cmd = "bash railway.sh && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"
