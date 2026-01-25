@@ -1,3 +1,10 @@
+# Nixpacks configuration for Laravel PHP backend
+# This explicitly disables Node.js/npm to prevent Railway from treating this as a Node.js app
+
+[providers]
+# Disable Node.js provider - this is a pure PHP backend
+nodejs = false
+
 [phases.setup]
 # Only use Nix packages - avoid apt-get completely
 nixPkgs = [
