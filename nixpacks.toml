@@ -1,11 +1,9 @@
-[phases.setup]
-nixPkgs = ["php82", "php82Packages.composer", "nodejs_20"]
-
-[phases.install]
-cmds = ["composer install --no-dev --optimize-autoloader"]
+# This is the updated nixpacks.toml file
 
 [phases.build]
-cmds = ["composer install --no-dev --optimize-autoloader"]
+cmds = [
+    "composer install --no-dev --optimize-autoloader",
+    "php artisan config:clear"
+]
 
-[start]
-cmd = "php artisan config:cache && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT"
+cmd = "php artisan config:clear && php artisan config:cache && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT"
