@@ -12,9 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('otp_code', 6)->nullable()->after('email_verified_at');
-            $table->timestamp('otp_expires_at')->nullable()->after('otp_code');
-            $table->integer('otp_attempts')->default(0)->after('otp_expires_at');
+            if (!Schema::hasColumn('users', 'otp_code')) {
+                $table->string('otp_code', 6)->nullable()->after('email_verified_at');
+            }
+            if (!Schema::hasColumn('users', 'otp_attempts')) {
+                $table->timestamp('otp_expires_at')->nullable()->after('otp_code');
+                $table->integer('otp_attempts')->default(0)->after('otp_expires_at');
+            }
         });
     }
 

@@ -1,5 +1,44 @@
 # 🎉 YAKAN - Real-Time Order Notification System Complete!
 
+## 🚀 Quick Start
+
+### First Time Setup
+
+1. **Clone and install:**
+```bash
+git clone https://github.com/Jaslemkaril/Yakan-WebApp.git
+cd Yakan-WebApp
+composer install
+npm install
+```
+
+2. **Configure environment:**
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+3. **Setup database:**
+```bash
+php artisan migrate:fresh
+php artisan db:seed --class=AdminUserSeederUpdated
+```
+
+4. **Login credentials:**
+   - Admin: `admin@yakan.com` / `admin123`
+   - User: `user@yakan.com` / `user123`
+
+5. **Start server:**
+```bash
+php artisan serve
+```
+
+Visit: http://localhost:8000
+
+📖 **Full setup guide:** See [SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md)
+
+---
+
 ## 🚀 NEW: Order Notification System
 
 **I've built you a complete, production-ready real-time order notification system!**
