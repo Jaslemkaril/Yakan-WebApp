@@ -25,7 +25,7 @@ return new class extends Migration
             $table->text('provider_token')->nullable();
             $table->string('avatar')->nullable();
             $table->string('role')->default('user'); // 'user' or 'admin'
-            $table->string('otp_code')->nullable();
+            $table->string('otp_code', 6)->nullable();
             $table->timestamp('otp_expires_at')->nullable();
             $table->integer('otp_attempts')->default(0);
             $table->rememberToken();
