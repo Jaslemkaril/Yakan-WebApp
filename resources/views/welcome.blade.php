@@ -209,7 +209,7 @@
                     <div class="bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/30 shadow-2xl overflow-hidden weaver-image-container">
                         <div class="aspect-square rounded-2xl flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-red-700 to-red-900 shadow-inner">
                             <!-- Yakan weaver with traditional loom image -->
-                            <img src="{{ asset('uploads/yakan-weaver.webp') }}" alt="Yakan Weaver" class="w-full h-full object-cover" loading="lazy">
+                            <img src="{{ asset('images/yakan-weaver.webp') }}" alt="Yakan Weaver" class="w-full h-full object-cover" loading="lazy">
                             <!-- Decorative corner accent -->
                             <div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-white/20 to-transparent"></div>
                             <div class="absolute bottom-0 left-0 w-20 h-20 bg-gradient-to-tr from-white/20 to-transparent"></div>
