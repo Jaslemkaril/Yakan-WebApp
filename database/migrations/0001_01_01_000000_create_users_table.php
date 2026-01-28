@@ -14,10 +14,22 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->string('first_name')->nullable();
+            $table->string('last_name')->nullable();
+            $table->string('middle_initial')->nullable();
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->string('provider')->nullable();
+            $table->string('provider_id')->nullable();
+            $table->text('provider_token')->nullable();
+            $table->string('avatar')->nullable();
+            $table->string('role')->default('user'); // 'user' or 'admin'
+            $table->string('otp_code')->nullable();
+            $table->timestamp('otp_expires_at')->nullable();
+            $table->integer('otp_attempts')->default(0);
             $table->rememberToken();
+            $table->softDeletes();
             $table->timestamps();
         });
 
