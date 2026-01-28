@@ -76,9 +76,6 @@ class AuthenticatedSessionController extends Controller
             if ($user && $user->role === 'admin') {
                 $request->session()->regenerate();
                 
-                // Clear web guard to prevent conflicts
-                Auth::guard('web')->logout();
-                
                 return redirect('/admin/dashboard')->with('success', 'Admin login successful!');
             }
             

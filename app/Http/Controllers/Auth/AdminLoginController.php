@@ -35,15 +35,7 @@ class AdminLoginController extends Controller
             if ($user && $user->role === 'admin') {
                 $request->session()->regenerate();
                 
-                // Clear any existing web guard session to prevent conflicts
-                Auth::guard('web')->logout();
-                
-                // Set the intended URL explicitly to admin dashboard
-                session()->put('url.intended', '/admin/dashboard');
-                
-                // Force redirect to admin dashboard
-                \Log::info('Admin login successful, redirecting to: /admin/dashboard');
-                \Log::info('Current auth guards: web=' . (Auth::guard('web')->check() ? 'true' : 'false') . ', admin=' . (Auth::guard('admin')->check() ? 'true' : 'false'));
+                \Log::info('Admin login successful for: ' . $user->email);
                 return redirect('/admin/dashboard')->with('success', 'Welcome back, Admin!');
             }
             

@@ -36,7 +36,7 @@ Route::get('/login', function() {
     }
     
     $controller = new App\Http\Controllers\Auth\AuthenticatedSessionController();
-    return $controller->create();
+    return $controller->createUser();
 })->name('login');
 
 Route::post('/login', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'storeUser']);
