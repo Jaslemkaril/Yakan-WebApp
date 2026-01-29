@@ -11,9 +11,17 @@ class AdminLoginController extends Controller
     // Show the admin login form
     public function showLoginForm()
     {
-        // Clear any intended URL that might be from previous attempts
-        session()->forget('url.intended');
-        return view('auth.admin-login'); // Make sure this blade exists
+        // If already logged in as admin, redirect to dashboard
+        if (Auth::check() && Auth::user()->role === 'admin') {
+            return redirect('/admin/dashboard');
+        }
+        
+        // Logout any non-admin user
+        if (Auth::check()) {
+            Auth::logout();
+        }
+        
+        return view('auth.admin-login');
     }
 
     // Handle admin login
@@ -27,24 +35,44 @@ class AdminLoginController extends Controller
 
         $credentials = $request->only('email', 'password');
 
-        // Attempt login using the 'admin' guard
-        if (Auth::guard('admin')->attempt($credentials)) {
-            $user = Auth::guard('admin')->user();
+        \Log::info('Admin login attempt', ['email' => $credentials['email']]);
+
+        // Attempt login using the 'web' guard instead of 'admin'
+        if (Auth::attempt($credentials)) {
+            $user = Auth::user();
             
+            \Log::info('Auth attempt successful', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'role' => $user->role,
+            ]);
+
             // Check if user has admin role
             if ($user && $user->role === 'admin') {
                 $request->session()->regenerate();
                 
-                \Log::info('Admin login successful for: ' . $user->email);
+                \Log::info('Admin login successful', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'session_id' => session()->getId(),
+                ]);
+                
                 return redirect('/admin/dashboard')->with('success', 'Welcome back, Admin!');
             }
             
             // Logout if not admin
-            Auth::guard('admin')->logout();
+            \Log::warning('Login attempt by non-admin user', [
+                'email' => $user->email,
+                'role' => $user->role,
+            ]);
+            
+            Auth::logout();
             return back()->withErrors([
                 'email' => 'Access denied. Admin privileges required.',
             ])->onlyInput('email');
         }
+
+        \Log::warning('Admin login failed - invalid credentials', ['email' => $credentials['email']]);
 
         return back()->withErrors([
             'email' => 'Invalid credentials.',
