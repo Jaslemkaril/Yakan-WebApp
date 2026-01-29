@@ -56,7 +56,7 @@ Route::get('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::clas
 Route::post('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'login'])->name('admin.login.submit');
 
 // Admin dashboard route
-Route::get('/admin/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->middleware('auth:admin')->name('admin.dashboard');
+Route::get('/admin/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->middleware('admin')->name('admin.dashboard');
 
 // Regular user login routes
 Route::get('/login', function() {
