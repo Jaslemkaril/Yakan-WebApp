@@ -22,6 +22,32 @@ Route::get('/storage/{path}', function ($path) {
     ]);
 })->where('path', '.*')->name('storage.fallback');
 
+// Create sessions table route (for Railway setup)
+Route::get('/setup/create-sessions-table', function () {
+    $sql = "CREATE TABLE IF NOT EXISTS sessions (
+        id VARCHAR(255) PRIMARY KEY,
+        user_id BIGINT UNSIGNED NULL,
+        ip_address VARCHAR(45) NULL,
+        user_agent TEXT NULL,
+        payload LONGTEXT NOT NULL,
+        last_activity INT NOT NULL,
+        created_at TIMESTAMP NULL,
+        updated_at TIMESTAMP NULL,
+        INDEX idx_user_id (user_id),
+        INDEX idx_last_activity (last_activity)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
+    
+    try {
+        DB::statement($sql);
+        return "✓ Sessions table created successfully!";
+    } catch (\Exception $e) {
+        if (strpos($e->getMessage(), 'already exists') !== false) {
+            return "✓ Sessions table already exists!";
+        }
+        return "✗ Error: " . $e->getMessage();
+    }
+});
+
 // Admin login routes
 Route::get('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'showLoginForm'])->name('admin.login.form');
 Route::post('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'login'])->name('admin.login.submit');
