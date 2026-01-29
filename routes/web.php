@@ -51,6 +51,39 @@ Route::get('/setup/create-sessions-table', function () {
     }
 });
 
+// Reset admin password route
+Route::get('/setup/reset-admin-password', function () {
+    $admin = \App\Models\User::where('email', 'admin@yakan.com')->first();
+    
+    if (!$admin) {
+        return "✗ Admin user not found!";
+    }
+    
+    $admin->password = \Hash::make('admin123');
+    $admin->save();
+    
+    return "✓ Admin password reset to: admin123";
+});
+
+// Create admin user route (for Railway setup)
+Route::get('/setup/create-admin', function () {
+    $admin = \App\Models\User::where('email', 'admin@yakan.com')->first();
+    
+    if ($admin) {
+        return "Admin already exists: " . $admin->email . " (Role: " . $admin->role . ")";
+    }
+    
+    $admin = \App\Models\User::create([
+        'name' => 'Administrator',
+        'email' => 'admin@yakan.com',
+        'password' => bcrypt('admin123'),
+        'role' => 'admin',
+        'email_verified_at' => now(),
+    ]);
+    
+    return "✓ Admin created successfully! Email: admin@yakan.com, Password: admin123";
+});
+
 // Debug session route
 Route::get('/debug/session', function () {
     return response()->json([
@@ -59,6 +92,20 @@ Route::get('/debug/session', function () {
         'session_id' => session()->getId(),
         'session_data' => session()->all(),
     ]);
+});
+
+// Reset admin password route
+Route::get('/setup/reset-admin-password', function () {
+    $admin = \App\Models\User::where('email', 'admin@yakan.com')->first();
+    
+    if (!$admin) {
+        return "Admin user not found!";
+    }
+    
+    $admin->password = \Hash::make('admin123');
+    $admin->save();
+    
+    return "✓ Admin password reset to: admin123";
 });
 
 // Admin login routes
