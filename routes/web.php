@@ -51,6 +51,16 @@ Route::get('/setup/create-sessions-table', function () {
     }
 });
 
+// Debug session route
+Route::get('/debug/session', function () {
+    return response()->json([
+        'authenticated' => \Auth::check(),
+        'user' => \Auth::user() ? \Auth::user()->toArray() : null,
+        'session_id' => session()->getId(),
+        'session_data' => session()->all(),
+    ]);
+});
+
 // Admin login routes
 Route::get('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'showLoginForm'])->name('admin.login.form');
 Route::post('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'login'])->name('admin.login.submit');
