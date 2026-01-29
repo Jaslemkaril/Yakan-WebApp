@@ -24,6 +24,9 @@ Route::get('/storage/{path}', function ($path) {
 
 // Create sessions table route (for Railway setup)
 Route::get('/setup/create-sessions-table', function () {
+    // Clear route cache first
+    Artisan::call('route:cache');
+    
     $sql = "CREATE TABLE IF NOT EXISTS sessions (
         id VARCHAR(255) PRIMARY KEY,
         user_id BIGINT UNSIGNED NULL,
