@@ -328,59 +328,61 @@
                 </div>
             </div>
 
-            <table class="w-full">
-                <thead>
-                    <tr>
-                        <th class="text-left">Order ID</th>
-                        <th class="text-left">Customer</th>
-                        <th class="text-left">Amount</th>
-                        <th class="text-left">Status</th>
-                        <th class="text-left">Payment</th>
-                        <th class="text-left">Date</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($orders as $order)
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
                         <tr>
-                            <td class="font-semibold text-[#800000]">#{{ $order->id }}</td>
-                            <td>
-                                <div class="font-medium text-gray-900">{{ $order->user->name ?? $order->customer_name ?? 'N/A' }}</div>
-                                <div class="text-xs text-gray-500">{{ $order->user->email ?? $order->customer_email ?? 'N/A' }}</div>
-                            </td>
-                            <td class="font-semibold text-gray-900">₱{{ number_format($order->total_amount, 2) }}</td>
-                            <td>
-                                <span class="status-badge status-{{ strtolower($order->status) }}">
-                                    {{ ucfirst($order->status) }}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="status-badge status-{{ strtolower($order->payment_status) }}">
-                                    {{ ucfirst($order->payment_status) }}
-                                </span>
-                            </td>
-                            <td class="text-sm text-gray-600">{{ $order->created_at->format('M d, Y') }}</td>
-                            <td class="text-center">
-                                <div class="flex justify-center gap-2">
-                                    <a href="{{ route('admin.orders.show', $order->id) }}" class="action-btn action-primary" title="View">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                    </a>
-                                    <a href="{{ route('admin.orders.show', $order->id) }}" class="action-btn action-success" title="Edit">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                                    </a>
-                                </div>
-                            </td>
+                            <th class="text-left">Order ID</th>
+                            <th class="text-left">Customer</th>
+                            <th class="text-left">Amount</th>
+                            <th class="text-left">Status</th>
+                            <th class="text-left">Payment</th>
+                            <th class="text-left">Date</th>
+                            <th class="text-center">Actions</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="7" class="text-center py-8 text-gray-500">
-                                <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
-                                No orders found
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @forelse($orders as $order)
+                            <tr>
+                                <td class="font-semibold text-[#800000]">#{{ $order->id }}</td>
+                                <td>
+                                    <div class="font-medium text-gray-900">{{ $order->user->name ?? $order->customer_name ?? 'N/A' }}</div>
+                                    <div class="text-xs text-gray-500">{{ $order->user->email ?? $order->customer_email ?? 'N/A' }}</div>
+                                </td>
+                                <td class="font-semibold text-gray-900">₱{{ number_format($order->total_amount, 2) }}</td>
+                                <td>
+                                    <span class="status-badge status-{{ strtolower($order->status) }}">
+                                        {{ ucfirst($order->status) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="status-badge status-{{ strtolower($order->payment_status) }}">
+                                        {{ ucfirst($order->payment_status) }}
+                                    </span>
+                                </td>
+                                <td class="text-sm text-gray-600">{{ $order->created_at->format('M d, Y') }}</td>
+                                <td class="text-center">
+                                    <div class="flex justify-center gap-2">
+                                        <a href="{{ route('admin.orders.show', $order->id) }}" class="action-btn action-primary" title="View">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                        </a>
+                                        <a href="{{ route('admin.orders.show', $order->id) }}" class="action-btn action-success" title="Edit">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="text-center py-8 text-gray-500">
+                                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+                                    No orders found
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- Pagination -->
