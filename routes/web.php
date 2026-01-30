@@ -108,6 +108,20 @@ Route::get('/debug/oauth-config', function () {
     ]);
 });
 
+// Debug OAuth callback route
+Route::get('/debug/oauth-test', function () {
+    $lastError = \Log::getMonolog()->getHandlers()[0]->getLastError();
+    return response()->json([
+        'authenticated' => \Auth::check(),
+        'user' => \Auth::user() ? \Auth::user()->toArray() : null,
+        'session_id' => session()->getId(),
+        'config_loaded' => [
+            'google_client_id' => !empty(config('services.google.client_id')),
+            'facebook_client_id' => !empty(config('services.facebook.client_id')),
+        ],
+    ]);
+});
+
 // Reset admin password route
 Route::get('/setup/reset-admin-password', function () {
     $admin = \App\Models\User::where('email', 'admin@yakan.com')->first();
