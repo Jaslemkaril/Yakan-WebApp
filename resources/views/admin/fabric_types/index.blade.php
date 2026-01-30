@@ -29,47 +29,47 @@
         @if($fabricTypes->count() > 0)
             <div class="overflow-x-auto">
                 <table class="w-full">
-                <thead style="background-color: #800000;">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-white font-semibold">Name</th>
-                        <th class="px-6 py-3 text-left text-white font-semibold">Icon</th>
-                        <th class="px-6 py-3 text-left text-white font-semibold">Description</th>
-                        <th class="px-6 py-3 text-center text-white font-semibold">Status</th>
-                        <th class="px-6 py-3 text-center text-white font-semibold">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($fabricTypes as $fabricType)
-                        <tr class="border-t border-gray-200 hover:bg-gray-50">
-                            <td class="px-6 py-4 font-semibold text-gray-900">{{ $fabricType->name }}</td>
-                            <td class="px-6 py-4">
-                                @if($fabricType->icon)
-                                    <span class="text-2xl">{{ $fabricType->icon }}</span>
-                                @else
-                                    <span class="text-gray-400">—</span>
-                                @endif
-                            </td>
-                            <td class="px-6 py-4 text-gray-600 text-sm">{{ Str::limit($fabricType->description ?? '—', 50) }}</td>
-                            <td class="px-6 py-4 text-center">
-                                <label class="inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" class="w-5 h-5 toggle-active" data-id="{{ $fabricType->id }}" data-route="{{ route('admin.fabric_types.toggle', $fabricType->id) }}" {{ $fabricType->is_active ? 'checked' : '' }} style="accent-color: #800000;">
-                                    <span class="ml-2 text-sm font-medium {{ $fabricType->is_active ? 'text-green-600' : 'text-gray-400' }}">
-                                        {{ $fabricType->is_active ? 'Active' : 'Inactive' }}
-                                    </span>
-                                </label>
-                            </td>
-                            <td class="px-6 py-4 text-center space-x-2">
-                                <a href="{{ route('admin.fabric_types.edit', $fabricType->id) }}" class="inline-block px-3 py-1 rounded text-white text-sm font-semibold transition-all" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
-                                    Edit
-                                </a>
-                                <button type="button" class="px-3 py-1 rounded bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-all delete-btn" data-id="{{ $fabricType->id }}" data-route="{{ route('admin.fabric_types.destroy', $fabricType->id) }}">
-                                    Delete
-                                </button>
-                            </td>
+                    <thead style="background-color: #800000;">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-white font-semibold">Name</th>
+                            <th class="px-6 py-3 text-left text-white font-semibold">Icon</th>
+                            <th class="px-6 py-3 text-left text-white font-semibold">Description</th>
+                            <th class="px-6 py-3 text-center text-white font-semibold">Status</th>
+                            <th class="px-6 py-3 text-center text-white font-semibold">Actions</th>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach($fabricTypes as $fabricType)
+                            <tr class="border-t border-gray-200 hover:bg-gray-50">
+                                <td class="px-6 py-4 font-semibold text-gray-900">{{ $fabricType->name }}</td>
+                                <td class="px-6 py-4">
+                                    @if($fabricType->icon)
+                                        <span class="text-2xl">{{ $fabricType->icon }}</span>
+                                    @else
+                                        <span class="text-gray-400">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 text-gray-600 text-sm">{{ Str::limit($fabricType->description ?? '—', 50) }}</td>
+                                <td class="px-6 py-4 text-center">
+                                    <label class="inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="w-5 h-5 toggle-active" data-id="{{ $fabricType->id }}" data-route="{{ route('admin.fabric_types.toggle', $fabricType->id) }}" {{ $fabricType->is_active ? 'checked' : '' }} style="accent-color: #800000;">
+                                        <span class="ml-2 text-sm font-medium {{ $fabricType->is_active ? 'text-green-600' : 'text-gray-400' }}">
+                                            {{ $fabricType->is_active ? 'Active' : 'Inactive' }}
+                                        </span>
+                                    </label>
+                                </td>
+                                <td class="px-6 py-4 text-center space-x-2">
+                                    <a href="{{ route('admin.fabric_types.edit', $fabricType->id) }}" class="inline-block px-3 py-1 rounded text-white text-sm font-semibold transition-all" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
+                                        Edit
+                                    </a>
+                                    <button type="button" class="px-3 py-1 rounded bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-all delete-btn" data-id="{{ $fabricType->id }}" data-route="{{ route('admin.fabric_types.destroy', $fabricType->id) }}">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         @else
             <div class="p-8 text-center">
