@@ -94,20 +94,6 @@ Route::get('/debug/session', function () {
     ]);
 });
 
-// Debug OAuth redirect URIs
-Route::get('/debug/oauth-config', function () {
-    return response()->json([
-        'google' => [
-            'client_id' => config('services.google.client_id'),
-            'redirect' => config('services.google.redirect'),
-        ],
-        'facebook' => [
-            'client_id' => config('services.facebook.client_id'),
-            'redirect' => config('services.facebook.redirect'),
-        ],
-    ]);
-});
-
 // Reset admin password route
 Route::get('/setup/reset-admin-password', function () {
     $admin = \App\Models\User::where('email', 'admin@yakan.com')->first();
