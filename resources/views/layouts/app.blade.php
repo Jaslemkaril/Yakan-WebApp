@@ -599,9 +599,13 @@
                         <!-- User Menu -->
                         <div class="relative" x-data="{ open: false }">
                             <button @click="open = !open" class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors">
-                                <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: linear-gradient(to bottom right, #800000, #600000);">
-                                    <span class="text-white text-sm font-semibold">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
-                                </div>
+                                @if(auth()->user()->avatar)
+                                    <img src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->name }}" class="w-8 h-8 rounded-full object-cover border-2 border-maroon-600" loading="lazy">
+                                @else
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: linear-gradient(to bottom right, #800000, #600000);">
+                                        <span class="text-white text-sm font-semibold">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+                                    </div>
+                                @endif
                                 <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                 </svg>

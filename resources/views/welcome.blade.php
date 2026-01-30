@@ -141,7 +141,7 @@
 @section('content')
     <!-- Success Messages -->
     @if(session('success') || session('status'))
-        <div class="fixed top-20 right-4 z-50 max-w-sm animate-fade-in-up">
+        <div id="success-message" class="fixed top-20 right-4 z-50 max-w-sm animate-fade-in-up">
             <div class="bg-green-50 border border-green-200 text-green-800 px-6 py-4 rounded-xl shadow-2xl flex items-center space-x-3">
                 <div class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
                     <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -154,6 +154,21 @@
                 </div>
             </div>
         </div>
+        <script>
+            setTimeout(function() {
+                const msgEl = document.getElementById('success-message');
+                if (msgEl) {
+                    msgEl.style.animation = 'fadeOut 0.5s ease-out forwards';
+                    setTimeout(() => msgEl.remove(), 500);
+                }
+            }, 4000);
+        </script>
+        <style>
+            @keyframes fadeOut {
+                from { opacity: 1; transform: translateX(0); }
+                to { opacity: 0; transform: translateX(100%); }
+            }
+        </style>
     @endif
 
     <!-- Hero Section -->
