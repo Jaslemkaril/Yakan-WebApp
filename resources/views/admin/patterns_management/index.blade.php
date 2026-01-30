@@ -6,7 +6,7 @@
 <div class="max-w-6xl mx-auto px-4 py-8">
     <!-- Header -->
     <div class="mb-8">
-        <h1 class="text-4xl font-bold text-gray-900 mb-2">Patterns Management</h1>
+        <h1 class="text-2xl md:text-4xl font-bold text-gray-900 mb-2">Patterns Management</h1>
         <p class="text-gray-600">Manage fabric types and intended uses for custom orders</p>
     </div>
 
@@ -22,7 +22,7 @@
         <div class="mb-8">
             <div class="flex justify-between items-center">
                 <div>
-                    <h2 id="fabric-types" class="text-3xl font-bold text-gray-900 mb-2">Fabric Types</h2>
+                    <h2 id="fabric-types" class="text-xl md:text-3xl font-bold text-gray-900 mb-2">Fabric Types</h2>
                     <p class="text-gray-600">Manage fabric types available for custom orders</p>
                 </div>
                 <button type="button" onclick="openAddFabricTypeModal()" class="px-6 py-3 rounded-lg font-bold text-white transition-all" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
@@ -82,7 +82,7 @@
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
         <!-- Add New Intended Use Section -->
         <div class="mb-8">
-            <h2 id="intended-uses" class="text-3xl font-bold text-gray-900 mb-2">Intended Uses</h2>
+            <h2 id="intended-uses" class="text-xl md:text-3xl font-bold text-gray-900 mb-2">Intended Uses</h2>
             <p class="text-gray-600 mb-6">Manage intended uses for custom orders</p>
             
             <form id="newIntendedUseForm" action="{{ route('admin.intended_uses.store') }}" method="POST">
