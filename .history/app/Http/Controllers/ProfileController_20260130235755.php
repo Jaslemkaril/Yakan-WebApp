@@ -9,7 +9,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -117,16 +116,8 @@ class ProfileController extends Controller
             return Redirect::route('profile.edit')->with('status', 'email-already-verified');
         }
 
-        try {
-            $user->sendEmailVerificationNotification();
-            return back()->with('status', 'verification-link-sent');
-        } catch (\Exception $e) {
-            Log::error('Email verification notification failed: ' . $e->getMessage(), [
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'exception' => $e
-            ]);
-            return back()->with('error', 'Failed to send verification email. Please try again later.');
-        }
+        $user->sendEmailVerificationNotification();
+
+        return back()->with('status', 'verification-link-sent');
     }
 }
