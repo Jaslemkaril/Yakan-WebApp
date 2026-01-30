@@ -27,7 +27,8 @@
     <!-- Fabric Types Table -->
     <div class="bg-white rounded-lg shadow-lg overflow-hidden">
         @if($fabricTypes->count() > 0)
-            <table class="w-full">
+            <div class="overflow-x-auto">
+                <table class="w-full">
                 <thead style="background-color: #800000;">
                     <tr>
                         <th class="px-6 py-3 text-left text-white font-semibold">Name</th>
@@ -69,6 +70,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
         @else
             <div class="p-8 text-center">
                 <p class="text-gray-500 mb-4">No fabric types found</p>
