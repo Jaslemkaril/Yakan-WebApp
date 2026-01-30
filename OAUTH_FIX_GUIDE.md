@@ -8,12 +8,12 @@ Google OAuth was giving `redirect_uri_mismatch` error because the redirect URIs 
 ### 1. Updated Local `.env` File
 Added the OAuth credentials and redirect URIs to your local `.env`:
 ```
-GOOGLE_CLIENT_ID=915673616124-toenvmcr97t350n208kdpnvjtqiq8r7t.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=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
+GOOGLE_CLIENT_ID=<your-google-client-id>
+GOOGLE_CLIENT_SECRET=<your-google-client-secret>
 GOOGLE_REDIRECT_URI=https://yakan-webapp-production.up.railway.app/auth/google/callback
 
-FACEBOOK_CLIENT_ID=871447252435350
-FACEBOOK_CLIENT_SECRET=5fd340d63112a5748a81fabce55f317f
+FACEBOOK_CLIENT_ID=<your-facebook-app-id>
+FACEBOOK_CLIENT_SECRET=<your-facebook-app-secret>
 FACEBOOK_REDIRECT_URI=https://yakan-webapp-production.up.railway.app/auth/facebook/callback
 ```
 
@@ -34,23 +34,23 @@ https://yakan-webapp-production.up.railway.app/debug/oauth-config
 ### Step 1: Update Google Cloud Console
 
 1. Go to https://console.cloud.google.com/apis/credentials
-2. Find your OAuth 2.0 Client ID: `915673616124-toenvmcr97t350n208kdpnvjtqiq8r7t.apps.googleusercontent.com`
+2. Find your OAuth 2.0 Client ID
 3. Click Edit or the pencil icon
 4. Under "Authorized redirect URIs", ADD THIS:
    ```
    https://yakan-webapp-production.up.railway.app/auth/google/callback
    ```
-5. **IMPORTANT**: Remove or keep the old `https://yourdomain.com/auth/google/callback` URIs
+5. **IMPORTANT**: Remove old URIs if needed
 6. Save changes
 
 ### Step 2: Update Facebook Developer Console
 
 1. Go to https://developers.facebook.com/
-2. Find your app: `871447252435350`
+2. Find your app
 3. Go to Settings → Basic
-4. Under "App Domains", make sure you have: `yakan-webapp-production.up.railway.app`
-5. Go to Settings → Advanced
-6. Under "Valid OAuth Redirect URIs", ADD THIS:
+4. Under "App Domains", add: `yakan-webapp-production.up.railway.app`
+5. Go to Settings → Advanced or Facebook Login settings
+6. Under "Valid OAuth Redirect URIs", add:
    ```
    https://yakan-webapp-production.up.railway.app/auth/facebook/callback
    ```
