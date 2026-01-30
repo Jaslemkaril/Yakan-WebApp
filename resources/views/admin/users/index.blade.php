@@ -153,11 +153,15 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-10 w-10">
-                                            <div class="h-10 w-10 rounded-full bg-maroon-100 flex items-center justify-center">
-                                                <span class="text-maroon-700 font-semibold text-sm">
-                                                    {{ strtoupper(substr($user->name, 0, 1)) }}
-                                                </span>
-                                            </div>
+                                            @if($user->avatar)
+                                                <img src="{{ $user->avatar }}" alt="{{ $user->name }}" class="h-10 w-10 rounded-full object-cover border-2 border-maroon-600">
+                                            @else
+                                                <div class="h-10 w-10 rounded-full bg-maroon-100 flex items-center justify-center">
+                                                    <span class="text-maroon-700 font-semibold text-sm">
+                                                        {{ strtoupper(substr($user->name, 0, 1)) }}
+                                                    </span>
+                                                </div>
+                                            @endif
                                         </div>
                                         <div class="ml-4">
                                             <div class="text-sm font-medium text-gray-900">{{ $user->name }}</div>
