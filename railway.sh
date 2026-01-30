@@ -12,9 +12,16 @@ php artisan view:clear || true
 echo "📦 Running database migrations..."
 php artisan migrate --force --no-interaction
 
-# Create storage link
+# Create storage link (critical for image visibility)
 echo "🔗 Creating storage link..."
-php artisan storage:link || true
+# Remove old symlink if it exists
+rm -f public/storage || true
+# Create new symlink
+php artisan storage:link --force || {
+    echo "⚠️ Warning: storage:link failed, but continuing..."
+    mkdir -p storage/app/public
+    ln -sf ../storage/app/public public/storage || true
+}
 
 # Cache for performance
 echo "⚡ Caching configuration..."
