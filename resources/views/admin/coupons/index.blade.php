@@ -8,7 +8,7 @@
     <div class="bg-[#800000] rounded-2xl p-8 text-white shadow-xl">
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-3xl font-bold">Coupons Management</h1>
+                <h1 class="text-xl md:text-3xl font-bold">Coupons Management</h1>
                 <p class="text-purple-100 text-lg mt-2">Manage promotional codes and discounts</p>
             </div>
             <a href="{{ route('admin.coupons.create') }}" class="inline-flex items-center px-6 py-3 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors">

@@ -38,7 +38,7 @@
 </div>
 
 <!-- Stats Cards -->
-<div class="grid grid-cols-4 gap-6 mb-8">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     <div class="stat-card p-6 rounded-lg shadow">
         <h3 class="text-sm font-semibold mb-2">TOTAL CHATS</h3>
         <div class="value">{{ $stats['total'] }}</div>

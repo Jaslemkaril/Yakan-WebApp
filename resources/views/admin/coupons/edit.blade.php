@@ -7,7 +7,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Edit Coupon</h1>
+            <h1 class="text-xl md:text-3xl font-bold text-gray-900">Edit Coupon</h1>
             <p class="text-gray-600 mt-2">Update promotional code details</p>
         </div>
         <a href="{{ route('admin.coupons.index') }}" class="inline-flex items-center px-4 py-2 text-gray-700 hover:text-gray-900">

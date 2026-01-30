@@ -8,7 +8,7 @@
     <div class="bg-[#800000] rounded-2xl p-8 text-white shadow-xl">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
-                <h1 class="text-3xl font-bold mb-2">Product Details</h1>
+                <h1 class="text-xl md:text-3xl font-bold mb-2">Product Details</h1>
                 <p class="text-purple-100 text-lg">View complete product information and statistics</p>
             </div>
             <div class="mt-4 md:mt-0 flex space-x-3">
