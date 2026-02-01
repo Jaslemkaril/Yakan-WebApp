@@ -160,7 +160,7 @@
         });
 
         function deleteCategory(categoryId, categoryName) {
-            if (!confirm(`Are you sure you want to delete "${categoryName}"?`)) {
+            if (!confirm(`Are you sure you want to delete "${categoryName}"? This action cannot be undone.`)) {
                 return;
             }
 
@@ -185,7 +185,9 @@
             })
             .then(data => {
                 if (data.success) {
-                    // Reload page immediately without alert
+                    // Show success message
+                    alert(data.message);
+                    // Reload page to update category pills
                     location.reload();
                 } else {
                     alert('Error: ' + (data.message || 'Failed to delete category'));
