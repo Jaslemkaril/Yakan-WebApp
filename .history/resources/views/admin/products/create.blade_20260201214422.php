@@ -114,11 +114,8 @@
                 return;
             }
 
-            // Construct the URL directly
-            const createUrl = '/admin/categories';
-
             // Send AJAX request to create category
-            fetch(createUrl, {
+            fetch('{{ route("admin.categories.store") }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
