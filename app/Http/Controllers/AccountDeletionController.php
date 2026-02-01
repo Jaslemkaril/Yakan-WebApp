@@ -58,25 +58,46 @@ class AccountDeletionController extends Controller
             $this->sendDeletionEmail($userEmail, $userName);
 
             // Delete user's orders (optionally anonymize instead of delete)
-            $user->orders()->each(function ($order) {
-                $order->update([
-                    'user_id' => null,
-                    'customer_email' => null,
-                    'customer_name' => 'Deleted User',
-                ]);
-            });
+            if (method_exists($user, 'orders')) {
+                $user->orders()->each(function ($order) {
+                    $order->update([
+                        'user_id' => null,
+                        'customer_email' => null,
+                        'customer_name' => 'Deleted User',
+                    ]);
+                });
+            }
+
+            // Delete custom orders
+            if (method_exists($user, 'customOrders')) {
+                $user->customOrders()->each(function ($order) {
+                    $order->update([
+                        'user_id' => null,
+                        'customer_email' => null,
+                        'customer_name' => 'Deleted User',
+                    ]);
+                });
+            }
 
             // Delete wishlist items
-            $user->wishlists()->delete();
+            if (method_exists($user, 'wishlists')) {
+                $user->wishlists()->delete();
+            }
 
             // Delete addresses
-            $user->addresses()->delete();
+            if (method_exists($user, 'addresses')) {
+                $user->addresses()->delete();
+            }
 
             // Delete cart items
-            $user->cartItems()->delete();
+            if (method_exists($user, 'cartItems')) {
+                $user->cartItems()->delete();
+            }
 
-            // Delete social auth records
-            $user->socialAuth()->delete();
+            // Delete notifications
+            if (method_exists($user, 'notifications')) {
+                $user->notifications()->delete();
+            }
 
             // Delete the user
             $user->delete();
@@ -94,6 +115,7 @@ class AccountDeletionController extends Controller
             \Log::error('Error deleting user account', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return back()->with('error', 'An error occurred while deleting your account. Please contact support.');
