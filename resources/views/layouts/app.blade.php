@@ -289,10 +289,22 @@
         /* Navigation Enhancements */
         .nav-link {
             position: relative;
-            padding: 8px 16px;
+            padding: 6px 8px;
             border-radius: 8px;
             transition: all 0.3s ease;
             font-weight: 500;
+        }
+        
+        @media (min-width: 1024px) {
+            .nav-link {
+                padding: 8px 12px;
+            }
+        }
+        
+        @media (min-width: 1280px) {
+            .nav-link {
+                padding: 8px 16px;
+            }
         }
 
         .nav-link:hover {
@@ -528,18 +540,18 @@
                 </div>
 
                 <!-- Desktop Navigation -->
-                <div class="hidden md:flex items-center space-x-6">
-                    <a href="{{ route('welcome') }}" class="nav-link whitespace-nowrap">Home</a>
-                    <a href="{{ route('products.index') }}" class="nav-link whitespace-nowrap">Products</a>
-                    <a href="{{ route('custom_orders.index') }}" class="nav-link whitespace-nowrap">Custom Orders</a>
-                    <a href="{{ route('cultural-heritage.index') }}" class="nav-link whitespace-nowrap">Cultural Heritage</a>
-                    <a href="{{ route('track-order.index') }}" class="nav-link whitespace-nowrap">Track Order</a>
+                <div class="hidden md:flex items-center space-x-3 lg:space-x-4 xl:space-x-6">
+                    <a href="{{ route('welcome') }}" class="nav-link whitespace-nowrap text-sm lg:text-base">Home</a>
+                    <a href="{{ route('products.index') }}" class="nav-link whitespace-nowrap text-sm lg:text-base">Products</a>
+                    <a href="{{ route('custom_orders.index') }}" class="nav-link whitespace-nowrap text-sm lg:text-base">Custom Orders</a>
+                    <a href="{{ route('cultural-heritage.index') }}" class="nav-link whitespace-nowrap text-sm lg:text-base">Cultural Heritage</a>
+                    <a href="{{ route('track-order.index') }}" class="nav-link whitespace-nowrap text-sm lg:text-base">Track Order</a>
                     @auth
-                        <a href="{{ route('chats.index') }}" class="nav-link whitespace-nowrap flex items-center gap-2 relative">
+                        <a href="{{ route('chats.index') }}" class="nav-link whitespace-nowrap flex items-center gap-1.5 relative text-sm lg:text-base">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                             </svg>
-                            Support
+                            <span class="hidden lg:inline">Support</span>
                             @if($unreadChatCount > 0)
                                 <span style="position: absolute; top: -8px; right: -8px; background-color: #800000; color: white; font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 10px; min-width: 18px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3); z-index: 10;">
                                     {{ $unreadChatCount > 9 ? '9+' : $unreadChatCount }}
@@ -551,8 +563,8 @@
 
                 <!-- Wishlist Icon -->
                 @auth
-                    <a href="{{ route('wishlist.index') }}" class="p-2 rounded-lg hover:bg-gray-100 transition-colors relative" title="My Wishlist">
-                        <svg class="w-6 h-6 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #8b3a56;" onmouseover="this.style.color='#7a3350'" onmouseout="this.style.color='#8b3a56'">
+                    <a href="{{ route('wishlist.index') }}" class="p-1.5 md:p-2 rounded-lg hover:bg-gray-100 transition-colors relative" title="My Wishlist">
+                        <svg class="w-5 h-5 md:w-6 md:h-6 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #8b3a56;" onmouseover="this.style.color='#7a3350'" onmouseout="this.style.color='#8b3a56'">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                         </svg>
                         @php
@@ -566,12 +578,12 @@
                 @endauth
 
                 <!-- Right Side Actions -->
-                <div class="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
+                <div class="flex items-center space-x-1 sm:space-x-2 md:space-x-3 lg:space-x-4">
                     @auth
                         <!-- Cart -->
                         <a href="{{ route('cart.index') }}" class="relative group">
-                            <div class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
-                                <svg class="w-6 h-6 text-gray-700 group-hover:text-maroon-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="--tw-text-opacity: 1;">
+                            <div class="p-1.5 md:p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                                <svg class="w-5 h-5 md:w-6 md:h-6 text-gray-700 group-hover:text-maroon-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="--tw-text-opacity: 1;">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
                                 </svg>
                                 @php
