@@ -87,14 +87,14 @@
                     <div class="flex items-center gap-2 sm:gap-3" x-data="{ profileOpen: false }">
                         <div class="relative">
                             <button @click="profileOpen = !profileOpen" class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors">
-                                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#800000] flex items-center justify-center">
+                                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#800000] flex items-center justify-center shadow-lg">
                                     <span class="text-white text-sm sm:text-base font-semibold">A</span>
                                 </div>
-                                <div class="hidden sm:block text-left">
-                                    <p class="text-sm font-semibold text-gray-900">Admin</p>
+                                <div class="text-left">
+                                    <p class="text-xs sm:text-sm font-semibold text-gray-900">Admin</p>
                                     <p class="text-xs text-gray-500">Administrator</p>
                                 </div>
-                                <i class="fas fa-chevron-down text-gray-500 text-xs hidden sm:block"></i>
+                                <i class="fas fa-chevron-down text-gray-500 text-xs"></i>
                             </button>
                             
                             <!-- Dropdown -->

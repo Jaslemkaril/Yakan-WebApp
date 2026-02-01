@@ -304,20 +304,20 @@
 
             <!-- Total Orders Card -->
             <div class="group relative">
-                <div class="absolute -inset-0.5 bg-[#800000] rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
-                <div class="relative bg-white rounded-2xl p-6 card-hover-lift">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="w-14 h-14 bg-[#800000] rounded-xl flex items-center justify-center shadow-lg">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                <div class="absolute -inset-0.5 bg-[#800000] rounded-xl sm:rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
+                <div class="relative bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 card-hover-lift">
+                    <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-[#800000] rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg">
+                            <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
                         </div>
                         <div class="flex flex-col items-end">
-                            <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">{{ $pendingOrders }} pending</span>
-                            <span class="text-xs text-gray-500 mt-1">+8.2%</span>
+                            <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-0.5 sm:py-1 rounded-full">{{ $pendingOrders }} pending</span>
+                            <span class="text-xs text-gray-500 mt-1 hidden sm:inline">+8.2%</span>
                         </div>
                     </div>
-                    <div class="space-y-2">
-                        <h3 class="text-3xl font-bold text-gray-900">{{ $totalOrders }}</h3>
-                        <p class="text-gray-600 text-sm font-medium">Total Orders</p>
+                    <div class="space-y-0.5 sm:space-y-1 md:space-y-2">
+                        <h3 class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{{ $totalOrders }}</h3>
+                        <p class="text-gray-600 text-xs sm:text-sm font-medium">Total Orders</p>
                     </div>
                     <div class="mt-4">
                         <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
@@ -333,20 +333,20 @@
 
             <!-- Total Users Card -->
             <div class="group relative">
-                <div class="absolute -inset-0.5 bg-[#800000] rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
-                <div class="relative bg-white rounded-2xl p-6 card-hover-lift">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="w-14 h-14 bg-[#800000] rounded-xl flex items-center justify-center shadow-lg">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM6 20h12a6 6 0 00-6-6 6 6 0 00-6 6z"/></svg>
+                <div class="absolute -inset-0.5 bg-[#800000] rounded-xl sm:rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
+                <div class="relative bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 card-hover-lift">
+                    <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-[#800000] rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg">
+                            <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zM6 20h12a6 6 0 00-6-6 6 6 0 00-6 6z"/></svg>
                         </div>
                         <div class="flex flex-col items-end">
-                            <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">Active</span>
-                            <span class="text-xs text-gray-500 mt-1">+15.3%</span>
+                            <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-0.5 sm:py-1 rounded-full">Active</span>
+                            <span class="text-xs text-gray-500 mt-1 hidden sm:inline">+15.3%</span>
                         </div>
                     </div>
-                    <div class="space-y-2">
-                        <h3 class="text-3xl font-bold text-gray-900">{{ $totalUsers }}</h3>
-                        <p class="text-gray-600 text-sm font-medium">Total Users</p>
+                    <div class="space-y-0.5 sm:space-y-1 md:space-y-2">
+                        <h3 class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{{ $totalUsers }}</h3>
+                        <p class="text-gray-600 text-xs sm:text-sm font-medium">Total Users</p>
                     </div>
                     <div class="mt-4">
                         <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
@@ -362,20 +362,20 @@
 
             <!-- Completed Orders Card -->
             <div class="group relative">
-                <div class="absolute -inset-0.5 bg-[#800000] rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
-                <div class="relative bg-white rounded-2xl p-6 card-hover-lift">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="w-14 h-14 bg-[#800000] rounded-xl flex items-center justify-center shadow-lg">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div class="absolute -inset-0.5 bg-[#800000] rounded-xl sm:rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
+                <div class="relative bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 card-hover-lift">
+                    <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-[#800000] rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg">
+                            <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </div>
                         <div class="flex flex-col items-end">
-                            <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">{{ $completedOrders }} done</span>
-                            <span class="text-xs text-gray-500 mt-1">{{ $totalOrders > 0 ? round(($completedOrders / $totalOrders) * 100) : 0 }}% rate</span>
+                            <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-0.5 sm:py-1 rounded-full">{{ $completedOrders }} done</span>
+                            <span class="text-xs text-gray-500 mt-1 hidden sm:inline">{{ $totalOrders > 0 ? round(($completedOrders / $totalOrders) * 100) : 0 }}% rate</span>
                         </div>
                     </div>
-                    <div class="space-y-2">
-                        <h3 class="text-3xl font-bold text-gray-900">{{ $completedOrders }}</h3>
-                        <p class="text-gray-600 text-sm font-medium">Completed Orders</p>
+                    <div class="space-y-0.5 sm:space-y-1 md:space-y-2">
+                        <h3 class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">{{ $completedOrders }}</h3>
+                        <p class="text-gray-600 text-xs sm:text-sm font-medium">Completed Orders</p>
                     </div>
                     <div class="mt-4">
                         <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
@@ -410,53 +410,53 @@
             </div>
 
             <!-- Today's Orders -->
-            <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 card-hover-lift">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-[#800000] rounded-xl flex items-center justify-center shadow-md">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <div class="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift">
+                <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-[#800000] rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     </div>
                     <div class="text-right">
-                        <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">Today</span>
+                        <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-0.5 sm:py-1 rounded-full">Today</span>
                     </div>
                 </div>
-                <div class="space-y-1">
-                    <h3 class="text-2xl font-bold text-gray-900">{{ $todayOrders }}</h3>
-                    <p class="text-gray-600 text-sm font-medium">Orders Today</p>
-                    <p class="text-xs text-gray-500">₱{{ number_format($todayRevenue, 0) }} revenue</p>
+                <div class="space-y-0.5 sm:space-y-1">
+                    <h3 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ $todayOrders }}</h3>
+                    <p class="text-gray-600 text-xs sm:text-sm font-medium">Orders Today</p>
+                    <p class="text-xs text-gray-500 hidden sm:block">₱{{ number_format($todayRevenue, 0) }} revenue</p>
                 </div>
             </div>
 
             <!-- Shipped Orders -->
-            <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 card-hover-lift">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-[#800000] rounded-xl flex items-center justify-center shadow-md">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <div class="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift">
+                <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-[#800000] rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                     </div>
                     <div class="text-right">
-                        <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">In Transit</span>
+                        <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-0.5 sm:py-1 rounded-full">In Transit</span>
                     </div>
                 </div>
-                <div class="space-y-1">
-                    <h3 class="text-2xl font-bold text-gray-900">{{ $shippedOrders }}</h3>
-                    <p class="text-gray-600 text-sm font-medium">Shipped Orders</p>
-                    <p class="text-xs text-gray-500">On the way to customers</p>
+                <div class="space-y-0.5 sm:space-y-1">
+                    <h3 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ $shippedOrders }}</h3>
+                    <p class="text-gray-600 text-xs sm:text-sm font-medium">Shipped Orders</p>
+                    <p class="text-xs text-gray-500 hidden sm:block">On the way to customers</p>
                 </div>
             </div>
 
             <!-- Orders with Notes -->
-            <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 card-hover-lift">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-[#800000] rounded-xl flex items-center justify-center shadow-md">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+            <div class="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift">
+                <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-[#800000] rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
                     </div>
                     <div class="text-right">
-                        <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">Notes</span>
+                        <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-0.5 sm:py-1 rounded-full">Notes</span>
                     </div>
                 </div>
-                <div class="space-y-1">
-                    <h3 class="text-2xl font-bold text-gray-900">{{ $ordersWithNotes }}</h3>
-                    <p class="text-gray-600 text-sm font-medium">Orders with Notes</p>
-                    <p class="text-xs text-gray-500">{{ $totalOrders > 0 ? round(($ordersWithNotes / $totalOrders) * 100) : 0 }}% of total orders</p>
+                <div class="space-y-0.5 sm:space-y-1">
+                    <h3 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ $ordersWithNotes }}</h3>
+                    <p class="text-gray-600 text-xs sm:text-sm font-medium">Orders with Notes</p>
+                    <p class="text-xs text-gray-500 hidden sm:block">{{ $totalOrders > 0 ? round(($ordersWithNotes / $totalOrders) * 100) : 0 }}% of total orders</p>
                 </div>
             </div>
         </div>
