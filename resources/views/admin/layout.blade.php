@@ -61,12 +61,12 @@
     <div class="flex-1 overflow-auto">
         <!-- Header with Search and Profile -->
         <header class="bg-white shadow-sm p-4 md:p-6 mb-4 md:mb-6">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <h1 class="text-xl md:text-3xl font-bold ml-16 md:ml-0">@yield('title', 'Admin Dashboard')</h1>
+            <div class="flex items-center justify-between gap-4">
+                <h1 class="text-xl md:text-3xl font-bold ml-16 md:ml-0 flex-shrink-0">@yield('title', 'Admin Dashboard')</h1>
                 
-                <div class="flex items-center gap-3 sm:gap-4">
-                    <!-- Search Bar -->
-                    <div class="flex-1 sm:flex-initial sm:min-w-[250px] md:min-w-[300px]">
+                <div class="flex items-center gap-2 md:gap-4 flex-shrink-0">
+                    <!-- Search Bar - Hidden on mobile, visible on larger screens -->
+                    <div class="hidden lg:block min-w-[250px]">
                         <form action="{{ route('admin.products.index') }}" method="GET">
                             <div class="relative">
                                 <input 
@@ -83,40 +83,45 @@
                         </form>
                     </div>
                     
-                    <!-- Admin Profile -->
-                    <div class="flex items-center gap-2 sm:gap-3" x-data="{ profileOpen: false }">
-                        <div class="relative">
-                            <button @click="profileOpen = !profileOpen" class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors">
-                                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#800000] flex items-center justify-center shadow-lg">
-                                    <span class="text-white text-sm sm:text-base font-semibold">A</span>
-                                </div>
-                                <div class="text-left">
-                                    <p class="text-xs sm:text-sm font-semibold text-gray-900">Admin</p>
-                                    <p class="text-xs text-gray-500">Administrator</p>
-                                </div>
-                                <i class="fas fa-chevron-down text-gray-500 text-xs"></i>
-                            </button>
-                            
-                            <!-- Dropdown -->
-                            <div x-show="profileOpen" @click.away="profileOpen = false" x-cloak
-                                x-transition:enter="transition ease-out duration-200"
-                                x-transition:enter-start="transform scale-95 opacity-0"
-                                x-transition:enter-end="transform scale-100 opacity-100"
-                                x-transition:leave="transition ease-in duration-75"
-                                x-transition:leave-start="transform scale-100 opacity-100"
-                                x-transition:leave-end="transform scale-95 opacity-0"
-                                class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
-                                <a href="{{ route('welcome') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                    <i class="fas fa-home mr-2"></i>View Site
-                                </a>
-                                <div class="border-t border-gray-100 my-1"></div>
-                                <form method="POST" action="{{ route('logout') }}">
-                                    @csrf
-                                    <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
-                                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
-                                    </button>
-                                </form>
+                    <!-- Admin Profile - Always Visible -->
+                    <div class="relative" x-data="{ profileOpen: false }">
+                        <button @click="profileOpen = !profileOpen" class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200">
+                            <div class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-[#800000] flex items-center justify-center shadow-lg">
+                                <i class="fas fa-user-shield text-white text-sm md:text-base"></i>
                             </div>
+                            <div class="text-left">
+                                <p class="text-xs md:text-sm font-bold text-gray-900">Admin</p>
+                                <p class="text-xs text-gray-500">Administrator</p>
+                            </div>
+                            <i class="fas fa-chevron-down text-gray-500 text-xs"></i>
+                        </button>
+                        
+                        <!-- Dropdown -->
+                        <div x-show="profileOpen" @click.away="profileOpen = false" x-cloak
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="transform scale-95 opacity-0"
+                            x-transition:enter-end="transform scale-100 opacity-100"
+                            x-transition:leave="transition ease-in duration-75"
+                            x-transition:leave-start="transform scale-100 opacity-100"
+                            x-transition:leave-end="transform scale-95 opacity-0"
+                            class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                            <div class="px-4 py-3 border-b border-gray-100">
+                                <p class="text-sm font-bold text-gray-900">Administrator</p>
+                                <p class="text-xs text-gray-500">System Admin</p>
+                            </div>
+                            <a href="{{ route('welcome') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-home mr-2 text-[#800000]"></i>View Site
+                            </a>
+                            <a href="{{ route('admin.dashboard') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-chart-line mr-2 text-[#800000]"></i>Dashboard
+                            </a>
+                            <div class="border-t border-gray-100 my-1"></div>
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
