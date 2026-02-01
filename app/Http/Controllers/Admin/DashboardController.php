@@ -24,56 +24,110 @@ class DashboardController extends Controller
     /**
      * Show the admin dashboard page.
      */
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $totalOrders = \App\Models\Order::count();
-            $pendingOrders = \App\Models\Order::where('status', 'pending')->count();
-            $completedOrders = \App\Models\Order::where('status', 'completed')->count();
+            // Get filter parameters
+            $period = $request->get('period', 'all'); // daily, weekly, yearly, all
+            $stockFilter = $request->get('stock', 'all'); // all, out-of-stock, in-stock
+            
+            // Date filtering based on period
+            $dateQuery = \App\Models\Order::query();
+            switch ($period) {
+                case 'daily':
+                    $dateQuery->whereDate('created_at', today());
+                    break;
+                case 'weekly':
+                    $dateQuery->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                    break;
+                case 'yearly':
+                    $dateQuery->whereYear('created_at', now()->year);
+                    break;
+                default:
+                    // all time
+                    break;
+            }
+            
+            $totalOrders = (clone $dateQuery)->count();
+            $pendingOrders = (clone $dateQuery)->where('status', 'pending')->count();
+            $completedOrders = (clone $dateQuery)->where('status', 'completed')->count();
             $totalUsers = \App\Models\User::count();
-            $totalRevenue = (float) \App\Models\Order::where('status', 'completed')->sum('total_amount');
+            $totalRevenue = (float) (clone $dateQuery)->where('status', 'completed')->sum('total_amount');
 
             // New analytics
             $averageOrderValue = $completedOrders > 0 ? $totalRevenue / $completedOrders : 0;
-            $ordersWithNotes = \App\Models\Order::whereNotNull('customer_notes')->where('customer_notes', '!=', '')->count();
+            $ordersWithNotes = (clone $dateQuery)->whereNotNull('customer_notes')->where('customer_notes', '!=', '')->count();
             $todayOrders = \App\Models\Order::whereDate('created_at', today())->count();
             $todayRevenue = (float) \App\Models\Order::whereDate('created_at', today())->where('status', 'completed')->sum('total_amount');
-            $shippedOrders = \App\Models\Order::where('status', 'shipped')->count();
-            $deliveredOrders = \App\Models\Order::where('status', 'delivered')->count();
+            $shippedOrders = (clone $dateQuery)->where('status', 'shipped')->count();
+            $deliveredOrders = (clone $dateQuery)->where('status', 'delivered')->count();
             
             // Payment method breakdown
-            $paymentMethods = \App\Models\Order::selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
+            $paymentMethods = (clone $dateQuery)->selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
                 ->groupBy('payment_method')
                 ->get();
 
             // Delivery type breakdown
-            $deliveryTypes = \App\Models\Order::selectRaw('delivery_type, COUNT(*) as count')
+            $deliveryTypes = (clone $dateQuery)->selectRaw('delivery_type, COUNT(*) as count')
                 ->groupBy('delivery_type')
                 ->get();
 
-            $recentOrders = \App\Models\Order::with('user')
+            $recentOrders = (clone $dateQuery)->with('user')
                 ->orderByDesc('created_at')
                 ->take(10)
                 ->get();
 
             $recentUsers = \App\Models\User::orderByDesc('created_at')->take(10)->get();
 
-            $ordersByStatus = \App\Models\Order::selectRaw('status, COUNT(*) as count')
+            $ordersByStatus = (clone $dateQuery)->selectRaw('status, COUNT(*) as count')
                 ->groupBy('status')
                 ->pluck('count', 'status');
 
             $totalProducts = \App\Models\Product::count();
+            
+            // Out-of-stock items
+            $outOfStockItems = \App\Models\Product::where('stock', '<=', 0)->get();
+            $outOfStockCount = $outOfStockItems->count();
 
-            // Top products by sold quantity
-            $topProducts = \App\Models\OrderItem::selectRaw('product_id, SUM(quantity) as sold')
+            // Top products by sold quantity (Best Sellers)
+            $topProductsQuery = \App\Models\OrderItem::selectRaw('product_id, SUM(quantity) as sold, SUM(price * quantity) as revenue')
                 ->groupBy('product_id')
                 ->orderByDesc('sold')
-                ->with('product')
-                ->take(5)
-                ->get();
+                ->with('product');
+                
+            if ($period !== 'all') {
+                $topProductsQuery->whereHas('order', function($q) use ($dateQuery) {
+                    $q->whereIn('id', (clone $dateQuery)->pluck('id'));
+                });
+            }
+            
+            $topProducts = $topProductsQuery->take(10)->get();
+            
+            // Low sales products (bottom 10)
+            $lowSalesProductsQuery = \App\Models\OrderItem::selectRaw('product_id, SUM(quantity) as sold, SUM(price * quantity) as revenue')
+                ->groupBy('product_id')
+                ->orderBy('sold', 'asc')
+                ->with('product');
+                
+            if ($period !== 'all') {
+                $lowSalesProductsQuery->whereHas('order', function($q) use ($dateQuery) {
+                    $q->whereIn('id', (clone $dateQuery)->pluck('id'));
+                });
+            }
+            
+            $lowSalesProducts = $lowSalesProductsQuery->take(10)->get();
 
-            // Basic sales data for the last 30 days
-            $allSalesData = \App\Models\Order::where('created_at', '>=', now()->subDays(30))
+            // Basic sales data
+            $salesDataRange = 30;
+            if ($period == 'yearly') {
+                $salesDataRange = 365;
+            } elseif ($period == 'weekly') {
+                $salesDataRange = 7;
+            } elseif ($period == 'daily') {
+                $salesDataRange = 1;
+            }
+            
+            $allSalesData = \App\Models\Order::where('created_at', '>=', now()->subDays($salesDataRange))
                 ->where('status', 'completed')
                 ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue, COUNT(*) as orders')
                 ->groupBy('date')
@@ -99,7 +153,12 @@ class DashboardController extends Controller
                 'ordersByStatus',
                 'totalProducts',
                 'topProducts',
-                'allSalesData'
+                'lowSalesProducts',
+                'outOfStockItems',
+                'outOfStockCount',
+                'allSalesData',
+                'period',
+                'stockFilter'
             ));
         } catch (\Exception $e) {
             \Log::error('Dashboard index error: ' . $e->getMessage());

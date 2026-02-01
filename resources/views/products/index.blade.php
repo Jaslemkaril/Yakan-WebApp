@@ -28,12 +28,18 @@
 
     .product-card {
         background: white;
-        border-radius: 20px;
+        border-radius: 12px;
         overflow: hidden;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
         cursor: pointer;
+    }
+    
+    @media (min-width: 768px) {
+        .product-card {
+            border-radius: 20px;
+        }
     }
 
     .product-card:hover {
@@ -58,7 +64,7 @@
     }
 
     .product-image {
-        height: 280px;
+        height: 200px;
         width: 100%;
         background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
         position: relative;
@@ -67,7 +73,21 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 20px;
+        padding: 12px;
+    }
+    
+    @media (min-width: 640px) {
+        .product-image {
+            height: 240px;
+            padding: 16px;
+        }
+    }
+    
+    @media (min-width: 768px) {
+        .product-image {
+            height: 280px;
+            padding: 20px;
+        }
     }
 
     .product-image::before {
@@ -153,16 +173,34 @@
 
     .product-badge {
         position: absolute;
-        top: 1rem;
-        right: 1rem;
+        top: 0.5rem;
+        right: 0.5rem;
         background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(10px);
-        padding: 0.25rem 0.75rem;
+        padding: 0.25rem 0.5rem;
         border-radius: 2rem;
-        font-size: 0.75rem;
+        font-size: 0.625rem;
         font-weight: 600;
         color: #dc2626;
         border: 1px solid rgba(220, 38, 38, 0.2);
+    }
+    
+    @media (min-width: 640px) {
+        .product-badge {
+            top: 0.75rem;
+            right: 0.75rem;
+            padding: 0.25rem 0.625rem;
+            font-size: 0.7rem;
+        }
+    }
+    
+    @media (min-width: 768px) {
+        .product-badge {
+            top: 1rem;
+            right: 1rem;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+        }
     }
 
     .product-badge.hot {
@@ -292,7 +330,7 @@
                 </div>
 
                 <!-- Products Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
                     @foreach($products as $index => $product)
                         <div class="product-card animate-fade-in-up" style="animation-delay: {{ $index * 0.1 }}s">
                             <div class="product-image">
@@ -341,23 +379,23 @@
                                 </div>
                             </div>
                             
-                            <div class="p-6">
-                                <div class="flex items-start justify-between mb-3">
-                                    <h3 class="text-xl font-bold text-gray-900 transition-colors" style="cursor: pointer;" onmouseover="this.style.color='#800000'" onmouseout="this.style.color=''">{{ $product->name }}</h3>
+                            <div class="p-3 sm:p-4 md:p-6">
+                                <div class="flex items-start justify-between mb-2 md:mb-3">
+                                    <h3 class="text-sm sm:text-base md:text-xl font-bold text-gray-900 transition-colors line-clamp-2" style="cursor: pointer;" onmouseover="this.style.color='#800000'" onmouseout="this.style.color=''">{{ $product->name }}</h3>
                                     @if($product->category)
-                                        <span class="text-xs px-2 py-1 rounded-full" style="background-color: rgba(128, 0, 0, 0.1); color: #800000;">
+                                        <span class="text-xs px-2 py-1 rounded-full ml-2 flex-shrink-0" style="background-color: rgba(128, 0, 0, 0.1); color: #800000;">
                                             {{ $product->category->name }}
                                         </span>
                                     @endif
                                 </div>
                                 
-                                <p class="text-gray-600 mb-4 line-clamp-2 text-sm leading-relaxed">
+                                <p class="text-gray-600 mb-2 md:mb-4 line-clamp-2 text-xs sm:text-sm leading-relaxed hidden sm:block">
                                     {{ $product->description ?? 'Premium quality product with exceptional features and craftsmanship.' }}
                                 </p>
                                 
                                 <!-- Rating -->
-                                <div class="flex items-center mb-4">
-                                    <div class="flex text-yellow-400 mr-2" title="4.0 out of 5 stars">
+                                <div class="flex items-center mb-2 md:mb-4">
+                                    <div class="flex text-yellow-400 mr-1 md:mr-2 text-xs sm:text-sm" title="4.0 out of 5 stars">
                                         @for($i = 1; $i <= 5; $i++)
                                             @if($i <= 4)
                                                 ★
@@ -366,15 +404,15 @@
                                             @endif
                                         @endfor
                                     </div>
-                                    <span class="text-sm text-gray-500">(24 reviews)</span>
+                                    <span class="text-xs sm:text-sm text-gray-500 hidden sm:inline">(24 reviews)</span>
                                 </div>
                                 
                                 <!-- Price Section -->
-                                <div class="price-section flex items-center justify-between mb-4">
+                                <div class="price-section flex items-center justify-between mb-3 md:mb-4">
                                     <div>
-                                        <div class="text-2xl font-bold" style="color: #800000;">₱{{ number_format($product->price ?? 0) }}</div>
+                                        <div class="text-lg sm:text-xl md:text-2xl font-bold" style="color: #800000;">₱{{ number_format($product->price ?? 0) }}</div>
                                         @if($product->original_price && $product->original_price > $product->price)
-                                            <div class="text-sm text-gray-500 line-through">₱{{ number_format($product->original_price) }}</div>
+                                            <div class="text-xs sm:text-sm text-gray-500 line-through">₱{{ number_format($product->original_price) }}</div>
                                         @endif
                                     </div>
                                     
@@ -397,14 +435,14 @@
                                 
                                 <!-- Action Buttons -->
                                 <div class="flex gap-2">
-                                    <button class="flex-1 btn-secondary" onclick="event.stopPropagation(); quickView({{ $product->id }})">
-                                        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <button class="flex-1 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold border-2 rounded-lg transition-all hover:bg-gray-50" style="border-color: #800000; color: #800000;" onclick="event.stopPropagation(); quickView({{ $product->id }})">
+                                        <svg class="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                         </svg>
-                                        Quick View
+                                        <span class="hidden sm:inline">Quick View</span>
                                     </button>
-                                    <a href="{{ route('products.show', $product->id) }}" class="flex-1 btn-primary" onclick="event.stopPropagation()">
+                                    <a href="{{ route('products.show', $product->id) }}" class="flex-1 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg text-white text-center transition-all hover:opacity-90" style="background-color: #800000;" onclick="event.stopPropagation()">
                                         View Details
                                     </a>
                                 </div>
