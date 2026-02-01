@@ -496,11 +496,11 @@
             <div class="flex justify-between items-center h-16">
                 <!-- Logo -->
                 <div class="flex items-center">
-                    <a href="{{ route('welcome') }}" class="flex items-center space-x-3 group">
-                        <div class="w-10 h-10 bg-gradient-to-br from-maroon-600 to-maroon-700 rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform" style="background: linear-gradient(to bottom right, #800000, #600000);">
-                            <span class="text-white font-bold text-xl">Y</span>
+                    <a href="{{ route('welcome') }}" class="flex items-center space-x-2 sm:space-x-3 group">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-maroon-600 to-maroon-700 rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform" style="background: linear-gradient(to bottom right, #800000, #600000);">
+                            <span class="text-white font-bold text-lg sm:text-xl">Y</span>
                         </div>
-                        <span class="text-2xl font-bold text-gradient">Yakan</span>
+                        <span class="text-xl sm:text-2xl font-bold text-gradient">Yakan</span>
                     </a>
                 </div>
 
@@ -566,7 +566,7 @@
                 @endauth
 
                 <!-- Right Side Actions -->
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
                     @auth
                         <!-- Cart -->
                         <a href="{{ route('cart.index') }}" class="relative group">
@@ -631,8 +631,8 @@
                         </div>
                     @else
                         <!-- Login/Register Buttons -->
-                        <a href="{{ route('login') }}" class="btn-secondary">Login</a>
-                        <a href="{{ route('register') }}" class="btn-primary">Sign Up</a>
+                        <a href="{{ route('login') }}" class="px-3 py-1.5 sm:px-4 sm:py-2 md:px-5 md:py-2.5 text-sm sm:text-base font-semibold border-2 rounded-lg transition-all hover:bg-gray-50" style="border-color: #800000; color: #800000;">Login</a>
+                        <a href="{{ route('register') }}" class="px-3 py-1.5 sm:px-4 sm:py-2 md:px-5 md:py-2.5 text-sm sm:text-base font-semibold rounded-lg text-white transition-all hover:opacity-90" style="background-color: #800000;">Sign Up</a>
                     @endauth
 
                     <!-- Mobile Menu Button -->
