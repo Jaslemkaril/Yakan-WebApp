@@ -7,16 +7,16 @@
     <!-- Static Assets (Vite build disabled for Expo frontend) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Alpine.js for mobile menu toggle -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
     @stack('styles')
     <style>
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="flex h-screen bg-gray-100">
-    <!-- Alpine.js for mobile menu toggle -->
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<body class="flex h-screen bg-gray-100" x-data="{ sidebarOpen: false }">
     
-    <div x-data="{ sidebarOpen: false }" class="flex w-full h-full">
+    <div class="flex w-full h-full">
         <!-- Mobile Menu Button -->
         <button @click="sidebarOpen = !sidebarOpen" class="md:hidden fixed top-4 left-4 z-50 bg-[#800000] text-white p-3 rounded-lg shadow-lg min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-[#600000] transition-colors">
             <i class="fas fa-bars text-xl"></i>
@@ -134,7 +134,7 @@
         </main>
         </div><!-- Close main content div -->
         
-    </div><!-- Close Alpine x-data wrapper -->
+    </div><!-- Close flex wrapper -->
 
     @stack('scripts')
 </body>
