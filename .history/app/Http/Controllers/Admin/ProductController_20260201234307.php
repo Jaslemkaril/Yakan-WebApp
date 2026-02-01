@@ -175,11 +175,8 @@ class ProductController extends Controller
             // Remove deleted images from array and delete files
             $allImages = array_filter($allImages, function($img) use ($imagesToDelete) {
                 if (in_array($img['path'], $imagesToDelete)) {
-                    // Delete physical file
-                    $filePath = public_path('uploads/products/' . $img['path']);
-                    if (file_exists($filePath)) {
-                        @unlink($filePath);
-                    }
+                    // Delete physical file from storage
+                    \Storage::disk('public')->delete('products/' . $img['path']);
                     return false;
                 }
                 return true;
@@ -195,17 +192,10 @@ class ProductController extends Controller
         
         if ($request->hasFile('images')) {
             $imageIndex = count($allImages);
-            $uploadDir = public_path('uploads/products');
-            
-            // Ensure upload directory exists
-            if (!is_dir($uploadDir)) {
-                @mkdir($uploadDir, 0777, true);
-            }
-            
             foreach ($request->file('images') as $index => $image) {
                 if ($image && $image->isValid()) {
                     $imageName = time() . '_' . $imageIndex . '_' . $image->getClientOriginalName();
-                    $image->move($uploadDir, $imageName);
+                    $image->storeAs('products', $imageName, 'public');
                     
                     $allImages[] = [
                         'path' => $imageName,
