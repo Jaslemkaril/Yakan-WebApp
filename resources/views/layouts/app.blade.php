@@ -517,7 +517,7 @@
                 </div>
 
                 <!-- Search Bar -->
-                <div class="hidden md:flex flex-1 max-w-2xl mx-8">
+                <div class="hidden md:flex flex-1 max-w-xl lg:max-w-2xl mx-4 lg:mx-8">
                     <form action="{{ route('products.search') }}" method="GET" class="w-full" id="searchForm">
                         <div class="relative">
                             <input 
@@ -526,12 +526,12 @@
                                 id="searchInput"
                                 placeholder="Search products..." 
                                 value="{{ request('q') }}"
-                                class="w-full pl-12 pr-4 py-2.5 border-2 border-gray-200 rounded-full focus:outline-none focus:border-maroon-600 transition-all"
+                                class="w-full pl-10 lg:pl-12 pr-4 py-2 lg:py-2.5 text-sm lg:text-base border-2 border-gray-200 rounded-full focus:outline-none focus:border-maroon-600 transition-all"
                                 style="border-color: #e5e7eb;"
                                 autocomplete="off"
                             >
-                            <button type="submit" class="absolute left-4 top-1/2 transform -translate-y-1/2 hover:scale-110 transition-transform">
-                                <svg class="w-5 h-5 text-gray-400 hover:text-maroon-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #9ca3af;">
+                            <button type="submit" class="absolute left-3 lg:left-4 top-1/2 transform -translate-y-1/2 hover:scale-110 transition-transform">
+                                <svg class="w-4 h-4 lg:w-5 lg:h-5 text-gray-400 hover:text-maroon-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #9ca3af;">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                                 </svg>
                             </button>
@@ -540,12 +540,12 @@
                 </div>
 
                 <!-- Desktop Navigation -->
-                <div class="hidden md:flex items-center space-x-3 lg:space-x-4 xl:space-x-6">
-                    <a href="{{ route('welcome') }}" class="nav-link whitespace-nowrap text-sm lg:text-base">Home</a>
-                    <a href="{{ route('products.index') }}" class="nav-link whitespace-nowrap text-sm lg:text-base">Products</a>
-                    <a href="{{ route('custom_orders.index') }}" class="nav-link whitespace-nowrap text-sm lg:text-base">Custom Orders</a>
-                    <a href="{{ route('cultural-heritage.index') }}" class="nav-link whitespace-nowrap text-sm lg:text-base">Cultural Heritage</a>
-                    <a href="{{ route('track-order.index') }}" class="nav-link whitespace-nowrap text-sm lg:text-base">Track Order</a>
+                <div class="hidden lg:flex items-center space-x-2 xl:space-x-4">
+                    <a href="{{ route('welcome') }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Home</a>
+                    <a href="{{ route('products.index') }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Products</a>
+                    <a href="{{ route('custom_orders.index') }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Custom Orders</a>
+                    <a href="{{ route('cultural-heritage.index') }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Cultural Heritage</a>
+                    <a href="{{ route('track-order.index') }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Track Order</a>
                     @auth
                         <a href="{{ route('chats.index') }}" class="nav-link whitespace-nowrap flex items-center gap-1.5 relative text-sm lg:text-base">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -561,29 +561,27 @@
                     @endauth
                 </div>
 
-                <!-- Wishlist Icon -->
-                @auth
-                    <a href="{{ route('wishlist.index') }}" class="p-1.5 md:p-2 rounded-lg hover:bg-gray-100 transition-colors relative" title="My Wishlist">
-                        <svg class="w-5 h-5 md:w-6 md:h-6 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #8b3a56;" onmouseover="this.style.color='#7a3350'" onmouseout="this.style.color='#8b3a56'">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-                        </svg>
-                        @php
-                            $wishlist = \App\Models\Wishlist::where('user_id', auth()->user()->id)->first();
-                            $wishlistCount = $wishlist ? $wishlist->items()->count() : 0;
-                        @endphp
-                        <span id="wishlist-count-badge" class="absolute -top-1 -right-1 text-white text-xs font-bold rounded-full flex items-center justify-center w-5 h-5 {{ $wishlistCount > 0 ? '' : 'hidden' }}" style="background-color: #800000;">
-                            {{ $wishlistCount > 99 ? '99+' : $wishlistCount }}
-                        </span>
-                    </a>
-                @endauth
-
                 <!-- Right Side Actions -->
-                <div class="flex items-center space-x-1 sm:space-x-2 md:space-x-3 lg:space-x-4">
+                <div class="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
+                    <!-- Wishlist Icon -->
                     @auth
+                        <a href="{{ route('wishlist.index') }}" class="p-1.5 lg:p-2 rounded-lg hover:bg-gray-100 transition-colors relative" title="My Wishlist">
+                            <svg class="w-5 h-5 lg:w-6 lg:h-6 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #8b3a56;" onmouseover="this.style.color='#7a3350'" onmouseout="this.style.color='#8b3a56'">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                            </svg>
+                            @php
+                                $wishlist = \App\Models\Wishlist::where('user_id', auth()->user()->id)->first();
+                                $wishlistCount = $wishlist ? $wishlist->items()->count() : 0;
+                            @endphp
+                            <span id="wishlist-count-badge" class="absolute -top-1 -right-1 text-white text-xs font-bold rounded-full flex items-center justify-center w-5 h-5 {{ $wishlistCount > 0 ? '' : 'hidden' }}" style="background-color: #800000;">
+                                {{ $wishlistCount > 99 ? '99+' : $wishlistCount }}
+                            </span>
+                        </a>
+                    @endauth
                         <!-- Cart -->
                         <a href="{{ route('cart.index') }}" class="relative group">
-                            <div class="p-1.5 md:p-2 rounded-lg hover:bg-gray-100 transition-colors">
-                                <svg class="w-5 h-5 md:w-6 md:h-6 text-gray-700 group-hover:text-maroon-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="--tw-text-opacity: 1;">
+                            <div class="p-1.5 lg:p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                                <svg class="w-5 h-5 lg:w-6 lg:h-6 text-gray-700 group-hover:text-maroon-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="--tw-text-opacity: 1;">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
                                 </svg>
                                 @php
@@ -610,15 +608,15 @@
 
                         <!-- User Menu -->
                         <div class="relative" x-data="{ open: false }">
-                            <button @click="open = !open" class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                            <button @click="open = !open" class="flex items-center space-x-1 lg:space-x-2 p-1.5 lg:p-2 rounded-lg hover:bg-gray-100 transition-colors">
                                 @if(auth()->user()->avatar)
-                                    <img src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->name }}" class="w-8 h-8 rounded-full object-cover border-2 border-maroon-600" loading="lazy">
+                                    <img src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->name }}" class="w-7 h-7 lg:w-8 lg:h-8 rounded-full object-cover border-2 border-maroon-600" loading="lazy">
                                 @else
-                                    <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: linear-gradient(to bottom right, #800000, #600000);">
-                                        <span class="text-white text-sm font-semibold">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+                                    <div class="w-7 h-7 lg:w-8 lg:h-8 rounded-full flex items-center justify-center" style="background: linear-gradient(to bottom right, #800000, #600000);">
+                                        <span class="text-white text-xs lg:text-sm font-semibold">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
                                     </div>
                                 @endif
-                                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-3 h-3 lg:w-4 lg:h-4 text-gray-600 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                 </svg>
                             </button>
@@ -643,12 +641,12 @@
                         </div>
                     @else
                         <!-- Login/Register Buttons -->
-                        <a href="{{ route('login') }}" class="px-3 py-1.5 sm:px-4 sm:py-2 md:px-5 md:py-2.5 text-sm sm:text-base font-semibold border-2 rounded-lg transition-all hover:bg-gray-50" style="border-color: #800000; color: #800000;">Login</a>
-                        <a href="{{ route('register') }}" class="px-3 py-1.5 sm:px-4 sm:py-2 md:px-5 md:py-2.5 text-sm sm:text-base font-semibold rounded-lg text-white transition-all hover:opacity-90" style="background-color: #800000;">Sign Up</a>
+                        <a href="{{ route('login') }}" class="px-3 py-1.5 lg:px-4 lg:py-2 text-xs sm:text-sm lg:text-base font-semibold border-2 rounded-lg transition-all hover:bg-gray-50 whitespace-nowrap" style="border-color: #800000; color: #800000;">Login</a>
+                        <a href="{{ route('register') }}" class="px-3 py-1.5 lg:px-4 lg:py-2 text-xs sm:text-sm lg:text-base font-semibold rounded-lg text-white transition-all hover:opacity-90 whitespace-nowrap" style="background-color: #800000;">Sign Up</a>
                     @endauth
 
                     <!-- Mobile Menu Button -->
-                    <button @click="mobileMenu = !mobileMenu" class="md:hidden p-2 rounded-lg hover:bg-gray-100">
+                    <button @click="mobileMenu = !mobileMenu" class="lg:hidden p-2 rounded-lg hover:bg-gray-100">
                         <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                         </svg>
