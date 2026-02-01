@@ -51,6 +51,19 @@ Route::get('/setup/create-sessions-table', function () {
     }
 });
 
+// Privacy Policy and Data Deletion Routes (Required for Facebook OAuth)
+Route::get('/privacy-policy', function () {
+    return view('privacy-policy');
+})->name('privacy-policy');
+
+Route::get('/data-deletion', function () {
+    return view('data-deletion');
+})->name('data-deletion');
+
+Route::get('/terms-of-service', function () {
+    return view('terms-of-service');
+})->name('terms-of-service');
+
 // Reset admin password route
 Route::get('/setup/reset-admin-password', function () {
     $admin = \App\Models\User::where('email', 'admin@yakan.com')->first();
