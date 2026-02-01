@@ -128,46 +128,46 @@
     </div>
 
     <!-- Main Content -->
-    <div class="relative z-10 p-6 space-y-8">
+    <div class="relative z-10 p-3 sm:p-4 md:p-6 space-y-6 sm:space-y-8">
         <!-- Enhanced Welcome Header -->
         <div class="animate-fade-in-up">
-            <div class="bg-[#800000] rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+            <div class="bg-[#800000] rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 text-white shadow-2xl relative overflow-hidden">
                 <div class="absolute inset-0 bg-black opacity-10"></div>
                 <div class="relative z-10">
                     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-                        <div class="space-y-4">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                                <span class="text-green-300 text-sm font-medium">System Online</span>
+                        <div class="space-y-3 sm:space-y-4">
+                            <div class="flex items-center space-x-2 sm:space-x-3">
+                                <div class="w-2 h-2 sm:w-3 sm:h-3 bg-green-400 rounded-full animate-pulse"></div>
+                                <span class="text-green-300 text-xs sm:text-sm font-medium">System Online</span>
                             </div>
-                            <h1 class="text-4xl lg:text-5xl font-bold leading-tight">
+                            <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
                                 Welcome back, <span class="gradient-text text-white">Admin</span>
                             </h1>
-                            <p class="text-xl text-indigo-100 max-w-2xl">
+                            <p class="text-sm sm:text-base md:text-lg lg:text-xl text-indigo-100 max-w-2xl">
                                 Here's your comprehensive business overview for {{ now()->format('F j, Y') }}
                             </p>
-                            <div class="flex flex-wrap gap-3 pt-2">
-                                <div class="flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-                                    <i class="fas fa-calendar-alt"></i>
-                                    <span class="text-sm">{{ now()->format('l') }}</span>
+                            <div class="flex flex-wrap gap-2 sm:gap-3 pt-2">
+                                <div class="flex items-center space-x-1.5 sm:space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-2.5 sm:px-4 py-1.5 sm:py-2">
+                                    <i class="fas fa-calendar-alt text-xs sm:text-sm"></i>
+                                    <span class="text-xs sm:text-sm">{{ now()->format('l') }}</span>
                                 </div>
-                                <div class="flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-                                    <i class="fas fa-clock"></i>
-                                    <span class="text-sm">{{ now()->format('g:i A') }}</span>
+                                <div class="flex items-center space-x-1.5 sm:space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-2.5 sm:px-4 py-1.5 sm:py-2">
+                                    <i class="fas fa-clock text-xs sm:text-sm"></i>
+                                    <span class="text-xs sm:text-sm">{{ now()->format('g:i A') }}</span>
                                 </div>
-                                <div class="flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-                                    <i class="fas fa-sun"></i>
-                                    <span class="text-sm">{{ now()->format('h:i A') }} PST</span>
+                                <div class="flex items-center space-x-1.5 sm:space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-2.5 sm:px-4 py-1.5 sm:py-2">
+                                    <i class="fas fa-sun text-xs sm:text-sm"></i>
+                                    <span class="text-xs sm:text-sm">{{ now()->format('h:i A') }} PST</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="mt-6 lg:mt-0 lg:ml-8">
-                            <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+                        <div class="mt-4 sm:mt-6 lg:mt-0 lg:ml-8">
+                            <div class="bg-white/10 backdrop-blur-md rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/20">
                                 <div class="text-center">
-                                    <div class="text-5xl font-bold mb-2">{{ $totalOrders }}</div>
-                                    <div class="text-sm text-indigo-200">Total Orders</div>
-                                    <div class="mt-3 text-2xl font-semibold">₱{{ number_format($totalRevenue, 0) }}</div>
-                                    <div class="text-sm text-indigo-200">Total Revenue</div>
+                                    <div class="text-3xl sm:text-4xl md:text-5xl font-bold mb-2">{{ $totalOrders }}</div>
+                                    <div class="text-xs sm:text-sm text-indigo-200">Total Orders</div>
+                                    <div class="mt-2 sm:mt-3 text-xl sm:text-2xl font-semibold">₱{{ number_format($totalRevenue, 0) }}</div>
+                                    <div class="text-xs sm:text-sm text-indigo-200">Total Revenue</div>
                                 </div>
                             </div>
                         </div>
@@ -177,25 +177,25 @@
         </div>
 
         <!-- Enhanced Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-in-left">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 animate-slide-in-left">
             <!-- Total Revenue Card -->
             <div class="group relative">
                 <div class="absolute -inset-0.5 bg-[#800000] rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
-                <div class="relative bg-white rounded-2xl p-6 card-hover-lift">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="w-14 h-14 bg-[#800000] rounded-xl flex items-center justify-center shadow-lg">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div class="relative bg-white rounded-2xl p-4 sm:p-6 card-hover-lift">
+                    <div class="flex items-center justify-between mb-3 sm:mb-4">
+                        <div class="w-12 h-12 sm:w-14 sm:h-14 bg-[#800000] rounded-xl flex items-center justify-center shadow-lg">
+                            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </div>
                         <div class="flex flex-col items-end">
                             <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">Live</span>
                             <span class="text-xs text-gray-500 mt-1">+12.5%</span>
                         </div>
                     </div>
-                    <div class="space-y-2">
-                        <h3 class="text-3xl font-bold text-gray-900">₱{{ number_format($totalRevenue, 0) }}</h3>
-                        <p class="text-gray-600 text-sm font-medium">Total Revenue</p>
+                    <div class="space-y-1 sm:space-y-2">
+                        <h3 class="text-2xl sm:text-3xl font-bold text-gray-900">₱{{ number_format($totalRevenue, 0) }}</h3>
+                        <p class="text-gray-600 text-xs sm:text-sm font-medium">Total Revenue</p>
                     </div>
-                    <div class="mt-4">
+                    <div class="mt-3 sm:mt-4">
                         <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
                             <span>Progress</span>
                             <span>{{ min(100, round($totalRevenue / 1000)) }}%</span>
@@ -296,20 +296,20 @@
         </div>
 
         <!-- Additional Analytics Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <!-- Average Order Value -->
-            <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 card-hover-lift">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-[#800000] rounded-xl flex items-center justify-center shadow-md">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3v3m-6-1v-6a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+            <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-100 card-hover-lift">
+                <div class="flex items-center justify-between mb-3 sm:mb-4">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-[#800000] rounded-xl flex items-center justify-center shadow-md">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3v3m-6-1v-6a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
                     </div>
                     <div class="text-right">
                         <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">AOV</span>
                     </div>
                 </div>
                 <div class="space-y-1">
-                    <h3 class="text-2xl font-bold text-gray-900">₱{{ number_format($averageOrderValue, 2) }}</h3>
-                    <p class="text-gray-600 text-sm font-medium">Avg Order Value</p>
+                    <h3 class="text-xl sm:text-2xl font-bold text-gray-900">₱{{ number_format($averageOrderValue, 2) }}</h3>
+                    <p class="text-gray-600 text-xs sm:text-sm font-medium">Avg Order Value</p>
                     <p class="text-xs text-gray-500">Per completed order</p>
                 </div>
             </div>
@@ -367,35 +367,35 @@
         </div>
 
         <!-- Payment & Delivery Analytics -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <!-- Payment Methods Breakdown -->
-            <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 card-hover-lift">
-                <div class="flex items-center space-x-3 mb-6">
-                    <div class="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-600 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-credit-card text-white"></i>
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 border border-gray-100 card-hover-lift">
+                <div class="flex items-center space-x-2 sm:space-x-3 mb-4 sm:mb-6">
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-green-400 to-emerald-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-credit-card text-white text-sm sm:text-base"></i>
                     </div>
                     <div>
-                        <h2 class="text-lg font-bold text-gray-900">Payment Methods</h2>
-                        <p class="text-sm text-gray-500">Revenue distribution</p>
+                        <h2 class="text-base sm:text-lg font-bold text-gray-900">Payment Methods</h2>
+                        <p class="text-xs sm:text-sm text-gray-500">Revenue distribution</p>
                     </div>
                 </div>
-                <div class="space-y-4">
+                <div class="space-y-3 sm:space-y-4">
                     @foreach($paymentMethods as $method)
-                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-10 h-10 rounded-lg flex items-center justify-center
+                        <div class="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center space-x-2 sm:space-x-3">
+                                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center
                                     {{ $method->payment_method === 'online' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600' }}">
-                                    <i class="fas {{ $method->payment_method === 'online' ? 'fa-mobile-alt' : 'fa-university' }}"></i>
+                                    <i class="fas {{ $method->payment_method === 'online' ? 'fa-mobile-alt' : 'fa-university' }} text-sm sm:text-base"></i>
                                 </div>
                                 <div>
-                                    <div class="font-semibold text-gray-900">
+                                    <div class="font-semibold text-gray-900 text-sm sm:text-base">
                                         {{ $method->payment_method === 'online' ? 'GCash' : 'Bank Transfer' }}
                                     </div>
                                     <div class="text-xs text-gray-500">{{ $method->count }} orders</div>
                                 </div>
                             </div>
                             <div class="text-right">
-                                <div class="text-lg font-bold text-gray-900">₱{{ number_format($method->total, 0) }}</div>
+                                <div class="text-base sm:text-lg font-bold text-gray-900">₱{{ number_format($method->total, 0) }}</div>
                                 <div class="text-xs text-gray-500">{{ $totalRevenue > 0 ? round(($method->total / $totalRevenue) * 100) : 0 }}%</div>
                             </div>
                         </div>
