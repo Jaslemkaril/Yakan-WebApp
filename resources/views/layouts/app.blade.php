@@ -578,6 +578,8 @@
                             </span>
                         </a>
                     @endauth
+
+                    @auth
                         <!-- Cart -->
                         <a href="{{ route('cart.index') }}" class="relative group">
                             <div class="p-1.5 lg:p-2 rounded-lg hover:bg-gray-100 transition-colors">
