@@ -8,7 +8,13 @@
         background: linear-gradient(135deg, rgba(139, 0, 0, 0.92) 0%, rgba(100, 0, 0, 0.95) 100%), url('https://images.unsplash.com/photo-1577720643272-265e434f3894?w=1200&h=600&fit=crop') center/cover;
         position: relative;
         overflow: hidden;
-        min-height: 90vh;
+        min-height: 100vh;
+    }
+    
+    @media (max-width: 768px) {
+        .hero-section {
+            min-height: auto;
+        }
     }
 
     .hero-section::before {
@@ -41,11 +47,17 @@
     .feature-card {
         background: white;
         border-radius: 24px;
-        padding: 2rem;
+        padding: 1.5rem;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
+    }
+    
+    @media (min-width: 768px) {
+        .feature-card {
+            padding: 2rem;
+        }
     }
 
     .feature-card::before {
@@ -66,9 +78,21 @@
     .product-showcase {
         background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
         border-radius: 24px;
-        padding: 3rem;
+        padding: 1.5rem;
         position: relative;
         overflow: hidden;
+    }
+    
+    @media (min-width: 768px) {
+        .product-showcase {
+            padding: 2.5rem;
+        }
+    }
+    
+    @media (min-width: 1024px) {
+        .product-showcase {
+            padding: 3rem;
+        }
     }
 
     .product-showcase::before {
@@ -90,9 +114,15 @@
     .testimonial-card {
         background: white;
         border-radius: 20px;
-        padding: 2rem;
+        padding: 1.5rem;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         position: relative;
+    }
+    
+    @media (min-width: 768px) {
+        .testimonial-card {
+            padding: 2rem;
+        }
     }
 
     .testimonial-card::before {
@@ -172,31 +202,31 @@
     @endif
 
     <!-- Hero Section -->
-    <section class="hero-section text-white py-20 lg:py-32">
+    <section class="hero-section text-white py-12 sm:py-16 md:py-20 lg:py-32">
         <div class="hero-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                <div class="animate-fade-in-up space-y-6">
-                    <h1 class="text-5xl lg:text-6xl xl:text-7xl font-bold mb-6 leading-none text-white drop-shadow-2xl whitespace-nowrap">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 items-center">
+                <div class="animate-fade-in-up space-y-4 md:space-y-6">
+                    <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 md:mb-6 leading-tight text-white drop-shadow-2xl break-words">
                         TUWAS YAKAN
                     </h1>
-                    <p class="text-2xl lg:text-4xl xl:text-5xl mb-6 text-red-100 leading-relaxed font-semibold tracking-wide drop-shadow-lg">
+                    <p class="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mb-4 md:mb-6 text-red-100 leading-snug md:leading-relaxed font-semibold tracking-wide drop-shadow-lg">
                         Weaving Through Generations
                     </p>
-                    <p class="text-lg lg:text-xl xl:text-2xl mb-8 text-red-100 leading-relaxed font-light max-w-xl">
+                    <p class="text-base sm:text-lg md:text-xl lg:text-xl xl:text-2xl mb-6 md:mb-8 text-red-100 leading-relaxed font-light max-w-xl">
                         Authentic handcrafted products with traditional artistry passed down through generations of skilled Yakan weavers
                     </p>
-                    <div class="flex flex-col sm:flex-row gap-4 pt-4">
-                        <a href="{{ route('products.index') }}" class="group bg-maroon-800 hover:bg-maroon-900 text-white text-lg px-10 py-5 inline-flex items-center justify-center shadow-2xl hover:shadow-red-500/50 transform hover:scale-105 transition-all duration-300 rounded-lg font-semibold" style="background-color: #800000;">
-                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4">
+                        <a href="{{ route('products.index') }}" class="group bg-maroon-800 hover:bg-maroon-900 text-white text-sm sm:text-base md:text-lg px-6 sm:px-8 md:px-10 py-3 sm:py-4 md:py-5 inline-flex items-center justify-center shadow-2xl hover:shadow-red-500/50 transform hover:scale-105 transition-all duration-300 rounded-lg font-semibold" style="background-color: #800000;">
+                            <svg class="w-5 h-5 md:w-6 md:h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                             </svg>
                             <span>Shop Products</span>
-                            <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-4 h-4 md:w-5 md:h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
                             </svg>
                         </a>
-                        <a href="{{ route('custom_orders.index') }}" class="group btn-secondary text-lg px-10 py-5 inline-flex items-center justify-center shadow-2xl border-2 hover:shadow-white/30 transform hover:scale-105 transition-all duration-300">
-                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="{{ route('custom_orders.index') }}" class="group btn-secondary text-sm sm:text-base md:text-lg px-6 sm:px-8 md:px-10 py-3 sm:py-4 md:py-5 inline-flex items-center justify-center shadow-2xl border-2 hover:shadow-white/30 transform hover:scale-105 transition-all duration-300">
+                            <svg class="w-5 h-5 md:w-6 md:h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                             </svg>
                             <span>Custom Orders</span>
@@ -204,18 +234,18 @@
                     </div>
                     
                     <!-- Stats or features -->
-                    <div class="grid grid-cols-3 gap-6 pt-8 border-t border-white/20">
+                    <div class="grid grid-cols-3 gap-3 sm:gap-4 md:gap-6 pt-6 md:pt-8 border-t border-white/20">
                         <div class="text-center">
-                            <div class="text-3xl font-bold text-white mb-1">1000+</div>
-                            <div class="text-sm text-red-200">Happy Customers</div>
+                            <div class="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">1000+</div>
+                            <div class="text-xs sm:text-sm text-red-200">Happy Customers</div>
                         </div>
                         <div class="text-center">
-                            <div class="text-3xl font-bold text-white mb-1">500+</div>
-                            <div class="text-sm text-red-200">Products</div>
+                            <div class="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">500+</div>
+                            <div class="text-xs sm:text-sm text-red-200">Products</div>
                         </div>
                         <div class="text-center">
-                            <div class="text-3xl font-bold text-white mb-1">100%</div>
-                            <div class="text-sm text-red-200">Authentic</div>
+                            <div class="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">100%</div>
+                            <div class="text-xs sm:text-sm text-red-200">Authentic</div>
                         </div>
                     </div>
                 </div>
@@ -239,14 +269,14 @@
     </section>
 
     <!-- Features Section -->
-    <section class="py-20 bg-gray-50">
+    <section class="py-12 md:py-16 lg:py-20 bg-gray-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16 animate-fade-in-up">
-                <h2 class="text-4xl lg:text-5xl font-bold text-gradient mb-4">Why Choose Yakan?</h2>
-                <p class="text-xl text-gray-600 max-w-3xl mx-auto">Experience the perfect blend of quality, creativity, and exceptional service</p>
+            <div class="text-center mb-10 md:mb-16 animate-fade-in-up">
+                <h2 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gradient mb-3 md:mb-4">Why Choose Yakan?</h2>
+                <p class="text-base sm:text-lg md:text-xl text-gray-600 max-w-3xl mx-auto px-4">Experience the perfect blend of quality, creativity, and exceptional service</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                 <div class="feature-card animate-slide-in-left" style="animation-delay: 0.1s">
                     <div class="w-16 h-16 bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl flex items-center justify-center mb-6">
                         <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -311,15 +341,15 @@
     </section>
 
     <!-- Product Showcase -->
-    <section class="py-20">
+    <section class="py-12 md:py-16 lg:py-20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="product-showcase relative">
-                <div class="text-center mb-12 relative z-10">
-                    <h2 class="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Featured Products</h2>
-                    <p class="text-xl text-gray-700">Discover our handpicked selection of premium items</p>
+                <div class="text-center mb-8 md:mb-12 relative z-10">
+                    <h2 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 md:mb-4">Featured Products</h2>
+                    <p class="text-base sm:text-lg md:text-xl text-gray-700 px-4">Discover our handpicked selection of premium items</p>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8 relative z-10">
                     @php
                         $featuredProducts = \App\Models\Product::inRandomOrder()->take(4)->get();
                     @endphp
@@ -361,14 +391,14 @@
     </section>
 
     <!-- Testimonials -->
-    <section class="py-20 bg-gray-50">
+    <section class="py-12 md:py-16 lg:py-20 bg-gray-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl lg:text-5xl font-bold text-gradient mb-4">What Our Customers Say</h2>
-                <p class="text-xl text-gray-600">Real experiences from real customers</p>
+            <div class="text-center mb-10 md:mb-16">
+                <h2 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gradient mb-3 md:mb-4">What Our Customers Say</h2>
+                <p class="text-base sm:text-lg md:text-xl text-gray-600 px-4">Real experiences from real customers</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                 <div class="testimonial-card animate-fade-in-up" style="animation-delay: 0.1s">
                     <div class="relative z-10">
                         <div class="flex items-center mb-4">
@@ -424,23 +454,23 @@
     </section>
 
     <!-- CTA Section -->
-    <section class="py-20">
+    <section class="py-12 md:py-16 lg:py-20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="cta-section text-white p-12 lg:p-20 relative">
+            <div class="cta-section text-white p-8 sm:p-10 md:p-12 lg:p-20 relative">
                 <div class="relative z-10 text-center">
-                    <div class="inline-block mb-6">
-                        <div class="w-16 h-16 bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="inline-block mb-4 md:mb-6">
+                        <div class="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-3 md:mb-4 shadow-lg">
+                            <svg class="w-6 h-6 md:w-8 md:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                             </svg>
                         </div>
                     </div>
-                    <h2 class="text-4xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-white via-red-100 to-white bg-clip-text text-transparent">Ready to Start Shopping?</h2>
-                    <p class="text-xl lg:text-2xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed">
+                    <h2 class="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mb-4 md:mb-6 bg-gradient-to-r from-white via-red-100 to-white bg-clip-text text-transparent px-4">Ready to Start Shopping?</h2>
+                    <p class="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-300 mb-8 md:mb-10 max-w-3xl mx-auto leading-relaxed px-4">
                         Join thousands of satisfied customers who have discovered the perfect blend of quality and creativity.
                     </p>
-                    <div class="flex flex-col sm:flex-row gap-5 justify-center">
-                        <a href="{{ route('products.index') }}" class="group relative overflow-hidden bg-white text-gray-900 text-lg px-10 py-5 rounded-xl font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center justify-center">
+                    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-5 justify-center">
+                        <a href="{{ route('products.index') }}" class="group relative overflow-hidden bg-white text-gray-900 text-sm sm:text-base md:text-lg px-6 sm:px-8 md:px-10 py-3 sm:py-4 md:py-5 rounded-xl font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center justify-center">
                             <span class="relative z-10">Start Shopping</span>
                             <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
@@ -453,7 +483,7 @@
                                 </svg>
                             </span>
                         </a>
-                        <a href="{{ route('custom_orders.index') }}" class="group bg-transparent border-2 border-white text-white text-lg px-10 py-5 rounded-xl font-bold hover:bg-white hover:text-gray-900 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center justify-center">
+                        <a href="{{ route('custom_orders.index') }}" class="group bg-transparent border-2 border-white text-white text-sm sm:text-base md:text-lg px-6 sm:px-8 md:px-10 py-3 sm:py-4 md:py-5 rounded-xl font-bold hover:bg-white hover:text-gray-900 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 inline-flex items-center justify-center">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                             </svg>
@@ -461,9 +491,9 @@
                         </a>
                     </div>
                     <!-- Trust indicators -->
-                    <div class="mt-12 flex flex-wrap items-center justify-center gap-8 text-gray-400 text-sm">
+                    <div class="mt-10 md:mt-12 flex flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8 text-gray-400 text-xs sm:text-sm px-4">
                         <div class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="w-4 h-4 sm:w-5 sm:h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
                             <span>Secure Checkout</span>
