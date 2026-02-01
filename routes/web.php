@@ -56,7 +56,9 @@ Route::get('/privacy-policy', function () {
     return view('privacy-policy');
 })->name('privacy-policy');
 
-Route::get('/data-deletion', [App\Http\Controllers\AccountDeletionController::class, 'show'])->name('data-deletion');
+Route::get('/data-deletion', function () {
+    return view('data-deletion');
+})->name('data-deletion');
 
 Route::post('/account/delete', [App\Http\Controllers\AccountDeletionController::class, 'delete'])
     ->middleware('auth')

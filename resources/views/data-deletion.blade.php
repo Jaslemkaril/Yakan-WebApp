@@ -5,6 +5,26 @@
     <div class="max-w-4xl mx-auto">
         <h1 class="text-4xl font-bold mb-8 text-red-800">Data Deletion</h1>
         
+        @if ($errors->any())
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                @foreach ($errors->all() as $error)
+                    <p>{{ $error }}</p>
+                @endforeach
+            </div>
+        @endif
+
+        @if (session('success'))
+            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        @if (session('error'))
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                {{ session('error') }}
+            </div>
+        @endif
+        
         <div class="prose prose-lg">
             <h2 class="text-2xl font-bold mt-8 mb-4">Delete Your Account and Data</h2>
             

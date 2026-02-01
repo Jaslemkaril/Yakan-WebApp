@@ -128,16 +128,22 @@ class AccountDeletionController extends Controller
     private function sendDeletionEmail($email, $name)
     {
         try {
-            \Mail::send('emails.account-deleted', [
+            $emailView = view('emails.account-deleted', [
                 'name' => $name,
                 'deletion_date' => now()->format('F d, Y H:i:s'),
                 'support_email' => 'eh202202743@wmsu.edu.ph',
-            ], function ($message) use ($email) {
+            ])->render();
+
+            \Mail::raw($emailView, function ($message) use ($email, $name) {
                 $message->to($email)
                     ->subject('Your Yakan Account Has Been Deleted');
             });
         } catch (\Exception $e) {
-            \Log::error('Error sending deletion email', ['error' => $e->getMessage()]);
+            \Log::warning('Could not send deletion email', [
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+            // Don't fail the deletion if email fails
         }
     }
 }
