@@ -3,24 +3,124 @@
 @section('content')
 <div class="container py-12">
     <div class="max-w-4xl mx-auto">
-        <h1 class="text-4xl font-bold mb-8 text-red-800">Data Deletion Instructions</h1>
+        <h1 class="text-4xl font-bold mb-8 text-red-800">Data Deletion</h1>
         
         <div class="prose prose-lg">
-            <h2 class="text-2xl font-bold mt-8 mb-4">How to Delete Your Account and Data</h2>
+            <h2 class="text-2xl font-bold mt-8 mb-4">Delete Your Account and Data</h2>
             
-            <h3 class="text-xl font-bold mt-6 mb-3">Option 1: Self-Service Deletion (Recommended)</h3>
-            <ol class="list-decimal list-inside space-y-2">
-                <li>Log in to your Yakan account</li>
-                <li>Click on your profile icon in the top-right corner</li>
-                <li>Select "Account Settings"</li>
-                <li>Scroll to the bottom of the page</li>
-                <li>Click the red "Delete My Account and Data" button</li>
-                <li>Enter your password to confirm</li>
-                <li>Click "Permanently Delete" to confirm</li>
-                <li>Check your email for confirmation</li>
-            </ol>
+            @if(Auth::check())
+                <h3 class="text-xl font-bold mt-6 mb-3">Permanent Account Deletion</h3>
+                <div class="bg-red-50 p-6 rounded border-2 border-red-200 mb-6">
+                    <p class="text-red-800 font-semibold mb-4">
+                        ⚠️ Warning: This action is PERMANENT and cannot be undone.
+                    </p>
+                    <p class="mb-4">
+                        Deleting your account will immediately remove all your personal data from our system.
+                    </p>
+                    <form id="deleteAccountForm" method="POST" action="{{ route('account.delete') }}" class="space-y-4">
+                        @csrf
+                        
+                        <div>
+                            <label for="password" class="block text-sm font-semibold mb-2">
+                                Enter your password to confirm deletion:
+                            </label>
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password" 
+                                class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-red-500"
+                                placeholder="Your password"
+                                required
+                            >
+                            @error('password')
+                                <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
 
-            <h3 class="text-xl font-bold mt-6 mb-3">Option 2: Request via Email</h3>
+                        <div class="flex items-center">
+                            <input 
+                                type="checkbox" 
+                                id="confirm" 
+                                name="confirm" 
+                                class="w-4 h-4 text-red-600"
+                                required
+                            >
+                            <label for="confirm" class="ml-2 text-sm">
+                                I understand this is permanent and cannot be reversed
+                            </label>
+                        </div>
+
+                        <button 
+                            type="button"
+                            onclick="confirmDelete()"
+                            class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded w-full"
+                        >
+                            Delete My Account and Data
+                        </button>
+                    </form>
+                </div>
+            @else
+                <h3 class="text-xl font-bold mt-6 mb-3">Self-Service Account Deletion</h3>
+                <div class="bg-blue-50 p-6 rounded mb-6">
+                    <p class="mb-4">
+                        You must be <a href="{{ route('login') }}" class="text-blue-600 hover:underline font-semibold">logged in</a> to delete your account.
+                    </p>
+                </div>
+            @endif
+            
+            <h3 class="text-xl font-bold mt-8 mb-3">Request via Email</h3>
+            <p>
+                If you cannot access your account, send an email to:
+            </p>
+            <p class="font-semibold text-lg bg-gray-100 p-4 rounded">
+                <a href="mailto:eh202202743@wmsu.edu.ph" class="text-red-600 hover:underline">eh202202743@wmsu.edu.ph</a>
+            </p>
+
+            <h2 class="text-2xl font-bold mt-8 mb-4">What Gets Deleted</h2>
+            <ul class="list-disc list-inside space-y-2">
+                <li>Personal profile information</li>
+                <li>Account credentials</li>
+                <li>Wishlist and saved items</li>
+                <li>Addresses and preferences</li>
+                <li>Social media connections</li>
+            </ul>
+
+            <h2 class="text-2xl font-bold mt-8 mb-4">What We Keep</h2>
+            <p class="text-sm text-gray-600">
+                For legal compliance, we retain anonymized transaction records.
+            </p>
+
+            <p class="text-gray-600 text-sm mt-12 border-t pt-4">
+                <strong>Last updated:</strong> {{ now()->format('F d, Y') }}<br>
+                <strong>Yakan E-commerce Platform</strong>
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete() {
+    const confirm = document.getElementById('confirm').checked;
+    const password = document.getElementById('password').value;
+
+    if (!password) {
+        alert('Please enter your password to confirm deletion.');
+        return;
+    }
+
+    if (!confirm) {
+        alert('Please check the confirmation box to proceed.');
+        return;
+    }
+
+    if (confirm('⚠️ IMPORTANT: Deleting your account is PERMANENT and CANNOT be undone.\n\nAll your personal data, orders, and preferences will be permanently removed.\n\nAre you absolutely sure you want to continue?')) {
+        if (confirm('This is your final warning. Click OK to permanently delete your account.')) {
+            document.getElementById('deleteAccountForm').submit();
+        }
+    }
+}
+</script>
+@endsection
             <p>
                 If you cannot access your account, send an email to:
             </p>
