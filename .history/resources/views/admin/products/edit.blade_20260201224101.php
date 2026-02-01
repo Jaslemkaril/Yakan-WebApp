@@ -1,7 +1,4 @@
 @extends('layouts.admin')
-@php
-use Illuminate\Support\Facades\Storage;
-@endphp
 @section('title', 'Edit Product')
 
 @section('content')

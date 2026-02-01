@@ -1,9 +1,5 @@
 @extends('layouts.admin')
 
-@php
-use Illuminate\Support\Facades\Storage;
-@endphp
-
 @section('title', 'Products Management')
 
 @section('content')
@@ -132,7 +128,7 @@ use Illuminate\Support\Facades\Storage;
                 </div>
                 <div class="aspect-w-16 aspect-h-9 bg-gray-100 relative overflow-hidden rounded-lg h-48">
                     @if($product->image)
-                        <img src="{{ Storage::disk('public')->url('products/' . $product->image) }}" alt="{{ $product->name }}" 
+                        <img src="{{ asset('storage/products/' . $product->image) }}" alt="{{ $product->name }}" 
                              class="w-full h-full object-cover"
                              onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full bg-gradient-to-br from-purple-100 to-pink-100 flex flex-col items-center justify-center\'><div class=\'text-4xl mb-2\'>🧵</div><div class=\'text-sm text-gray-600\'>{{ addslashes($product->name) }}</div></div>';">
                     @else

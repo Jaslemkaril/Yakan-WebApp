@@ -1,7 +1,4 @@
 @extends('layouts.admin')
-@php
-use Illuminate\Support\Facades\Storage;
-@endphp
 @section('title', 'Edit Product')
 
 @section('content')
@@ -202,7 +199,7 @@ use Illuminate\Support\Facades\Storage;
                 <div class="grid grid-cols-5 gap-2" id="existingImagesGrid">
                     @foreach($images as $index => $img)
                     <div class="relative group existing-image" data-image-path="{{ $img['path'] }}">
-                        <img src="{{ Storage::disk('public')->url('products/' . $img['path']) }}" 
+                        <img src="{{ asset('storage/products/' . $img['path']) }}" 
                              alt="Product image {{ $index + 1 }}"
                              class="w-full aspect-square object-cover rounded border-2 border-blue-300">
                         <button type="button" onclick="deleteExistingImage('{{ $img['path'] }}', this)" 
