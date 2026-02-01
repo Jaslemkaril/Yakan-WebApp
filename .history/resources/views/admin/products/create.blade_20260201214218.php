@@ -124,20 +124,16 @@
                 },
                 body: JSON.stringify({ name: categoryName })
             })
-            .then(response => {
-                if (!response.ok) {
-                    return response.text().then(text => {
-                        throw new Error(`HTTP ${response.status}: ${text}`);
-                    });
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     // Add new option to select
                     const select = document.getElementById('categorySelect');
                     const option = new Option(data.category.name, data.category.id, true, true);
                     select.add(option);
+                    
+                    // Show success message
+                    alert('Category "' + data.category.name + '" created successfully!');
                     
                     // Reset and hide form
                     input.value = '';
@@ -151,7 +147,7 @@
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Failed to create category: ' + error.message);
+                alert('Failed to create category. Please try again.');
             });
         }
 
