@@ -4,6 +4,34 @@
 
 @push('styles')
 <style>
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    body {
+        background: white !important;
+    }
+    
+    .fixed {
+        position: static !important;
+    }
+    
+    .card-hover-lift {
+        box-shadow: none !important;
+        transform: none !important;
+    }
+    
+    .bg-gradient-to-br {
+        background: white !important;
+    }
+    
+    @page {
+        margin: 1cm;
+    }
+}
+
 /* Custom animations and styles */
 @keyframes fadeInUp {
     from {
@@ -121,7 +149,7 @@
 @section('content')
 <div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50">
     <!-- Animated Background Elements -->
-    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+    <div class="fixed inset-0 overflow-hidden pointer-events-none no-print">
         <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation"></div>
         <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation" style="animation-delay: 2s;"></div>
         <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation" style="animation-delay: 4s;"></div>
@@ -129,44 +157,111 @@
 
     <!-- Main Content -->
     <div class="relative z-10 p-3 sm:p-4 md:p-6 space-y-6 sm:space-y-8">
+        <!-- Filter and Print Controls -->
+        <div class="no-print bg-white rounded-lg sm:rounded-xl shadow-md p-3 sm:p-4 md:p-6 animate-fade-in-up">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 flex-1">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-calendar-alt mr-2"></i>Sales Period
+                        </label>
+                        <form action="{{ route('admin.dashboard') }}" method="GET" id="filterForm">
+                            <div class="flex flex-wrap gap-2">
+                                <button type="submit" name="period" value="daily" 
+                                    class="px-4 py-2 rounded-lg font-medium transition-colors {{ $period == 'daily' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                                    <i class="fas fa-calendar-day mr-1"></i> Daily
+                                </button>
+                                <button type="submit" name="period" value="weekly" 
+                                    class="px-4 py-2 rounded-lg font-medium transition-colors {{ $period == 'weekly' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                                    <i class="fas fa-calendar-week mr-1"></i> Weekly
+                                </button>
+                                <button type="submit" name="period" value="yearly" 
+                                    class="px-4 py-2 rounded-lg font-medium transition-colors {{ $period == 'yearly' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                                    <i class="fas fa-calendar-alt mr-1"></i> Yearly
+                                </button>
+                                <button type="submit" name="period" value="all" 
+                                    class="px-4 py-2 rounded-lg font-medium transition-colors {{ $period == 'all' ? 'bg-[#800000] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                                    <i class="fas fa-infinity mr-1"></i> All Time
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3">
+                    @if($outOfStockCount > 0)
+                    <a href="#out-of-stock-section" class="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors flex items-center gap-2">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>{{ $outOfStockCount }} Out of Stock</span>
+                    </a>
+                    @endif
+                    
+                    <button onclick="window.print()" class="px-4 py-2 bg-[#800000] text-white rounded-lg font-medium hover:bg-[#600000] transition-colors flex items-center gap-2">
+                        <i class="fas fa-print"></i>
+                        <span class="hidden sm:inline">Print Report</span>
+                        <span class="sm:hidden">Print</span>
+                    </button>
+                </div>
+            </div>
+            
+            @if($period != 'all')
+            <div class="mt-3 pt-3 border-t border-gray-200">
+                <p class="text-sm text-gray-600">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Showing 
+                    <span class="font-semibold text-[#800000]">
+                        @if($period == 'daily')
+                            Today's
+                        @elseif($period == 'weekly')
+                            This Week's
+                        @elseif($period == 'yearly')
+                            This Year's
+                        @endif
+                    </span>
+                    data
+                </p>
+            </div>
+            @endif
+        </div>
+
         <!-- Enhanced Welcome Header -->
         <div class="animate-fade-in-up">
-            <div class="bg-[#800000] rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 text-white shadow-2xl relative overflow-hidden">
+            <div class="bg-[#800000] rounded-xl sm:rounded-2xl md:rounded-3xl p-3 sm:p-4 md:p-6 lg:p-8 text-white shadow-2xl relative overflow-hidden">
                 <div class="absolute inset-0 bg-black opacity-10"></div>
                 <div class="relative z-10">
-                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-                        <div class="space-y-3 sm:space-y-4">
-                            <div class="flex items-center space-x-2 sm:space-x-3">
-                                <div class="w-2 h-2 sm:w-3 sm:h-3 bg-green-400 rounded-full animate-pulse"></div>
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
+                        <div class="space-y-2 sm:space-y-3 md:space-y-4">
+                            <div class="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3">
+                                <div class="w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3 bg-green-400 rounded-full animate-pulse"></div>
                                 <span class="text-green-300 text-xs sm:text-sm font-medium">System Online</span>
                             </div>
-                            <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
+                            <h1 class="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold leading-tight">
                                 Welcome back, <span class="gradient-text text-white">Admin</span>
                             </h1>
-                            <p class="text-sm sm:text-base md:text-lg lg:text-xl text-indigo-100 max-w-2xl">
+                            <p class="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-indigo-100 max-w-2xl">
                                 Here's your comprehensive business overview for {{ now()->format('F j, Y') }}
                             </p>
-                            <div class="flex flex-wrap gap-2 sm:gap-3 pt-2">
-                                <div class="flex items-center space-x-1.5 sm:space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-2.5 sm:px-4 py-1.5 sm:py-2">
+                            <div class="flex flex-wrap gap-1.5 sm:gap-2 md:gap-3 pt-1 sm:pt-2">
+                                <div class="flex items-center space-x-1 sm:space-x-1.5 md:space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-2 sm:px-2.5 md:px-4 py-1 sm:py-1.5 md:py-2">
                                     <i class="fas fa-calendar-alt text-xs sm:text-sm"></i>
                                     <span class="text-xs sm:text-sm">{{ now()->format('l') }}</span>
                                 </div>
-                                <div class="flex items-center space-x-1.5 sm:space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-2.5 sm:px-4 py-1.5 sm:py-2">
+                                <div class="flex items-center space-x-1 sm:space-x-1.5 md:space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-2 sm:px-2.5 md:px-4 py-1 sm:py-1.5 md:py-2">
                                     <i class="fas fa-clock text-xs sm:text-sm"></i>
                                     <span class="text-xs sm:text-sm">{{ now()->format('g:i A') }}</span>
                                 </div>
-                                <div class="flex items-center space-x-1.5 sm:space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-2.5 sm:px-4 py-1.5 sm:py-2">
+                                <div class="hidden sm:flex items-center space-x-1.5 md:space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-2.5 md:px-4 py-1.5 md:py-2">
                                     <i class="fas fa-sun text-xs sm:text-sm"></i>
                                     <span class="text-xs sm:text-sm">{{ now()->format('h:i A') }} PST</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="mt-4 sm:mt-6 lg:mt-0 lg:ml-8">
-                            <div class="bg-white/10 backdrop-blur-md rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/20">
+                        <div class="mt-3 sm:mt-4 lg:mt-0 lg:ml-8">
+                            <div class="bg-white/10 backdrop-blur-md rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-6 border border-white/20">
                                 <div class="text-center">
-                                    <div class="text-3xl sm:text-4xl md:text-5xl font-bold mb-2">{{ $totalOrders }}</div>
+                                    <div class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-1 sm:mb-2">{{ $totalOrders }}</div>
                                     <div class="text-xs sm:text-sm text-indigo-200">Total Orders</div>
-                                    <div class="mt-2 sm:mt-3 text-xl sm:text-2xl font-semibold">₱{{ number_format($totalRevenue, 0) }}</div>
+                                    <div class="mt-1 sm:mt-2 md:mt-3 text-lg sm:text-xl md:text-2xl font-semibold">₱{{ number_format($totalRevenue, 0) }}</div>
                                     <div class="text-xs sm:text-sm text-indigo-200">Total Revenue</div>
                                 </div>
                             </div>
@@ -180,22 +275,22 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 animate-slide-in-left">
             <!-- Total Revenue Card -->
             <div class="group relative">
-                <div class="absolute -inset-0.5 bg-[#800000] rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
-                <div class="relative bg-white rounded-2xl p-4 sm:p-6 card-hover-lift">
-                    <div class="flex items-center justify-between mb-3 sm:mb-4">
-                        <div class="w-12 h-12 sm:w-14 sm:h-14 bg-[#800000] rounded-xl flex items-center justify-center shadow-lg">
-                            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div class="absolute -inset-0.5 bg-[#800000] rounded-xl sm:rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
+                <div class="relative bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 card-hover-lift">
+                    <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-[#800000] rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg">
+                            <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </div>
                         <div class="flex flex-col items-end">
-                            <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">Live</span>
-                            <span class="text-xs text-gray-500 mt-1">+12.5%</span>
+                            <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-0.5 sm:py-1 rounded-full">Live</span>
+                            <span class="text-xs text-gray-500 mt-1 hidden sm:inline">+12.5%</span>
                         </div>
                     </div>
-                    <div class="space-y-1 sm:space-y-2">
-                        <h3 class="text-2xl sm:text-3xl font-bold text-gray-900">₱{{ number_format($totalRevenue, 0) }}</h3>
+                    <div class="space-y-0.5 sm:space-y-1 md:space-y-2">
+                        <h3 class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">₱{{ number_format($totalRevenue, 0) }}</h3>
                         <p class="text-gray-600 text-xs sm:text-sm font-medium">Total Revenue</p>
                     </div>
-                    <div class="mt-3 sm:mt-4">
+                    <div class="mt-2 sm:mt-3 md:mt-4">
                         <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
                             <span>Progress</span>
                             <span>{{ min(100, round($totalRevenue / 1000)) }}%</span>
@@ -298,19 +393,19 @@
         <!-- Additional Analytics Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <!-- Average Order Value -->
-            <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-100 card-hover-lift">
-                <div class="flex items-center justify-between mb-3 sm:mb-4">
-                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-[#800000] rounded-xl flex items-center justify-center shadow-md">
-                        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3v3m-6-1v-6a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+            <div class="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift">
+                <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-[#800000] rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3v3m-6-1v-6a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
                     </div>
                     <div class="text-right">
-                        <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-1 rounded-full">AOV</span>
+                        <span class="text-xs font-medium text-[#800000] bg-[#fef2f2] px-2 py-0.5 sm:py-1 rounded-full">AOV</span>
                     </div>
                 </div>
-                <div class="space-y-1">
-                    <h3 class="text-xl sm:text-2xl font-bold text-gray-900">₱{{ number_format($averageOrderValue, 2) }}</h3>
+                <div class="space-y-0.5 sm:space-y-1">
+                    <h3 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">₱{{ number_format($averageOrderValue, 2) }}</h3>
                     <p class="text-gray-600 text-xs sm:text-sm font-medium">Avg Order Value</p>
-                    <p class="text-xs text-gray-500">Per completed order</p>
+                    <p class="text-xs text-gray-500 hidden sm:block">Per completed order</p>
                 </div>
             </div>
 
@@ -490,53 +585,182 @@
             </div>
         </div>
 
-        <!-- Enhanced Top Products Section -->
-        <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 card-hover-lift">
-            <div class="flex items-center justify-between mb-6">
+        <!-- Enhanced Top Products Section with Best Sellers & Low Sales -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 card-hover-lift" x-data="{ activeTab: 'bestsellers' }">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-600 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-trophy text-white"></i>
+                        <i class="fas fa-chart-line text-white"></i>
                     </div>
                     <div>
-                        <h2 class="text-lg font-bold text-gray-900">Top Selling Products</h2>
-                        <p class="text-sm text-gray-500">Best performers this week</p>
+                        <h2 class="text-lg font-bold text-gray-900">Product Performance</h2>
+                        <p class="text-sm text-gray-500">Sales analytics and insights</p>
+                    </div>
+                </div>
+                
+                <!-- Tab Buttons -->
+                <div class="flex gap-2 bg-gray-100 p-1 rounded-lg">
+                    <button @click="activeTab = 'bestsellers'" 
+                        :class="activeTab === 'bestsellers' ? 'bg-[#800000] text-white' : 'bg-transparent text-gray-600 hover:text-gray-900'"
+                        class="px-4 py-2 rounded-md font-medium transition-all duration-200 text-sm">
+                        <i class="fas fa-trophy mr-1"></i> Best Sellers
+                    </button>
+                    <button @click="activeTab = 'lowsales'" 
+                        :class="activeTab === 'lowsales' ? 'bg-[#800000] text-white' : 'bg-transparent text-gray-600 hover:text-gray-900'"
+                        class="px-4 py-2 rounded-md font-medium transition-all duration-200 text-sm">
+                        <i class="fas fa-arrow-down mr-1"></i> Low Sales
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Best Sellers Tab -->
+            <div x-show="activeTab === 'bestsellers'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
+                @if($topProducts->count() > 0)
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        @foreach($topProducts as $index => $item)
+                            @php
+                                $product = $item->product;
+                            @endphp
+                            <div class="group relative">
+                                <div class="absolute -inset-0.5 bg-gradient-to-r from-green-400 to-emerald-600 rounded-xl opacity-0 group-hover:opacity-100 transition duration-300"></div>
+                                <div class="relative bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 text-center border border-green-100 hover:border-green-200 transition-all duration-300">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-600 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-lg">
+                                        <span class="text-white font-bold text-lg">{{ $index + 1 }}</span>
+                                    </div>
+                                    <h3 class="font-bold text-gray-900 text-sm mb-1 truncate" title="{{ $product->name ?? 'N/A' }}">
+                                        {{ $product->name ?? 'Product ' . ($index + 1) }}
+                                    </h3>
+                                    <p class="text-xs text-gray-600 mb-1">
+                                        <i class="fas fa-box mr-1"></i>{{ $item->sold ?? 0 }} sold
+                                    </p>
+                                    <p class="text-xs font-semibold text-green-600">
+                                        <i class="fas fa-peso-sign mr-1"></i>{{ number_format($item->revenue ?? 0, 2) }}
+                                    </p>
+                                    @if($product && $product->stock > 0)
+                                        <div class="mt-2">
+                                            <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                                                <i class="fas fa-check-circle mr-1"></i>In Stock
+                                            </span>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="text-center py-12">
+                        <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-trophy text-gray-400 text-2xl"></i>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No best sellers yet</h3>
+                        <p class="text-gray-500">Start selling to see your top products here</p>
+                    </div>
+                @endif
+            </div>
+            
+            <!-- Low Sales Tab -->
+            <div x-show="activeTab === 'lowsales'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
+                @if($lowSalesProducts->count() > 0)
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        @foreach($lowSalesProducts as $index => $item)
+                            @php
+                                $product = $item->product;
+                            @endphp
+                            <div class="group relative">
+                                <div class="absolute -inset-0.5 bg-gradient-to-r from-orange-400 to-red-600 rounded-xl opacity-0 group-hover:opacity-100 transition duration-300"></div>
+                                <div class="relative bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-4 text-center border border-orange-100 hover:border-orange-200 transition-all duration-300">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-600 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-lg">
+                                        <i class="fas fa-arrow-down text-white text-lg"></i>
+                                    </div>
+                                    <h3 class="font-bold text-gray-900 text-sm mb-1 truncate" title="{{ $product->name ?? 'N/A' }}">
+                                        {{ $product->name ?? 'Product ' . ($index + 1) }}
+                                    </h3>
+                                    <p class="text-xs text-gray-600 mb-1">
+                                        <i class="fas fa-box mr-1"></i>{{ $item->sold ?? 0 }} sold
+                                    </p>
+                                    <p class="text-xs font-semibold text-orange-600">
+                                        <i class="fas fa-peso-sign mr-1"></i>{{ number_format($item->revenue ?? 0, 2) }}
+                                    </p>
+                                    @if($product && $product->stock <= 0)
+                                        <div class="mt-2">
+                                            <span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
+                                                <i class="fas fa-times-circle mr-1"></i>Out of Stock
+                                            </span>
+                                        </div>
+                                    @elseif($product && $product->stock < 10)
+                                        <div class="mt-2">
+                                            <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
+                                                <i class="fas fa-exclamation-triangle mr-1"></i>Low Stock
+                                            </span>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div class="flex items-start gap-3">
+                            <i class="fas fa-lightbulb text-yellow-600 text-xl mt-1"></i>
+                            <div>
+                                <h4 class="font-semibold text-gray-900 mb-1">Boost These Products</h4>
+                                <p class="text-sm text-gray-600">Consider running promotions or improving visibility for these items to increase sales.</p>
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    <div class="text-center py-12">
+                        <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-chart-line text-gray-400 text-2xl"></i>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No sales data available</h3>
+                        <p class="text-gray-500">Products with low sales will appear here</p>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        <!-- Out of Stock Items Section -->
+        @if($outOfStockCount > 0)
+        <div id="out-of-stock-section" class="bg-white rounded-2xl shadow-xl p-6 border-2 border-red-200 card-hover-lift">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-red-400 to-red-600 rounded-lg flex items-center justify-center animate-pulse">
+                        <i class="fas fa-exclamation-triangle text-white"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-900">Out of Stock Items</h2>
+                        <p class="text-sm text-red-600">{{ $outOfStockCount }} product(s) need restocking</p>
                     </div>
                 </div>
                 <a href="{{ route('admin.products.index') }}" class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1">
-                    <span>View All</span>
+                    <span>Manage Stock</span>
                     <i class="fas fa-arrow-right text-xs"></i>
                 </a>
             </div>
-            @if($topProducts->count() > 0)
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    @foreach($topProducts as $index => $product)
-                        <div class="group relative">
-                            <div class="absolute -inset-0.5 bg-gradient-to-r from-orange-400 to-red-600 rounded-xl opacity-0 group-hover:opacity-100 transition duration-300"></div>
-                            <div class="relative bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-4 text-center border border-orange-100 hover:border-orange-200 transition-all duration-300">
-                                <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-600 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-lg">
-                                    <span class="text-white font-bold text-lg">{{ $index + 1 }}</span>
-                                </div>
-                                <h3 class="font-bold text-gray-900 text-sm mb-1 truncate">{{ $product->name ?? 'Product ' . ($index + 1) }}</h3>
-                                <p class="text-xs text-gray-600">{{ $product->quantity_sold ?? 0 }} sold</p>
-                                <div class="mt-2 flex items-center justify-center space-x-1">
-                                    @for($i = 0; $i < min(5, $product->quantity_sold ?? 0); $i++)
-                                        <i class="fas fa-star text-yellow-400 text-xs"></i>
-                                    @endfor
-                                </div>
-                            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                @foreach($outOfStockItems as $product)
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 hover:bg-red-100 transition-colors">
+                        <div class="flex items-start justify-between mb-2">
+                            <h3 class="font-semibold text-gray-900 text-sm truncate flex-1" title="{{ $product->name }}">
+                                {{ $product->name }}
+                            </h3>
+                            <span class="ml-2 px-2 py-1 bg-red-600 text-white text-xs rounded-full flex-shrink-0">
+                                0 stock
+                            </span>
                         </div>
-                    @endforeach
-                </div>
-            @else
-                <div class="text-center py-12">
-                    <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-box text-gray-400 text-2xl"></i>
+                        <p class="text-xs text-gray-600 mb-2">
+                            <i class="fas fa-tag mr-1"></i>₱{{ number_format($product->price, 2) }}
+                        </p>
+                        @if($product->category)
+                            <p class="text-xs text-gray-500">
+                                <i class="fas fa-folder mr-1"></i>{{ $product->category }}
+                            </p>
+                        @endif
                     </div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">No sales data yet</h3>
-                    <p class="text-gray-500">Start selling to see your top products here</p>
-                </div>
-            @endif
+                @endforeach
+            </div>
         </div>
+        @endif
 
         <!-- Enhanced Recent Orders & Quick Actions -->
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
