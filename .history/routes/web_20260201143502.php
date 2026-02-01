@@ -57,8 +57,12 @@ Route::get('/privacy-policy', function () {
 })->name('privacy-policy');
 
 Route::get('/data-deletion', function () {
-    return response()->view('data-deletion');
+    return view('data-deletion');
 })->name('data-deletion');
+
+Route::post('/account/delete', [App\Http\Controllers\AccountDeletionController::class, 'delete'])
+    ->middleware('auth')
+    ->name('account.delete');
 
 Route::get('/terms-of-service', function () {
     return view('terms-of-service');
@@ -691,7 +695,6 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     
     // Category Management (AJAX)
     Route::post('/categories', [\App\Http\Controllers\Admin\CategoryController::class, 'store'])->name('categories.store');
-    Route::delete('/categories/{id}', [\App\Http\Controllers\Admin\CategoryController::class, 'destroy'])->name('categories.destroy');
     
     // Pattern Management
     Route::resource('patterns', \App\Http\Controllers\Admin\PatternController::class);

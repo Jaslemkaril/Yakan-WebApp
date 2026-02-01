@@ -158,38 +158,6 @@
                 addNewCategory();
             }
         });
-
-        function deleteCategory(categoryId, categoryName) {
-            if (!confirm(`Are you sure you want to delete "${categoryName}"? This action cannot be undone.`)) {
-                return;
-            }
-
-            // Send DELETE request to remove category
-            fetch('{{ route("admin.categories.destroy", ":id") }}'.replace(':id', categoryId), {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Show success message
-                    alert(data.message);
-                    // Reload page to update category pills
-                    location.reload();
-                } else {
-                    alert('Error: ' + (data.message || 'Failed to delete category'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Failed to delete category. Please try again.');
-            });
-        }
-
         </script>
 
         <!-- Price -->
