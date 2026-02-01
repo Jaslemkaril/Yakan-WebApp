@@ -1,11 +1,17 @@
-@extends('layouts.app')
-
-@section('content')
-<div class="container py-12">
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Deletion - Yakan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+<div class="container mx-auto py-12 px-4">
     <div class="max-w-4xl mx-auto">
         <h1 class="text-4xl font-bold mb-8 text-red-800">Data Deletion Instructions</h1>
         
-        <div class="prose prose-lg">
+        <div class="prose prose-lg max-w-none">
             <h2 class="text-2xl font-bold mt-8 mb-4">How to Delete Your Account and Data</h2>
             
             <h3 class="text-xl font-bold mt-6 mb-3">Option 1: Self-Service Deletion (Recommended)</h3>
@@ -40,9 +46,6 @@
             </p>
 
             <h2 class="text-2xl font-bold mt-8 mb-4">What Gets Deleted</h2>
-            <p class="font-semibold text-lg bg-red-50 p-4 rounded mb-4">
-                All the following data will be permanently removed:
-            </p>
             <ul class="list-disc list-inside space-y-2">
                 <li>Personal profile information (name, email, phone)</li>
                 <li>Account credentials and password</li>
@@ -56,9 +59,6 @@
             </ul>
 
             <h2 class="text-2xl font-bold mt-8 mb-4">What We Keep (For Legal Reasons)</h2>
-            <p class="font-semibold text-lg bg-blue-50 p-4 rounded mb-4">
-                These records will be retained in anonymized form:
-            </p>
             <ul class="list-disc list-inside space-y-2">
                 <li><strong>Transaction Records:</strong> Anonymized transaction history for accounting purposes</li>
                 <li><strong>Tax Records:</strong> Invoices and tax compliance data (required by law)</li>
@@ -109,13 +109,13 @@
             </div>
 
             <p class="text-gray-600 text-sm mt-12 border-t pt-4">
-                <strong>Last updated:</strong> {{ now()->format('F d, Y') }}<br>
                 <strong>Yakan E-commerce Platform</strong>
             </p>
         </div>
     </div>
 </div>
-@endsection
+</body>
+</html>
                 <h3 class="text-xl font-bold mt-6 mb-3">Permanent Account Deletion</h3>
                 <div class="bg-red-50 p-6 rounded border-2 border-red-200 mb-6">
                     <p class="text-red-800 font-semibold mb-4">
