@@ -158,33 +158,6 @@ use Illuminate\Support\Facades\Storage;
                 addNewCategory();
             }
         });
-
-        function deleteCategory(categoryId) {
-            if (!confirm('Are you sure you want to delete this category?')) {
-                return;
-            }
-
-            fetch(`{{ url('admin/categories') }}/${categoryId}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Category deleted successfully!');
-                    location.reload();
-                } else {
-                    alert('Error: ' + (data.message || 'Failed to delete category'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Failed to delete category. Please try again.');
-            });
-        }
         </script>
 
         <!-- Price -->
