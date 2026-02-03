@@ -2,7 +2,6 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Home, ShoppingBag, User, MessageCircle, Scissors } from 'lucide-react-native';
-import colors from '../constants/colors';
 
 const BottomNav = ({ navigation, activeRoute }) => {
   const navItems = [
@@ -24,13 +23,13 @@ const BottomNav = ({ navigation, activeRoute }) => {
             key={item.route}
             style={styles.tab}
             onPress={() => navigation.navigate(item.route)}
-            activeOpacity={0.65}
+            activeOpacity={0.7}
           >
             <View style={[styles.iconContainer, isActive && styles.activeIconContainer]}>
               <IconComponent
-                size={26}
-                color={isActive ? colors.primary : colors.textLight}
-                strokeWidth={isActive ? 2.8 : 2.2}
+                size={24}
+                color={isActive ? '#8B1A1A' : '#9CA3AF'}
+                strokeWidth={isActive ? 2.5 : 2}
               />
             </View>
             <Text style={[styles.label, isActive && styles.activeLabel]}>
@@ -46,45 +45,43 @@ const BottomNav = ({ navigation, activeRoute }) => {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
-    borderTopWidth: 1.2,
-    borderTopColor: colors.borderLight,
-    paddingBottom: 10,
-    paddingTop: 14,
-    elevation: 12,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingBottom: 8,
+    paddingTop: 12,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
-    marginBottom: 6,
+    borderRadius: 14,
+    marginBottom: 4,
     backgroundColor: 'transparent',
-    transition: 'all 0.2s ease',
   },
   activeIconContainer: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#FEE2E2',
   },
   label: {
     fontSize: 11,
-    color: colors.textLight,
-    fontWeight: '600',
+    color: '#9CA3AF',
+    fontWeight: '500',
     marginTop: 2,
-    letterSpacing: -0.2,
   },
   activeLabel: {
-    color: colors.primary,
+    color: '#8B1A1A',
     fontWeight: '700',
   },
 });

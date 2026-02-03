@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import colors from '../constants/colors';
 
 const Header = ({ navigation, title, showBack = true }) => {
@@ -10,13 +9,12 @@ const Header = ({ navigation, title, showBack = true }) => {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
-          activeOpacity={0.6}
         >
-          <Ionicons name="chevron-back" size={28} color={colors.white} />
+          <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
       )}
       <Text style={styles.title}>{title}</Text>
-      <View style={{ width: showBack ? 44 : 0 }} />
+      <View style={{ width: showBack ? 60 : 0 }} />
     </View>
   );
 };
@@ -24,32 +22,27 @@ const Header = ({ navigation, title, showBack = true }) => {
 const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.primary,
-    paddingVertical: 16,
+    paddingVertical: 15,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 48,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 6,
+    paddingTop: 40,
   },
   backButton: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    width: 44,
-    height: 44,
+  },
+  backButtonText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '600',
   },
   title: {
     flex: 2,
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: 'bold',
     color: colors.white,
     textAlign: 'center',
-    letterSpacing: -0.5,
   },
 });
 
