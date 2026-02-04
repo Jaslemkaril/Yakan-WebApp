@@ -295,16 +295,8 @@ class DashboardController extends Controller
 
             // Prepare CSV output
             $filename = 'dashboard_report_' . $period . '_' . date('Y-m-d_His') . '.csv';
-            
-            $headers = [
-                'Content-Type' => 'text/csv; charset=UTF-8',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-                'Pragma' => 'no-cache',
-                'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-                'Expires' => '0',
-            ];
 
-            $callback = function() use ($totalOrders, $pendingOrders, $completedOrders, $shippedOrders, $deliveredOrders, $totalRevenue, $averageOrderValue, $orders, $topProducts, $paymentMethods, $period) {
+            return response()->streamDownload(function() use ($totalOrders, $pendingOrders, $completedOrders, $shippedOrders, $deliveredOrders, $totalRevenue, $averageOrderValue, $orders, $topProducts, $paymentMethods, $period) {
                 $file = fopen('php://output', 'w');
                 
                 // Add UTF-8 BOM for Excel compatibility
@@ -323,8 +315,8 @@ class DashboardController extends Controller
                 fputcsv($file, ['Completed Orders', $completedOrders]);
                 fputcsv($file, ['Shipped Orders', $shippedOrders]);
                 fputcsv($file, ['Delivered Orders', $deliveredOrders]);
-                fputcsv($file, ['Total Revenue', '₱' . number_format($totalRevenue, 2)]);
-                fputcsv($file, ['Average Order Value', '₱' . number_format($averageOrderValue, 2)]);
+                fputcsv($file, ['Total Revenue', 'P' . number_format($totalRevenue, 2)]);
+                fputcsv($file, ['Average Order Value', 'P' . number_format($averageOrderValue, 2)]);
                 fputcsv($file, []);
 
                 // Payment Methods Section
@@ -334,7 +326,7 @@ class DashboardController extends Controller
                     fputcsv($file, [
                         ucfirst($method->payment_method ?? 'Unknown'),
                         $method->count,
-                        '₱' . number_format($method->total, 2)
+                        'P' . number_format($method->total ?? 0, 2)
                     ]);
                 }
                 fputcsv($file, []);
@@ -346,7 +338,7 @@ class DashboardController extends Controller
                     fputcsv($file, [
                         $item->product->name ?? 'Unknown Product',
                         $item->sold,
-                        '₱' . number_format($item->revenue, 2)
+                        'P' . number_format($item->revenue ?? 0, 2)
                     ]);
                 }
                 fputcsv($file, []);
@@ -361,20 +353,20 @@ class DashboardController extends Controller
                     
                     fputcsv($file, [
                         $order->id,
-                        $order->user->name ?? 'Guest',
+                        $order->user->name ?? ($order->customer_name ?? 'Guest'),
                         $order->created_at->format('Y-m-d H:i:s'),
-                        ucfirst($order->status),
+                        ucfirst($order->status ?? 'Unknown'),
                         ucfirst($order->payment_method ?? 'N/A'),
                         ucfirst($order->delivery_type ?? 'N/A'),
-                        '₱' . number_format($order->total_amount, 2),
-                        $items
+                        'P' . number_format($order->total_amount ?? 0, 2),
+                        $items ?: 'No items'
                     ]);
                 }
 
                 fclose($file);
-            };
-
-            return response()->stream($callback, 200, $headers);
+            }, $filename, [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+            ]);
 
         } catch (\Exception $e) {
             \Log::error('Export report error: ' . $e->getMessage());
