@@ -627,6 +627,15 @@
                                     <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-600 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-lg">
                                         <span class="text-white font-bold text-lg">{{ $index + 1 }}</span>
                                     </div>
+                                    @if($product && $product->image)
+                                        <div class="w-16 h-16 mx-auto mb-3 rounded-lg overflow-hidden bg-white shadow-md">
+                                            <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                                        </div>
+                                    @else
+                                        <div class="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-md">
+                                            <i class="fas fa-box text-green-600 text-2xl"></i>
+                                        </div>
+                                    @endif
                                     <h3 class="font-bold text-gray-900 text-sm mb-1 truncate" title="{{ $product->name ?? 'N/A' }}">
                                         {{ $product->name ?? 'Product ' . ($index + 1) }}
                                     </h3>
@@ -672,6 +681,15 @@
                                     <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-600 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-lg">
                                         <i class="fas fa-arrow-down text-white text-lg"></i>
                                     </div>
+                                    @if($product && $product->image)
+                                        <div class="w-16 h-16 mx-auto mb-3 rounded-lg overflow-hidden bg-white shadow-md">
+                                            <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                                        </div>
+                                    @else
+                                        <div class="w-16 h-16 bg-gradient-to-br from-orange-100 to-red-100 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-md">
+                                            <i class="fas fa-box text-orange-600 text-2xl"></i>
+                                        </div>
+                                    @endif
                                     <h3 class="font-bold text-gray-900 text-sm mb-1 truncate" title="{{ $product->name ?? 'N/A' }}">
                                         {{ $product->name ?? 'Product ' . ($index + 1) }}
                                     </h3>
