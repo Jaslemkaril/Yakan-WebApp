@@ -196,6 +196,12 @@
                     </a>
                     @endif
                     
+                    <a href="{{ route('admin.analytics.export', ['type' => 'dashboard', 'period' => $period]) }}" class="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
+                        <i class="fas fa-file-csv"></i>
+                        <span class="hidden sm:inline">Export CSV</span>
+                        <span class="sm:hidden">CSV</span>
+                    </a>
+                    
                     <button onclick="window.print()" class="px-4 py-2 bg-[#800000] text-white rounded-lg font-medium hover:bg-[#600000] transition-colors flex items-center gap-2">
                         <i class="fas fa-print"></i>
                         <span class="hidden sm:inline">Print Report</span>

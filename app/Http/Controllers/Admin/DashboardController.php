@@ -234,4 +234,145 @@ class DashboardController extends Controller
             return redirect()->route('admin.dashboard')->with('error', 'Unable to load analytics.');
         }
     }
+
+    /**
+     * Export dashboard report to CSV
+     */
+    public function exportReport(Request $request)
+    {
+        try {
+            $period = $request->get('period', 'all');
+            
+            // Date filtering based on period
+            $dateQuery = \App\Models\Order::query();
+            switch ($period) {
+                case 'daily':
+                    $dateQuery->whereDate('created_at', today());
+                    break;
+                case 'weekly':
+                    $dateQuery->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                    break;
+                case 'yearly':
+                    $dateQuery->whereYear('created_at', now()->year);
+                    break;
+                default:
+                    // all time
+                    break;
+            }
+
+            // Get all dashboard data
+            $totalOrders = (clone $dateQuery)->count();
+            $pendingOrders = (clone $dateQuery)->where('status', 'pending')->count();
+            $completedOrders = (clone $dateQuery)->where('status', 'completed')->count();
+            $shippedOrders = (clone $dateQuery)->where('status', 'shipped')->count();
+            $deliveredOrders = (clone $dateQuery)->where('status', 'delivered')->count();
+            $totalRevenue = (float) (clone $dateQuery)->where('status', 'completed')->sum('total_amount');
+            $averageOrderValue = $completedOrders > 0 ? $totalRevenue / $completedOrders : 0;
+
+            // Get orders with details
+            $orders = (clone $dateQuery)->with(['user', 'items.product'])
+                ->orderByDesc('created_at')
+                ->get();
+
+            // Get top products
+            $topProductsQuery = \App\Models\OrderItem::selectRaw('product_id, SUM(quantity) as sold, SUM(price * quantity) as revenue')
+                ->groupBy('product_id')
+                ->orderByDesc('sold')
+                ->with('product');
+                
+            if ($period !== 'all') {
+                $topProductsQuery->whereHas('order', function($q) use ($dateQuery) {
+                    $q->whereIn('id', (clone $dateQuery)->pluck('id'));
+                });
+            }
+            
+            $topProducts = $topProductsQuery->take(10)->get();
+
+            // Payment method breakdown
+            $paymentMethods = (clone $dateQuery)->selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
+                ->groupBy('payment_method')
+                ->get();
+
+            // Prepare CSV output
+            $filename = 'dashboard_report_' . $period . '_' . date('Y-m-d_His') . '.csv';
+            
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ];
+
+            $callback = function() use ($totalOrders, $pendingOrders, $completedOrders, $shippedOrders, $deliveredOrders, $totalRevenue, $averageOrderValue, $orders, $topProducts, $paymentMethods, $period) {
+                $file = fopen('php://output', 'w');
+
+                // Dashboard Summary Section
+                fputcsv($file, ['DASHBOARD SUMMARY']);
+                fputcsv($file, ['Period', ucfirst($period)]);
+                fputcsv($file, ['Generated', now()->format('Y-m-d H:i:s')]);
+                fputcsv($file, []);
+                
+                fputcsv($file, ['OVERVIEW METRICS']);
+                fputcsv($file, ['Metric', 'Value']);
+                fputcsv($file, ['Total Orders', $totalOrders]);
+                fputcsv($file, ['Pending Orders', $pendingOrders]);
+                fputcsv($file, ['Completed Orders', $completedOrders]);
+                fputcsv($file, ['Shipped Orders', $shippedOrders]);
+                fputcsv($file, ['Delivered Orders', $deliveredOrders]);
+                fputcsv($file, ['Total Revenue', '₱' . number_format($totalRevenue, 2)]);
+                fputcsv($file, ['Average Order Value', '₱' . number_format($averageOrderValue, 2)]);
+                fputcsv($file, []);
+
+                // Payment Methods Section
+                fputcsv($file, ['PAYMENT METHODS']);
+                fputcsv($file, ['Payment Method', 'Orders', 'Total Amount']);
+                foreach ($paymentMethods as $method) {
+                    fputcsv($file, [
+                        ucfirst($method->payment_method ?? 'Unknown'),
+                        $method->count,
+                        '₱' . number_format($method->total, 2)
+                    ]);
+                }
+                fputcsv($file, []);
+
+                // Top Products Section
+                fputcsv($file, ['TOP SELLING PRODUCTS']);
+                fputcsv($file, ['Product Name', 'Quantity Sold', 'Revenue']);
+                foreach ($topProducts as $item) {
+                    fputcsv($file, [
+                        $item->product->name ?? 'Unknown Product',
+                        $item->sold,
+                        '₱' . number_format($item->revenue, 2)
+                    ]);
+                }
+                fputcsv($file, []);
+
+                // Orders Detail Section
+                fputcsv($file, ['ALL ORDERS']);
+                fputcsv($file, ['Order ID', 'Customer', 'Date', 'Status', 'Payment Method', 'Delivery Type', 'Total Amount', 'Items']);
+                foreach ($orders as $order) {
+                    $items = $order->items->map(function($item) {
+                        return ($item->product->name ?? 'Unknown') . ' (x' . $item->quantity . ')';
+                    })->join('; ');
+                    
+                    fputcsv($file, [
+                        $order->id,
+                        $order->user->name ?? 'Guest',
+                        $order->created_at->format('Y-m-d H:i:s'),
+                        ucfirst($order->status),
+                        ucfirst($order->payment_method ?? 'N/A'),
+                        ucfirst($order->delivery_type ?? 'N/A'),
+                        '₱' . number_format($order->total_amount, 2),
+                        $items
+                    ]);
+                }
+
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+
+        } catch (\Exception $e) {
+            \Log::error('Export report error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Unable to export report: ' . $e->getMessage());
+        }
+    }
 }
