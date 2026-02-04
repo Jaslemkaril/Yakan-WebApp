@@ -818,6 +818,9 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
 
     // Analytics (using dashboard controller)
     Route::get('/analytics', [DashboardController::class, 'analytics'])->name('analytics');
+    
+    // Dashboard CSV Export - Direct route
+    Route::get('/dashboard/export-csv', [DashboardController::class, 'exportReport'])->name('dashboard.export');
 
     // User Management
     Route::prefix('users')->group(function () {
