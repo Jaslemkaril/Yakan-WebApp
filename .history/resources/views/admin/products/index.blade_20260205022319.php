@@ -38,7 +38,7 @@ use Illuminate\Support\Facades\Storage;
                     <p class="text-2xl font-bold text-gray-900">{{ $products->total() }}</p>
                 </div>
                 <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m0 0l8 4m-8-4v10l8 4m0-10l8 4m-8-4v10l8-4m0 0l-8-4-8 4m8 4v10l-8-4m0-10l8 4"/></svg>
+                    <i class="fas fa-cube text-purple-500 text-xl"></i>
                 </div>
             </div>
         </div>
@@ -49,7 +49,7 @@ use Illuminate\Support\Facades\Storage;
                     <p class="text-2xl font-bold text-gray-900">{{ $products->where('status', 'active')->count() }}</p>
                 </div>
                 <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <i class="fas fa-check-circle text-green-500 text-xl"></i>
                 </div>
             </div>
         </div>
@@ -60,7 +60,7 @@ use Illuminate\Support\Facades\Storage;
                     <p class="text-2xl font-bold text-gray-900">{{ $products->where('stock', '<=', 10)->count() }}</p>
                 </div>
                 <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-yellow-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 0v2m0-6v-2m0 0v-2m0 0h2m-2 0h-2m7.5 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <i class="fas fa-exclamation-triangle text-yellow-500 text-xl animate-pulse"></i>
                 </div>
             </div>
         </div>
@@ -71,7 +71,7 @@ use Illuminate\Support\Facades\Storage;
                     <p class="text-2xl font-bold text-gray-900">{{ $products->where('stock', 0)->count() }}</p>
                 </div>
                 <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-2-2V6a2 2 0 012-2h3.672a2 2 0 012 2v2m0 0h5.094a2 2 0 012 2v2a2 2 0 01-2 2h-5.094m0 0a2 2 0 01-2-2V6a2 2 0 012-2h3.672a2 2 0 012 2v2m0 0h.001"/></svg>
+                    <i class="fas fa-times-circle text-red-500 text-xl"></i>
                 </div>
             </div>
         </div>
