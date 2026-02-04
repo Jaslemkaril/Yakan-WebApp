@@ -297,12 +297,18 @@ class DashboardController extends Controller
             $filename = 'dashboard_report_' . $period . '_' . date('Y-m-d_His') . '.csv';
             
             $headers = [
-                'Content-Type' => 'text/csv',
+                'Content-Type' => 'text/csv; charset=UTF-8',
                 'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Pragma' => 'no-cache',
+                'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+                'Expires' => '0',
             ];
 
             $callback = function() use ($totalOrders, $pendingOrders, $completedOrders, $shippedOrders, $deliveredOrders, $totalRevenue, $averageOrderValue, $orders, $topProducts, $paymentMethods, $period) {
                 $file = fopen('php://output', 'w');
+                
+                // Add UTF-8 BOM for Excel compatibility
+                fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
 
                 // Dashboard Summary Section
                 fputcsv($file, ['DASHBOARD SUMMARY']);
