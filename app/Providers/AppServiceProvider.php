@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\URL;
 use App\Models\Order;
 use App\Models\Chat;
 
@@ -22,6 +23,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Force HTTPS in production (Railway, Heroku, etc.)
+        if (config('app.env') === 'production' || request()->header('X-Forwarded-Proto') === 'https') {
+            URL::forceScheme('https');
+        }
+
         // Share pending orders count with admin layout
         View::composer('layouts.admin', function ($view) {
             $pendingOrdersCount = Order::whereRaw('LOWER(status) = ?', ['pending'])->count();
