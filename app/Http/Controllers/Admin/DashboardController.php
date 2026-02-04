@@ -238,7 +238,7 @@ class DashboardController extends Controller
     /**
      * Export dashboard report to CSV
      */
-    public function exportReport(Request $request)
+    public function exportReport(Request $request, $type = 'dashboard')
     {
         try {
             $period = $request->get('period', 'all');
