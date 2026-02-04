@@ -759,6 +759,48 @@
         .slide-in-left {
             animation: slideInLeft 0.5s ease-out;
         }
+        
+        /* Print Styles - Hide sidebar and navigation */
+        @media print {
+            aside,
+            .sidebar-mobile,
+            .sidebar-overlay,
+            nav,
+            .no-print,
+            .mobile-header,
+            header,
+            button:not(.print-button),
+            .fixed,
+            .z-40,
+            [x-cloak] {
+                display: none !important;
+            }
+            
+            body {
+                background: white !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            main {
+                margin-left: 0 !important;
+                padding: 20px !important;
+                width: 100% !important;
+            }
+            
+            .flex.min-h-screen {
+                display: block !important;
+            }
+            
+            .ml-0, .ml-72, [class*="ml-"] {
+                margin-left: 0 !important;
+            }
+            
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
     </style>
 </head>
 <body class="font-sans antialiased" x-data="{ 

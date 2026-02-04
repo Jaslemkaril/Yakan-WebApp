@@ -6,29 +6,130 @@
 <style>
 /* Print styles */
 @media print {
-    .no-print {
+    /* Hide non-essential elements */
+    .no-print,
+    aside,
+    .sidebar-mobile,
+    .sidebar-overlay,
+    nav,
+    .mobile-header,
+    header,
+    button,
+    .filter-section,
+    .flex.gap-3,
+    [x-data],
+    .fixed {
         display: none !important;
     }
     
+    /* Reset body and main content */
     body {
         background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 12pt !important;
+        line-height: 1.4 !important;
     }
     
-    .fixed {
-        position: static !important;
+    /* Full width for main content */
+    main,
+    .main-content,
+    .min-h-screen,
+    .flex.min-h-screen > div {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 15px !important;
     }
     
-    .card-hover-lift {
+    /* Remove margins from flex containers */
+    .flex {
+        display: block !important;
+    }
+    
+    .ml-0,
+    .ml-72,
+    [class*="ml-"] {
+        margin-left: 0 !important;
+    }
+    
+    /* Page setup */
+    @page {
+        margin: 1.5cm;
+        size: A4 portrait;
+    }
+    
+    /* Card styles for print */
+    .card-hover-lift,
+    .bg-white,
+    [class*="rounded"] {
         box-shadow: none !important;
         transform: none !important;
+        border: 1px solid #ddd !important;
+        page-break-inside: avoid;
+        margin-bottom: 15px !important;
     }
     
-    .bg-gradient-to-br {
+    /* Remove backgrounds */
+    .bg-gradient-to-br,
+    .bg-gradient-to-b,
+    [class*="bg-gradient"] {
         background: white !important;
     }
     
-    @page {
-        margin: 1cm;
+    /* Make maroon header visible on print */
+    .bg-\[\\#800000\] {
+        background: #800000 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color: white !important;
+    }
+    
+    /* Table styles */
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 10pt !important;
+    }
+    
+    th, td {
+        border: 1px solid #ddd !important;
+        padding: 8px !important;
+        text-align: left !important;
+    }
+    
+    /* Hide animations */
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+    
+    /* Print header */
+    .print-header {
+        display: block !important;
+        text-align: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #800000;
+    }
+    
+    /* Show print header */
+    .hidden.print\\:block {
+        display: block !important;
+    }
+    
+    /* Ensure grid displays properly */
+    .grid {
+        display: grid !important;
+    }
+    
+    /* Page breaks */
+    h1, h2, h3 {
+        page-break-after: avoid;
+    }
+    
+    .page-break {
+        page-break-before: always;
     }
 }
 
@@ -148,6 +249,13 @@
 
 @section('content')
 <div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50">
+    <!-- Print Only Header -->
+    <div class="hidden print:block print-header" style="display: none;">
+        <h1 style="font-size: 24pt; color: #800000; margin-bottom: 5px;">Yakan E-commerce Dashboard Report</h1>
+        <p style="font-size: 12pt; color: #666;">Generated on {{ now()->format('F j, Y \a\t g:i A') }}</p>
+        <p style="font-size: 11pt; color: #888;">Period: {{ ucfirst($period) }}</p>
+    </div>
+    
     <!-- Animated Background Elements -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none no-print">
         <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation"></div>
