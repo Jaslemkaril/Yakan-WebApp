@@ -253,7 +253,7 @@
                         @foreach($relatedProducts as $related)
                             <a href="{{ route('products.show', $related) }}" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
                                 @if($related->image)
-                                    <img src="{{ asset('storage/' . $related->image) }}" alt="{{ $related->name }}" class="w-12 h-12 object-cover rounded-lg" />
+                                    <img src="{{ asset('uploads/products/' . $related->image) }}" alt="{{ $related->name }}" class="w-12 h-12 object-cover rounded-lg" />
                                 @else
                                     <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
                                         <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -573,35 +573,6 @@ function showNotification(message, type = 'success') {
         notification.remove();
     }, 3000);
 }
-
-// Star rating functionality
-@if(auth()->check())
-document.querySelectorAll('input[name="rating"]').forEach((radio, index) => {
-    radio.addEventListener('change', function() {
-        document.querySelectorAll('#star1, #star2, #star3, #star4, #star5').forEach((star, i) => {
-            star.textContent = i < this.value ? '★' : '☆';
-            star.classList.toggle('text-yellow-400', i < this.value);
-        });
-    });
-    
-    const star = document.querySelector('#star' + (index + 1));
-    star?.addEventListener('click', () => radio.checked = true);
-    star?.addEventListener('mouseover', function() {
-        document.querySelectorAll('#star1, #star2, #star3, #star4, #star5').forEach((s, i) => {
-            s.textContent = i <= index ? '★' : '☆';
-        });
-    });
-});
-
-document.addEventListener('mouseleave', function() {
-    const checked = document.querySelector('input[name="rating"]:checked');
-    document.querySelectorAll('#star1, #star2, #star3, #star4, #star5').forEach((star, i) => {
-        star.textContent = checked && i < checked.value ? '★' : '☆';
-        star.classList.toggle('text-yellow-400', checked && i < checked.value);
-    });
-});
-@endif
-
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {

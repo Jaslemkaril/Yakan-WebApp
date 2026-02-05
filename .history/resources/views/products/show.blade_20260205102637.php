@@ -574,35 +574,6 @@ function showNotification(message, type = 'success') {
     }, 3000);
 }
 
-// Star rating functionality
-@if(auth()->check())
-document.querySelectorAll('input[name="rating"]').forEach((radio, index) => {
-    radio.addEventListener('change', function() {
-        document.querySelectorAll('#star1, #star2, #star3, #star4, #star5').forEach((star, i) => {
-            star.textContent = i < this.value ? '★' : '☆';
-            star.classList.toggle('text-yellow-400', i < this.value);
-        });
-    });
-    
-    const star = document.querySelector('#star' + (index + 1));
-    star?.addEventListener('click', () => radio.checked = true);
-    star?.addEventListener('mouseover', function() {
-        document.querySelectorAll('#star1, #star2, #star3, #star4, #star5').forEach((s, i) => {
-            s.textContent = i <= index ? '★' : '☆';
-        });
-    });
-});
-
-document.addEventListener('mouseleave', function() {
-    const checked = document.querySelector('input[name="rating"]:checked');
-    document.querySelectorAll('#star1, #star2, #star3, #star4, #star5').forEach((star, i) => {
-        star.textContent = checked && i < checked.value ? '★' : '☆';
-        star.classList.toggle('text-yellow-400', checked && i < checked.value);
-    });
-});
-@endif
-
-
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
     updateHiddenInputs();
