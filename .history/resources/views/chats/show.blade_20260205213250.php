@@ -398,12 +398,9 @@
     }
 
     function clearImage() {
-        console.log('clearImage called');
         const imageInput = document.getElementById('image');
-        const preview = document.getElementById('imagePreview');
-        console.log('Elements:', imageInput, preview);
-        if (imageInput) imageInput.value = '';
-        if (preview) preview.classList.add('hidden');
+        imageInput.value = '';
+        document.getElementById('imagePreview').classList.add('hidden');
     }
 
     function showPaymentProofPreview(input) {
