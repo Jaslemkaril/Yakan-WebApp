@@ -18,8 +18,7 @@
         <div class="space-y-4">
             <div class="aspect-square bg-gray-100 rounded-2xl overflow-hidden shadow-lg">
                 @if($product->image)
-                    <img id="mainProductImage" src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" 
-                         onerror="this.src='{{ asset('storage/' . $product->image) }}'" 
+                    <img id="mainProductImage" src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" 
                          class="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                          onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200\'><div class=\'text-8xl opacity-20\'>📦</div></div>';">
                 @else
@@ -543,6 +542,34 @@ function showNotification(message, type = 'success') {
         notification.remove();
     }, 3000);
 }
+
+// Star rating functionality
+@if(auth()->check())
+document.querySelectorAll('input[name="rating"]').forEach((radio, index) => {
+    radio.addEventListener('change', function() {
+        document.querySelectorAll('#star1, #star2, #star3, #star4, #star5').forEach((star, i) => {
+            star.textContent = i < this.value ? '★' : '☆';
+            star.classList.toggle('text-yellow-400', i < this.value);
+        });
+    });
+    
+    const star = document.querySelector('#star' + (index + 1));
+    star?.addEventListener('click', () => radio.checked = true);
+    star?.addEventListener('mouseover', function() {
+        document.querySelectorAll('#star1, #star2, #star3, #star4, #star5').forEach((s, i) => {
+            s.textContent = i <= index ? '★' : '☆';
+        });
+    });
+});
+
+document.addEventListener('mouseleave', function() {
+    const checked = document.querySelector('input[name="rating"]:checked');
+    document.querySelectorAll('#star1, #star2, #star3, #star4, #star5').forEach((star, i) => {
+        star.textContent = checked && i < checked.value ? '★' : '☆';
+        star.classList.toggle('text-yellow-400', checked && i < checked.value);
+    });
+});
+@endif
 
 
 // Initialize

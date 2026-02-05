@@ -18,8 +18,7 @@
         <div class="space-y-4">
             <div class="aspect-square bg-gray-100 rounded-2xl overflow-hidden shadow-lg">
                 @if($product->image)
-                    <img id="mainProductImage" src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" 
-                         onerror="this.src='{{ asset('storage/' . $product->image) }}'" 
+                    <img id="mainProductImage" src="{{ file_exists(public_path('storage/' . $product->image)) ? asset('storage/' . $product->image) : asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" 
                          class="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                          onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200\'><div class=\'text-8xl opacity-20\'>📦</div></div>';">
                 @else
