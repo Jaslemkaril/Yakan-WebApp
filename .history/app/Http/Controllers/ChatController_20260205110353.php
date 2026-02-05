@@ -120,13 +120,8 @@ class ChatController extends Controller
         ];
 
         if ($request->hasFile('image')) {
-            $uploadDir = public_path('uploads/chat');
-            if (!is_dir($uploadDir)) {
-                @mkdir($uploadDir, 0777, true);
-            }
-            $imageName = time() . '_' . $request->file('image')->getClientOriginalName();
-            $request->file('image')->move($uploadDir, $imageName);
-            $messageData['image_path'] = 'uploads/chat/' . $imageName;
+            $path = $request->file('image')->store('chat-images', 'public');
+            $messageData['image_path'] = $path;
         }
 
         ChatMessage::create($messageData);
