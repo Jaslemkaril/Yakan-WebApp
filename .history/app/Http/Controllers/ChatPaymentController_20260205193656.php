@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Chat;
 use App\Models\ChatPayment;
-use App\Models\ChatMessage;
 use App\Models\CustomOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -100,7 +99,11 @@ class ChatPaymentController extends Controller
      */
     public function verifyPayment(ChatPayment $payment, Request $request)
     {
-        // Admin is verified by middleware
+        // Check if user is admin
+        if (!Auth::check() || Auth::user()->role !== 'admin') {
+            abort(403, 'Only admin can verify payments');
+        }
+
         $validated = $request->validate([
             'action' => 'required|in:approve,reject',
             'notes' => 'nullable|string|max:1000',
