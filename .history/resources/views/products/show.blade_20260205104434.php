@@ -253,7 +253,7 @@
                         @foreach($relatedProducts as $related)
                             <a href="{{ route('products.show', $related) }}" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
                                 @if($related->image)
-                                    <img src="{{ asset('uploads/products/' . $related->image) }}" alt="{{ $related->name }}" class="w-12 h-12 object-cover rounded-lg" />
+                                    <img src="{{ asset('storage/' . $related->image) }}" alt="{{ $related->name }}" class="w-12 h-12 object-cover rounded-lg" />
                                 @else
                                     <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
                                         <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
