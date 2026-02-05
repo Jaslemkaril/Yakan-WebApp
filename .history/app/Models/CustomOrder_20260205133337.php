@@ -152,14 +152,6 @@ class CustomOrder extends Model
     }
 
     /**
-     * Get the chat this custom order came from
-     */
-    public function chat()
-    {
-        return $this->belongsTo(Chat::class);
-    }
-
-    /**
      * Get fabric type relationship
      */
     public function fabricType()

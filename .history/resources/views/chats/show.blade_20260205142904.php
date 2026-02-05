@@ -396,15 +396,10 @@
         document.getElementById('imagePreview').classList.add('hidden');
     }
 
-    function showPaymentProofPreview(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                document.getElementById('paymentProofImg').src = e.target.result;
-                document.getElementById('paymentProofPreview').classList.remove('hidden');
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
+    // Auto-scroll to bottom
+    const messagesContainer = document.getElementById('messagesContainer');
+    if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
-
+</script>
 @endsection
