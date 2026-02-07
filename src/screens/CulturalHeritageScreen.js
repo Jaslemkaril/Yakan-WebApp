@@ -40,8 +40,24 @@ const CulturalHeritageScreen = ({ navigation }) => {
         throw new Error(response.error || 'Failed to fetch cultural heritage');
       }
       
-      const heritageData = response.data?.data || response.data || [];
+      // Handle both paginated and non-paginated responses
+      let heritageData = [];
+      if (response.data?.data && Array.isArray(response.data.data)) {
+        // Paginated response
+        heritageData = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        // Direct array response
+        heritageData = response.data;
+      }
+      
       console.log('📚 CulturalHeritage: Fetched', heritageData.length, 'items');
+      
+      // If no data from API, load fallback
+      if (heritageData.length === 0) {
+        console.log('📚 CulturalHeritage: No data from API, loading fallback');
+        loadFallbackData();
+        return;
+      }
       
       // Separate patterns and artisan stories
       const patternsData = heritageData.filter(item => 

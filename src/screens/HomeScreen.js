@@ -25,6 +25,7 @@ const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [products, setProducts] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -304,15 +305,22 @@ export default function HomeScreen({ navigation }) {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.heroSearchContainer}>
-                <Text style={styles.heroSearchIcon}></Text>
+              <View style={[styles.heroSearchContainer, isSearchFocused && styles.heroSearchContainerFocused]}>
+                <Ionicons name="search" size={20} color={isSearchFocused ? "#fff" : "rgba(255,255,255,0.8)"} style={styles.heroSearchIcon} />
                 <TextInput
                   style={styles.heroSearchInput}
                   placeholder="Search products..."
                   placeholderTextColor="rgba(255,255,255,0.7)"
                   value={searchQuery}
                   onChangeText={setSearchQuery}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setIsSearchFocused(false)}
                 />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButtonHero}>
+                    <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.8)" />
+                  </TouchableOpacity>
+                )}
               </View>
 
               <View style={styles.logoContainer}>
@@ -653,22 +661,38 @@ const styles = StyleSheet.create({
   heroSearchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 25,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 30,
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 14,
     marginBottom: 40,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.35)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  heroSearchContainerFocused: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderColor: 'rgba(255,255,255,0.6)',
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   heroSearchIcon: {
-    fontSize: 18,
-    marginRight: 10,
+    marginRight: 12,
   },
   heroSearchInput: {
     flex: 1,
     fontSize: 16,
     color: colors.white,
+    paddingVertical: 0,
+  },
+  clearButtonHero: {
+    padding: 4,
+    marginLeft: 8,
   },
   logoContainer: {
     alignItems: 'center',

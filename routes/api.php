@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\CulturalHeritageController;
+use App\Http\Controllers\Api\SocialAuthController;
 use App\Http\Controllers\PaymentController;
 
 Route::prefix('v1')->group(function () {
@@ -15,6 +16,10 @@ Route::prefix('v1')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login-guest', [AuthController::class, 'loginGuest']);
+    
+    // Social Authentication
+    Route::post('/auth/google', [SocialAuthController::class, 'googleLogin']);
+    Route::post('/auth/facebook', [SocialAuthController::class, 'facebookLogin']);
 
     // ===================== PRODUCTS (Public) =====================
     Route::get('/products', [ProductController::class, 'index']);

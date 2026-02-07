@@ -15,9 +15,11 @@ import { useCart } from '../context/CartContext';
 import ApiService from '../services/api';
 import API_CONFIG from '../config/config';
 import BottomNav from '../components/BottomNav';
+import colors from '../constants/colors';
 
 const ProductsScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -152,15 +154,22 @@ const ProductsScreen = ({ navigation }) => {
       ) : (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+        <View style={[styles.searchContainer, isSearchFocused && styles.searchContainerFocused]}>
+          <Ionicons name="search" size={20} color={isSearchFocused ? colors.primary : "#999"} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search products..."
             placeholderTextColor="#999"
             value={searchQuery}
             onChangeText={setSearchQuery}
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setIsSearchFocused(false)}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="#999" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Category Filter */}
@@ -308,22 +317,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
     margin: 15,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    borderRadius: 25,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: 'transparent',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  searchContainerFocused: {
+    borderColor: colors.primary,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: 12,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
     color: '#333',
+    paddingVertical: 0,
+  },
+  clearButton: {
+    padding: 4,
+    marginLeft: 8,
   },
   categoryContainer: {
     paddingHorizontal: 15,

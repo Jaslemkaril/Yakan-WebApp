@@ -258,6 +258,54 @@ class ApiService {
   }
 
   /**
+   * Login with Google
+   */
+  async loginWithGoogle(googleData) {
+    const response = await this.request('POST', '/auth/google', {
+      id_token: googleData.idToken,
+      email: googleData.email,
+      name: googleData.name,
+      photo: googleData.photo,
+      google_id: googleData.id,
+    });
+
+    if (response.success) {
+      const innerData = response.data?.data || response.data;
+      const token = innerData?.token;
+      
+      if (token) {
+        await this.saveToken(token);
+      }
+    }
+
+    return response;
+  }
+
+  /**
+   * Login with Facebook
+   */
+  async loginWithFacebook(facebookData) {
+    const response = await this.request('POST', '/auth/facebook', {
+      access_token: facebookData.accessToken,
+      email: facebookData.email,
+      name: facebookData.name,
+      photo: facebookData.photo,
+      facebook_id: facebookData.id,
+    });
+
+    if (response.success) {
+      const innerData = response.data?.data || response.data;
+      const token = innerData?.token;
+      
+      if (token) {
+        await this.saveToken(token);
+      }
+    }
+
+    return response;
+  }
+
+  /**
    * Logout user
    */
   async logout() {
