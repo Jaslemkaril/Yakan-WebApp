@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\CulturalHeritageController;
 use App\Http\Controllers\PaymentController;
 
 Route::prefix('v1')->group(function () {
@@ -17,8 +18,14 @@ Route::prefix('v1')->group(function () {
 
     // ===================== PRODUCTS (Public) =====================
     Route::get('/products', [ProductController::class, 'index']);
+    Route::get('/products/featured', [ProductController::class, 'featured']);
     Route::get('/products/{id}', [ProductController::class, 'show']);
     Route::get('/products/search', [ProductController::class, 'search']);
+
+    // ===================== CULTURAL HERITAGE (Public) =====================
+    Route::get('/cultural-heritage', [CulturalHeritageController::class, 'index']);
+    Route::get('/cultural-heritage/categories', [CulturalHeritageController::class, 'categories']);
+    Route::get('/cultural-heritage/{slug}', [CulturalHeritageController::class, 'show']);
 
     // ===================== ORDERS (Public - Read Only) =====================
     Route::get('/orders', [OrderController::class, 'index']);
