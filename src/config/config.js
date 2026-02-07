@@ -5,28 +5,27 @@ import { Platform } from 'react-native';
 
 // Detect if running on emulator or physical device
 const getApiBaseUrl = () => {
-  // For Android Emulator, use 10.0.2.2 (emulator's special alias for host localhost)
-  // For iOS Simulator, use localhost
-  // For physical devices, use your machine's local IP
+  // ✅ DEPLOYED ON RAILWAY - Production URL
+  return 'https://yakan-webapp-production.up.railway.app/api/v1';
   
-  const MACHINE_IP = '192.168.47.5'; // ⚠️ SCHOOL IP - Updated for presentation
-  const PORT = '8000';
-  
-  // Try multiple URLs in order of preference
-  // You can manually override by uncommenting one of these:
-  
+  // 🔧 For local development, uncomment one of these:
+  // const MACHINE_IP = '192.168.47.5';
+  // const PORT = '8000';
   // return `http://10.0.2.2:${PORT}/api/v1`; // Android Emulator
   // return `http://localhost:${PORT}/api/v1`; // iOS Simulator
-  return `http://${MACHINE_IP}:${PORT}/api/v1`; // Physical Device (DEFAULT)
+  // return `http://${MACHINE_IP}:${PORT}/api/v1`; // Physical Device
 };
 
 const getStorageBaseUrl = () => {
-  const MACHINE_IP = '192.168.47.5';
-  const PORT = '8000';
+  // ✅ DEPLOYED ON RAILWAY - Production URL
+  return 'https://yakan-webapp-production.up.railway.app/storage';
   
+  // 🔧 For local development, uncomment one of these:
+  // const MACHINE_IP = '192.168.47.5';
+  // const PORT = '8000';
   // return `http://10.0.2.2:${PORT}/storage`; // Android Emulator
   // return `http://localhost:${PORT}/storage`; // iOS Simulator
-  return `http://${MACHINE_IP}:${PORT}/storage`; // Physical Device (DEFAULT)
+  // return `http://${MACHINE_IP}:${PORT}/storage`; // Physical Device
 };
 
 export const API_CONFIG = {

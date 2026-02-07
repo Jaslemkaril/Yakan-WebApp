@@ -26,6 +26,7 @@ const { width } = Dimensions.get('window');
 export default function HomeScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const { getCartCount, isLoggedIn, addToWishlist, removeFromWishlist, isInWishlist } = useCart();
@@ -33,7 +34,47 @@ export default function HomeScreen({ navigation }) {
   // Fetch products from API on component mount
   useEffect(() => {
     fetchProducts();
+    fetchFeaturedProducts();
   }, []);
+
+  const fetchFeaturedProducts = async () => {
+    try {
+      console.log('🏠 HomeScreen: Fetching featured products...');
+      const response = await ApiService.request('GET', '/products?featured=true&limit=6');
+      
+      if (!response.success) {
+        console.warn('🏠 Featured products not available, using first 3 products');
+        return;
+      }
+      
+      const productsData = response.data?.data || response.data || [];
+      console.log('🏠 HomeScreen: Fetched', productsData.length, 'featured products');
+      
+      const transformedProducts = transformProducts(productsData);
+      setFeaturedProducts(transformedProducts);
+    } catch (error) {
+      console.error('🏠 HomeScreen: Error fetching featured products:', error);
+    }
+  };
+
+  const transformProducts = (productsData) => {
+    return productsData.map(product => ({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: parseFloat(product.price),
+      category: product.category?.name || 'Uncategorized',
+      image: product.image 
+        ? { uri: product.image.startsWith('http') 
+            ? product.image 
+            : product.image.startsWith('/uploads') || product.image.startsWith('/storage')
+              ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${product.image}`
+              : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/storage/products/${product.image}` 
+          }
+        : require('../assets/images/Saputangan.jpg'),
+      stock: product.stock || 0,
+    }));
+  };
 
   const fetchProducts = async () => {
     try {
@@ -47,32 +88,16 @@ export default function HomeScreen({ navigation }) {
         throw new Error(response.error || 'Failed to fetch products');
       }
       
-      // Handle triple-nested response
-      const apiData = response.data?.data || response.data || {};
-      const productsData = Array.isArray(apiData.data) ? apiData.data : Array.isArray(apiData) ? apiData : [];
-      
+      const productsData = response.data?.data || response.data || [];
       console.log('🏠 HomeScreen: Fetched', productsData.length, 'products');
       
-      // Transform API data
-      const transformedProducts = productsData.map((product, index) => ({
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        price: parseFloat(product.price),
-        featured: index < 2, // First 2 products are featured
-        category: product.category?.name || 'Uncategorized',
-        image: product.image 
-          ? { uri: product.image.startsWith('http') 
-              ? product.image 
-              : product.image.startsWith('/uploads') || product.image.startsWith('/storage')
-                ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${product.image}`
-                : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/uploads/products/${product.image}` 
-            }
-          : require('../assets/images/Saputangan.jpg'),
-        stock: product.stock || 0,
-      }));
-      
+      const transformedProducts = transformProducts(productsData);
       setProducts(transformedProducts);
+      
+      // If no featured products yet, use first 3 from all products
+      if (featuredProducts.length === 0 && transformedProducts.length > 0) {
+        setFeaturedProducts(transformedProducts.slice(0, 3));
+      }
     } catch (error) {
       console.error('🏠 HomeScreen: Error fetching products:', error);
       // Fallback to mock data
@@ -82,7 +107,6 @@ export default function HomeScreen({ navigation }) {
           name: 'Yakan Traditional Dress',
           description: 'Beautiful handwoven traditional Yakan dress with intricate patterns',
           price: 2500.00,
-          featured: true,
           image: require('../assets/images/Saputangan.jpg'),
         },
         {
@@ -90,7 +114,6 @@ export default function HomeScreen({ navigation }) {
           name: 'Yakan Headwrap',
           description: 'Traditional Yakan headwrap with authentic patterns',
           price: 450.00,
-          featured: true,
           image: require('../assets/images/pinantupan.jpg'),
         },
         {
@@ -98,17 +121,15 @@ export default function HomeScreen({ navigation }) {
           name: 'Yakan Wall Hanging',
           description: 'Decorative wall hanging featuring traditional Yakan weaving',
           price: 1200.00,
-          featured: false,
           image: require('../assets/images/Patterns.jpg'),
         },
       ];
       setProducts(mockProducts);
+      setFeaturedProducts(mockProducts.slice(0, 2));
     } finally {
       setLoading(false);
     }
   };
-
-  const featuredProducts = products.filter(p => p.featured);
   
   const handleMenuPress = () => {
     setMenuOpen(true);
@@ -305,15 +326,46 @@ export default function HomeScreen({ navigation }) {
 
         {/* FEATURED FABRICS SECTION */}
         <View style={styles.featuredSection}>
-          <Text style={styles.sectionTitle}>Featured Fabrics</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Featured Fabrics</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Products')}>
+              <Text style={styles.seeAllText}>See All →</Text>
+            </TouchableOpacity>
+          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.featuredScroll}
           >
-            {featuredProducts.map(product => renderFeaturedCard(product))}
+            {featuredProducts.length > 0 ? (
+              featuredProducts.map(product => renderFeaturedCard(product))
+            ) : (
+              <Text style={styles.noProductsText}>No featured products available</Text>
+            )}
           </ScrollView>
         </View>
+
+        {/* SHOP ALL PRODUCTS SECTION */}
+        {products.length > 0 && (
+          <View style={styles.productsSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Shop All Products</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Products')}>
+                <Text style={styles.seeAllText}>View All →</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.productsGrid}>
+              {products.slice(0, 6).map(product => renderProductCard(product))}
+            </View>
+            <TouchableOpacity 
+              style={styles.viewAllButton}
+              onPress={() => navigation.navigate('Products')}
+            >
+              <Text style={styles.viewAllButtonText}>Browse All Products</Text>
+              <Ionicons name="arrow-forward" size={20} color={colors.white} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* CULTURAL HERITAGE SECTION */}
         <View style={styles.culturalSection}>
@@ -646,12 +698,28 @@ const styles = StyleSheet.create({
   featuredSection: {
     marginBottom: 25,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 15,
+  },
   sectionTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     color: colors.text,
-    marginHorizontal: 20,
-    marginBottom: 15,
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  noProductsText: {
+    fontSize: 14,
+    color: colors.textLight,
+    marginLeft: 20,
+    fontStyle: 'italic',
   },
   featuredScroll: {
     paddingHorizontal: 15,
@@ -701,6 +769,32 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.primary,
+  },
+  // SHOP ALL PRODUCTS SECTION
+  productsSection: {
+    marginBottom: 25,
+    paddingHorizontal: 20,
+  },
+  productsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    marginTop: 15,
+    gap: 8,
+  },
+  viewAllButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
   },
   // CULTURAL HERITAGE SECTION
   culturalSection: {

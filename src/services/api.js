@@ -712,6 +712,34 @@ class ApiService {
     return await this.request('DELETE', '/cart');
   }
 
+  // ==================== CULTURAL HERITAGE ENDPOINTS ====================
+
+  /**
+   * Get all cultural heritage content
+   */
+  async getCulturalHeritage(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    const endpoint = queryString 
+      ? `/cultural-heritage?${queryString}`
+      : '/cultural-heritage';
+    
+    return this.request('GET', endpoint);
+  }
+
+  /**
+   * Get cultural heritage categories
+   */
+  async getCulturalHeritageCategories() {
+    return this.request('GET', '/cultural-heritage/categories');
+  }
+
+  /**
+   * Get single cultural heritage item by slug
+   */
+  async getCulturalHeritageItem(slug) {
+    return this.request('GET', `/cultural-heritage/${slug}`);
+  }
+
   // ==================== POLLING/REAL-TIME METHODS ====================
 
   /**
