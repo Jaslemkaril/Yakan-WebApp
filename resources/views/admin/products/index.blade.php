@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Storage;
         <div class="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
                 <h1 class="text-xl md:text-3xl font-bold mb-2">Products Management</h1>
-                <p class="text-purple-100 text-lg">Manage your product catalog and inventory</p>
+                <p class="text-red-100 text-lg">Manage your product catalog and inventory</p>
             </div>
             <div class="mt-4 md:mt-0 flex space-x-3">
                 <button id="bulkDeleteBtn" onclick="confirmBulkDelete()" class="hidden bg-red-500/90 backdrop-blur-sm text-white border border-red-400/30 rounded-lg px-4 py-2 hover:bg-red-600 transition-colors">
@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Storage;
                 <button class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
                     <i class="fas fa-download mr-2"></i>Export Products
                 </button>
-                <a href="{{ route('admin.products.create') }}" class="bg-white text-purple-600 px-4 py-2 rounded-lg hover:bg-gray-100 font-medium transition-colors">
+                <a href="{{ route('admin.products.create') }}" class="bg-white text-[#800000] px-4 py-2 rounded-lg hover:bg-gray-100 font-medium transition-colors">
                     <i class="fas fa-plus mr-2"></i>Add Product
                 </a>
             </div>
@@ -31,14 +31,14 @@ use Illuminate\Support\Facades\Storage;
 
     <!-- Stats Overview -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500 hover:shadow-lg transition-shadow">
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-[#800000] hover:shadow-lg transition-shadow">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-500">Total Products</p>
                     <p class="text-2xl font-bold text-gray-900">{{ $products->total() }}</p>
                 </div>
-                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m0 0l8 4m-8-4v10l8 4m0-10l8 4m-8-4v10l8-4m0 0l-8-4-8 4m8 4v10l-8-4m0-10l8 4"/></svg>
+                <div class="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m0 0l8 4m-8-4v10l8 4m0-10l8 4m-8-4v10l8-4m0 0l-8-4-8 4m8 4v10l-8-4m0-10l8 4"/></svg>
                 </div>
             </div>
         </div>
@@ -83,10 +83,10 @@ use Illuminate\Support\Facades\Storage;
             <div class="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
                 <div class="relative">
                     <input type="text" name="search" value="{{ request('search') }}" placeholder="Search products..." 
-                           class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                           class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent">
                     <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                 </div>
-                <select name="category" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <select name="category" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000]">
                     <option value="">All Categories</option>
                     @php
                         $categories = ['Yakan Bags', 'Yakan Fabrics', 'Accessories', 'Home Decor'];
@@ -95,12 +95,12 @@ use Illuminate\Support\Facades\Storage;
                     <option value="{{ $category }}" {{ request('category') == $category ? 'selected' : '' }}>{{ $category }}</option>
                     @endforeach
                 </select>
-                <select name="status" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <select name="status" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000]">
                     <option value="">All Status</option>
                     <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
                     <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
                 </select>
-                <select name="stock" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <select name="stock" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000]">
                     <option value="">All Stock Levels</option>
                     <option value="in_stock" {{ request('stock') == 'in_stock' ? 'selected' : '' }}>In Stock</option>
                     <option value="low_stock" {{ request('stock') == 'low_stock' ? 'selected' : '' }}>Low Stock</option>
@@ -108,7 +108,7 @@ use Illuminate\Support\Facades\Storage;
                 </select>
             </div>
             <div class="flex space-x-2">
-                <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                <button type="submit" class="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors">
                     <i class="fas fa-search mr-2"></i>Search
                 </button>
                 <a href="{{ route('admin.products.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
@@ -126,7 +126,7 @@ use Illuminate\Support\Facades\Storage;
                 <!-- Checkbox for bulk selection -->
                 <div class="absolute top-3 left-3 z-10">
                     <input type="checkbox" 
-                           class="product-checkbox w-5 h-5 text-purple-600 bg-white border-gray-300 rounded focus:ring-purple-500 focus:ring-2 cursor-pointer"
+                           class="product-checkbox w-5 h-5 text-[#800000] bg-white border-gray-300 rounded focus:ring-[#800000] focus:ring-2 cursor-pointer"
                            value="{{ $product->id }}"
                            onchange="updateBulkDeleteButton()">
                 </div>
@@ -136,7 +136,7 @@ use Illuminate\Support\Facades\Storage;
                              class="w-full h-full object-cover"
                              onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 300%22%3E%3Crect fill=%22%23f0e9ff%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%236b21a8%22 font-size=%2248%22%3E🧵%3C/text%3E%3C/svg%3E';">
                     @else
-                        <div class="w-full h-full bg-gradient-to-br from-purple-100 to-pink-100 flex flex-col items-center justify-center">
+                        <div class="w-full h-full bg-gradient-to-br from-red-50 to-orange-50 flex flex-col items-center justify-center">
                             <div class="text-4xl mb-2">🧵</div>
                             <div class="text-sm text-gray-600">{{ $product->name }}</div>
                         </div>
@@ -201,7 +201,7 @@ use Illuminate\Support\Facades\Storage;
                             <i class="fas fa-eye mr-1"></i>View
                         </a>
                         <a href="{{ route('admin.products.edit', $product->id) }}" 
-                           class="flex-1 text-center px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors text-sm">
+                           class="flex-1 text-center px-3 py-2 bg-[#800000] text-white rounded hover:bg-[#600000] transition-colors text-sm">
                             <i class="fas fa-edit mr-1"></i>Edit
                         </a>
                         <button type="button"
@@ -216,7 +216,7 @@ use Illuminate\Support\Facades\Storage;
             <div class="col-span-full text-center py-12">
                 <i class="fas fa-box-open text-4xl text-gray-300 mb-4"></i>
                 <p class="text-gray-500">No products found</p>
-                <a href="{{ route('admin.products.create') }}" class="mt-4 inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                <a href="{{ route('admin.products.create') }}" class="mt-4 inline-flex items-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors">
                     <i class="fas fa-plus mr-2"></i>Add Your First Product
                 </a>
             </div>

@@ -12,10 +12,10 @@
         @apply w-12 h-12 rounded-full flex items-center justify-center text-white mb-4;
     }
     
-    .stat-card.blue .icon { @apply bg-gradient-to-br from-blue-400 to-blue-600; }
+    .stat-card.blue .icon { @apply bg-gradient-to-br from-[#800000] to-[#600000]; }
     .stat-card.green .icon { @apply bg-gradient-to-br from-green-400 to-green-600; }
     .stat-card.orange .icon { @apply bg-gradient-to-br from-orange-400 to-orange-600; }
-    .stat-card.purple .icon { @apply bg-gradient-to-br from-purple-400 to-purple-600; }
+    .stat-card.purple .icon { @apply bg-gradient-to-br from-[#800000] to-[#600000]; }
     .stat-card.red .icon { @apply bg-gradient-to-br from-red-400 to-red-600; }
     .stat-card.indigo .icon { @apply bg-gradient-to-br from-indigo-400 to-indigo-600; }
     
@@ -37,7 +37,7 @@
     }
     
     .quick-action-btn.primary {
-        @apply bg-blue-600 text-white hover:bg-blue-700;
+        @apply bg-[#800000] text-white hover:bg-[#600000];
     }
     
     .quick-action-btn.success {
@@ -66,7 +66,7 @@
     }
     
     .timeline-item.processing::before {
-        @apply bg-blue-500 border-blue-500;
+        @apply bg-[#800000] border-[#800000];
     }
     
     .timeline-item.pending::before {
@@ -137,7 +137,7 @@
             <div>
                 <p class="text-3xl font-bold text-gray-900">{{ $stats['processing_orders'] }}</p>
                 <p class="text-sm text-gray-600">Processing</p>
-                <p class="text-xs text-blue-600 mt-1">In production</p>
+                <p class="text-xs text-[#800000] mt-1">In production</p>
             </div>
         </div>
 
@@ -220,7 +220,7 @@
                     <p class="text-sm font-semibold">{{ $stats['pending_orders'] }}</p>
                 </div>
                 <div class="text-center">
-                    <div class="w-3 h-3 bg-blue-500 rounded-full mx-auto mb-1"></div>
+                    <div class="w-3 h-3 bg-[#800000] rounded-full mx-auto mb-1"></div>
                     <p class="text-xs text-gray-600">Processing</p>
                     <p class="text-sm font-semibold">{{ $stats['processing_orders'] }}</p>
                 </div>
@@ -275,7 +275,7 @@
                 <button onclick="filterQueue('urgent')" class="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-700 hover:bg-red-200">
                     Urgent
                 </button>
-                <button onclick="filterQueue('today')" class="px-3 py-1 text-sm rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200">
+                <button onclick="filterQueue('today')" class="px-3 py-1 text-sm rounded-lg bg-red-50 text-[#800000] hover:bg-red-100">
                     Due Today
                 </button>
             </div>
@@ -292,20 +292,20 @@
                 <p class="text-xs text-gray-500 mb-3">Custom Yakan Bag - Diamond Pattern</p>
                 <div class="flex items-center justify-between text-xs">
                     <span class="text-gray-500">Due: Tomorrow</span>
-                    <button class="text-blue-600 hover:text-blue-800">View Details</button>
+                    <button class="text-[#800000] hover:text-[#800000]">View Details</button>
                 </div>
             </div>
 
             <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-sm font-medium text-gray-900">Order #1235</span>
-                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Processing</span>
+                    <span class="px-2 py-1 bg-red-50 text-[#800000] text-xs rounded-full">Processing</span>
                 </div>
                 <p class="text-sm text-gray-600 mb-2">Customer: Jane Smith</p>
                 <p class="text-xs text-gray-500 mb-3">Silk Fabric - Custom Pattern</p>
                 <div class="flex items-center justify-between text-xs">
                     <span class="text-gray-500">Due: In 3 days</span>
-                    <button class="text-blue-600 hover:text-blue-800">View Details</button>
+                    <button class="text-[#800000] hover:text-[#800000]">View Details</button>
                 </div>
             </div>
 
@@ -318,7 +318,7 @@
                 <p class="text-xs text-gray-500 mb-3">Cotton Shirt - Geometric Pattern</p>
                 <div class="flex items-center justify-between text-xs">
                     <span class="text-gray-500">Completed: Today</span>
-                    <button class="text-blue-600 hover:text-blue-800">View Details</button>
+                    <button class="text-[#800000] hover:text-[#800000]">View Details</button>
                 </div>
             </div>
         </div>

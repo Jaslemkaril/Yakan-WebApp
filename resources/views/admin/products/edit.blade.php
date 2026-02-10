@@ -5,16 +5,25 @@ use Illuminate\Support\Facades\Storage;
 @section('title', 'Edit Product')
 
 @section('content')
-<div class="max-w-3xl mx-auto p-6 bg-white shadow rounded-lg mt-6">
-    <div class="flex items-center justify-between mb-6">
-        <h2 class="text-2xl font-bold">Edit Product</h2>
-        <a href="{{ route('admin.products.index') }}" class="text-gray-600 hover:text-gray-800">
-            <i class="fas fa-arrow-left mr-2"></i>Back to Products
-        </a>
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-[#800000] rounded-2xl p-6 sm:p-8 text-white shadow-xl">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+                <h1 class="text-xl md:text-3xl font-bold mb-2">Edit Product</h1>
+                <p class="text-red-100 text-lg">Update product details for {{ $product->name }}</p>
+            </div>
+            <a href="{{ route('admin.products.index') }}" class="mt-4 md:mt-0 inline-flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white text-sm font-medium transition">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                Back to Products
+            </a>
+        </div>
     </div>
 
+<div class="max-w-3xl mx-auto p-6 bg-white shadow rounded-lg">
+
     @if ($errors->any())
-        <div class="mb-4 p-4 border border-red-200 bg-red-50 rounded">
+        <div class="mb-4 p-4 border border-red-200 bg-red-50 rounded-lg">
             <ul class="list-disc list-inside text-sm text-red-700">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -31,7 +40,7 @@ use Illuminate\Support\Facades\Storage;
         <div>
             <label class="block font-medium text-gray-700">Name</label>
             <input type="text" name="name" value="{{ old('name', $product->name) }}"
-                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-red-600" required>
+                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#800000]" required>
         </div>
 
         <!-- Category -->
@@ -39,7 +48,7 @@ use Illuminate\Support\Facades\Storage;
             <label class="block font-medium text-gray-700 mb-2">Category</label>
             <div class="flex gap-2">
                 <select name="category_id" id="categorySelect"
-                    class="border rounded px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-red-600"
+                    class="border rounded px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-[#800000]"
                     style="border-color: #800000;">
                     <option value="">-- Select Category --</option>
                     @foreach($categories as $category)
@@ -191,7 +200,7 @@ use Illuminate\Support\Facades\Storage;
         <div>
             <label class="block font-medium text-gray-700">Price (₱)</label>
             <input type="number" name="price" value="{{ old('price', $product->price) }}"
-                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-red-600" step="0.01"
+                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#800000]" step="0.01"
                 placeholder="0.00" required>
         </div>
 
@@ -199,7 +208,7 @@ use Illuminate\Support\Facades\Storage;
         <div>
             <label class="block font-medium text-gray-700">Stock</label>
             <input type="number" name="stock" value="{{ old('stock', $product->stock) }}"
-                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-red-600" min="0"
+                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#800000]" min="0"
                 required>
         </div>
 
@@ -207,7 +216,7 @@ use Illuminate\Support\Facades\Storage;
         <div>
             <label class="block font-medium text-gray-700">Description</label>
             <textarea name="description" rows="4"
-                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-red-600">{{ old('description', $product->description) }}</textarea>
+                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#800000]">{{ old('description', $product->description) }}</textarea>
         </div>
 
         <!-- Professional Image Upload Section -->
@@ -224,9 +233,9 @@ use Illuminate\Support\Facades\Storage;
                 $images = is_array($product->all_images) ? $product->all_images : (json_decode($product->all_images, true) ?? []);
             @endphp
             @if(count($images) > 0)
-            <div class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                 <div class="flex items-center justify-between mb-3">
-                    <h4 class="font-medium text-blue-900">Current Images ({{ count($images) }})</h4>
+                    <h4 class="font-medium text-[#800000]">Current Images ({{ count($images) }})</h4>
                     <button type="button" onclick="deleteAllExistingImages()" class="text-sm text-red-600 hover:text-red-800 font-medium">
                         <i class="fas fa-trash mr-1"></i>Delete All Current Images
                     </button>
@@ -236,7 +245,7 @@ use Illuminate\Support\Facades\Storage;
                     <div class="relative group existing-image" data-image-path="{{ $img['path'] }}">
                         <img src="{{ asset('uploads/products/' . $img['path']) }}" 
                              alt="Product image {{ $index + 1 }}"
-                             class="w-full aspect-square object-cover rounded border-2 border-blue-300">
+                             class="w-full aspect-square object-cover rounded border-2 border-red-300">
                         <button type="button" onclick="deleteExistingImage('{{ $img['path'] }}', this)" 
                                 class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-700 transition-colors shadow-lg opacity-0 group-hover:opacity-100">
                             <i class="fas fa-times text-xs"></i>
@@ -316,10 +325,10 @@ use Illuminate\Support\Facades\Storage;
             </div>
 
             <!-- Image Guidelines -->
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div class="bg-red-50 border border-red-200 rounded-lg p-3">
                 <div class="flex items-start">
-                    <i class="fas fa-info-circle text-blue-600 mt-0.5 mr-2"></i>
-                    <div class="text-xs text-blue-800">
+                    <i class="fas fa-info-circle text-[#800000] mt-0.5 mr-2"></i>
+                    <div class="text-xs text-[#800000]">
                         <p class="font-medium mb-1">Image Upload Tips:</p>
                         <ul class="list-disc list-inside space-y-0.5">
                             <li>Maximum file size: 5MB per image</li>
@@ -438,7 +447,7 @@ use Illuminate\Support\Facades\Storage;
         <div>
             <label class="block font-medium text-gray-700">Status</label>
             <select name="status"
-                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-red-600" required>
+                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#800000]" required>
                 <option value="active" {{ old('status', $product->status) == 'active' ? 'selected' : '' }}>Active</option>
                 <option value="inactive" {{ old('status', $product->status) == 'inactive' ? 'selected' : '' }}>Inactive</option>
             </select>
@@ -447,7 +456,7 @@ use Illuminate\Support\Facades\Storage;
         <!-- Product Stats (Read-only info) -->
         <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
             <h3 class="font-medium text-gray-900 mb-3 flex items-center">
-                <i class="fas fa-info-circle mr-2 text-blue-600"></i>Product Information
+                <i class="fas fa-info-circle mr-2 text-[#800000]"></i>Product Information
             </h3>
             <div class="grid grid-cols-2 gap-4 text-sm">
                 <div>
@@ -472,14 +481,15 @@ use Illuminate\Support\Facades\Storage;
         <!-- Submit Buttons -->
         <div class="flex gap-3 pt-4">
             <button type="submit"
-                class="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 transition-colors duration-200">
+                class="bg-[#800000] text-white px-6 py-3 rounded-lg hover:bg-[#600000] transition-colors duration-200 font-medium shadow-lg">
                 <i class="fas fa-save mr-2"></i>Update Product
             </button>
             <a href="{{ route('admin.products.index') }}"
-                class="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition-colors duration-200">
+                class="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors duration-200 font-medium">
                 <i class="fas fa-times mr-2"></i>Cancel
             </a>
         </div>
     </form>
+</div>
 </div>
 @endsection

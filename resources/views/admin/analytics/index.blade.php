@@ -5,7 +5,7 @@
 @section('content')
 <div class="space-y-6">
     <!-- Analytics Header -->
-    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 text-white shadow-xl">
+    <div class="bg-gradient-to-r from-[#800000] to-[#600000] rounded-2xl p-8 text-white shadow-xl">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
                 <h1 class="text-3xl font-bold mb-2">Analytics Dashboard</h1>
@@ -36,8 +36,8 @@
                     <p class="text-sm font-medium text-gray-600">Total Orders</p>
                     <h3 class="text-2xl font-bold text-gray-900">{{ $salesData->sum('orders') ?? 0 }}</h3>
                 </div>
-                <div class="p-3 bg-blue-100 rounded-full">
-                    <i class="fas fa-shopping-cart text-blue-600"></i>
+                <div class="p-3 bg-red-50 rounded-full">
+                    <i class="fas fa-shopping-cart text-[#800000]"></i>
                 </div>
             </div>
         </div>
@@ -49,8 +49,8 @@
                     <p class="text-sm font-medium text-gray-600">New Users</p>
                     <h3 class="text-2xl font-bold text-gray-900">{{ $userGrowth->sum('users') ?? 0 }}</h3>
                 </div>
-                <div class="p-3 bg-purple-100 rounded-full">
-                    <i class="fas fa-users text-purple-600"></i>
+                <div class="p-3 bg-red-50 rounded-full">
+                    <i class="fas fa-users text-[#800000]"></i>
                 </div>
             </div>
         </div>

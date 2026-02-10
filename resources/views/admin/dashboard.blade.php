@@ -248,7 +248,7 @@
 @endpush
 
 @section('content')
-<div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50">
+<div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-red-50">
     <!-- Print Only Header -->
     <div class="hidden print:block print-header" style="display: none;">
         <h1 style="font-size: 24pt; color: #800000; margin-bottom: 5px;">Yakan E-commerce Dashboard Report</h1>
@@ -258,8 +258,8 @@
     
     <!-- Animated Background Elements -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none no-print">
-        <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation"></div>
-        <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation" style="animation-delay: 2s;"></div>
+        <div class="absolute -top-40 -right-40 w-80 h-80 bg-red-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation"></div>
+        <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-red-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation" style="animation-delay: 2s;"></div>
         <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation" style="animation-delay: 4s;"></div>
     </div>
 
@@ -654,7 +654,7 @@
             <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 card-hover-lift">
                 <div class="flex items-center justify-between mb-6">
                     <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-lg flex items-center justify-center">
+                        <div class="w-10 h-10 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center">
                             <i class="fas fa-chart-line text-white"></i>
                         </div>
                         <div>
@@ -663,7 +663,7 @@
                         </div>
                     </div>
                     <div class="flex items-center space-x-2">
-                        <button class="px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                        <button class="px-3 py-1 text-xs font-medium text-[#800000] bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
                             Export
                         </button>
                         <button class="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
@@ -680,7 +680,7 @@
             <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 card-hover-lift">
                 <div class="flex items-center justify-between mb-6">
                     <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-600 rounded-lg flex items-center justify-center">
+                        <div class="w-10 h-10 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center">
                             <i class="fas fa-chart-pie text-white"></i>
                         </div>
                         <div>
@@ -688,7 +688,7 @@
                             <p class="text-sm text-gray-500">Real-time distribution</p>
                         </div>
                     </div>
-                    <a href="{{ route('admin.regular.index') }}" class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1">
+                    <a href="{{ route('admin.regular.index') }}" class="text-sm text-[#800000] hover:text-[#600000] font-medium flex items-center space-x-1">
                         <span>View All</span>
                         <i class="fas fa-arrow-right text-xs"></i>
                     </a>
@@ -884,7 +884,7 @@
                         <p class="text-sm text-red-600">{{ $outOfStockCount }} product(s) need restocking</p>
                     </div>
                 </div>
-                <a href="{{ route('admin.products.index') }}" class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1">
+                <a href="{{ route('admin.products.index') }}" class="text-sm text-[#800000] hover:text-[#600000] font-medium flex items-center space-x-1">
                     <span>Manage Stock</span>
                     <i class="fas fa-arrow-right text-xs"></i>
                 </a>
@@ -920,7 +920,7 @@
             <div class="xl:col-span-2 bg-white rounded-2xl shadow-xl p-6 border border-gray-100 card-hover-lift">
                 <div class="flex items-center justify-between mb-6">
                     <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-lg flex items-center justify-center">
+                        <div class="w-10 h-10 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center">
                             <i class="fas fa-shopping-bag text-white"></i>
                         </div>
                         <div>
@@ -928,7 +928,7 @@
                             <p class="text-sm text-gray-500">Latest customer activity</p>
                         </div>
                     </div>
-                    <a href="{{ route('admin.regular.index') }}" class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1">
+                    <a href="{{ route('admin.regular.index') }}" class="text-sm text-[#800000] hover:text-[#600000] font-medium flex items-center space-x-1">
                         <span>View All</span>
                         <i class="fas fa-arrow-right text-xs"></i>
                     </a>
@@ -937,11 +937,11 @@
                     @if($recentOrders->count() > 0)
                         @foreach($recentOrders as $order)
                             <div class="group relative">
-                                <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-400 to-indigo-600 rounded-xl opacity-0 group-hover:opacity-10 transition duration-300"></div>
-                                <div class="relative bg-white rounded-xl p-4 border border-gray-100 hover:border-blue-200 transition-all duration-300">
+                                <div class="absolute -inset-0.5 bg-gradient-to-r from-[#800000] to-[#600000] rounded-xl opacity-0 group-hover:opacity-10 transition duration-300"></div>
+                                <div class="relative bg-white rounded-xl p-4 border border-gray-100 hover:border-red-200 transition-all duration-300">
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center space-x-4">
-                                            <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
+                                            <div class="w-12 h-12 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center shadow-lg">
                                                 <i class="fas fa-shopping-bag text-white"></i>
                                             </div>
                                             <div>
@@ -965,7 +965,7 @@
                                                 </span>
                                             </div>
                                             <div class="flex space-x-1">
-                                                <button class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-200 transition-colors">
+                                                <button class="w-8 h-8 bg-red-100 text-[#800000] rounded-lg flex items-center justify-center hover:bg-red-200 transition-colors">
                                                     <i class="fas fa-eye text-sm"></i>
                                                 </button>
                                             </div>
@@ -998,9 +998,9 @@
                     </div>
                 </div>
                 <div class="space-y-3">
-                    <a href="{{ route('admin.products.create') }}" class="group block w-full text-left p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 rounded-xl transition-all duration-300 border border-blue-100 hover:border-blue-200">
+                    <a href="{{ route('admin.products.create') }}" class="group block w-full text-left p-4 bg-gradient-to-r from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 rounded-xl transition-all duration-300 border border-red-100 hover:border-red-200">
                         <div class="flex items-center space-x-3">
-                            <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-lg flex items-center justify-center">
+                            <div class="w-10 h-10 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center">
                                 <i class="fas fa-plus text-white group-hover:scale-110 transition-transform"></i>
                             </div>
                             <div>
@@ -1022,9 +1022,9 @@
                         </div>
                     </a>
 
-                    <a href="{{ route('admin.users.index') }}" class="group block w-full text-left p-4 bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 rounded-xl transition-all duration-300 border border-purple-100 hover:border-purple-200">
+                    <a href="{{ route('admin.users.index') }}" class="group block w-full text-left p-4 bg-gradient-to-r from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 rounded-xl transition-all duration-300 border border-red-100 hover:border-red-200">
                         <div class="flex items-center space-x-3">
-                            <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-600 rounded-lg flex items-center justify-center">
+                            <div class="w-10 h-10 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center">
                                 <i class="fas fa-users text-white group-hover:scale-110 transition-transform"></i>
                             </div>
                             <div>

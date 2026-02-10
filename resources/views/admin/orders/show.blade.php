@@ -409,8 +409,8 @@
         @if($order->customer_notes)
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div class="flex items-center mb-4">
-                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
                         </svg>
                     </div>
@@ -419,7 +419,7 @@
                         <p class="text-sm text-gray-500">Special instructions from customer</p>
                     </div>
                 </div>
-                <div class="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <div class="bg-red-50 rounded-lg p-4 border border-red-100">
                     <p class="text-gray-700 leading-relaxed">{{ $order->customer_notes }}</p>
                 </div>
             </div>
@@ -429,7 +429,7 @@
     <!-- Order Progress Tracker -->
     <div class="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div class="flex items-center mb-6">
-            <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 text-[#800000] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
             </svg>
             <h3 class="text-base font-semibold text-gray-900">Order Progress</h3>
@@ -439,7 +439,7 @@
             <!-- Progress Line Background -->
             <div class="absolute top-8 left-0 right-0 h-0.5 bg-gray-200" style="margin: 0 4rem;"></div>
             <!-- Active Progress Line -->
-            <div class="absolute top-8 left-0 h-0.5 bg-blue-600 transition-all duration-500" style="margin-left: 4rem; width: 
+            <div class="absolute top-8 left-0 h-0.5 bg-[#800000] transition-all duration-500" style="margin-left: 4rem; width: 
                 @if($order->status == 'pending') 0%
                 @elseif($order->status == 'processing') calc(33.33% - 2.67rem)
                 @elseif($order->status == 'shipped') calc(66.66% - 5.33rem)

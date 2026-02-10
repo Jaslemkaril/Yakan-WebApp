@@ -9,7 +9,7 @@
         <div class="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
                 <h1 class="text-3xl font-bold mb-2">Edit Order #{{ $order->id }}</h1>
-                <p class="text-blue-100 text-lg">Modify order details and items</p>
+                <p class="text-red-100 text-lg">Modify order details and items</p>
                 @if($order->status !== 'pending')
                     <div class="mt-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                         <i class="fas fa-exclamation-triangle mr-1"></i>
@@ -60,7 +60,7 @@
                                 required
                                 @if($order->status !== 'pending') disabled
                                 @endif
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent @if($order->status !== 'pending') bg-gray-100 @endif">
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent @if($order->status !== 'pending') bg-gray-100 @endif">
                             <option value="">Choose a customer...</option>
                             @foreach($users as $user)
                             <option value="{{ $user->id }}" {{ old('user_id', $order->user_id) == $user->id ? 'selected' : '' }}>
@@ -82,7 +82,7 @@
                                 id="addItemBtn"
                                 @if($order->status !== 'pending') disabled
                                 @endif
-                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm @if($order->status !== 'pending') opacity-50 cursor-not-allowed @endif">
+                                class="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors text-sm @if($order->status !== 'pending') opacity-50 cursor-not-allowed @endif">
                             <i class="fas fa-plus mr-2"></i>Add Item
                         </button>
                     </div>
@@ -100,7 +100,7 @@
                                             required
                                             @if($order->status !== 'pending') disabled
                                             @endif
-                                            class="product-select w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent @if($order->status !== 'pending') bg-gray-100 @endif">
+                                            class="product-select w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent @if($order->status !== 'pending') bg-gray-100 @endif">
                                         <option value="">Select a product...</option>
                                         @foreach($products as $product)
                                         <option value="{{ $product->id }}" 
@@ -124,7 +124,7 @@
                                            required
                                            @if($order->status !== 'pending') disabled
                                            @endif
-                                           class="quantity-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent @if($order->status !== 'pending') bg-gray-100 @endif">
+                                           class="quantity-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent @if($order->status !== 'pending') bg-gray-100 @endif">
                                 </div>
                             </div>
                             
@@ -160,7 +160,7 @@
                             </div>
                             <div class="border-t pt-2 flex justify-between">
                                 <span class="font-semibold text-gray-900">Total:</span>
-                                <span class="font-bold text-lg text-blue-600" id="totalAmount">₱{{ number_format($order->total_amount, 2) }}</span>
+                                <span class="font-bold text-lg text-[#800000]" id="totalAmount">₱{{ number_format($order->total_amount, 2) }}</span>
                             </div>
                         </div>
                     </div>
@@ -179,7 +179,7 @@
                                   rows="3"
                                   @if($order->status !== 'pending') disabled
                                   @endif
-                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent @if($order->status !== 'pending') bg-gray-100 @endif"
+                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent @if($order->status !== 'pending') bg-gray-100 @endif"
                                   placeholder="Add any special instructions or notes for this order...">{{ old('notes', $order->notes) }}</textarea>
                         @error('notes')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -200,7 +200,7 @@
                         </a>
                         @if($order->status === 'pending')
                         <button type="submit" 
-                                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                class="px-6 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors">
                             <i class="fas fa-save mr-2"></i>Update Order
                         </button>
                         @else
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </label>
                         <select name="items[${index}][product_id]" 
                                 required
-                                class="product-select w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                class="product-select w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent">
                             <option value="">Select a product...</option>
                             ${productOptions}
                         </select>
@@ -313,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                min="1" 
                                value="1"
                                required
-                               class="quantity-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                               class="quantity-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent">
                     </div>
                 </div>
                 

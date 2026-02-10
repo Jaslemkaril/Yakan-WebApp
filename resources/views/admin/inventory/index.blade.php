@@ -64,13 +64,13 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+            <div class="bg-white rounded-lg shadow p-4 border-l-4 border-[#800000]">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm text-gray-500">Total Items</p>
                         <p class="text-2xl font-bold text-gray-900">{{ $products->total() }}</p>
                     </div>
-                    <i class="fas fa-chart-bar text-blue-500 text-2xl"></i>
+                    <i class="fas fa-chart-bar text-[#800000] text-2xl"></i>
                 </div>
             </div>
         </div>
@@ -118,7 +118,7 @@
                             <span>View</span>
                         </div>
                         <div class="flex items-center gap-1">
-                            <i class="fas fa-edit text-blue-600"></i>
+                            <i class="fas fa-edit text-[#800000]"></i>
                             <span>Edit</span>
                         </div>
                         <div class="flex items-center gap-1">
@@ -133,7 +133,7 @@
                     <div class="font-medium text-gray-700 mb-2 sm:mb-1">Product Actions:</div>
                     <div class="flex flex-wrap gap-2 sm:gap-3">
                         <div class="flex items-center gap-1">
-                            <i class="fas fa-eye text-purple-600"></i>
+                            <i class="fas fa-eye text-[#800000]"></i>
                             <span>View</span>
                         </div>
                         <div class="flex items-center gap-1">
@@ -240,7 +240,7 @@
                                         <a href="{{ route('admin.inventory.show', $inventory) }}" class="text-red-600 hover:text-red-900" title="View Inventory">
                                             <i class="fas fa-box"></i>
                                         </a>
-                                        <a href="{{ route('admin.inventory.edit', $inventory) }}" class="text-blue-600 hover:text-blue-900" title="Edit Inventory">
+                                        <a href="{{ route('admin.inventory.edit', $inventory) }}" class="text-[#800000] hover:text-[#600000]" title="Edit Inventory">
                                             <i class="fas fa-edit"></i>
                                         </a>
                                         @if($inventory->isLowStock())
@@ -265,7 +265,7 @@
                                     @endif
                                     
                                     <!-- Product Actions -->
-                                    <a href="{{ route('products.show', $product->id) }}" class="text-purple-600 hover:text-purple-900" title="View Product">
+                                    <a href="{{ route('products.show', $product->id) }}" class="text-[#800000] hover:text-[#600000]" title="View Product">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     <a href="{{ route('admin.products.edit', $product->id) }}" class="text-orange-600 hover:text-orange-900" title="Edit Product">

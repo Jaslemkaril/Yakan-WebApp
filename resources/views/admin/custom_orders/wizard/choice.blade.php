@@ -10,7 +10,7 @@
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
                     <h1 class="text-xl font-semibold text-gray-900">Create Custom Order</h1>
-                    <span class="ml-3 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">Admin Mode</span>
+                    <span class="ml-3 px-2 py-1 text-xs font-medium bg-red-50 text-[#800000] rounded-full">Admin Mode</span>
                 </div>
                 <a href="{{ route('admin.custom-orders.index') }}" class="text-gray-500 hover:text-gray-700">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -27,14 +27,14 @@
             <div class="flex items-center justify-center space-x-6">
                 <div class="flex items-center group">
                     <div class="relative">
-                        <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg">
+                        <div class="w-8 h-8 bg-[#800000] text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg">
                             1
                         </div>
                         <div class="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
                     </div>
-                    <span class="ml-3 font-bold text-blue-600">Choose Type</span>
+                    <span class="ml-3 font-bold text-[#800000]">Choose Type</span>
                 </div>
-                <div class="w-16 h-1 bg-gradient-to-r from-blue-600 to-gray-300 rounded-full"></div>
+                <div class="w-16 h-1 bg-gradient-to-r from-[#800000] to-gray-300 rounded-full"></div>
                 <div class="flex items-center group opacity-60">
                     <div class="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold">
                         2
@@ -57,7 +57,7 @@
         <!-- Page Header -->
         <div class="bg-white rounded-lg shadow p-6 mb-8">
             <div class="flex items-center">
-                <svg class="w-8 h-8 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-8 h-8 text-[#800000] mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
                 </svg>
                 <div>
@@ -71,11 +71,11 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             
             <!-- Product-Based Customization -->
-            <div class="bg-white rounded-xl shadow-lg border-2 border-gray-200 overflow-hidden hover:border-blue-500 hover:shadow-xl transition-all duration-300">
+            <div class="bg-white rounded-xl shadow-lg border-2 border-gray-200 overflow-hidden hover:border-[#800000] hover:shadow-xl transition-all duration-300">
                 <div class="p-6">
                     <div class="flex items-center mb-6">
-                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mr-4">
-                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center mr-4">
+                            <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                             </svg>
                         </div>
@@ -87,7 +87,7 @@
 
                     <div class="space-y-4 mb-6">
                         <div class="flex items-start">
-                            <svg class="w-5 h-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-[#800000] mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <div>
@@ -97,7 +97,7 @@
                         </div>
                         
                         <div class="flex items-start">
-                            <svg class="w-5 h-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-[#800000] mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <div>
@@ -107,7 +107,7 @@
                         </div>
                         
                         <div class="flex items-start">
-                            <svg class="w-5 h-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-[#800000] mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <div>
@@ -117,9 +117,9 @@
                         </div>
                     </div>
 
-                    <div class="bg-blue-50 rounded-lg p-4 mb-6">
-                        <h4 class="font-semibold text-blue-900 mb-2">Perfect for:</h4>
-                        <ul class="text-sm text-blue-700 space-y-1">
+                    <div class="bg-red-50 rounded-lg p-4 mb-6">
+                        <h4 class="font-semibold text-[#800000] mb-2">Perfect for:</h4>
+                        <ul class="text-sm text-[#800000] space-y-1">
                             <li>• Customer phone orders</li>
                             <li>• In-person customizations</li>
                             <li>• Business bulk orders</li>
@@ -127,7 +127,7 @@
                         </ul>
                     </div>
 
-                    <button onclick="selectChoice('product')" class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center">
+                    <button onclick="selectChoice('product')" class="w-full bg-[#800000] text-white py-3 px-6 rounded-lg font-semibold hover:bg-[#600000] transition-colors duration-200 flex items-center justify-center">
                         <span>Start Product Customization</span>
                         <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -137,11 +137,11 @@
             </div>
 
             <!-- Fabric-First Customization -->
-            <div class="bg-white rounded-xl shadow-lg border-2 border-gray-200 overflow-hidden hover:border-purple-500 hover:shadow-xl transition-all duration-300">
+            <div class="bg-white rounded-xl shadow-lg border-2 border-gray-200 overflow-hidden hover:border-[#800000] hover:shadow-xl transition-all duration-300">
                 <div class="p-6">
                     <div class="flex items-center mb-6">
-                        <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mr-4">
-                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center mr-4">
+                            <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
                             </svg>
                         </div>
@@ -153,7 +153,7 @@
 
                     <div class="space-y-4 mb-6">
                         <div class="flex items-start">
-                            <svg class="w-5 h-5 text-purple-500 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-[#800000] mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <div>
@@ -163,7 +163,7 @@
                         </div>
                         
                         <div class="flex items-start">
-                            <svg class="w-5 h-5 text-purple-500 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-[#800000] mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <div>
@@ -173,7 +173,7 @@
                         </div>
                         
                         <div class="flex items-start">
-                            <svg class="w-5 h-5 text-purple-500 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-[#800000] mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <div>
@@ -183,9 +183,9 @@
                         </div>
                     </div>
 
-                    <div class="bg-purple-50 rounded-lg p-4 mb-6">
-                        <h4 class="font-semibold text-purple-900 mb-2">Perfect for:</h4>
-                        <ul class="text-sm text-purple-700 space-y-1">
+                    <div class="bg-red-50 rounded-lg p-4 mb-6">
+                        <h4 class="font-semibold text-[#800000] mb-2">Perfect for:</h4>
+                        <ul class="text-sm text-[#800000] space-y-1">
                             <li>• Custom fabric orders</li>
                             <li>• Design projects</li>
                             <li>• Bulk fabric requests</li>
@@ -193,7 +193,7 @@
                         </ul>
                     </div>
 
-                    <button onclick="selectChoice('fabric')" class="w-full bg-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-700 transition-colors duration-200 flex items-center justify-center">
+                    <button onclick="selectChoice('fabric')" class="w-full bg-[#800000] text-white py-3 px-6 rounded-lg font-semibold hover:bg-[#600000] transition-colors duration-200 flex items-center justify-center">
                         <span>Start Fabric Design</span>
                         <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -234,7 +234,7 @@ function selectChoice(choice) {
     loadingDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
     loadingDiv.innerHTML = `
         <div class="bg-white rounded-lg p-6 flex items-center">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#800000] mr-3"></div>
             <span class="text-gray-700">Loading customization options...</span>
         </div>
     `;

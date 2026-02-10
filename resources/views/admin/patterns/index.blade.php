@@ -103,7 +103,7 @@
                                     {{ ucfirst($pattern->difficulty_level) }}
                                 </span>
                                 @if($pattern->is_active)
-                                    <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-800">Active</span>
+                                    <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full bg-red-50 text-[#800000]">Active</span>
                                 @else
                                     <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-800">Inactive</span>
                                 @endif
