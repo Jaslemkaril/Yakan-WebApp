@@ -388,7 +388,7 @@
         <!-- Enhanced Stats Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 animate-slide-in-left">
             <!-- Total Revenue Card -->
-            <div class="group relative">
+            <a href="{{ route('admin.analytics.sales') }}" class="group relative block cursor-pointer">
                 <div class="absolute -inset-0.5 bg-[#800000] rounded-xl sm:rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
                 <div class="relative bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 card-hover-lift">
                     <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
@@ -414,10 +414,10 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
 
             <!-- Total Orders Card -->
-            <div class="group relative">
+            <a href="{{ route('admin.orders.index') }}" class="group relative block cursor-pointer">
                 <div class="absolute -inset-0.5 bg-[#800000] rounded-xl sm:rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
                 <div class="relative bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 card-hover-lift">
                     <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
@@ -443,10 +443,10 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
 
             <!-- Total Users Card -->
-            <div class="group relative">
+            <a href="{{ route('admin.users.index') }}" class="group relative block cursor-pointer">
                 <div class="absolute -inset-0.5 bg-[#800000] rounded-xl sm:rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
                 <div class="relative bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 card-hover-lift">
                     <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
@@ -472,10 +472,10 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
 
             <!-- Completed Orders Card -->
-            <div class="group relative">
+            <a href="{{ route('admin.orders.index') }}?status=completed" class="group relative block cursor-pointer">
                 <div class="absolute -inset-0.5 bg-[#800000] rounded-xl sm:rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
                 <div class="relative bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 card-hover-lift">
                     <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
@@ -501,13 +501,13 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <!-- Additional Analytics Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <!-- Average Order Value -->
-            <div class="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift">
+            <a href="{{ route('admin.analytics.sales') }}" class="block bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift hover:shadow-xl transition-shadow cursor-pointer">
                 <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
                     <div class="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-[#800000] rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
                         <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3v3m-6-1v-6a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
@@ -521,10 +521,10 @@
                     <p class="text-gray-600 text-xs sm:text-sm font-medium">Avg Order Value</p>
                     <p class="text-xs text-gray-500 hidden sm:block">Per completed order</p>
                 </div>
-            </div>
+            </a>
 
             <!-- Today's Orders -->
-            <div class="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift">
+            <a href="{{ route('admin.orders.index') }}?date=today" class="block bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift hover:shadow-xl transition-shadow cursor-pointer">
                 <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
                     <div class="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-[#800000] rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
                         <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -538,10 +538,10 @@
                     <p class="text-gray-600 text-xs sm:text-sm font-medium">Orders Today</p>
                     <p class="text-xs text-gray-500 hidden sm:block">₱{{ number_format($todayRevenue, 0) }} revenue</p>
                 </div>
-            </div>
+            </a>
 
             <!-- Shipped Orders -->
-            <div class="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift">
+            <a href="{{ route('admin.orders.index') }}?status=shipped" class="block bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift hover:shadow-xl transition-shadow cursor-pointer">
                 <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
                     <div class="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-[#800000] rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
                         <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
@@ -555,10 +555,10 @@
                     <p class="text-gray-600 text-xs sm:text-sm font-medium">Shipped Orders</p>
                     <p class="text-xs text-gray-500 hidden sm:block">On the way to customers</p>
                 </div>
-            </div>
+            </a>
 
             <!-- Orders with Notes -->
-            <div class="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift">
+            <a href="{{ route('admin.orders.index') }}" class="block bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift hover:shadow-xl transition-shadow cursor-pointer">
                 <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
                     <div class="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-[#800000] rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
                         <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
@@ -572,7 +572,7 @@
                     <p class="text-gray-600 text-xs sm:text-sm font-medium">Orders with Notes</p>
                     <p class="text-xs text-gray-500 hidden sm:block">{{ $totalOrders > 0 ? round(($ordersWithNotes / $totalOrders) * 100) : 0 }}% of total orders</p>
                 </div>
-            </div>
+            </a>
         </div>
 
         <!-- Payment & Delivery Analytics -->
