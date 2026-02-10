@@ -730,6 +730,16 @@
             <!-- Best Sellers Tab -->
             <div x-show="activeTab === 'bestsellers'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
                 @if($topProducts->count() > 0)
+                    <!-- Best Sellers Chart -->
+                    <div class="mb-8 bg-gray-50 rounded-xl p-6 border border-gray-200">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-4">
+                            <i class="fas fa-chart-bar mr-2 text-green-600"></i>Sales Comparison
+                        </h3>
+                        <div class="relative h-80">
+                            <canvas id="bestSellersChart"></canvas>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                         @foreach($topProducts as $index => $item)
                             @php
@@ -784,6 +794,16 @@
             <!-- Low Sales Tab -->
             <div x-show="activeTab === 'lowsales'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
                 @if($lowSalesProducts->count() > 0)
+                    <!-- Low Sales Chart -->
+                    <div class="mb-8 bg-gray-50 rounded-xl p-6 border border-gray-200">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-4">
+                            <i class="fas fa-chart-bar mr-2 text-orange-600"></i>Sales Comparison
+                        </h3>
+                        <div class="relative h-80">
+                            <canvas id="lowSalesChart"></canvas>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                         @foreach($lowSalesProducts as $index => $item)
                             @php
@@ -1189,6 +1209,196 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+
+    // Best Sellers Chart
+    const bestSellersCtx = document.getElementById('bestSellersChart');
+    if (bestSellersCtx) {
+        new Chart(bestSellersCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: @json($topProducts->map(function($item) { return optional($item->product)->name ?? 'Product'; })),
+                datasets: [{
+                    label: 'Units Sold',
+                    data: @json($topProducts->pluck('sold')),
+                    backgroundColor: [
+                        'rgba(34, 197, 94, 0.8)',
+                        'rgba(22, 163, 74, 0.8)',
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(5, 150, 105, 0.8)',
+                        'rgba(4, 120, 87, 0.8)',
+                        'rgba(6, 95, 70, 0.8)',
+                        'rgba(5, 83, 58, 0.8)',
+                        'rgba(4, 72, 50, 0.8)',
+                        'rgba(3, 60, 43, 0.8)',
+                        'rgba(2, 50, 35, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgb(34, 197, 94)',
+                        'rgb(22, 163, 74)',
+                        'rgb(16, 185, 129)',
+                        'rgb(5, 150, 105)',
+                        'rgb(4, 120, 87)',
+                        'rgb(6, 95, 70)',
+                        'rgb(5, 83, 58)',
+                        'rgb(4, 72, 50)',
+                        'rgb(3, 60, 43)',
+                        'rgb(2, 50, 35)'
+                    ],
+                    borderRadius: 8,
+                    borderWidth: 2,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        cornerRadius: 8,
+                        titleFont: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: 13
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                return 'Sold: ' + context.parsed.x + ' units';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value + ' units';
+                            },
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Low Sales Chart
+    const lowSalesCtx = document.getElementById('lowSalesChart');
+    if (lowSalesCtx) {
+        new Chart(lowSalesCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: @json($lowSalesProducts->map(function($item) { return optional($item->product)->name ?? 'Product'; })),
+                datasets: [{
+                    label: 'Units Sold',
+                    data: @json($lowSalesProducts->pluck('sold')),
+                    backgroundColor: [
+                        'rgba(251, 146, 60, 0.8)',
+                        'rgba(249, 115, 22, 0.8)',
+                        'rgba(234, 88, 12, 0.8)',
+                        'rgba(194, 65, 12, 0.8)',
+                        'rgba(154, 52, 18, 0.8)',
+                        'rgba(120, 40, 13, 0.8)',
+                        'rgba(92, 31, 11, 0.8)',
+                        'rgba(88, 28, 12, 0.8)',
+                        'rgba(78, 22, 6, 0.8)',
+                        'rgba(69, 19, 5, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgb(251, 146, 60)',
+                        'rgb(249, 115, 22)',
+                        'rgb(234, 88, 12)',
+                        'rgb(194, 65, 12)',
+                        'rgb(154, 52, 18)',
+                        'rgb(120, 40, 13)',
+                        'rgb(92, 31, 11)',
+                        'rgb(88, 28, 12)',
+                        'rgb(78, 22, 6)',
+                        'rgb(69, 19, 5)'
+                    ],
+                    borderRadius: 8,
+                    borderWidth: 2,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        cornerRadius: 8,
+                        titleFont: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: 13
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                return 'Sold: ' + context.parsed.x + ' units';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value + ' units';
+                            },
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 });
 </script>
 @endsection
