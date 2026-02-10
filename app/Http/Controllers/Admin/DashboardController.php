@@ -364,6 +364,128 @@ class DashboardController extends Controller
     }
 
     /**
+     * Print Report - renders a printable page with selectable report sections
+     */
+    public function printReport(Request $request)
+    {
+        try {
+            $period = $request->get('period', 'all');
+            $sections = $request->get('sections', []);
+
+            // If no sections selected, show all
+            if (empty($sections)) {
+                $sections = ['revenue', 'product_sales', 'transactions', 'users'];
+            }
+
+            // Date filtering
+            $dateQuery = Order::query();
+            switch ($period) {
+                case 'daily':
+                    $dateQuery->whereDate('created_at', today());
+                    break;
+                case 'weekly':
+                    $dateQuery->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                    break;
+                case 'yearly':
+                    $dateQuery->whereYear('created_at', now()->year);
+                    break;
+            }
+
+            $data = ['period' => $period, 'sections' => $sections];
+
+            // --- Total Revenue ---
+            if (in_array('revenue', $sections)) {
+                $data['totalRevenue'] = (float) (clone $dateQuery)->where('status', 'completed')->sum('total_amount');
+                $data['totalOrders'] = (clone $dateQuery)->count();
+                $data['completedOrders'] = (clone $dateQuery)->where('status', 'completed')->count();
+                $data['pendingOrders'] = (clone $dateQuery)->where('status', 'pending')->count();
+                $data['averageOrderValue'] = $data['completedOrders'] > 0 ? $data['totalRevenue'] / $data['completedOrders'] : 0;
+
+                // Monthly revenue for chart (last 12 months)
+                $data['monthlyRevenue'] = Order::where('status', 'completed')
+                    ->where('created_at', '>=', now()->subMonths(12))
+                    ->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, SUM(total_amount) as revenue, COUNT(*) as orders')
+                    ->groupBy('year', 'month')
+                    ->orderBy('year')
+                    ->orderBy('month')
+                    ->get();
+
+                // Daily revenue for the selected period
+                $daysRange = match($period) {
+                    'daily' => 1,
+                    'weekly' => 7,
+                    'yearly' => 365,
+                    default => 30,
+                };
+                $data['dailyRevenue'] = Order::where('status', 'completed')
+                    ->where('created_at', '>=', now()->subDays($daysRange))
+                    ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue, COUNT(*) as orders')
+                    ->groupBy('date')
+                    ->orderBy('date')
+                    ->get();
+
+                // Payment method breakdown
+                $data['paymentMethods'] = (clone $dateQuery)->selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
+                    ->groupBy('payment_method')
+                    ->get();
+            }
+
+            // --- Product Sales Report ---
+            if (in_array('product_sales', $sections)) {
+                $topProductsQuery = OrderItem::selectRaw('product_id, SUM(quantity) as sold, SUM(price * quantity) as revenue')
+                    ->groupBy('product_id')
+                    ->orderByDesc('sold')
+                    ->with('product');
+
+                if ($period !== 'all') {
+                    $topProductsQuery->whereHas('order', function($q) use ($dateQuery) {
+                        $q->whereIn('id', (clone $dateQuery)->pluck('id'));
+                    });
+                }
+
+                $data['productSales'] = $topProductsQuery->get();
+                $data['totalProducts'] = Product::count();
+                $data['outOfStockCount'] = Product::where('stock', '<=', 0)->count();
+            }
+
+            // --- Transaction History ---
+            if (in_array('transactions', $sections)) {
+                $data['transactions'] = (clone $dateQuery)->with(['user', 'items.product'])
+                    ->orderByDesc('created_at')
+                    ->get();
+            }
+
+            // --- Total Users ---
+            if (in_array('users', $sections)) {
+                $data['totalUsers'] = User::count();
+                $data['adminUsers'] = User::where('role', 'admin')->count();
+                $data['customerUsers'] = User::where('role', '!=', 'admin')->count();
+                $data['newUsersThisMonth'] = User::where('created_at', '>=', now()->startOfMonth())->count();
+                $data['newUsersThisWeek'] = User::where('created_at', '>=', now()->startOfWeek())->count();
+
+                // User growth by month (last 12 months)
+                $data['userGrowth'] = User::where('created_at', '>=', now()->subMonths(12))
+                    ->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, COUNT(*) as users')
+                    ->groupBy('year', 'month')
+                    ->orderBy('year')
+                    ->orderBy('month')
+                    ->get();
+
+                // Top customers
+                $data['topCustomers'] = User::withCount('orders')
+                    ->orderByDesc('orders_count')
+                    ->take(10)
+                    ->get();
+            }
+
+            return view('admin.print-report', $data);
+        } catch (\Exception $e) {
+            \Log::error('Print report error: ' . $e->getMessage());
+            return redirect()->route('admin.dashboard')->with('error', 'Unable to generate print report: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Export dashboard report to CSV
      */
     public function exportReport(Request $request, $type = null)

@@ -310,7 +310,7 @@
                         <span class="sm:hidden">CSV</span>
                     </a>
                     
-                    <button onclick="window.print()" class="px-4 py-2 bg-[#800000] text-white rounded-lg font-medium hover:bg-[#600000] transition-colors flex items-center gap-2">
+                    <button onclick="document.getElementById('printReportModal').classList.remove('hidden')" class="px-4 py-2 bg-[#800000] text-white rounded-lg font-medium hover:bg-[#600000] transition-colors flex items-center gap-2">
                         <i class="fas fa-print"></i>
                         <span class="hidden sm:inline">Print Report</span>
                         <span class="sm:hidden">Print</span>
@@ -1400,5 +1400,166 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+</script>
+
+<!-- Print Report Options Modal -->
+<div id="printReportModal" class="hidden fixed inset-0 z-[9999] overflow-y-auto" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 py-6">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onclick="document.getElementById('printReportModal').classList.add('hidden')"></div>
+        
+        <!-- Modal Content -->
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-auto transform transition-all">
+            <!-- Header -->
+            <div class="bg-[#800000] rounded-t-2xl px-6 py-5">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-print text-white text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-white">Print Report</h3>
+                            <p class="text-sm text-red-200">Choose which sections to include</p>
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('printReportModal').classList.add('hidden')" class="text-white/70 hover:text-white transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <form id="printReportForm" action="{{ route('admin.dashboard.print') }}" method="GET" target="_blank">
+                <input type="hidden" name="period" value="{{ $period }}">
+                
+                <div class="p-6 space-y-4">
+                    <!-- Select All -->
+                    <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                        <span class="text-sm font-semibold text-gray-700">Select Report Sections</span>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" id="selectAllSections" onchange="toggleAllSections(this)" checked
+                                class="w-4 h-4 text-[#800000] rounded focus:ring-[#800000] border-gray-300">
+                            <span class="text-xs font-medium text-gray-500">Select All</span>
+                        </label>
+                    </div>
+
+                    <!-- Section: Total Revenue -->
+                    <label class="flex items-start space-x-4 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[#800000] hover:bg-red-50/50 transition-all duration-200 report-section-label">
+                        <input type="checkbox" name="sections[]" value="revenue" checked
+                            class="mt-1 w-5 h-5 text-[#800000] rounded focus:ring-[#800000] border-gray-300 section-checkbox">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-peso-sign text-[#800000]"></i>
+                                <span class="font-semibold text-gray-800">Total Revenue</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Revenue summary with graph, monthly breakdown, and payment method analysis</p>
+                        </div>
+                    </label>
+
+                    <!-- Section: Product Sales -->
+                    <label class="flex items-start space-x-4 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[#800000] hover:bg-red-50/50 transition-all duration-200 report-section-label">
+                        <input type="checkbox" name="sections[]" value="product_sales" checked
+                            class="mt-1 w-5 h-5 text-[#800000] rounded focus:ring-[#800000] border-gray-300 section-checkbox">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-box text-[#800000]"></i>
+                                <span class="font-semibold text-gray-800">Product Sales Report</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Sales per product with quantities, unit prices, and total revenue per item</p>
+                        </div>
+                    </label>
+
+                    <!-- Section: Transaction History -->
+                    <label class="flex items-start space-x-4 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[#800000] hover:bg-red-50/50 transition-all duration-200 report-section-label">
+                        <input type="checkbox" name="sections[]" value="transactions" checked
+                            class="mt-1 w-5 h-5 text-[#800000] rounded focus:ring-[#800000] border-gray-300 section-checkbox">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-receipt text-[#800000]"></i>
+                                <span class="font-semibold text-gray-800">Transaction History</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Complete list with date, order ID, products purchased, and total amounts</p>
+                        </div>
+                    </label>
+
+                    <!-- Section: Total Users -->
+                    <label class="flex items-start space-x-4 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[#800000] hover:bg-red-50/50 transition-all duration-200 report-section-label">
+                        <input type="checkbox" name="sections[]" value="users" checked
+                            class="mt-1 w-5 h-5 text-[#800000] rounded focus:ring-[#800000] border-gray-300 section-checkbox">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-users text-[#800000]"></i>
+                                <span class="font-semibold text-gray-800">Total Users</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">User summary count, role breakdown, growth chart, and top customers</p>
+                        </div>
+                    </label>
+
+                    <!-- Validation message -->
+                    <p id="printValidation" class="hidden text-sm text-red-600 font-medium">
+                        <i class="fas fa-exclamation-circle mr-1"></i>Please select at least one section.
+                    </p>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-b-2xl border-t border-gray-200">
+                    <button type="button" onclick="document.getElementById('printReportModal').classList.add('hidden')" 
+                        class="px-5 py-2.5 text-gray-600 bg-white border border-gray-300 rounded-lg font-medium hover:bg-gray-100 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" id="printReportBtn"
+                        class="px-6 py-2.5 bg-[#800000] text-white rounded-lg font-semibold hover:bg-[#600000] transition-colors flex items-center space-x-2">
+                        <i class="fas fa-external-link-alt"></i>
+                        <span>Generate & Print</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleAllSections(selectAllCheckbox) {
+    document.querySelectorAll('.section-checkbox').forEach(cb => {
+        cb.checked = selectAllCheckbox.checked;
+        updateLabelStyle(cb);
+    });
+}
+
+function updateLabelStyle(checkbox) {
+    const label = checkbox.closest('.report-section-label');
+    if (checkbox.checked) {
+        label.classList.add('border-[#800000]', 'bg-red-50/50');
+        label.classList.remove('border-gray-200', 'opacity-60');
+    } else {
+        label.classList.remove('border-[#800000]', 'bg-red-50/50');
+        label.classList.add('border-gray-200', 'opacity-60');
+    }
+}
+
+// Handle individual checkbox changes
+document.querySelectorAll('.section-checkbox').forEach(cb => {
+    cb.addEventListener('change', function() {
+        updateLabelStyle(this);
+        // Update Select All state
+        const allChecked = document.querySelectorAll('.section-checkbox:checked').length === document.querySelectorAll('.section-checkbox').length;
+        document.getElementById('selectAllSections').checked = allChecked;
+        document.getElementById('printValidation').classList.add('hidden');
+    });
+});
+
+// Form submission validation
+document.getElementById('printReportForm').addEventListener('submit', function(e) {
+    const checked = document.querySelectorAll('.section-checkbox:checked');
+    if (checked.length === 0) {
+        e.preventDefault();
+        document.getElementById('printValidation').classList.remove('hidden');
+        return false;
+    }
+    // Close modal after short delay
+    setTimeout(() => document.getElementById('printReportModal').classList.add('hidden'), 300);
+});
+
+// Initialize label styles
+document.querySelectorAll('.section-checkbox').forEach(cb => updateLabelStyle(cb));
 </script>
 @endsection
