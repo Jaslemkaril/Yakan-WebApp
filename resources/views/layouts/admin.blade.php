@@ -970,10 +970,11 @@
         @endif
     </a>
 
-    <!-- <a href="{{ route('admin.analytics') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 group {{ request()->routeIs('admin.analytics') ? 'nav-link-active' : '' }}">
-        <i class="fas fa-chart-line w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0"></i>
-        <span class="sidebar-text font-medium text-gray-700 group-hover:text-gray-900">Analytics</span>
-    </a> -->
+    {{-- Analytics Dashboard --}}
+    <a href="{{ route('admin.analytics-dashboard.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ request()->routeIs('admin.analytics-dashboard.*') ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+        <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Analytics</span>
+    </a>
     
     <!-- Settings Section -->
     <div class="pt-4 mt-4 border-t" style="border-color: rgba(255,255,255,0.1);">

@@ -2,8 +2,10 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Home, ShoppingBag, User, MessageCircle, Scissors } from 'lucide-react-native';
+import { useTheme } from '../context/ThemeContext';
 
 const BottomNav = ({ navigation, activeRoute }) => {
+  const { theme, isDarkMode } = useTheme();
   const navItems = [
     { route: 'Home', icon: Home, label: 'Home' },
     { route: 'Products', icon: ShoppingBag, label: 'Products' },
@@ -13,7 +15,10 @@ const BottomNav = ({ navigation, activeRoute }) => {
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { 
+      backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF',
+      borderTopColor: isDarkMode ? '#333' : '#E5E7EB',
+    }]}>
       {navItems.map((item) => {
         const isActive = activeRoute === item.route;
         const IconComponent = item.icon;
@@ -25,14 +30,18 @@ const BottomNav = ({ navigation, activeRoute }) => {
             onPress={() => navigation.navigate(item.route)}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconContainer, isActive && styles.activeIconContainer]}>
+            <View style={[styles.iconContainer, isActive && { backgroundColor: isDarkMode ? '#3D1515' : '#FEE2E2' }]}>
               <IconComponent
                 size={24}
-                color={isActive ? '#8B1A1A' : '#9CA3AF'}
+                color={isActive ? theme.primary : (isDarkMode ? '#777' : '#9CA3AF')}
                 strokeWidth={isActive ? 2.5 : 2}
               />
             </View>
-            <Text style={[styles.label, isActive && styles.activeLabel]}>
+            <Text style={[
+              styles.label, 
+              { color: isDarkMode ? '#777' : '#9CA3AF' },
+              isActive && { color: theme.primary, fontWeight: '700' }
+            ]}>
               {item.label}
             </Text>
           </TouchableOpacity>

@@ -17,6 +17,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import BottomNav from '../components/BottomNav';
+import ScreenHeader from '../components/ScreenHeader';
+import { useTheme } from '../context/ThemeContext';
 import colors from '../constants/colors';
 import ApiService from '../services/api';
 import API_CONFIG from '../config/config';
@@ -31,6 +33,8 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const { getCartCount, isLoggedIn, addToWishlist, removeFromWishlist, isInWishlist } = useCart();
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
 
   // Fetch products from API on component mount
   useEffect(() => {
@@ -80,13 +84,18 @@ export default function HomeScreen({ navigation }) {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      console.log('🏠 HomeScreen: Fetching products from API...');
+      console.log('🏠 HomeScreen: Starting fetchProducts...');
       console.log('🏠 HomeScreen: API Base URL:', API_CONFIG.API_BASE_URL);
       
       const response = await ApiService.getProducts();
+      console.log('🏠 HomeScreen: API response received:', response?.success);
       
       if (!response.success) {
-        throw new Error(response.error || 'Failed to fetch products');
+        console.warn('🏠 HomeScreen: API returned error:', response.error);
+        console.warn('🏠 HomeScreen: Using fallback mock data');
+        // Don't throw - use fallback data instead
+        setProducts(getMockProducts());
+        return;
       }
       
       const productsData = response.data?.data || response.data || [];
@@ -99,37 +108,41 @@ export default function HomeScreen({ navigation }) {
       if (featuredProducts.length === 0 && transformedProducts.length > 0) {
         setFeaturedProducts(transformedProducts.slice(0, 3));
       }
+      console.log('🏠 HomeScreen: Products loaded successfully');
     } catch (error) {
-      console.error('🏠 HomeScreen: Error fetching products:', error);
+      console.error('🏠 HomeScreen: Error fetching products:', error.message);
+      console.log('🏠 HomeScreen: Using fallback mock data due to error');
       // Fallback to mock data
-      const mockProducts = [
-        {
-          id: 1,
-          name: 'Yakan Traditional Dress',
-          description: 'Beautiful handwoven traditional Yakan dress with intricate patterns',
-          price: 2500.00,
-          image: require('../assets/images/Saputangan.jpg'),
-        },
-        {
-          id: 2,
-          name: 'Yakan Headwrap',
-          description: 'Traditional Yakan headwrap with authentic patterns',
-          price: 450.00,
-          image: require('../assets/images/pinantupan.jpg'),
-        },
-        {
-          id: 3,
-          name: 'Yakan Wall Hanging',
-          description: 'Decorative wall hanging featuring traditional Yakan weaving',
-          price: 1200.00,
-          image: require('../assets/images/Patterns.jpg'),
-        },
-      ];
-      setProducts(mockProducts);
-      setFeaturedProducts(mockProducts.slice(0, 2));
+      setProducts(getMockProducts());
     } finally {
       setLoading(false);
     }
+  };
+
+  const getMockProducts = () => {
+    return [
+      {
+        id: 1,
+        name: 'Yakan Traditional Dress',
+        description: 'Beautiful handwoven traditional Yakan dress with intricate patterns',
+        price: 2500.00,
+        image: require('../assets/images/Saputangan.jpg'),
+      },
+      {
+        id: 2,
+        name: 'Yakan Headwrap',
+        description: 'Traditional Yakan headwrap with authentic patterns',
+        price: 450.00,
+        image: require('../assets/images/pinantupan.jpg'),
+      },
+      {
+        id: 3,
+        name: 'Yakan Wall Hanging',
+        description: 'Decorative wall hanging featuring traditional Yakan weaving',
+        price: 1200.00,
+        image: require('../assets/images/Patterns.jpg'),
+      },
+    ];
   };
   
   const handleMenuPress = () => {
@@ -161,7 +174,7 @@ export default function HomeScreen({ navigation }) {
     return (
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text style={styles.loadingText}>Loading products...</Text>
         </View>
         <BottomNav navigation={navigation} activeRoute="Home" />
@@ -274,7 +287,16 @@ export default function HomeScreen({ navigation }) {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader 
+        title="TUWAS YAKAN" 
+        navigation={navigation} 
+        showBack={false}
+        rightIcon={<Ionicons name="cart" size={24} color="#fff" />}
+        onRightIconPress={() => navigation.navigate('Cart')}
+        showCartCount={true}
+        cartCount={getCartCount()}
+      />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* HERO SECTION */}
         <View style={styles.heroSection}>
@@ -284,27 +306,6 @@ export default function HomeScreen({ navigation }) {
             resizeMode="cover"
           >
             <View style={styles.heroOverlay}>
-              <View style={styles.topBar}>
-                <TouchableOpacity 
-                  style={styles.menuButton}
-                  onPress={handleMenuPress}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="menu" size={28} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.heroCartButton}
-                  onPress={() => navigation.navigate('Cart')}
-                >
-                  <Ionicons name="cart" size={28} color="#fff" />
-                  {getCartCount() > 0 && (
-                    <View style={styles.heroBadge}>
-                      <Text style={styles.heroBadgeText}>{getCartCount()}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
-
               <View style={[styles.heroSearchContainer, isSearchFocused && styles.heroSearchContainerFocused]}>
                 <Ionicons name="search" size={20} color={isSearchFocused ? "#fff" : "rgba(255,255,255,0.8)"} style={styles.heroSearchIcon} />
                 <TextInput
@@ -370,7 +371,7 @@ export default function HomeScreen({ navigation }) {
               onPress={() => navigation.navigate('Products')}
             >
               <Text style={styles.viewAllButtonText}>Browse All Products</Text>
-              <Ionicons name="arrow-forward" size={20} color={colors.white} />
+              <Ionicons name="arrow-forward" size={20} color={'#fff'} />
             </TouchableOpacity>
           </View>
         )}
@@ -432,173 +433,27 @@ export default function HomeScreen({ navigation }) {
         </View>
       </ScrollView>
 
-      {/* MENU MODAL */}
-      <Modal
-        visible={menuOpen}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={handleMenuClose}
-      >
-        <TouchableOpacity 
-          style={styles.menuOverlay}
-          activeOpacity={1}
-          onPress={handleMenuClose}
-        >
-          <View style={styles.menuContainer}>
-            <View style={styles.menuHeader}>
-              <Text style={styles.menuTitle}>Menu</Text>
-              <TouchableOpacity onPress={handleMenuClose}>
-                <Text style={styles.menuCloseIcon}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.menuContent} showsVerticalScrollIndicator={false}>
-              {/* Main Navigation */}
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => handleMenuNavigation('Home')}
-                activeOpacity={0.6}
-              >
-                <View style={styles.menuIconBox}>
-                  <Text style={styles.menuItemIcon}>⌂</Text>
-                </View>
-                <Text style={styles.menuItemText}>Home</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => handleMenuNavigation('Products')}
-                activeOpacity={0.6}
-              >
-                <View style={styles.menuIconBox}>
-                  <Text style={styles.menuItemIcon}>◆</Text>
-                </View>
-                <Text style={styles.menuItemText}>Products</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => handleMenuNavigation('CustomOrder')}
-                activeOpacity={0.6}
-              >
-                <View style={styles.menuIconBox}>
-                  <Text style={styles.menuItemIcon}>✎</Text>
-                </View>
-                <Text style={styles.menuItemText}>Custom Order</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => handleMenuNavigation('CulturalHeritage')}
-                activeOpacity={0.6}
-              >
-                <View style={styles.menuIconBox}>
-                  <Text style={styles.menuItemIcon}>◈</Text>
-                </View>
-                <Text style={styles.menuItemText}>Cultural Heritage</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => handleMenuNavigation('Wishlist')}
-                activeOpacity={0.6}
-              >
-                <View style={styles.menuIconBox}>
-                  <Text style={styles.menuItemIcon}>♡</Text>
-                </View>
-                <Text style={styles.menuItemText}>Wishlist</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => handleMenuNavigation('TrackOrders')}
-                activeOpacity={0.6}
-              >
-                <View style={styles.menuIconBox}>
-                  <Text style={styles.menuItemIcon}>▢</Text>
-                </View>
-                <Text style={styles.menuItemText}>Track Orders</Text>
-              </TouchableOpacity>
-
-              <View style={styles.menuDivider} />
-
-              {/* Account Section */}
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => handleMenuNavigation('Account')}
-                activeOpacity={0.6}
-              >
-                <View style={styles.menuIconBox}>
-                  <Text style={styles.menuItemIcon}>◉</Text>
-                </View>
-                <Text style={styles.menuItemText}>Account</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => handleMenuNavigation('Settings')}
-                activeOpacity={0.6}
-              >
-                <View style={styles.menuIconBox}>
-                  <Text style={styles.menuItemIcon}>⚙</Text>
-                </View>
-                <Text style={styles.menuItemText}>Settings</Text>
-              </TouchableOpacity>
-
-              <View style={styles.menuDivider} />
-
-              {/* Auth Section */}
-              {isLoggedIn && (
-                <TouchableOpacity 
-                  style={[styles.menuItem, styles.menuItemLogout]}
-                  onPress={handleLogout}
-                  activeOpacity={0.6}
-                >
-                  <View style={[styles.menuIconBox, styles.menuIconBoxLogout]}>
-                    <Text style={[styles.menuItemIcon, styles.menuItemIconLogout]}>⊗</Text>
-                  </View>
-                  <Text style={[styles.menuItemText, styles.menuItemTextLogout]}>Logout</Text>
-                </TouchableOpacity>
-              )}
-
-              {!isLoggedIn && (
-                <TouchableOpacity 
-                  style={[styles.menuItem, styles.menuItemLogin]}
-                  onPress={() => handleMenuNavigation('Login')}
-                  activeOpacity={0.6}
-                >
-                  <View style={[styles.menuIconBox, styles.menuIconBoxLogin]}>
-                    <Text style={[styles.menuItemIcon, styles.menuItemIconLogin]}>⊕</Text>
-                  </View>
-                  <Text style={[styles.menuItemText, styles.menuItemTextLogin]}>Login</Text>
-                </TouchableOpacity>
-              )}
-            </ScrollView>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
       {/* BOTTOM NAVIGATION */}
       <BottomNav navigation={navigation} activeRoute="Home" />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: theme.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: theme.background,
   },
   loadingText: {
     marginTop: 15,
     fontSize: 16,
-    color: colors.text,
+    color: theme.text,
   },
   scrollView: {
     flex: 1,
@@ -654,7 +509,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroBadgeText: {
-    color: colors.white,
+    color: '#fff',
     fontSize: 11,
     fontWeight: 'bold',
   },
@@ -687,7 +542,7 @@ const styles = StyleSheet.create({
   heroSearchInput: {
     flex: 1,
     fontSize: 16,
-    color: colors.white,
+    color: '#fff',
     paddingVertical: 0,
   },
   clearButtonHero: {
@@ -701,19 +556,19 @@ const styles = StyleSheet.create({
   logoMain: {
     fontSize: 52,
     fontWeight: 'bold',
-    color: colors.white,
+    color: '#fff',
     letterSpacing: 4,
   },
   logoSub: {
     fontSize: 40,
     fontWeight: 'bold',
-    color: colors.white,
+    color: '#fff',
     letterSpacing: 3,
     marginTop: -5,
   },
   tagline: {
     fontSize: 16,
-    color: colors.white,
+    color: '#fff',
     marginTop: 8,
     fontStyle: 'italic',
     letterSpacing: 1,
@@ -732,16 +587,16 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: colors.text,
+    color: theme.text,
   },
   seeAllText: {
     fontSize: 14,
-    color: colors.primary,
+    color: theme.primary,
     fontWeight: '600',
   },
   noProductsText: {
     fontSize: 14,
-    color: colors.textLight,
+    color: theme.textSecondary,
     marginLeft: 20,
     fontStyle: 'italic',
   },
@@ -750,11 +605,11 @@ const styles = StyleSheet.create({
   },
   featuredCard: {
     width: 220,
-    backgroundColor: colors.white,
+    backgroundColor: theme.cardBackground,
     borderRadius: 15,
     marginHorizontal: 5,
     overflow: 'hidden',
-    shadowColor: colors.black,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15,
     shadowRadius: 5,
@@ -773,7 +628,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     right: 10,
-    backgroundColor: colors.white,
+    backgroundColor: theme.cardBackground,
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -786,13 +641,13 @@ const styles = StyleSheet.create({
   featuredName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: colors.text,
+    color: theme.text,
     marginBottom: 8,
   },
   featuredPrice: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: colors.primary,
+    color: theme.primary,
   },
   // SHOP ALL PRODUCTS SECTION
   productsSection: {
@@ -808,7 +663,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: theme.primary,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 10,
@@ -816,7 +671,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   viewAllButtonText: {
-    color: colors.white,
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -850,45 +705,45 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   culturalContent: {
-    backgroundColor: colors.white,
+    backgroundColor: theme.cardBackground,
     padding: 20,
     borderRadius: 15,
   },
   culturalText: {
     fontSize: 14,
-    color: colors.text,
+    color: theme.text,
     lineHeight: 22,
     marginBottom: 15,
   },
   culturalSubtitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: colors.text,
+    color: theme.text,
     marginTop: 10,
     marginBottom: 10,
   },
   learnMoreButton: {
     marginTop: 10,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: theme.primary,
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 20,
     alignSelf: 'flex-start',
   },
   learnMoreText: {
-    color: colors.primary,
+    color: theme.primary,
     fontSize: 15,
     fontWeight: '600',
   },
   // PRODUCT CARD
   productCard: {
     width: '48%',
-    backgroundColor: colors.white,
+    backgroundColor: theme.cardBackground,
     borderRadius: 15,
     marginBottom: 15,
     overflow: 'hidden',
-    shadowColor: colors.black,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -907,7 +762,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     right: 10,
-    backgroundColor: colors.white,
+    backgroundColor: theme.cardBackground,
     width: 35,
     height: 35,
     borderRadius: 17.5,
@@ -925,12 +780,12 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: colors.text,
+    color: theme.text,
     marginBottom: 5,
   },
   productDescription: {
     fontSize: 12,
-    color: colors.textLight,
+    color: theme.textSecondary,
     marginBottom: 10,
     lineHeight: 16,
   },
@@ -943,10 +798,10 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: colors.text,
+    color: theme.text,
   },
   cartButton: {
-    backgroundColor: colors.black,
+    backgroundColor: theme.text,
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -962,9 +817,9 @@ const styles = StyleSheet.create({
   menuContainer: {
     width: '72%',
     height: '100%',
-    backgroundColor: '#fafafa',
+    backgroundColor: theme.surfaceBg,
     paddingTop: 50,
-    shadowColor: colors.black,
+    shadowColor: '#000',
     shadowOffset: { width: 3, height: 0 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -977,17 +832,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#efefef',
+    borderBottomColor: theme.borderLight,
   },
   menuTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#2c2c2c',
+    color: theme.text,
     letterSpacing: 0.5,
   },
   menuCloseIcon: {
     fontSize: 24,
-    color: '#999',
+    color: theme.textMuted,
     fontWeight: '300',
   },
   menuContent: {
@@ -1005,19 +860,19 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.surfaceBg,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
   },
   menuItemIcon: {
     fontSize: 18,
-    color: '#666',
+    color: theme.textSecondary,
     fontWeight: '300',
   },
   menuItemText: {
     fontSize: 15,
-    color: '#2c2c2c',
+    color: theme.text,
     fontWeight: '400',
     letterSpacing: 0.3,
   },
@@ -1027,16 +882,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: colors.primary,
+    backgroundColor: theme.primary,
   },
   menuIconBoxLogin: {
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   menuItemIconLogin: {
-    color: colors.white,
+    color: '#fff',
   },
   menuItemTextLogin: {
-    color: colors.white,
+    color: '#fff',
     fontWeight: '600',
   },
   menuItemLogout: {
@@ -1045,21 +900,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#ffe8e8',
+    backgroundColor: theme.dangerBg,
   },
   menuIconBoxLogout: {
     backgroundColor: 'rgba(211, 47, 47, 0.15)',
   },
   menuItemIconLogout: {
-    color: '#d32f2f',
+    color: theme.dangerText,
   },
   menuItemTextLogout: {
-    color: '#d32f2f',
+    color: theme.dangerText,
     fontWeight: '600',
   },
   menuDivider: {
     height: 1,
-    backgroundColor: '#efefef',
+    backgroundColor: theme.borderLight,
     marginVertical: 8,
     marginHorizontal: 16,
   },

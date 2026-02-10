@@ -15,8 +15,12 @@ import * as ImagePicker from 'expo-image-picker';
 import colors from '../constants/colors';
 import { useOrders } from '../../useOrders';
 import { trackingStages } from '../constants/tracking';
+import ScreenHeader from '../components/ScreenHeader';
+import { useTheme } from '../context/ThemeContext';
 
 const TrackOrderScreen = ({ navigation }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
   const {
     orders,
     loading,
@@ -216,14 +220,12 @@ const TrackOrderScreen = ({ navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Track Orders</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader 
+        title="Track Orders" 
+        navigation={navigation} 
+        showBack={true}
+      />
 
       {orders.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -264,21 +266,21 @@ const TrackOrderScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: theme.textSecondary,
   },
   header: {
     flexDirection: 'row',
@@ -287,18 +289,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 15,
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
   },
   backButton: {
     fontSize: 28,
-    color: '#333',
+    color: theme.text,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
   },
   emptyContainer: {
     flex: 1,
@@ -313,18 +315,18 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
     marginBottom: 10,
   },
   emptyText: {
     fontSize: 15,
-    color: '#666',
+    color: theme.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 30,
   },
   shopButton: {
-    backgroundColor: '#8B1A1A',
+    backgroundColor: theme.primary,
     paddingHorizontal: 30,
     paddingVertical: 15,
     borderRadius: 8,
@@ -342,12 +344,12 @@ const styles = StyleSheet.create({
   },
   orderCount: {
     fontSize: 15,
-    color: '#666',
+    color: theme.textSecondary,
     marginBottom: 10,
     marginLeft: 5,
   },
   orderCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 15,
@@ -369,13 +371,13 @@ const styles = StyleSheet.create({
   },
   orderRefLabel: {
     fontSize: 13,
-    color: '#666',
+    color: theme.textSecondary,
     marginRight: 6,
   },
   orderRef: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
   },
   statusBadge: {
     paddingHorizontal: 12,
@@ -389,12 +391,12 @@ const styles = StyleSheet.create({
   },
   orderDate: {
     fontSize: 13,
-    color: '#999',
+    color: theme.textMuted,
     marginBottom: 12,
   },
   divider: {
     height: 1,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.borderLight,
     marginVertical: 12,
   },
   itemsContainer: {
@@ -402,18 +404,18 @@ const styles = StyleSheet.create({
   },
   itemText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     marginBottom: 4,
   },
   moreItems: {
     fontSize: 13,
-    color: '#8B1A1A',
+    color: theme.primary,
     fontStyle: 'italic',
     marginTop: 4,
   },
   customDetailText: {
     fontSize: 13,
-    color: '#666',
+    color: theme.textSecondary,
     fontStyle: 'italic',
     marginTop: 4,
   },
@@ -423,19 +425,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: theme.borderLight,
   },
   totalLabel: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textSecondary,
   },
   totalAmount: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#8B1A1A',
+    color: theme.primary,
   },
   paymentReminder: {
-    backgroundColor: '#FFF3F3',
+    backgroundColor: theme.warningBg,
     borderLeftWidth: 3,
     borderLeftColor: '#FF9800',
     padding: 12,
@@ -449,16 +451,16 @@ const styles = StyleSheet.create({
   },
   reminderText: {
     fontSize: 12,
-    color: '#D84315',
+    color: theme.warningText,
     lineHeight: 18,
     flex: 1,
     marginRight: 10,
   },
   uploadButtonText: {
     fontSize: 12,
-    color: '#8B1A1A',
+    color: theme.primary,
     fontWeight: 'bold',
-    backgroundColor: '#FFF',
+    backgroundColor: theme.cardBackground,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
@@ -469,7 +471,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.successBg,
     padding: 10,
     marginTop: 12,
     borderRadius: 6,
@@ -478,7 +480,7 @@ const styles = StyleSheet.create({
   },
   proofUploadedText: {
     fontSize: 12,
-    color: '#2E7D32',
+    color: theme.successText,
     fontWeight: '600',
   },
   proofThumbnail: {
@@ -494,7 +496,7 @@ const styles = StyleSheet.create({
   },
   viewDetailsText: {
     fontSize: 13,
-    color: '#8B1A1A',
+    color: theme.primary,
     fontWeight: '600',
   },
 });

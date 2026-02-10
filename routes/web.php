@@ -837,13 +837,20 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         Route::post('/{user}/toggle', [UserManagementController::class, 'toggleStatus'])->name('users.toggle');
     });
 
-    // Analytics & Reports
+    // Analytics & Reports (legacy)
     Route::prefix('analytics')->group(function () {
         Route::get('/', [DashboardController::class, 'analytics'])->name('analytics');
         Route::get('/sales', [DashboardController::class, 'salesReport'])->name('analytics.sales');
         Route::get('/products', [DashboardController::class, 'productsReport'])->name('analytics.products');
         Route::get('/users', [DashboardController::class, 'usersReport'])->name('analytics.users');
         Route::get('/export/{type}', [DashboardController::class, 'exportReport'])->name('analytics.export');
+    });
+
+    // Analytics Dashboard (full-featured)
+    Route::prefix('analytics-dashboard')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\AnalyticsDashboardController::class, 'index'])->name('analytics-dashboard.index');
+        Route::get('/chart-data', [\App\Http\Controllers\Admin\AnalyticsDashboardController::class, 'chartData'])->name('analytics-dashboard.chart-data');
+        Route::get('/export/{type}', [\App\Http\Controllers\Admin\AnalyticsDashboardController::class, 'exportReport'])->name('analytics-dashboard.export');
     });
 
     // System Settings

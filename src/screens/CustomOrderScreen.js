@@ -10,11 +10,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import BottomNav from '../components/BottomNav';
+import ScreenHeader from '../components/ScreenHeader';
+import { useTheme } from '../context/ThemeContext';
 import colors from '../constants/colors';
 
 const { width } = require('react-native').Dimensions.get('window');
 
 const CustomOrderScreen = ({ navigation }) => {
+  const { theme } = useTheme();
   const webURL = 'https://yakan-webapp-production.up.railway.app/custom-orders';
 
   const handleOpenWebsite = () => {
@@ -36,19 +39,13 @@ const CustomOrderScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader 
+        title="Custom Order" 
+        navigation={navigation} 
+        showBack={false}
+      />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Custom Order</Text>
-          <View style={{ width: 24 }} />
-        </View>
 
         {/* Main Content */}
         <View style={styles.contentContainer}>

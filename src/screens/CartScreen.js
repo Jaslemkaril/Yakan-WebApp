@@ -14,9 +14,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import API_CONFIG from '../config/config';
 import colors from '../constants/colors';
+import ScreenHeader from '../components/ScreenHeader';
+import { useTheme } from '../context/ThemeContext';
 
 const CartScreen = ({ navigation }) => {
   const { cartItems, removeFromCart, updateQuantity, getCartTotal, clearCart, fetchCart, isLoggedIn, setCheckoutItems } = useCart();
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedItems, setSelectedItems] = useState({});
 
@@ -280,17 +284,14 @@ const CartScreen = ({ navigation }) => {
   const allSelected = selectedCount === cartItems.length && cartItems.length > 0;
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Shopping Cart</Text>
-        <TouchableOpacity onPress={handleClearCart}>
-          <Text style={styles.clearButton}>Clear</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader 
+        title="Shopping Cart" 
+        navigation={navigation} 
+        showBack={true}
+        rightIcon={<Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>Clear</Text>}
+        onRightIconPress={handleClearCart}
+      />
 
       {/* Select All Section */}
       <View style={styles.selectAllContainer}>
@@ -350,21 +351,21 @@ const CartScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: colors.text,
+    color: theme.text,
   },
   header: {
     flexDirection: 'row',
@@ -372,24 +373,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: colors.white,
+    backgroundColor: theme.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: theme.border,
     marginTop: 12,
   },
   backButton: {
     fontSize: 24,
-    color: colors.primary,
+    color: theme.primary,
     fontWeight: 'bold',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: colors.text,
+    color: theme.text,
   },
   clearButton: {
     fontSize: 14,
-    color: colors.primary,
+    color: theme.primary,
     fontWeight: '600',
   },
   listContent: {
@@ -398,7 +399,7 @@ const styles = StyleSheet.create({
   },
   cartItemCard: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     marginBottom: 12,
     overflow: 'hidden',
@@ -415,11 +416,11 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   selectAllContainer: {
-    backgroundColor: colors.white,
+    backgroundColor: theme.cardBackground,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: theme.border,
   },
   selectAllButton: {
     flexDirection: 'row',
@@ -429,7 +430,7 @@ const styles = StyleSheet.create({
   selectAllText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.text,
+    color: theme.text,
   },
   imageContainer: {
     position: 'relative',
@@ -439,12 +440,12 @@ const styles = StyleSheet.create({
   productImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.surfaceBg,
   },
   placeholderImage: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#e8e8e8',
+    backgroundColor: theme.surfaceBg,
   },
   placeholderText: {
     fontSize: 40,
@@ -457,12 +458,12 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.text,
+    color: theme.text,
     marginBottom: 4,
   },
   productDescription: {
     fontSize: 12,
-    color: colors.textLight,
+    color: theme.textSecondary,
     marginBottom: 8,
   },
   priceRow: {
@@ -473,13 +474,13 @@ const styles = StyleSheet.create({
   },
   unitPrice: {
     fontSize: 12,
-    color: colors.textLight,
+    color: theme.textSecondary,
     textDecorationLine: 'line-through',
   },
   totalPrice: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: colors.primary,
+    color: theme.primary,
   },
   quantityControls: {
     flexDirection: 'row',
@@ -490,12 +491,12 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 6,
-    backgroundColor: colors.primary,
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   quantityButtonText: {
-    color: colors.white,
+    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -504,14 +505,14 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: theme.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   quantityText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.text,
+    color: theme.text,
   },
   removeButton: {
     marginLeft: 'auto',
@@ -536,33 +537,33 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: colors.text,
+    color: theme.text,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 14,
-    color: colors.textLight,
+    color: theme.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
   },
   shopButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: theme.primary,
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 8,
   },
   shopButtonText: {
-    color: colors.white,
+    color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },
   summarySection: {
-    backgroundColor: colors.white,
+    backgroundColor: theme.cardBackground,
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: theme.border,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -572,37 +573,37 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: colors.textLight,
+    color: theme.textSecondary,
   },
   summaryValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.text,
+    color: theme.text,
   },
   divider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: theme.border,
     marginVertical: 12,
   },
   totalLabel: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: colors.text,
+    color: theme.text,
   },
   totalValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: colors.primary,
+    color: theme.primary,
   },
   checkoutButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: theme.primary,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 16,
   },
   checkoutButtonText: {
-    color: colors.white,
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -612,10 +613,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: theme.primary,
   },
   continueShoppingText: {
-    color: colors.primary,
+    color: theme.primary,
     fontSize: 14,
     fontWeight: '600',
   },

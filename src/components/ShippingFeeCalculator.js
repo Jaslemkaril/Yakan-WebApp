@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import colors from '../constants/colors';
-import useShippingFee from '../hooks/useShippingFee';
+import { useShippingFee } from '../hooks/useShippingFee';
 
 const ShippingFeeCalculator = ({ onFeeCalculated, initialDistance = 0 }) => {
   const [distance, setDistance] = useState(initialDistance.toString());

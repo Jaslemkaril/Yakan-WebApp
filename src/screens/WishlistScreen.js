@@ -12,6 +12,8 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useCart } from '../context/CartContext';
+import ScreenHeader from '../components/ScreenHeader';
+import { useTheme } from '../context/ThemeContext';
 import colors from '../constants/colors';
 import BottomNav from '../components/BottomNav';
 import ApiService from '../services/api';
@@ -20,6 +22,8 @@ import API_CONFIG from '../config/config';
 const { width } = Dimensions.get('window');
 
 export default function WishlistScreen({ navigation }) {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
   const { addToCart, isLoggedIn, wishlistItems, removeFromWishlist, fetchWishlist } = useCart();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -77,16 +81,12 @@ export default function WishlistScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Wishlist</Text>
-          <View style={styles.backButton} />
-        </View>
+        <ScreenHeader 
+          title="Wishlist" 
+          navigation={navigation}
+          showBack={false}
+          showHamburger={true}
+        />
 
         <View style={styles.emptyContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -101,16 +101,12 @@ export default function WishlistScreen({ navigation }) {
   if (wishlistItems.length === 0) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Wishlist</Text>
-          <View style={styles.backButton} />
-        </View>
+        <ScreenHeader 
+          title="Wishlist" 
+          navigation={navigation}
+          showBack={false}
+          showHamburger={true}
+        />
 
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>♡</Text>
@@ -130,17 +126,13 @@ export default function WishlistScreen({ navigation }) {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Wishlist ({wishlistItems.length})</Text>
-        <View style={styles.backButton} />
-      </View>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader 
+        title={`Wishlist (${wishlistItems.length})`} 
+        navigation={navigation}
+        showBack={false}
+        showHamburger={true}
+      />
 
       <ScrollView 
         style={styles.content} 
@@ -155,11 +147,14 @@ export default function WishlistScreen({ navigation }) {
       >
         {wishlistItems.map((product) => {
           // Handle image URL - use /uploads/products/ path
-          const imageUri = product.image?.startsWith('http') 
-            ? product.image 
-            : product.image?.startsWith('/uploads') || product.image?.startsWith('/storage')
-              ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${product.image}`
-              : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/uploads/products/${product.image}`;
+          const imgStr = typeof product.image === 'string' ? product.image : '';
+          const imageUri = imgStr.startsWith('http') 
+            ? imgStr 
+            : imgStr.startsWith('/uploads') || imgStr.startsWith('/storage')
+              ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${imgStr}`
+              : imgStr
+                ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/uploads/products/${imgStr}`
+                : null;
 
           return (
             <View key={product.id} style={styles.wishlistItem}>
@@ -206,10 +201,10 @@ export default function WishlistScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.background,
   },
   header: {
     flexDirection: 'row',
@@ -218,13 +213,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.border,
     marginTop: 8,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
   },
   backButton: {
     width: 40,
@@ -234,7 +229,7 @@ const styles = StyleSheet.create({
   },
   backIcon: {
     fontSize: 24,
-    color: '#333',
+    color: theme.text,
   },
   content: {
     flex: 1,
@@ -254,16 +249,16 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: theme.textMuted,
     marginBottom: 24,
   },
   shopButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: theme.primary,
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 8,
@@ -275,12 +270,12 @@ const styles = StyleSheet.create({
   },
   wishlistItem: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     borderRadius: 8,
     marginBottom: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: theme.border,
   },
   productImage: {
     width: 100,
@@ -295,18 +290,18 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 4,
   },
   productDescription: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textSecondary,
     marginBottom: 8,
   },
   productPrice: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.primary,
+    color: theme.primary,
     marginBottom: 8,
   },
   actionButtons: {
@@ -315,7 +310,7 @@ const styles = StyleSheet.create({
   },
   addToCartBtn: {
     flex: 1,
-    backgroundColor: colors.primary,
+    backgroundColor: theme.primary,
     paddingVertical: 8,
     borderRadius: 6,
     alignItems: 'center',
@@ -330,12 +325,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   removeText: {
-    color: '#666',
+    color: theme.textSecondary,
     fontWeight: '600',
     fontSize: 12,
   },

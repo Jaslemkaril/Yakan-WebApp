@@ -39,34 +39,42 @@ export const CartProvider = ({ children }) => {
       const token = await AsyncStorage.getItem('authToken');
       console.log('[Auth] Initialize - token exists:', !!token);
       if (token) {
-        // Token exists, try to get user info from backend
-        const response = await ApiService.getCurrentUser();
-        console.log('[Auth] getCurrentUser response:', JSON.stringify(response, null, 2));
-        if (response.success) {
-          // Extract user data - check if it's nested in response.data.data or response.data
-          let userData = response.data?.data || response.data?.user || response.data;
-          console.log('[Auth] Extracted user data:', JSON.stringify(userData, null, 2));
-          
-          // Ensure we have the name field
-          if (!userData.name && userData.first_name && userData.last_name) {
-            userData.name = `${userData.first_name} ${userData.last_name}`;
-            console.log('[Auth] Created name from first_name + last_name:', userData.name);
+        try {
+          // Token exists, try to get user info from backend
+          const response = await ApiService.getCurrentUser();
+          console.log('[Auth] getCurrentUser response:', JSON.stringify(response, null, 2));
+          if (response.success) {
+            // Extract user data - check if it's nested in response.data.data or response.data
+            let userData = response.data?.data || response.data?.user || response.data;
+            console.log('[Auth] Extracted user data:', JSON.stringify(userData, null, 2));
+            
+            // Ensure we have the name field
+            if (!userData.name && userData.first_name && userData.last_name) {
+              userData.name = `${userData.first_name} ${userData.last_name}`;
+              console.log('[Auth] Created name from first_name + last_name:', userData.name);
+            }
+            
+            console.log('[Auth] Final user data to set:', JSON.stringify(userData, null, 2));
+            setUserInfo(userData);
+            setIsLoggedIn(true);
+          } else {
+            // Token invalid, clear it
+            console.log('[Auth] Token invalid, clearing');
+            await AsyncStorage.removeItem('authToken');
+            setIsLoggedIn(false);
           }
-          
-          console.log('[Auth] Final user data to set:', JSON.stringify(userData, null, 2));
-          setUserInfo(userData);
-          setIsLoggedIn(true);
-        } else {
-          // Token invalid, clear it
-          console.log('[Auth] Token invalid, clearing');
-          await AsyncStorage.removeItem('authToken');
+        } catch (apiError) {
+          // If API call fails (network error, server down, etc.), 
+          // don't crash - just log and continue as logged out
+          console.warn('[Auth] API call failed, continuing as logged out:', apiError.message);
           setIsLoggedIn(false);
         }
       } else {
         console.log('[Auth] No token found');
       }
     } catch (error) {
-      console.error('Auth initialization error:', error);
+      console.error('[Auth] Initialization error:', error);
+      // Don't throw - let app continue
     } finally {
       setIsLoadingAuth(false);
     }

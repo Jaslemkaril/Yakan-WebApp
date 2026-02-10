@@ -15,6 +15,8 @@ import { useCart } from '../context/CartContext';
 import ApiService from '../services/api';
 import API_CONFIG from '../config/config';
 import BottomNav from '../components/BottomNav';
+import ScreenHeader from '../components/ScreenHeader';
+import { useTheme } from '../context/ThemeContext';
 import colors from '../constants/colors';
 
 const ProductsScreen = ({ navigation }) => {
@@ -25,6 +27,8 @@ const ProductsScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState(['All']);
   const { isLoggedIn, addToWishlist, removeFromWishlist, isInWishlist } = useCart();
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
 
   // Fetch products from API
   useEffect(() => {
@@ -137,14 +141,14 @@ const ProductsScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Products</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Cart')}>
-          <Ionicons name="cart" size={28} color="#fff" />
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader 
+        title="Products" 
+        navigation={navigation} 
+        showBack={false}
+        rightIcon={<Ionicons name="cart" size={24} color="#fff" />}
+        onRightIconPress={() => navigation.navigate('Cart')}
+      />
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -279,21 +283,21 @@ const ProductsScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   loadingText: {
     marginTop: 15,
     fontSize: 16,
-    color: '#666',
+    color: theme.textSecondary,
   },
   header: {
     flexDirection: 'row',
@@ -302,12 +306,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 15,
-    backgroundColor: '#8B1A1A',
+    backgroundColor: theme.headerBg,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: theme.headerText,
   },
   content: {
     flex: 1,
@@ -315,7 +319,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     margin: 15,
     paddingHorizontal: 18,
     paddingVertical: 14,
@@ -329,7 +333,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   searchContainerFocused: {
-    borderColor: colors.primary,
+    borderColor: theme.primary,
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 6,
@@ -340,7 +344,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: theme.text,
     paddingVertical: 0,
   },
   clearButton: {
@@ -354,19 +358,19 @@ const styles = StyleSheet.create({
   categoryButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     borderRadius: 20,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
   },
   categoryButtonActive: {
-    backgroundColor: '#8B1A1A',
-    borderColor: '#8B1A1A',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   categoryText: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textSecondary,
   },
   categoryTextActive: {
     color: '#fff',
@@ -380,7 +384,7 @@ const styles = StyleSheet.create({
   },
   productCard: {
     width: '48%',
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     borderRadius: 15,
     marginBottom: 15,
     overflow: 'hidden',
@@ -403,7 +407,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     right: 10,
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     width: 35,
     height: 35,
     borderRadius: 17.5,
@@ -421,12 +425,12 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
     marginBottom: 5,
   },
   productDescription: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textSecondary,
     marginBottom: 10,
     lineHeight: 16,
   },
@@ -439,10 +443,10 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
   },
   cartButton: {
-    backgroundColor: '#000',
+    backgroundColor: theme.primary,
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -456,7 +460,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    color: theme.textMuted,
   },
 });
 

@@ -17,6 +17,8 @@ import ApiService from '../services/api';
 import NotificationService from '../services/notificationService';
 import colors from '../constants/colors';
 import * as ImagePicker from 'expo-image-picker';
+import ScreenHeader from '../components/ScreenHeader';
+import { useTheme } from '../context/ThemeContext';
 
 // Payment account details (customize these for your store)
 const PAYMENT_ACCOUNTS = {
@@ -32,17 +34,17 @@ const PAYMENT_ACCOUNTS = {
 };
 
 export default function PaymentScreen({ navigation, route }) {
+  const { theme } = useTheme();
   const { orderData } = route.params || {};
   
   if (!orderData) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backButton}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Payment</Text>
-        </View>
+        <ScreenHeader 
+          title="Payment" 
+          navigation={navigation} 
+          showBack={true}
+        />
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Order data not found. Please try again.</Text>
         </View>
@@ -619,15 +621,12 @@ export default function PaymentScreen({ navigation, route }) {
 
   // Payment Method Selection Screen
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Payment Method</Text>
-        <View style={{ width: 50 }} />
-      </View>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader 
+        title="Payment Method" 
+        navigation={navigation} 
+        showBack={true}
+      />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Order Summary */}

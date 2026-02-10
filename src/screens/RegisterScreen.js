@@ -45,7 +45,7 @@ export default function RegisterScreen({ navigation }) {
         Alert.alert('Success', 'Registration successful! You are now logged in.', [
           {
             text: 'OK',
-            onPress: () => navigation.navigate('Home')
+            onPress: () => navigation.reset({ index: 0, routes: [{ name: 'App' }] })
           }
         ]);
       } else {

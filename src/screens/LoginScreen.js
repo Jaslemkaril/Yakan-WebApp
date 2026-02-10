@@ -71,7 +71,7 @@ export default function LoginScreen({ navigation }) {
         Alert.alert('Success', 'Logged in with Google!', [
           {
             text: 'OK',
-            onPress: () => navigation.navigate('Home')
+            onPress: () => navigation.reset({ index: 0, routes: [{ name: 'App' }] })
           }
         ]);
       } else {
@@ -104,7 +104,7 @@ export default function LoginScreen({ navigation }) {
         Alert.alert('Success', 'Login successful!', [
           {
             text: 'OK',
-            onPress: () => navigation.navigate('Home')
+            onPress: () => navigation.reset({ index: 0, routes: [{ name: 'App' }] })
           }
         ]);
       } else {
