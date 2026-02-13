@@ -18,7 +18,7 @@
         <div class="space-y-4">
             <div class="aspect-square bg-gray-100 rounded-2xl overflow-hidden shadow-lg">
                 @if($product->image)
-                    <img id="mainProductImage" src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" 
+                    <img id="mainProductImage" src="{{ $product->image_src }}" alt="{{ $product->name }}" 
                          class="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                          onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200\'><div class=\'text-8xl opacity-20\'>📦</div></div>';">
                 @else
@@ -43,9 +43,9 @@
                 @if($hasMultipleImages)
                     @foreach($allImages as $index => $img)
                         <div class="thumbnail-item w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden cursor-pointer border-2 {{ $index === 0 ? 'border-red-500' : 'border-gray-300' }} hover:border-red-400 transition-colors"
-                             onclick="changeMainImage('{{ asset('uploads/products/' . $img['path']) }}', this)"
+                             onclick="changeMainImage('{{ str_starts_with($img['path'], 'http') ? $img['path'] : asset('uploads/products/' . $img['path']) }}', this)"
                              data-color="{{ $img['color'] ?? '' }}">
-                            <img src="{{ asset('uploads/products/' . $img['path']) }}" alt="Thumbnail {{ $index + 1 }}" 
+                            <img src="{{ str_starts_with($img['path'], 'http') ? $img['path'] : asset('uploads/products/' . $img['path']) }}" alt="Thumbnail {{ $index + 1 }}" 
                                  class="w-full h-full object-cover"
                                  onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center\'><div class=\'text-2xl opacity-30\'>📦</div></div>';">
                         </div>
@@ -53,8 +53,8 @@
                 @else
                     @if($product->image)
                         <div class="thumbnail-item w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden cursor-pointer border-2 border-red-500"
-                             onclick="changeMainImage('{{ asset('uploads/products/' . $product->image) }}', this)">
-                            <img src="{{ asset('uploads/products/' . $product->image) }}" alt="Thumbnail" class="w-full h-full object-cover"
+                             onclick="changeMainImage('{{ $product->image_src }}', this)">
+                            <img src="{{ $product->image_src }}" alt="Thumbnail" class="w-full h-full object-cover"
                                  onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center\'><div class=\'text-2xl opacity-30\'>📦</div></div>';">
                         </div>
                     @endif
@@ -253,7 +253,7 @@
                         @foreach($relatedProducts as $related)
                             <a href="{{ route('products.show', $related) }}" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
                                 @if($related->image)
-                                    <img src="{{ asset('uploads/products/' . $related->image) }}" alt="{{ $related->name }}" class="w-12 h-12 object-cover rounded-lg" />
+                                    <img src="{{ $related->image_src }}" alt="{{ $related->name }}" class="w-12 h-12 object-cover rounded-lg" />
                                 @else
                                     <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
                                         <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

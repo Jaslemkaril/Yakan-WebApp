@@ -13,6 +13,7 @@ nixPkgs = [
     "php82Extensions.mbstring", 
     "php82Extensions.pdo", 
     "php82Extensions.pdo_mysql",
+    "php82Extensions.curl",
     "git"  # Git is available via Nix, no need for apt
 ]
 

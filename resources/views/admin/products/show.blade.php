@@ -34,14 +34,14 @@
                 
                 @if($product->image)
                     <div class="relative group">
-                        <img src="{{ asset('uploads/products/' . $product->image) }}" 
+                        <img src="{{ $product->image_src }}" 
                              alt="{{ $product->name }}" 
                              class="w-full h-80 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow">
                         <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded-lg transition-all duration-300"></div>
                         
                         <!-- Image Actions -->
                         <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="window.open('{{ asset('uploads/products/' . $product->image) }}', '_blank')" 
+                            <button onclick="window.open('{{ $product->image_src }}', '_blank')" 
                                     class="bg-white/90 backdrop-blur-sm text-gray-700 rounded-lg p-2 hover:bg-white transition-colors shadow-lg">
                                 <i class="fas fa-expand"></i>
                             </button>

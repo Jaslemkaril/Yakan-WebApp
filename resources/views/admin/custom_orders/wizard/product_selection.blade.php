@@ -94,7 +94,7 @@
                             
                             <div class="relative">
                                 @if($product->image)
-                                    <img src="{{ asset('storage/' . $product->image) }}" 
+                                    <img src="{{ $product->image_src }}" 
                                          alt="{{ $product->name }}" 
                                          class="w-full h-48 object-cover">
                                 @else

@@ -358,7 +358,7 @@
                         <div class="bg-white rounded-2xl shadow-xl overflow-hidden transform hover:scale-105 transition-all duration-300 animate-fade-in-up" style="animation-delay: {{ $index * 0.1 }}s">
                             <div class="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
                                 @if($product->image)
-                                    <img src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" 
+                                    <img src="{{ $product->image_src }}" alt="{{ $product->name }}" 
                                          class="w-full h-full object-cover">
                                 @else
                                     <div class="text-6xl">📦</div>

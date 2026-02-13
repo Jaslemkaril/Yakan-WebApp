@@ -260,7 +260,7 @@
                             <div class="wishlist-image">
                                 <a href="{{ route('products.show', $entity) }}" class="block w-full h-full">
                                     @if($entity->image)
-                                        <img src="{{ asset('uploads/products/' . $entity->image) }}" alt="{{ $entity->name }}" />
+                                        <img src="{{ $entity->image_src }}" alt="{{ $entity->name }}" />
                                     @else
                                         <div class="w-full h-full flex items-center justify-center">
                                             <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

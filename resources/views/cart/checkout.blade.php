@@ -265,7 +265,7 @@
                                     <!-- Product Image -->
                                     <div class="flex-shrink-0 w-24 h-24 bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm product-image-container">
                                         @if($item->product->image)
-                                            <img src="{{ asset('uploads/products/' . $item->product->image) }}" 
+                                            <img src="{{ $item->product->image_src }}" 
                                                  alt="{{ $item->product->name }}"
                                                  class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
                                         @else

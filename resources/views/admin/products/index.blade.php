@@ -132,7 +132,7 @@ use Illuminate\Support\Facades\Storage;
                 </div>
                 <div class="aspect-w-16 aspect-h-9 bg-gray-100 relative overflow-hidden rounded-lg h-48">
                     @if($product->image)
-                        <img src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" 
+                        <img src="{{ $product->image_src }}" alt="{{ $product->name }}" 
                              class="w-full h-full object-cover"
                              onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 300%22%3E%3Crect fill=%22%23f0e9ff%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%236b21a8%22 font-size=%2248%22%3E🧵%3C/text%3E%3C/svg%3E';">
                     @else

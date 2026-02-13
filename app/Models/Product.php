@@ -164,7 +164,7 @@ class Product extends Model
 
         $imagePath = $this->image;
         
-        // If it's already a full URL, return as is
+        // If it's already a full URL (Cloudinary or other CDN), return as is
         if (str_starts_with($imagePath, 'http')) {
             return $imagePath;
         }
@@ -182,7 +182,7 @@ class Product extends Model
         // Generate full absolute URL for API/mobile access
         $baseUrl = config('app.url');
         
-        // Check if file exists in new uploads directory
+        // Check if file exists in uploads directory
         if (file_exists(public_path('uploads/' . $imagePath))) {
             return $baseUrl . '/uploads/' . $imagePath;
         }
@@ -192,8 +192,27 @@ class Product extends Model
             return $baseUrl . '/storage/' . $imagePath;
         }
         
-        // Default to storage for compatibility
-        return $baseUrl . '/storage/' . $imagePath;
+        // Default to uploads path for compatibility
+        return $baseUrl . '/uploads/' . $imagePath;
+    }
+
+    /**
+     * Get the product image source for use in views
+     * Handles both Cloudinary URLs and local file paths
+     */
+    public function getImageSrcAttribute(): string
+    {
+        if (!$this->image) {
+            return '';
+        }
+
+        // If it's a full URL (Cloudinary), return as is
+        if (str_starts_with($this->image, 'http')) {
+            return $this->image;
+        }
+
+        // Local file: use asset helper path
+        return asset('uploads/products/' . $this->image);
     }
 
     /**

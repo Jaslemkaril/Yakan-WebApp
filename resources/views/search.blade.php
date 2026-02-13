@@ -62,7 +62,7 @@
                             <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow duration-300">
                                 @if($product->image)
                                     <div class="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                                        <img src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" class="h-full w-full object-cover">
+                                        <img src="{{ $product->image_src }}" alt="{{ $product->name }}" class="h-full w-full object-cover">
                                     </div>
                                 @else
                                     <div class="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">

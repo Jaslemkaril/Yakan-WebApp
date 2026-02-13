@@ -40,7 +40,7 @@
                     <div class="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 relative overflow-hidden">
                         @if($product->image)
                             <div class="relative w-full h-full">
-                                <img src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" 
+                                <img src="{{ $product->image_src }}" alt="{{ $product->name }}" 
                                      class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out">
                                 <div class="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                             </div>

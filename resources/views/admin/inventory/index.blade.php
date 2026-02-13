@@ -171,7 +171,7 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
                                     @if($product->image)
-                                        <img class="h-10 w-10 rounded-lg object-cover" src="{{ asset('uploads/products/' . $product->image) }}" alt="">
+                                        <img class="h-10 w-10 rounded-lg object-cover" src="{{ $product->image_src }}" alt="">
                                     @else
                                         <div class="h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center">
                                             <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

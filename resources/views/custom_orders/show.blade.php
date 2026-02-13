@@ -316,7 +316,7 @@
                                 @elseif($designUrl)
                                     <img src="{{ $designUrl }}" alt="Custom design preview" class="w-full h-full object-cover">
                                 @elseif(isset($order->product) && $order->product->image)
-                                    <img src="{{ asset('storage/' . $order->product->image) }}" alt="{{ $order->product->name }}" class="w-full h-full object-cover">
+                                    <img src="{{ $order->product->image_src }}" alt="{{ $order->product->name }}" class="w-full h-full object-cover">
                                 @else
                                     <svg class="w-10 h-10" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
