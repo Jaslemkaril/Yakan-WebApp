@@ -731,10 +731,18 @@
             <div x-show="activeTab === 'bestsellers'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
                 @if($topProducts->count() > 0)
                     <!-- Best Sellers Chart -->
-                    <div class="mb-8 bg-gray-50 rounded-xl p-6 border border-gray-200">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-4">
-                            <i class="fas fa-chart-bar mr-2 text-green-600"></i>Sales Comparison
-                        </h3>
+                    <div class="mb-8 bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-6 border border-emerald-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-bold text-gray-800 flex items-center">
+                                <span class="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-600 rounded-lg flex items-center justify-center mr-2 shadow-sm">
+                                    <i class="fas fa-chart-bar text-white text-xs"></i>
+                                </span>
+                                Sales Comparison
+                            </h3>
+                            <span class="text-xs text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full font-medium">
+                                <i class="fas fa-arrow-up mr-1"></i>Top Performers
+                            </span>
+                        </div>
                         <div class="relative h-80">
                             <canvas id="bestSellersChart"></canvas>
                         </div>
@@ -753,7 +761,7 @@
                                     </div>
                                     @if($product && $product->image)
                                         <div class="w-16 h-16 mx-auto mb-3 rounded-lg overflow-hidden bg-white shadow-md">
-                                            <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                                            <img src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\'w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center\'><i class=\'fas fa-box text-green-600 text-2xl\'></i></div>'">
                                         </div>
                                     @else
                                         <div class="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-md">
@@ -795,10 +803,18 @@
             <div x-show="activeTab === 'lowsales'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
                 @if($lowSalesProducts->count() > 0)
                     <!-- Low Sales Chart -->
-                    <div class="mb-8 bg-gray-50 rounded-xl p-6 border border-gray-200">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-4">
-                            <i class="fas fa-chart-bar mr-2 text-orange-600"></i>Sales Comparison
-                        </h3>
+                    <div class="mb-8 bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-bold text-gray-800 flex items-center">
+                                <span class="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-500 rounded-lg flex items-center justify-center mr-2 shadow-sm">
+                                    <i class="fas fa-chart-bar text-white text-xs"></i>
+                                </span>
+                                Sales Comparison
+                            </h3>
+                            <span class="text-xs text-orange-600 bg-orange-100 px-3 py-1 rounded-full font-medium">
+                                <i class="fas fa-arrow-down mr-1"></i>Needs Attention
+                            </span>
+                        </div>
                         <div class="relative h-80">
                             <canvas id="lowSalesChart"></canvas>
                         </div>
@@ -817,7 +833,7 @@
                                     </div>
                                     @if($product && $product->image)
                                         <div class="w-16 h-16 mx-auto mb-3 rounded-lg overflow-hidden bg-white shadow-md">
-                                            <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                                            <img src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\'w-full h-full bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center\'><i class=\'fas fa-box text-orange-600 text-2xl\'></i></div>'">
                                         </div>
                                     @else
                                         <div class="w-16 h-16 bg-gradient-to-br from-orange-100 to-red-100 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-md">
@@ -1150,10 +1166,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Order Status Chart
     const statusCtx = document.getElementById('orderStatusChart').getContext('2d');
+    const statusIcons = ['\u2705', '\u2699\uFE0F', '\u23F3', '\u274C'];
     new Chart(statusCtx, {
         type: 'doughnut',
         data: {
-            labels: ['Completed', 'Processing', 'Pending', 'Cancelled'],
+            labels: ['\u2705 Completed', '\u2699\uFE0F Processing', '\u23F3 Pending', '\u274C Cancelled'],
             datasets: [{
                 data: [
                     {{ $ordersByStatus['completed'] ?? 0 }},
@@ -1167,28 +1184,40 @@ document.addEventListener('DOMContentLoaded', function() {
                     'rgb(250, 204, 21)',
                     'rgb(239, 68, 68)'
                 ],
-                borderWidth: 0,
-                hoverOffset: 4
+                borderWidth: 3,
+                borderColor: '#ffffff',
+                hoverOffset: 8,
+                hoverBorderWidth: 0
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            cutout: '65%',
+            animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: 1000,
+                easing: 'easeOutQuart'
+            },
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        padding: 15,
+                        padding: 18,
                         usePointStyle: true,
+                        pointStyle: 'rectRounded',
                         font: {
-                            size: 12
-                        }
+                            size: 13,
+                            weight: '500'
+                        },
+                        color: '#374151'
                     }
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    padding: 12,
-                    cornerRadius: 8,
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    padding: 14,
+                    cornerRadius: 10,
                     titleFont: {
                         size: 14,
                         weight: 'bold'
@@ -1196,13 +1225,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     bodyFont: {
                         size: 13
                     },
+                    displayColors: true,
+                    boxPadding: 6,
                     callbacks: {
                         label: function(context) {
                             const label = context.label || '';
                             const value = context.parsed || 0;
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((value / total) * 100).toFixed(1);
-                            return label + ': ' + value + ' (' + percentage + '%)';
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return ' ' + value + ' orders (' + percentage + '%)';
                         }
                     }
                 }
@@ -1213,54 +1244,53 @@ document.addEventListener('DOMContentLoaded', function() {
     // Best Sellers Chart
     const bestSellersCtx = document.getElementById('bestSellersChart');
     if (bestSellersCtx) {
-        new Chart(bestSellersCtx.getContext('2d'), {
+        const bestSellersChart = bestSellersCtx.getContext('2d');
+        const bestSellersGradient = bestSellersChart.createLinearGradient(0, 0, bestSellersCtx.width, 0);
+        bestSellersGradient.addColorStop(0, 'rgba(16, 185, 129, 0.9)');
+        bestSellersGradient.addColorStop(1, 'rgba(5, 150, 105, 0.9)');
+
+        new Chart(bestSellersChart, {
             type: 'bar',
             data: {
                 labels: @json($topProducts->map(function($item) { return optional($item->product)->name ?? 'Product'; })),
                 datasets: [{
                     label: 'Units Sold',
                     data: @json($topProducts->pluck('sold')),
-                    backgroundColor: [
-                        'rgba(34, 197, 94, 0.8)',
-                        'rgba(22, 163, 74, 0.8)',
-                        'rgba(16, 185, 129, 0.8)',
-                        'rgba(5, 150, 105, 0.8)',
-                        'rgba(4, 120, 87, 0.8)',
-                        'rgba(6, 95, 70, 0.8)',
-                        'rgba(5, 83, 58, 0.8)',
-                        'rgba(4, 72, 50, 0.8)',
-                        'rgba(3, 60, 43, 0.8)',
-                        'rgba(2, 50, 35, 0.8)'
-                    ],
-                    borderColor: [
-                        'rgb(34, 197, 94)',
-                        'rgb(22, 163, 74)',
-                        'rgb(16, 185, 129)',
-                        'rgb(5, 150, 105)',
-                        'rgb(4, 120, 87)',
-                        'rgb(6, 95, 70)',
-                        'rgb(5, 83, 58)',
-                        'rgb(4, 72, 50)',
-                        'rgb(3, 60, 43)',
-                        'rgb(2, 50, 35)'
-                    ],
-                    borderRadius: 8,
-                    borderWidth: 2,
-                    borderSkipped: false
+                    backgroundColor: function(context) {
+                        const chart = context.chart;
+                        const {ctx, chartArea} = chart;
+                        if (!chartArea) return 'rgba(16, 185, 129, 0.85)';
+                        const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+                        gradient.addColorStop(0, 'rgba(16, 185, 129, 0.85)');
+                        gradient.addColorStop(1, 'rgba(5, 150, 105, 0.95)');
+                        return gradient;
+                    },
+                    borderColor: 'rgba(5, 150, 105, 1)',
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderSkipped: false,
+                    barThickness: 28,
+                    hoverBackgroundColor: 'rgba(5, 150, 105, 1)',
+                    hoverBorderColor: 'rgba(4, 120, 87, 1)',
+                    hoverBorderWidth: 2
                 }]
             },
             options: {
                 indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                    duration: 1000,
+                    easing: 'easeOutQuart'
+                },
                 plugins: {
                     legend: {
                         display: false
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
-                        cornerRadius: 8,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        padding: 14,
+                        cornerRadius: 10,
                         titleFont: {
                             size: 14,
                             weight: 'bold'
@@ -1268,7 +1298,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         bodyFont: {
                             size: 13
                         },
+                        displayColors: false,
                         callbacks: {
+                            title: function(context) {
+                                return '\uD83C\uDFC6 ' + context[0].label;
+                            },
                             label: function(context) {
                                 return 'Sold: ' + context.parsed.x + ' units';
                             }
@@ -1279,15 +1313,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     x: {
                         beginAtZero: true,
                         grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
+                            color: 'rgba(0, 0, 0, 0.06)',
+                            drawBorder: false
                         },
                         ticks: {
+                            stepSize: 1,
+                            precision: 0,
                             callback: function(value) {
-                                return value + ' units';
+                                if (Math.floor(value) === value) {
+                                    return value + ' units';
+                                }
                             },
                             font: {
-                                size: 11
-                            }
+                                size: 12,
+                                weight: '500'
+                            },
+                            color: '#6b7280'
+                        },
+                        border: {
+                            display: false
                         }
                     },
                     y: {
@@ -1296,8 +1340,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                         ticks: {
                             font: {
-                                size: 11
-                            }
+                                size: 13,
+                                weight: '600'
+                            },
+                            color: '#374151',
+                            padding: 8
+                        },
+                        border: {
+                            display: false
                         }
                     }
                 }
@@ -1308,54 +1358,50 @@ document.addEventListener('DOMContentLoaded', function() {
     // Low Sales Chart
     const lowSalesCtx = document.getElementById('lowSalesChart');
     if (lowSalesCtx) {
-        new Chart(lowSalesCtx.getContext('2d'), {
+        const lowSalesChart = lowSalesCtx.getContext('2d');
+
+        new Chart(lowSalesChart, {
             type: 'bar',
             data: {
                 labels: @json($lowSalesProducts->map(function($item) { return optional($item->product)->name ?? 'Product'; })),
                 datasets: [{
                     label: 'Units Sold',
                     data: @json($lowSalesProducts->pluck('sold')),
-                    backgroundColor: [
-                        'rgba(251, 146, 60, 0.8)',
-                        'rgba(249, 115, 22, 0.8)',
-                        'rgba(234, 88, 12, 0.8)',
-                        'rgba(194, 65, 12, 0.8)',
-                        'rgba(154, 52, 18, 0.8)',
-                        'rgba(120, 40, 13, 0.8)',
-                        'rgba(92, 31, 11, 0.8)',
-                        'rgba(88, 28, 12, 0.8)',
-                        'rgba(78, 22, 6, 0.8)',
-                        'rgba(69, 19, 5, 0.8)'
-                    ],
-                    borderColor: [
-                        'rgb(251, 146, 60)',
-                        'rgb(249, 115, 22)',
-                        'rgb(234, 88, 12)',
-                        'rgb(194, 65, 12)',
-                        'rgb(154, 52, 18)',
-                        'rgb(120, 40, 13)',
-                        'rgb(92, 31, 11)',
-                        'rgb(88, 28, 12)',
-                        'rgb(78, 22, 6)',
-                        'rgb(69, 19, 5)'
-                    ],
-                    borderRadius: 8,
-                    borderWidth: 2,
-                    borderSkipped: false
+                    backgroundColor: function(context) {
+                        const chart = context.chart;
+                        const {ctx, chartArea} = chart;
+                        if (!chartArea) return 'rgba(251, 146, 60, 0.85)';
+                        const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+                        gradient.addColorStop(0, 'rgba(251, 146, 60, 0.85)');
+                        gradient.addColorStop(1, 'rgba(234, 88, 12, 0.95)');
+                        return gradient;
+                    },
+                    borderColor: 'rgba(234, 88, 12, 1)',
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderSkipped: false,
+                    barThickness: 28,
+                    hoverBackgroundColor: 'rgba(234, 88, 12, 1)',
+                    hoverBorderColor: 'rgba(194, 65, 12, 1)',
+                    hoverBorderWidth: 2
                 }]
             },
             options: {
                 indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                    duration: 1000,
+                    easing: 'easeOutQuart'
+                },
                 plugins: {
                     legend: {
                         display: false
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
-                        cornerRadius: 8,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        padding: 14,
+                        cornerRadius: 10,
                         titleFont: {
                             size: 14,
                             weight: 'bold'
@@ -1363,7 +1409,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         bodyFont: {
                             size: 13
                         },
+                        displayColors: false,
                         callbacks: {
+                            title: function(context) {
+                                return '\uD83D\uDCC9 ' + context[0].label;
+                            },
                             label: function(context) {
                                 return 'Sold: ' + context.parsed.x + ' units';
                             }
@@ -1374,15 +1424,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     x: {
                         beginAtZero: true,
                         grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
+                            color: 'rgba(0, 0, 0, 0.06)',
+                            drawBorder: false
                         },
                         ticks: {
+                            stepSize: 1,
+                            precision: 0,
                             callback: function(value) {
-                                return value + ' units';
+                                if (Math.floor(value) === value) {
+                                    return value + ' units';
+                                }
                             },
                             font: {
-                                size: 11
-                            }
+                                size: 12,
+                                weight: '500'
+                            },
+                            color: '#6b7280'
+                        },
+                        border: {
+                            display: false
                         }
                     },
                     y: {
@@ -1391,8 +1451,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                         ticks: {
                             font: {
-                                size: 11
-                            }
+                                size: 13,
+                                weight: '600'
+                            },
+                            color: '#374151',
+                            padding: 8
+                        },
+                        border: {
+                            display: false
                         }
                     }
                 }
