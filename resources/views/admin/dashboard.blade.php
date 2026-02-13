@@ -759,9 +759,16 @@
                                     <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-600 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-lg">
                                         <span class="text-white font-bold text-lg">{{ $index + 1 }}</span>
                                     </div>
-                                    @if($product && $product->image)
+                                    @php
+                                        $productImage = $product->image;
+                                        if (!$productImage && $product->all_images) {
+                                            $imgs = is_string($product->all_images) ? json_decode($product->all_images, true) : $product->all_images;
+                                            $productImage = !empty($imgs[0]['path']) ? $imgs[0]['path'] : null;
+                                        }
+                                    @endphp
+                                    @if($product && $productImage)
                                         <div class="w-16 h-16 mx-auto mb-3 rounded-lg overflow-hidden bg-white shadow-md">
-                                            <img src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\'w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center\'><i class=\'fas fa-box text-green-600 text-2xl\'></i></div>'">
+                                            <img src="{{ asset('uploads/products/' . $productImage) }}" alt="{{ $product->name }}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\'w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center\'><i class=\'fas fa-box text-green-600 text-2xl\'></i></div>'">
                                         </div>
                                     @else
                                         <div class="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-md">
@@ -831,9 +838,16 @@
                                     <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-600 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-lg">
                                         <i class="fas fa-arrow-down text-white text-lg"></i>
                                     </div>
-                                    @if($product && $product->image)
+                                    @php
+                                        $productImageLow = $product->image;
+                                        if (!$productImageLow && $product->all_images) {
+                                            $imgsLow = is_string($product->all_images) ? json_decode($product->all_images, true) : $product->all_images;
+                                            $productImageLow = !empty($imgsLow[0]['path']) ? $imgsLow[0]['path'] : null;
+                                        }
+                                    @endphp
+                                    @if($product && $productImageLow)
                                         <div class="w-16 h-16 mx-auto mb-3 rounded-lg overflow-hidden bg-white shadow-md">
-                                            <img src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\'w-full h-full bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center\'><i class=\'fas fa-box text-orange-600 text-2xl\'></i></div>'">
+                                            <img src="{{ asset('uploads/products/' . $productImageLow) }}" alt="{{ $product->name }}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\'w-full h-full bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center\'><i class=\'fas fa-box text-orange-600 text-2xl\'></i></div>'">
                                         </div>
                                     @else
                                         <div class="w-16 h-16 bg-gradient-to-br from-orange-100 to-red-100 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-md">

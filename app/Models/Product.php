@@ -20,6 +20,20 @@ class Product extends Model
                 $product->sku = 'YKN-' . strtoupper(substr(uniqid(), -8));
             }
         });
+
+        // Auto-repair: if image is null but all_images has entries, set image from first all_images entry
+        static::retrieved(function ($product) {
+            if (empty($product->image) && !empty($product->all_images)) {
+                $allImages = is_string($product->all_images) ? json_decode($product->all_images, true) : $product->all_images;
+                if (!empty($allImages) && is_array($allImages) && !empty($allImages[0]['path'])) {
+                    $product->image = $allImages[0]['path'];
+                    // Persist the fix silently so it doesn't need repair again
+                    static::withoutEvents(function () use ($product) {
+                        $product->updateQuietly(['image' => $product->image]);
+                    });
+                }
+            }
+        });
     }
 
     protected $fillable = [

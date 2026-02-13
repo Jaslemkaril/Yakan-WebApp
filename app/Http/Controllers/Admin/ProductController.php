@@ -87,7 +87,7 @@ class ProductController extends Controller
                     
                     // First VALID image becomes the main image
                     if ($imagePath === null) {
-                        $imagePath = $path;
+                        $imagePath = $imageName;
                     }
                     
                     $imageIndex++;
