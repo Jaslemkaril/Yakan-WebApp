@@ -192,18 +192,19 @@ class Product extends Model
             return $baseUrl . '/storage/' . $imagePath;
         }
         
-        // Default to uploads path for compatibility
-        return $baseUrl . '/uploads/' . $imagePath;
+        // File doesn't exist anywhere - return placeholder
+        return $baseUrl . '/images/no-image.svg';
     }
 
     /**
      * Get the product image source for use in views
      * Handles both Cloudinary URLs and local file paths
+     * Returns placeholder if image is missing
      */
     public function getImageSrcAttribute(): string
     {
         if (!$this->image) {
-            return '';
+            return asset('images/no-image.svg');
         }
 
         // If it's a full URL (Cloudinary), return as is
@@ -211,15 +212,45 @@ class Product extends Model
             return $this->image;
         }
 
-        // Local file: use asset helper path
-        return asset('uploads/products/' . $this->image);
+        // Local file: check if it actually exists, otherwise show placeholder
+        $localPath = public_path('uploads/products/' . $this->image);
+        if (file_exists($localPath)) {
+            return asset('uploads/products/' . $this->image);
+        }
+
+        // File doesn't exist (Railway ephemeral filesystem) - show placeholder
+        return asset('images/no-image.svg');
     }
 
     /**
-     * Check if product has an image
+     * Check if product has an actual accessible image
      */
     public function hasImage(): bool
     {
-        return !empty($this->image);
+        if (empty($this->image)) {
+            return false;
+        }
+        // Cloudinary URLs are always accessible
+        if (str_starts_with($this->image, 'http')) {
+            return true;
+        }
+        // Local files: check existence
+        return file_exists(public_path('uploads/products/' . $this->image));
+    }
+
+    /**
+     * Check if this product needs its image re-uploaded to Cloudinary
+     */
+    public function getNeedsImageUploadAttribute(): bool
+    {
+        if (empty($this->image)) {
+            return true;
+        }
+        // Already on Cloudinary
+        if (str_starts_with($this->image, 'http')) {
+            return false;
+        }
+        // Has a local path but file doesn't exist
+        return !file_exists(public_path('uploads/products/' . $this->image));
     }
 }

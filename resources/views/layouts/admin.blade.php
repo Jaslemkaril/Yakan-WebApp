@@ -1241,5 +1241,14 @@
     
     <!-- Page-specific scripts -->
     @stack('scripts')
+    <script>
+        // Fallback for broken product images
+        document.addEventListener('error', function(e) {
+            if (e.target.tagName === 'IMG' && !e.target.dataset.fallback) {
+                e.target.dataset.fallback = '1';
+                e.target.src = '{{ asset("images/no-image.svg") }}';
+            }
+        }, true);
+    </script>
 </body>
 </html>

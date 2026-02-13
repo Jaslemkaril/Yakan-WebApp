@@ -131,14 +131,14 @@ use Illuminate\Support\Facades\Storage;
                            onchange="updateBulkDeleteButton()">
                 </div>
                 <div class="aspect-w-16 aspect-h-9 bg-gray-100 relative overflow-hidden rounded-lg h-48">
-                    @if($product->image)
-                        <img src="{{ $product->image_src }}" alt="{{ $product->name }}" 
-                             class="w-full h-full object-cover"
-                             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 300%22%3E%3Crect fill=%22%23f0e9ff%22 width=%22400%22 height=%22300%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%236b21a8%22 font-size=%2248%22%3E🧵%3C/text%3E%3C/svg%3E';">
-                    @else
-                        <div class="w-full h-full bg-gradient-to-br from-red-50 to-orange-50 flex flex-col items-center justify-center">
-                            <div class="text-4xl mb-2">🧵</div>
-                            <div class="text-sm text-gray-600">{{ $product->name }}</div>
+                    <img src="{{ $product->image_src }}" alt="{{ $product->name }}" 
+                         class="w-full h-full object-cover">
+                    @if($product->needs_image_upload)
+                        <div class="absolute bottom-2 left-2">
+                            <a href="{{ route('admin.products.edit', $product) }}" 
+                               class="inline-flex items-center px-2 py-1 bg-amber-500 text-white text-xs font-medium rounded-full shadow hover:bg-amber-600 transition-colors">
+                                <i class="fas fa-camera mr-1"></i> Re-upload Image
+                            </a>
                         </div>
                     @endif
                     
