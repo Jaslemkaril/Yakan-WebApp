@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Yakan App",
-    "slug": "yakan-app",
+    "slug": "yakanapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -38,11 +38,14 @@
       "favicon": "./assets/favicon.png"
     },
     "updates": {
-      "enabled": false
+      "url": "https://u.expo.dev/b217594d-ba23-4e62-a63d-0fc749175838"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     },
     "extra": {
       "eas": {
-        "projectId": "your-project-id-here"
+        "projectId": "b217594d-ba23-4e62-a63d-0fc749175838"
       }
     }
   }

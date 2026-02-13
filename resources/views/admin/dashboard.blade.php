@@ -905,7 +905,7 @@
                         </p>
                         @if($product->category)
                             <p class="text-xs text-gray-500">
-                                <i class="fas fa-folder mr-1"></i>{{ $product->category }}
+                                <i class="fas fa-folder mr-1"></i>{{ $product->category->name }}
                             </p>
                         @endif
                     </div>

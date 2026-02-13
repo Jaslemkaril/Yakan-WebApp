@@ -86,7 +86,7 @@ class DashboardController extends Controller
             $totalProducts = \App\Models\Product::count();
             
             // Out-of-stock items
-            $outOfStockItems = \App\Models\Product::where('stock', '<=', 0)->get();
+            $outOfStockItems = \App\Models\Product::where('stock', '<=', 0)->with('category')->get();
             $outOfStockCount = $outOfStockItems->count();
 
             // Top products by sold quantity (Best Sellers)
@@ -309,7 +309,7 @@ class DashboardController extends Controller
 
             $totalProducts = Product::count();
             $outOfStockCount = Product::where('stock', '<=', 0)->count();
-            $outOfStockItems = Product::where('stock', '<=', 0)->get();
+            $outOfStockItems = Product::where('stock', '<=', 0)->with('category')->get();
 
             return view('admin.analytics.products', compact(
                 'topProducts',
