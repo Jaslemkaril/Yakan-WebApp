@@ -83,10 +83,29 @@ class ChatController extends Controller
         ];
 
         if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $filename = time() . '_' . $image->getClientOriginalName();
-            $path = Storage::disk('public')->putFileAs('chats', $image, $filename);
-            $messageData['image_path'] = Storage::disk('public')->url($path);
+            try {
+                $image = $request->file('image');
+                $filename = time() . '_' . $image->getClientOriginalName();
+                
+                // Ensure directory exists
+                $dir = storage_path('app/public/chats');
+                if (!is_dir($dir)) {
+                    mkdir($dir, 0755, true);
+                }
+                
+                // Store file directly in storage folder
+                $image->move($dir, $filename);
+                
+                // Build the URL path
+                $messageData['image_path'] = url('/storage/chats/' . $filename);
+            } catch (\Exception $e) {
+                \Log::error('Chat image upload failed on chat creation', [
+                    'error' => $e->getMessage(),
+                    'chat_id' => $chat->id,
+                    'user_id' => auth()->id(),
+                ]);
+                // Still create chat even if image upload fails
+            }
         }
 
         ChatMessage::create($messageData);
@@ -122,10 +141,35 @@ class ChatController extends Controller
         ];
 
         if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $filename = time() . '_' . $image->getClientOriginalName();
-            $path = Storage::disk('public')->putFileAs('chats', $image, $filename);
-            $messageData['image_path'] = Storage::disk('public')->url($path);
+            try {
+                $image = $request->file('image');
+                $filename = time() . '_' . $image->getClientOriginalName();
+                
+                // Ensure directory exists
+                $dir = storage_path('app/public/chats');
+                if (!is_dir($dir)) {
+                    mkdir($dir, 0755, true);
+                }
+                
+                // Store file directly in storage folder
+                $image->move($dir, $filename);
+                
+                // Build the URL path
+                $messageData['image_path'] = url('/storage/chats/' . $filename);
+                
+                \Log::info('Chat image uploaded', [
+                    'filename' => $filename,
+                    'url' => $messageData['image_path'],
+                    'chat_id' => $chat->id,
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Chat image upload failed', [
+                    'error' => $e->getMessage(),
+                    'chat_id' => $chat->id,
+                    'user_id' => auth()->id(),
+                ]);
+                return back()->withErrors(['image' => 'Failed to upload image: ' . $e->getMessage()]);
+            }
         }
 
         ChatMessage::create($messageData);
