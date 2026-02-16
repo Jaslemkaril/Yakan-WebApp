@@ -33,6 +33,7 @@
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
         overflow: hidden;
         position: relative;
+        backdrop-filter: blur(10px);
     }
 
     .auth-card::before {
@@ -41,8 +42,15 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #dc2626, #ea580c);
+        height: 5px;
+        background: linear-gradient(90deg, #dc2626, #ea580c, #dc2626);
+        background-size: 200% 100%;
+        animation: shimmer 3s linear infinite;
+    }
+
+    @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
     }
 
     .auth-form {
@@ -60,27 +68,48 @@
         align-items: center;
         justify-content: center;
         gap: 12px;
-        padding: 12px 20px;
+        padding: 14px 24px;
         border: 2px solid #e5e7eb;
         border-radius: 12px;
         background: white;
         font-weight: 600;
-        transition: all 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
         width: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .social-login-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.05), transparent);
+        transition: left 0.5s ease;
+    }
+
+    .social-login-btn:hover::before {
+        left: 100%;
     }
 
     .social-login-btn:hover {
-        border-color: #dc2626;
-        background: #fef2f2;
+        border-color: #4285F4;
+        background: #f8faff;
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(220, 38, 38, 0.15);
+        box-shadow: 0 10px 30px rgba(66, 133, 244, 0.2);
+    }
+
+    .social-login-btn:active {
+        transform: translateY(0);
     }
 
     .divider {
         display: flex;
         align-items: center;
-        gap: 1rem;
+        gap: 1.25rem;
         margin: 2rem 0;
     }
 
@@ -88,14 +117,15 @@
     .divider::after {
         content: '';
         flex: 1;
-        height: 1px;
-        background: #e5e7eb;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #e5e7eb, transparent);
     }
 
     .divider span {
-        color: #9ca3af;
+        color: #6b7280;
         font-size: 14px;
-        font-weight: 500;
+        font-weight: 600;
+        letter-spacing: 0.5px;
     }
 
     .input-group {
@@ -119,14 +149,23 @@
         border: 2px solid #e5e7eb;
         border-radius: 12px;
         font-size: 16px;
-        transition: all 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         background: white;
+    }
+
+    .auth-input::placeholder {
+        color: #9ca3af;
+    }
+
+    .auth-input:hover {
+        border-color: #d1d5db;
     }
 
     .auth-input:focus {
         outline: none;
         border-color: #dc2626;
-        box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
+        background: #ffffff;
     }
 
     .auth-input:focus ~ .input-icon {
@@ -136,14 +175,22 @@
     .remember-me {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         margin-bottom: 1.5rem;
+        cursor: pointer;
     }
 
     .remember-me input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
+        width: 20px;
+        height: 20px;
         accent-color: #dc2626;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+
+    .remember-me label {
+        cursor: pointer;
+        user-select: none;
     }
 
     .auth-illustration {
@@ -168,40 +215,47 @@
         list-style: none;
         padding: 0;
         margin: 2rem 0;
+        text-align: left;
     }
 
     .feature-list li {
         display: flex;
         align-items: center;
         gap: 12px;
-        margin-bottom: 1rem;
-        font-size: 16px;
+        margin-bottom: 1.25rem;
+        font-size: 17px;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        transition: all 0.3s ease;
     }
 
-    .feature-list li::before {
-        content: '✓';
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 24px;
-        height: 24px;
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 50%;
-        font-weight: bold;
-        flex-shrink: 0;
+    .feature-list li:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateX(8px);
     }
 
     .error-message {
-        background: #fef2f2;
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
         border: 1px solid #fecaca;
+        border-left: 4px solid #dc2626;
         color: #dc2626;
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
+        padding: 12px 16px;
+        border-radius: 10px;
         font-size: 14px;
         margin-bottom: 1rem;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
+        box-shadow: 0 2px 8px rgba(220, 38, 38, 0.1);
+        animation: shake 0.4s ease;
+    }
+
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
     }
 
     .btn-primary {
@@ -210,14 +264,37 @@
         border: none;
         border-radius: 12px;
         font-weight: 600;
-        transition: all 0.3s ease;
+        font-size: 16px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn-primary::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .btn-primary:hover:not(:disabled)::before {
+        opacity: 1;
     }
 
     .btn-primary:hover:not(:disabled) {
         background: linear-gradient(135deg, #b91c1c 0%, #c2410c 100%);
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3);
+        box-shadow: 0 12px 35px rgba(220, 38, 38, 0.4);
+    }
+
+    .btn-primary:active:not(:disabled) {
+        transform: translateY(0);
     }
 
     .btn-primary:disabled {
@@ -230,6 +307,30 @@
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
+    }
+
+    @keyframes fade-in-up {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in-up {
+        animation: fade-in-up 0.6s ease-out;
+    }
+
+    .link-hover {
+        transition: all 0.2s ease;
+    }
+
+    .link-hover:hover {
+        text-decoration: underline;
+        transform: translateX(2px);
     }
 </style>
 @endpush
@@ -254,17 +355,17 @@
                         <!-- Logo -->
                         <div class="text-center mb-8">
                             <div class="flex items-center justify-center space-x-3 mb-4">
-                                <div class="w-12 h-12 bg-gradient-to-br from-red-600 to-red-700 rounded-xl flex items-center justify-center">
-                                    <span class="text-white font-bold text-xl">Y</span>
+                                <div class="w-14 h-14 bg-gradient-to-br from-red-600 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-300">
+                                    <span class="text-white font-bold text-2xl">Y</span>
                                 </div>
-                                <span class="text-2xl font-bold text-gradient">Yakan</span>
+                                <span class="text-3xl font-bold text-gradient">Yakan</span>
                             </div>
-                            <h2 class="text-2xl font-bold text-gray-900">Welcome Back</h2>
-                            <p class="text-gray-600 mt-2">Sign in to your account to continue</p>
+                            <h2 class="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
+                            <p class="text-gray-600 text-base">Sign in to your account to continue</p>
                         </div>
 
                         <!-- Social Login -->
-                        <div class="space-y-3 mb-6">
+                        <div class="mb-6">
                             <a href="{{ route('auth.redirect', 'google') }}" class="social-login-btn w-full">
                                 <svg class="w-5 h-5" viewBox="0 0 24 24">
                                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -273,13 +374,6 @@
                                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                                 </svg>
                                 <span>Continue with Google</span>
-                            </a>
-                            
-                            <a href="{{ route('auth.redirect', 'facebook') }}" class="social-login-btn w-full">
-                                <svg class="w-5 h-5" fill="#1877F2" viewBox="0 0 24 24">
-                                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                                </svg>
-                                <span>Continue with Facebook</span>
                             </a>
                         </div>
 
@@ -340,23 +434,23 @@
                                 <label for="remember" class="text-sm text-gray-700">Remember me</label>
                             </div>
 
-                            <button type="submit" class="btn-primary w-full text-lg py-3">
-                                Sign In
+                            <button type="submit" class="btn-primary w-full text-lg py-3.5 font-semibold">
+                                <span class="relative z-10">Sign In</span>
                             </button>
                         </form>
 
                         <!-- Forgot Password -->
                         <div class="text-center mt-6">
-                            <a href="{{ route('password.request') }}" class="text-red-600 hover:text-red-700 font-medium text-sm">
+                            <a href="{{ route('password.request') }}" class="text-red-600 hover:text-red-700 font-medium text-sm link-hover inline-block">
                                 Forgot your password?
                             </a>
                         </div>
 
                         <!-- Sign Up Link -->
-                        <div class="text-center mt-8">
+                        <div class="text-center mt-8 pt-6 border-t border-gray-100">
                             <p class="text-gray-600">
                                 Don't have an account? 
-                                <a href="{{ route('register') }}" class="text-red-600 hover:text-red-700 font-medium">
+                                <a href="{{ route('register') }}" class="text-red-600 hover:text-red-700 font-semibold link-hover inline-block">
                                     Sign up for free
                                 </a>
                             </p>
@@ -367,23 +461,23 @@
                 <!-- Illustration Side -->
                 <div class="hidden lg:block">
                     <div class="auth-illustration rounded-2xl">
-                        <div class="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-8">
-                            <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-28 h-28 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center mb-8 shadow-2xl transform hover:scale-105 transition-transform duration-300">
+                            <svg class="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 10-8 0v4M5 9h14l1 12H4L5 9z"/>
                             </svg>
                         </div>
                         
-                        <h3 class="text-3xl font-bold mb-4">Welcome Back to Yakan</h3>
-                        <p class="text-red-100 mb-8 text-lg">
+                        <h3 class="text-4xl font-bold mb-4">Welcome Back to Yakan</h3>
+                        <p class="text-red-100 mb-8 text-lg leading-relaxed">
                             Access your personalized shopping experience and track your orders
                         </p>
 
                         <ul class="feature-list">
-                            <li>Track your orders in real-time</li>
-                            <li>Save items to your wishlist</li>
-                            <li>Exclusive member deals</li>
-                            <li>Faster checkout process</li>
-                            <li>Order history and receipts</li>
+                            <li>📦 Track your orders in real-time</li>
+                            <li>❤️ Save items to your wishlist</li>
+                            <li>🎁 Exclusive member deals</li>
+                            <li>⚡ Faster checkout process</li>
+                            <li>📋 Order history and receipts</li>
                         </ul>
 
                     </div>

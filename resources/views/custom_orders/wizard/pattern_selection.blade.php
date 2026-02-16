@@ -95,6 +95,135 @@
         display: none !important;
     }
 }
+
+/* ===== Enhanced Live Preview Styles ===== */
+#floatingPreview {
+    backdrop-filter: blur(12px);
+}
+
+/* Canvas checkerboard transparency background */
+.canvas-wrapper {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 
+        0 4px 24px rgba(128, 0, 0, 0.12),
+        0 1px 4px rgba(0, 0, 0, 0.06),
+        inset 0 0 0 1px rgba(128, 0, 0, 0.1);
+}
+
+.canvas-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: 
+        linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+        linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
+        linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    opacity: 0.5;
+    z-index: 0;
+    border-radius: 14px;
+}
+
+.canvas-wrapper canvas {
+    position: relative;
+    z-index: 1;
+}
+
+/* Enhance range sliders */
+input[type='range'] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    outline: none;
+    transition: opacity 0.2s;
+}
+
+input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #800000;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease;
+}
+
+input[type='range']::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+input[type='range']::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #800000;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Control labels */
+.control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.control-row:last-child {
+    border-bottom: none;
+}
+
+.control-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4b5563;
+    min-width: 52px;
+}
+
+.control-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: #800000;
+    background: #fff5f5;
+    padding: 2px 8px;
+    border-radius: 6px;
+    min-width: 40px;
+    text-align: center;
+}
+
+/* Background mode selector */
+.bg-mode-btn {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1.5px solid #e5e7eb;
+    background: white;
+    color: #6b7280;
+}
+
+.bg-mode-btn:hover {
+    border-color: #800000;
+    color: #800000;
+}
+
+.bg-mode-btn.active {
+    background: #800000;
+    color: white;
+    border-color: #800000;
+}
 </style>
 @endpush
 
@@ -172,14 +301,23 @@
         </div>
 
         <!-- Floating Live Preview Sidebar -->
-        <div class="fixed right-4 top-20 w-80 bg-white rounded-xl shadow-2xl border-4 z-50 max-h-[calc(100vh-6rem)] overflow-hidden" id="floatingPreview" style="display: block !important; visibility: visible !important; position: fixed !important; right: 1rem !important; top: 5rem !important; border-color:#800000;">
+        <div class="fixed right-4 top-20 w-80 bg-white/95 rounded-2xl shadow-2xl border z-50 max-h-[calc(100vh-6rem)] overflow-hidden" id="floatingPreview" style="display: block !important; visibility: visible !important; position: fixed !important; right: 1rem !important; top: 5rem !important; border-color: rgba(128,0,0,0.2); backdrop-filter: blur(12px);">
             <!-- Preview Header -->
-            <div class="text-white p-4" style="background: linear-gradient(to right, #800000, #a00000);">
-                <div class="flex items-center justify-between">
-                    <h3 class="font-semibold">Live Preview</h3>
-                    <div class="flex items-center space-x-2">
-                        <span class="text-xs opacity-90">Real-time</span>
-                        <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            <div class="text-white p-4 relative overflow-hidden" style="background: linear-gradient(135deg, #800000 0%, #a00000 50%, #c02020 100%);">
+                <div class="absolute inset-0 opacity-10">
+                    <div style="background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px); width:100%; height:100%;"></div>
+                </div>
+                <div class="flex items-center justify-between relative z-10">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                        <h3 class="font-bold text-base">Live Preview</h3>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-white/15 rounded-full px-3 py-1">
+                        <span class="text-xs font-medium">Real-time</span>
+                        <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                     </div>
                 </div>
             </div>
@@ -256,48 +394,60 @@
                             </div>
                         </div>
                     </div>
-                    <canvas id="fabricCanvas" 
-                            width="400" 
-                            height="350" 
-                            class="w-full rounded-xl border-4 shadow-2xl cursor-move transition-all duration-300 bg-white" style="border-color:#c08080;"
-                            style="image-rendering: crisp-edges; min-height: 350px;">
-                    </canvas>
+                    <div class="canvas-wrapper">
+                        <canvas id="fabricCanvas" 
+                                width="400" 
+                                height="350" 
+                                class="w-full rounded-xl cursor-move transition-all duration-300 bg-white"
+                                style="image-rendering: crisp-edges; min-height: 350px;">
+                        </canvas>
+                    </div>
+                    
+                    <!-- Background Mode Selector -->
+                    <div class="flex items-center gap-2 mt-3 mb-1">
+                        <span class="text-xs font-semibold text-gray-500">BG:</span>
+                        <button type="button" onclick="setCanvasBg('white')" class="bg-mode-btn active" id="bgWhite">White</button>
+                        <button type="button" onclick="setCanvasBg('light')" class="bg-mode-btn" id="bgLight">Light</button>
+                        <button type="button" onclick="setCanvasBg('dark')" class="bg-mode-btn" id="bgDark">Dark</button>
+                        <button type="button" onclick="setCanvasBg('fabric')" class="bg-mode-btn" id="bgFabric">Fabric</button>
+                    </div>
                     
                     <!-- Canvas Controls -->
-                    <div class="mt-4 space-y-2.5">
+                    <div class="mt-3 space-y-0">
                         <!-- Scale Control -->
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-medium text-gray-600">Scale</label>
+                        <div class="control-row">
+                            <label class="control-label">Scale</label>
                             <input type="range" id="patternScale" min="0.5" max="3" step="0.1" value="1" 
-                                   class="w-32 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                   class="w-28 bg-gray-200 cursor-pointer"
                                    oninput="updateCanvasPreview()">
-                            <span id="scaleValue" class="text-xs text-gray-600 w-8">1.0x</span>
+                            <span id="scaleValue" class="control-value">1.0x</span>
                         </div>
                         
                         <!-- Rotation Control -->
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-medium text-gray-600">Rotate</label>
+                        <div class="control-row">
+                            <label class="control-label">Rotate</label>
                             <input type="range" id="patternRotation" min="0" max="360" step="5" value="0" 
-                                   class="w-32 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                   class="w-28 bg-gray-200 cursor-pointer"
                                    oninput="updateCanvasPreview()">
-                            <span id="rotationValue" class="text-xs text-gray-600 w-8">0°</span>
+                            <span id="rotationValue" class="control-value">0°</span>
                         </div>
                         
                         <!-- Opacity Control -->
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-medium text-gray-600">Opacity</label>
-                            <input type="range" id="patternOpacity" min="0.3" max="1" step="0.1" value="0.85" 
-                                   class="w-32 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                        <div class="control-row">
+                            <label class="control-label">Opacity</label>
+                            <input type="range" id="patternOpacity" min="0.3" max="1" step="0.1" value="1" 
+                                   class="w-28 bg-gray-200 cursor-pointer"
                                    oninput="updateCanvasPreview()">
-                            <span id="opacityValue" class="text-xs text-gray-600 w-8">85%</span>
+                            <span id="opacityValue" class="control-value">100%</span>
                         </div>
                         
-                        <!-- Blend Mode Control (Hidden) -->
-                        <div class="hidden">
-                            <select id="blendMode" class="text-xs border border-gray-300 rounded px-2 py-1 cursor-pointer" onchange="updateCanvasPreview()">
+                        <!-- Blend Mode Control -->
+                        <div class="control-row">
+                            <label class="control-label">Blend</label>
+                            <select id="blendMode" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 cursor-pointer bg-white focus:border-red-400 focus:ring-1 focus:ring-red-200 outline-none transition-all" onchange="updateCanvasPreview()">
+                                <option value="source-over" selected>Normal</option>
                                 <option value="multiply">Multiply</option>
                                 <option value="overlay">Overlay</option>
-                                <option value="normal">Normal</option>
                                 <option value="screen">Screen</option>
                                 <option value="darken">Darken</option>
                                 <option value="lighten">Lighten</option>
@@ -373,11 +523,17 @@
                     <!-- Quick Actions -->
                     <div class="mt-4 flex gap-2">
                         <button type="button" onclick="resetCanvas()" 
-                                class="flex-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-medium transition-colors">
+                                class="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold transition-all duration-200 hover:shadow-sm flex items-center justify-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
                             Reset
                         </button>
                         <button type="button" onclick="saveCustomization()" 
-                                class="flex-1 px-2 py-1 bg-maroon-100 hover:bg-maroon-200 text-maroon-700 rounded text-xs font-medium transition-colors">
+                                class="flex-1 px-3 py-2 text-white rounded-lg text-xs font-semibold transition-all duration-200 hover:shadow-md flex items-center justify-center gap-1" style="background: linear-gradient(135deg, #800000, #a00000);">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
                             Save
                         </button>
                     </div>
@@ -1556,16 +1712,35 @@ function updateCombinedPreview(element, svgData, patternName, sizeClass) {
     }
 }
 
+// Canvas background mode: 'white' | 'light' | 'dark' | 'fabric'
+let canvasBgMode = 'white';
+
+function setCanvasBg(mode) {
+    canvasBgMode = mode;
+    // Update button active states
+    document.querySelectorAll('.bg-mode-btn').forEach(btn => btn.classList.remove('active'));
+    const btnId = 'bg' + mode.charAt(0).toUpperCase() + mode.slice(1);
+    const btn = document.getElementById(btnId);
+    if (btn) btn.classList.add('active');
+    
+    // Redraw
+    if (patternImage) {
+        updateCanvasPreview();
+    } else {
+        drawFabricBase();
+    }
+}
+
 function getFabricColor(fabricType) {
     const colors = {
-        'Cotton': '#f3f4f6',
-        'Silk': '#fef3c7',
-        'Polyester Cotton Blend': '#e5e7eb',
-        'Linen': '#fef2f2',
-        'Canvas': '#f9fafb',
-        'Jersey Knit': '#f0f9ff'
+        'Cotton': '#fafafa',
+        'Silk': '#fef9e7',
+        'Polyester Cotton Blend': '#f5f5f5',
+        'Linen': '#fdf6f0',
+        'Canvas': '#f8f8f8',
+        'Jersey Knit': '#f0f7ff'
     };
-    return colors[fabricType] || '#f3f4f6';
+    return colors[fabricType] || '#fafafa';
 }
 
 function filterPatterns(category) {
@@ -1638,29 +1813,81 @@ function drawFabricBase() {
     const width = canvas.width / (window.devicePixelRatio || 1);
     const height = canvas.height / (window.devicePixelRatio || 1);
     
-    // Fabric background with texture
-    const fabricType = '{{ session("wizard.fabric.type", "Cotton") }}';
-    ctx.fillStyle = getFabricColor(fabricType);
-    ctx.fillRect(0, 0, width, height);
-    
-    // Add fabric texture overlay
-    ctx.globalAlpha = 0.1;
-    for (let i = 0; i < width; i += 4) {
-        for (let j = 0; j < height; j += 4) {
-            if (Math.random() > 0.5) {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(i, j, 2, 2);
-            }
+    // Choose background based on mode
+    if (canvasBgMode === 'white') {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+    } else if (canvasBgMode === 'light') {
+        // Soft warm off-white
+        ctx.fillStyle = '#faf8f5';
+        ctx.fillRect(0, 0, width, height);
+        // Very subtle woven texture
+        ctx.globalAlpha = 0.04;
+        for (let i = 0; i < width; i += 8) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, height);
+            ctx.strokeStyle = '#c0b0a0';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
         }
+        for (let j = 0; j < height; j += 8) {
+            ctx.beginPath();
+            ctx.moveTo(0, j);
+            ctx.lineTo(width, j);
+            ctx.strokeStyle = '#c0b0a0';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1.0;
+    } else if (canvasBgMode === 'dark') {
+        // Dark mode for light-colored patterns
+        ctx.fillStyle = '#2d2d2d';
+        ctx.fillRect(0, 0, width, height);
+        // Subtle grid
+        ctx.globalAlpha = 0.06;
+        for (let i = 0; i < width; i += 10) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, height);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+        }
+        for (let j = 0; j < height; j += 10) {
+            ctx.beginPath();
+            ctx.moveTo(0, j);
+            ctx.lineTo(width, j);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1.0;
+    } else {
+        // Fabric mode - uses selected fabric color with clean texture
+        const fabricType = '{{ session("wizard.fabric.type", "Cotton") }}';
+        ctx.fillStyle = getFabricColor(fabricType);
+        ctx.fillRect(0, 0, width, height);
+        // Clean woven texture (no random noise)
+        ctx.globalAlpha = 0.03;
+        for (let i = 0; i < width; i += 6) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, height);
+            ctx.strokeStyle = '#8b7355';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+        }
+        for (let j = 0; j < height; j += 6) {
+            ctx.beginPath();
+            ctx.moveTo(0, j);
+            ctx.lineTo(width, j);
+            ctx.strokeStyle = '#8b7355';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1.0;
     }
-    ctx.globalAlpha = 1.0;
-    
-    // Add subtle gradient
-    const gradient = ctx.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.05)');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
 }
 
 function loadPatternToCanvas(patternData) {
@@ -1950,7 +2177,7 @@ function updateCanvasPreview() {
     const scale = parseFloat(document.getElementById('patternScale').value);
     const rotation = parseFloat(document.getElementById('patternRotation').value);
     const opacity = parseFloat(document.getElementById('patternOpacity').value);
-    const blendMode = document.getElementById('blendMode')?.value || 'multiply';
+    const blendMode = document.getElementById('blendMode')?.value || 'source-over';
     
     // Get color customization values
     const hue = parseFloat(document.getElementById('hueRotation')?.value || 0);
@@ -2018,10 +2245,11 @@ function updateCanvasPreview() {
 function resetCanvas() {
     document.getElementById('patternScale').value = 1;
     document.getElementById('patternRotation').value = 0;
-    document.getElementById('patternOpacity').value = 0.85;
+    document.getElementById('patternOpacity').value = 1;
     if (document.getElementById('blendMode')) {
-        document.getElementById('blendMode').value = 'multiply';
+        document.getElementById('blendMode').value = 'source-over';
     }
+    setCanvasBg('white');
     // Reset color controls
     if (document.getElementById('hueRotation')) {
         document.getElementById('hueRotation').value = 0;
