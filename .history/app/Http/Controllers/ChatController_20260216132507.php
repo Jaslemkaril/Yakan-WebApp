@@ -83,10 +83,13 @@ class ChatController extends Controller
         ];
 
         if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $filename = time() . '_' . $image->getClientOriginalName();
-            $path = Storage::disk('public')->putFileAs('chats', $image, $filename);
-            $messageData['image_path'] = Storage::disk('public')->url($path);
+            $uploadDir = public_path('uploads/chat');
+            if (!is_dir($uploadDir)) {
+                @mkdir($uploadDir, 0777, true);
+            }
+            $imageName = time() . '_' . $request->file('image')->getClientOriginalName();
+            $request->file('image')->move($uploadDir, $imageName);
+            $messageData['image_path'] = 'uploads/chat/' . $imageName;
         }
 
         ChatMessage::create($messageData);
@@ -122,10 +125,13 @@ class ChatController extends Controller
         ];
 
         if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $filename = time() . '_' . $image->getClientOriginalName();
-            $path = Storage::disk('public')->putFileAs('chats', $image, $filename);
-            $messageData['image_path'] = Storage::disk('public')->url($path);
+            $uploadDir = public_path('uploads/chat');
+            if (!is_dir($uploadDir)) {
+                @mkdir($uploadDir, 0777, true);
+            }
+            $imageName = time() . '_' . $request->file('image')->getClientOriginalName();
+            $request->file('image')->move($uploadDir, $imageName);
+            $messageData['image_path'] = 'uploads/chat/' . $imageName;
         }
 
         ChatMessage::create($messageData);

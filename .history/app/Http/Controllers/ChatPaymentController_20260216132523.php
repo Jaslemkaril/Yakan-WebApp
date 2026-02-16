@@ -65,13 +65,19 @@ class ChatPaymentController extends Controller
 
         // Store payment proof
         if ($request->hasFile('payment_proof')) {
+            $uploadDir = public_path('uploads/chat/payments');
+            if (!is_dir($uploadDir)) {
+                @mkdir($uploadDir, 0777, true);
+            }
+            
             $file = $request->file('payment_proof');
             $filename = 'payment_proof_' . $payment->id . '_' . time() . '.' . $file->getClientOriginalExtension();
-            $path = Storage::disk('public')->putFileAs('payments', $file, $filename);
-            $imageUrl = Storage::disk('public')->url($path);
+            $file->move($uploadDir, $filename);
+            
+            $path = 'uploads/chat/payments/' . $filename;
             
             $payment->update([
-                'payment_proof' => $imageUrl,
+                'payment_proof' => $path,
                 'payment_method' => $validated['payment_method'],
                 'status' => 'paid',
             ]);
@@ -82,7 +88,7 @@ class ChatPaymentController extends Controller
                 'user_id' => Auth::id(),
                 'sender_type' => 'user',
                 'message' => "Payment proof uploaded for Payment ID: #" . $payment->id . "\n\nPayment Method: " . ucfirst(str_replace('_', ' ', $validated['payment_method'])),
-                'image_path' => $imageUrl,
+                'image_path' => $path,
             ]);
         }
 

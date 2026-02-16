@@ -65,25 +65,36 @@ class ChatPaymentController extends Controller
 
         // Store payment proof
         if ($request->hasFile('payment_proof')) {
-            $file = $request->file('payment_proof');
-            $filename = 'payment_proof_' . $payment->id . '_' . time() . '.' . $file->getClientOriginalExtension();
-            $path = Storage::disk('public')->putFileAs('payments', $file, $filename);
-            $imageUrl = Storage::disk('public')->url($path);
-            
-            $payment->update([
-                'payment_proof' => $imageUrl,
-                'payment_method' => $validated['payment_method'],
-                'status' => 'paid',
-            ]);
-
-            // Add message to chat
-            ChatMessage::create([
-                'chat_id' => $chat->id,
-                'user_id' => Auth::id(),
-                'sender_type' => 'user',
-                'message' => "Payment proof uploaded for Payment ID: #" . $payment->id . "\n\nPayment Method: " . ucfirst(str_replace('_', ' ', $validated['payment_method'])),
-                'image_path' => $imageUrl,
-            ]);
+            try {
+                $file = $request->file('payment_proof');
+                $filename = 'payment_proof_' . $payment->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+                
+                // Store in the uploads disk with payments subdirectory
+                $path = Storage::disk('uploads')->putFileAs('payments', $file, $filename);
+                
+                $payment->update([
+                    'payment_proof' => 'uploads/' . $path,
+                    'payment_method' => $validated['payment_method'],
+                    'status' => 'paid',
+                ]);
+                
+                // Add message to chat
+                ChatMessage::create([
+                    'chat_id' => $chat->id,
+                    'user_id' => Auth::id(),
+                    'sender_type' => 'user',
+                    'message' => "Payment proof uploaded for Payment ID: #" . $payment->id . "\n\nPayment Method: " . ucfirst(str_replace('_', ' ', $validated['payment_method'])),
+                    'image_path' => 'uploads/' . $path,
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Chat payment proof upload failed', [
+                    'error' => $e->getMessage(),
+                    'chat_id' => $chat->id,
+                    'payment_id' => $payment->id,
+                    'user_id' => Auth::id(),
+                ]);
+                return back()->withErrors(['payment_proof' => 'Failed to upload payment proof. Please try again.']);
+            }
         }
 
         return redirect()->back()->with('success', 'Payment proof submitted. Waiting for admin verification.');

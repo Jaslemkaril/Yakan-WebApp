@@ -83,10 +83,18 @@ class ChatController extends Controller
         ];
 
         if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $filename = time() . '_' . $image->getClientOriginalName();
-            $path = Storage::disk('public')->putFileAs('chats', $image, $filename);
-            $messageData['image_path'] = Storage::disk('public')->url($path);
+            try {
+                $image = $request->file('image');
+                $path = Storage::disk('uploads')->putFileAs('chat', $image, time() . '_' . $image->getClientOriginalName());
+                $messageData['image_path'] = 'uploads/' . $path;
+            } catch (\Exception $e) {
+                \Log::error('Chat image upload failed on chat creation', [
+                    'error' => $e->getMessage(),
+                    'chat_id' => $chat->id,
+                    'user_id' => auth()->id(),
+                ]);
+                // Still create chat even if image upload fails
+            }
         }
 
         ChatMessage::create($messageData);
@@ -122,10 +130,21 @@ class ChatController extends Controller
         ];
 
         if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $filename = time() . '_' . $image->getClientOriginalName();
-            $path = Storage::disk('public')->putFileAs('chats', $image, $filename);
-            $messageData['image_path'] = Storage::disk('public')->url($path);
+            try {
+                $image = $request->file('image');
+                $filename = 'chat/' . time() . '_' . $image->getClientOriginalName();
+                
+                // Store in the public uploads disk
+                $path = Storage::disk('uploads')->putFileAs('chat', $image, time() . '_' . $image->getClientOriginalName());
+                $messageData['image_path'] = 'uploads/' . $path;
+            } catch (\Exception $e) {
+                \Log::error('Chat image upload failed', [
+                    'error' => $e->getMessage(),
+                    'chat_id' => $chat->id,
+                    'user_id' => auth()->id(),
+                ]);
+                return back()->withErrors(['image' => 'Failed to upload image. Please try again.']);
+            }
         }
 
         ChatMessage::create($messageData);
