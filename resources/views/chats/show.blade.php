@@ -120,11 +120,12 @@
                                         <img src="{{ $chatImageUrl }}" 
                                              alt="Attached image" 
                                              class="max-w-full rounded-xl shadow-md border-2 {{ $message->sender_type === 'user' ? 'border-white/30' : 'border-gray-200' }}"
-                                             style="max-height: 250px; object-fit: contain; cursor: pointer;"
-                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                             style="max-height: 250px; object-fit: contain; cursor: pointer; display: block;"
+                                             loading="lazy"
+                                             onerror="console.error('Image failed to load:', this.src); this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                         <div class="hidden items-center gap-2 px-4 py-3 bg-red-50 rounded-lg text-red-700 text-sm">
                                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                                            Image could not be loaded
+                                            🖼️ Image unavailable (URL: <code style="font-size: 10px; word-break: break-all;">{{ substr($chatImageUrl, 0, 50) }}...</code>)
                                         </div>
                                     </a>
                                 @endif
@@ -199,11 +200,12 @@
                         </label>
                         
                         <!-- Image Preview (shows above input when image is selected) -->
-                        <div id="imagePreview" class="hidden mb-4">
+                        <div id="imagePreview" class="hidden mb-4 p-3 bg-gray-100 rounded-lg">
+                            <p class="text-xs text-gray-600 mb-2 font-semibold">Selected Image:</p>
                             <div class="relative inline-block">
-                                <img id="previewImg" src="" alt="Preview" class="max-h-52 rounded-xl shadow-lg border-2 border-gray-200">
-                                <button type="button" onclick="clearImage()" class="absolute -top-2 -right-2 bg-white hover:bg-red-50 rounded-full p-2 shadow-lg transition border-2 border-gray-200 hover:border-red-300">
-                                    <svg class="w-4 h-4 text-gray-600 hover:text-red-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                                <img id="previewImg" src="" alt="Preview" class="max-h-52 max-w-full rounded-lg shadow-md border-2 border-gray-300" style="display: block;">
+                                <button type="button" onclick="clearImage()" class="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition border-2 border-white">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
                                 </button>
                             </div>
                         </div>
@@ -388,7 +390,10 @@
                 const img = document.getElementById('previewImg');
                 const preview = document.getElementById('imagePreview');
                 console.log('Preview elements:', img, preview);
-                if (img) img.src = e.target.result;
+                if (img) {
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                }
                 if (preview) preview.classList.remove('hidden');
             };
             reader.readAsDataURL(input.files[0]);
