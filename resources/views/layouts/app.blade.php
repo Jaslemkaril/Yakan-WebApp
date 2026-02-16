@@ -93,6 +93,11 @@
     
     @stack('styles')
     
+    <!-- Prevent Alpine.js flash of unstyled content -->
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+    
     <style>
         /* Modern Design System - Maroon Theme */
         :root {
@@ -108,8 +113,20 @@
         }
 
         * { 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             font-family: 'Inter', sans-serif;
+        }
+
+        /* Apply transitions only to interactive elements, not all elements */
+        a, button, input, select, textarea,
+        .nav-link, .btn-primary, .btn-secondary, .card, .product-card,
+        [class*="hover:"], [x-data] > div {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Exclude page-load elements from transitions to prevent glitches */
+        nav, nav *, .cart-badge, #notification-badge,
+        #wishlist-count-badge, footer, footer * {
+            transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, opacity 0.3s ease, transform 0.3s ease !important;
         }
 
         body {
@@ -494,7 +511,178 @@
         }
     </style>
 </head>
-<body class="antialiased">
+<body class="antialiased" style="opacity: 0;">
+    <!-- ===== Page Loading Screen ===== -->
+    <div id="pageLoader" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#ffffff;transition:opacity 0.4s ease, visibility 0.4s ease;">
+        <div style="text-align:center;">
+            <!-- Yakan Logo Spinner -->
+            <div style="position:relative;width:80px;height:80px;margin:0 auto 24px;">
+                <!-- Outer spinning ring -->
+                <div style="position:absolute;inset:0;border:3px solid #f3e8e8;border-top:3px solid #800000;border-right:3px solid #a00000;border-radius:50%;animation:loaderSpin 1s cubic-bezier(0.5,0,0.5,1) infinite;"></div>
+                <!-- Inner spinning ring (opposite direction) -->
+                <div style="position:absolute;inset:8px;border:2px solid #f3e8e8;border-bottom:2px solid #800000;border-left:2px solid #a00000;border-radius:50%;animation:loaderSpin 0.8s cubic-bezier(0.5,0,0.5,1) infinite reverse;"></div>
+                <!-- Center logo -->
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+                    <div style="width:36px;height:36px;background:linear-gradient(135deg,#800000,#a00000);border-radius:10px;display:flex;align-items:center;justify-content:center;animation:loaderPulse 1.5s ease-in-out infinite;">
+                        <span style="color:white;font-weight:800;font-size:18px;font-family:Inter,sans-serif;">Y</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Loading text -->
+            <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+                <span style="font-family:Inter,sans-serif;font-weight:700;font-size:14px;color:#800000;letter-spacing:2px;">LOADING</span>
+                <span style="display:inline-flex;gap:3px;" id="loaderDots">
+                    <span style="width:4px;height:4px;background:#800000;border-radius:50%;animation:loaderDot 1.2s ease-in-out infinite;animation-delay:0s;"></span>
+                    <span style="width:4px;height:4px;background:#800000;border-radius:50%;animation:loaderDot 1.2s ease-in-out infinite;animation-delay:0.2s;"></span>
+                    <span style="width:4px;height:4px;background:#800000;border-radius:50%;animation:loaderDot 1.2s ease-in-out infinite;animation-delay:0.4s;"></span>
+                </span>
+            </div>
+            <!-- Progress bar -->
+            <div style="width:120px;height:3px;background:#f3e8e8;border-radius:3px;margin:12px auto 0;overflow:hidden;">
+                <div id="loaderProgress" style="height:100%;width:0%;background:linear-gradient(90deg,#800000,#c02020);border-radius:3px;transition:width 0.3s ease;"></div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes loaderSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes loaderPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(0.9); opacity: 0.8; }
+        }
+        @keyframes loaderDot {
+            0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+            40% { opacity: 1; transform: translateY(-3px); }
+        }
+        /* Page content fade-in after load */
+        @keyframes pageReveal {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        body.page-loaded {
+            opacity: 1 !important;
+            animation: pageReveal 0.4s ease-out;
+        }
+        /* Navigation link loading indicator */
+        .nav-loading-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 3px;
+            background: linear-gradient(90deg, #800000, #c02020, #800000);
+            background-size: 200% 100%;
+            animation: navBarShimmer 1.5s linear infinite;
+            z-index: 99998;
+            transition: width 0.4s ease;
+            box-shadow: 0 0 8px rgba(128, 0, 0, 0.4);
+        }
+        @keyframes navBarShimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+
+    <script>
+    (function() {
+        // ===== Page Load Handler =====
+        var loader = document.getElementById('pageLoader');
+        var progress = document.getElementById('loaderProgress');
+        var loaded = false;
+
+        // Simulate progress
+        var pct = 0;
+        var progressInterval = setInterval(function() {
+            if (pct < 90) {
+                pct += Math.random() * 15 + 5;
+                if (pct > 90) pct = 90;
+                if (progress) progress.style.width = pct + '%';
+            }
+        }, 150);
+
+        function hideLoader() {
+            if (loaded) return;
+            loaded = true;
+            clearInterval(progressInterval);
+            if (progress) progress.style.width = '100%';
+            
+            setTimeout(function() {
+                document.body.classList.add('page-loaded');
+                if (loader) {
+                    loader.style.opacity = '0';
+                    loader.style.visibility = 'hidden';
+                    setTimeout(function() { loader.style.display = 'none'; }, 400);
+                }
+            }, 200);
+        }
+
+        // Hide loader when page is fully loaded
+        window.addEventListener('load', hideLoader);
+        // Fallback: hide after 4s max
+        setTimeout(hideLoader, 4000);
+
+        // ===== Navigation Loading Bar =====
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create the top loading bar element
+            var navBar = document.createElement('div');
+            navBar.className = 'nav-loading-indicator';
+            navBar.id = 'navLoadingBar';
+            navBar.style.display = 'none';
+            document.body.appendChild(navBar);
+
+            // Intercept navigation clicks
+            document.addEventListener('click', function(e) {
+                var link = e.target.closest('a[href]');
+                if (!link) return;
+
+                var href = link.getAttribute('href');
+                // Skip: anchors, javascript:, external, new tabs, special protocols
+                if (!href || href.startsWith('#') || href.startsWith('javascript:') ||
+                    href.startsWith('mailto:') || href.startsWith('tel:') ||
+                    link.target === '_blank' || link.hasAttribute('download') ||
+                    e.ctrlKey || e.metaKey || e.shiftKey) return;
+
+                // Skip external links
+                try {
+                    var url = new URL(href, window.location.origin);
+                    if (url.origin !== window.location.origin) return;
+                } catch(ex) { return; }
+
+                // Show the navigation loading bar
+                navBar.style.display = 'block';
+                navBar.style.width = '0%';
+                // Force reflow
+                navBar.offsetWidth;
+                // Animate to 30% quickly, then slow crawl
+                navBar.style.width = '30%';
+                setTimeout(function() { navBar.style.width = '70%'; }, 300);
+                setTimeout(function() { navBar.style.width = '85%'; }, 800);
+            });
+
+            // Handle form submissions too
+            document.addEventListener('submit', function(e) {
+                var form = e.target;
+                if (form.method && form.method.toUpperCase() === 'GET') {
+                    navBar.style.display = 'block';
+                    navBar.style.width = '0%';
+                    navBar.offsetWidth;
+                    navBar.style.width = '40%';
+                    setTimeout(function() { navBar.style.width = '80%'; }, 500);
+                }
+            });
+
+            // Before page unload, push bar to 95%
+            window.addEventListener('beforeunload', function() {
+                if (navBar.style.display !== 'none') {
+                    navBar.style.width = '95%';
+                }
+            });
+        });
+    })();
+    </script>
     <!-- Floating Background Elements -->
     @unless(request()->routeIs('chats.*'))
     <div class="floating-element floating-1"></div>
