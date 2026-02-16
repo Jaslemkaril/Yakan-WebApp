@@ -21,6 +21,8 @@ import { useCart } from '../context/CartContext';
 import ApiService from '../services/api';
 import colors from '../constants/colors';
 import BottomNav from '../components/BottomNav';
+import ScreenHeader from '../components/ScreenHeader';
+import { useTheme } from '../context/ThemeContext';
 
 export default function ChatScreen({ navigation }) {
   const [chats, setChats] = useState([]);
@@ -36,6 +38,8 @@ export default function ChatScreen({ navigation }) {
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const { isLoggedIn } = useCart();
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
   const flatListRef = useRef(null);
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const previousMessageCount = useRef(0);
@@ -568,19 +572,14 @@ export default function ChatScreen({ navigation }) {
   // Show chats list
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Messages</Text>
-          <Text style={styles.subtitle}>Support & Inquiries</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.newChatButton}
-          onPress={() => setShowNewChatForm(true)}
-        >
-          <Text style={styles.newChatButtonIcon}>+</Text>
-        </TouchableOpacity>
-      </View>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader 
+        title="Messages" 
+        navigation={navigation} 
+        showBack={false}
+        rightIcon={<Text style={{ color: '#fff', fontSize: 24, fontWeight: '600' }}>+</Text>}
+        onRightIconPress={() => setShowNewChatForm(true)}
+      />
 
       {chats.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -671,14 +670,14 @@ export default function ChatScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: theme.cardBackground,
   },
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.background,
   },
   centerContent: {
     flex: 1,
@@ -693,14 +692,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
-    backgroundColor: '#8B1A1A',
+    backgroundColor: theme.headerBg,
     borderBottomWidth: 1,
-    borderBottomColor: '#8B1A1A',
+    borderBottomColor: theme.headerBg,
   },
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#fff',
+    color: theme.headerText,
     marginBottom: 4,
   },
   subtitle: {
@@ -715,13 +714,13 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: colors.text,
+    color: theme.text,
   },
   newChatButton: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -732,7 +731,7 @@ const styles = StyleSheet.create({
   },
   newChatButtonIcon: {
     fontSize: 28,
-    color: '#8B1A1A',
+    color: theme.primary,
     fontWeight: 'bold',
   },
   chatsList: {
@@ -741,14 +740,14 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   chatItem: {
-    backgroundColor: colors.white,
+    backgroundColor: theme.cardBackground,
     borderRadius: 14,
     padding: 14,
     marginBottom: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: colors.black,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
@@ -766,18 +765,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.surfaceBg,
   },
   avatarOpen: {
-    backgroundColor: '#e8f5e9',
+    backgroundColor: theme.successBg,
   },
   avatarClosed: {
-    backgroundColor: '#ffebee',
+    backgroundColor: theme.dangerBg,
   },
   chatAvatarText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: colors.primary,
+    color: theme.primary,
   },
   chatItemContent: {
     flex: 1,
@@ -785,12 +784,12 @@ const styles = StyleSheet.create({
   chatItemSubject: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.text,
+    color: theme.text,
     marginBottom: 4,
   },
   chatItemPreview: {
     fontSize: 13,
-    color: '#999',
+    color: theme.textMuted,
     lineHeight: 18,
   },
   chatItemRight: {
@@ -804,19 +803,19 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   statusOpen: {
-    backgroundColor: '#e8f5e9',
+    backgroundColor: theme.successBg,
   },
   statusClosed: {
-    backgroundColor: '#ffebee',
+    backgroundColor: theme.dangerBg,
   },
   statusText: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: colors.primary,
+    color: theme.primary,
   },
   chatItemDate: {
     fontSize: 12,
-    color: '#bbb',
+    color: theme.textMuted,
   },
   emptyContainer: {
     flex: 1,
@@ -827,35 +826,35 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.text,
+    color: theme.text,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: theme.textMuted,
     marginBottom: 24,
     textAlign: 'center',
   },
   emptyButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: theme.primary,
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 10,
   },
   emptyButtonText: {
-    color: colors.white,
+    color: '#fff',
     fontWeight: '600',
     fontSize: 15,
   },
   loginButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: theme.primary,
     paddingHorizontal: 30,
     paddingVertical: 12,
     borderRadius: 10,
     marginTop: 20,
   },
   loginButtonText: {
-    color: colors.white,
+    color: '#fff',
     fontWeight: '600',
     fontSize: 16,
   },
@@ -866,9 +865,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 50,
     paddingBottom: 12,
-    backgroundColor: colors.white,
+    backgroundColor: theme.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
   },
   backButtonContainer: {
     padding: 12,
@@ -876,7 +875,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     fontSize: 18,
-    color: colors.primary,
+    color: theme.primary,
     fontWeight: '700',
   },
   chatHeaderInfo: {
@@ -886,7 +885,7 @@ const styles = StyleSheet.create({
   chatSubject: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
+    color: theme.text,
     marginBottom: 4,
   },
   statusBadge: {
@@ -907,7 +906,7 @@ const styles = StyleSheet.create({
   },
   chatStatus: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textSecondary,
     fontWeight: '500',
   },
   closeButtonContainer: {
@@ -915,7 +914,7 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     fontSize: 20,
-    color: '#f44336',
+    color: theme.dangerText,
     fontWeight: 'bold',
   },
   messagesFlatList: {
@@ -941,12 +940,12 @@ const styles = StyleSheet.create({
   },
   userMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: colors.primary,
+    backgroundColor: theme.primary,
     borderBottomRightRadius: 4,
   },
   adminMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: '#e8e8e8',
+    backgroundColor: theme.surfaceBg,
     borderBottomLeftRadius: 4,
   },
   messageText: {
@@ -954,10 +953,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   userMessageText: {
-    color: colors.white,
+    color: '#fff',
   },
   adminMessageText: {
-    color: colors.text,
+    color: theme.text,
   },
   messageTime: {
     fontSize: 11,
@@ -967,7 +966,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
   },
   adminMessageTime: {
-    color: '#999',
+    color: theme.textMuted,
   },
   emptyMessages: {
     alignItems: 'center',
@@ -976,31 +975,31 @@ const styles = StyleSheet.create({
   },
   emptyMessagesText: {
     fontSize: 14,
-    color: '#999',
+    color: theme.textMuted,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: colors.white,
+    backgroundColor: theme.cardBackground,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: theme.border,
   },
   imagePickerButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.inputBg,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
   },
   imagePickerIcon: {
     fontSize: 24,
-    color: colors.primary,
+    color: theme.primary,
     fontWeight: 'bold',
   },
   selectedImagePreview: {
@@ -1019,27 +1018,27 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: colors.primary,
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   removeImageIcon: {
-    color: colors.white,
+    color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 15,
-    color: colors.text,
+    color: theme.text,
     marginRight: 10,
     maxHeight: 100,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.inputBg,
   },
   messageInput: {
     minHeight: 80,
@@ -1047,13 +1046,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   sendButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: theme.primary,
     width: 44,
     height: 44,
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: colors.primary,
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -1063,7 +1062,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   sendButtonIcon: {
-    color: colors.white,
+    color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -1103,14 +1102,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 14,
-    backgroundColor: colors.white,
+    backgroundColor: theme.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
   },
   formTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.text,
+    color: theme.text,
   },
   formContainer: {
     flex: 1,
@@ -1123,17 +1122,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.text,
+    color: theme.text,
     marginBottom: 8,
   },
   charCount: {
     fontSize: 11,
-    color: '#999',
+    color: theme.textMuted,
     marginTop: 4,
     textAlign: 'right',
   },
   createButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: theme.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -1141,20 +1140,20 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     flexDirection: 'row',
     justifyContent: 'center',
-    shadowColor: colors.primary,
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   createButtonIcon: {
-    color: colors.white,
+    color: '#fff',
     fontSize: 18,
     marginRight: 8,
     fontWeight: 'bold',
   },
   createButtonText: {
-    color: colors.white,
+    color: '#fff',
     fontWeight: '600',
     fontSize: 16,
   },

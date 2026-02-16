@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Product;
 use App\Models\Category;
+use App\Services\CloudinaryService;
 use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
@@ -63,31 +64,43 @@ class ProductController extends Controller
         $imagePath = null;
         $allImages = [];
         $imageColors = $request->input('image_colors', []);
+        $cloudinary = new CloudinaryService();
         
         if ($request->hasFile('images')) {
             $imageIndex = 0;
-            $uploadDir = public_path('uploads/products');
-            
-            // Ensure upload directory exists
-            if (!is_dir($uploadDir)) {
-                @mkdir($uploadDir, 0777, true);
-            }
             
             foreach ($request->file('images') as $index => $image) {
                 if ($image && $image->isValid()) {
-                    // Save to public/uploads/products directly
-                    $imageName = time() . '_' . $imageIndex . '_' . $image->getClientOriginalName();
-                    $image->move($uploadDir, $imageName);
+                    $storedPath = null;
+                    
+                    // Try Cloudinary first (production)
+                    if ($cloudinary->isEnabled()) {
+                        $result = $cloudinary->uploadFile($image, 'products');
+                        if ($result) {
+                            $storedPath = $result['url'];
+                        }
+                    }
+                    
+                    // Fallback to local storage
+                    if (!$storedPath) {
+                        $uploadDir = public_path('uploads/products');
+                        if (!is_dir($uploadDir)) {
+                            @mkdir($uploadDir, 0777, true);
+                        }
+                        $imageName = time() . '_' . $imageIndex . '_' . $image->getClientOriginalName();
+                        $image->move($uploadDir, $imageName);
+                        $storedPath = $imageName;
+                    }
                     
                     $allImages[] = [
-                        'path' => $imageName,
+                        'path' => $storedPath,
                         'color' => $imageColors[$index] ?? null,
                         'sort_order' => $imageIndex
                     ];
                     
                     // First VALID image becomes the main image
                     if ($imagePath === null) {
-                        $imagePath = $path;
+                        $imagePath = $storedPath;
                     }
                     
                     $imageIndex++;
@@ -171,15 +184,23 @@ class ProductController extends Controller
         }
         
         $imagesToDelete = $request->delete_images ? json_decode($request->delete_images, true) : [];
+        $cloudinary = new CloudinaryService();
         
         if (!empty($imagesToDelete)) {
             // Remove deleted images from array and delete files
-            $allImages = array_filter($allImages, function($img) use ($imagesToDelete) {
+            $allImages = array_filter($allImages, function($img) use ($imagesToDelete, $cloudinary) {
                 if (in_array($img['path'], $imagesToDelete)) {
-                    // Delete physical file
-                    $filePath = public_path('uploads/products/' . $img['path']);
-                    if (file_exists($filePath)) {
-                        @unlink($filePath);
+                    // Delete from Cloudinary or local
+                    if (str_contains($img['path'], 'cloudinary.com')) {
+                        // Extract public_id from Cloudinary URL for deletion
+                        if (preg_match('/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z]+)?$/', $img['path'], $matches)) {
+                            $cloudinary->delete($matches[1]);
+                        }
+                    } else {
+                        $filePath = public_path('uploads/products/' . $img['path']);
+                        if (file_exists($filePath)) {
+                            @unlink($filePath);
+                        }
                     }
                     return false;
                 }
@@ -196,27 +217,39 @@ class ProductController extends Controller
         
         if ($request->hasFile('images')) {
             $imageIndex = count($allImages);
-            $uploadDir = public_path('uploads/products');
-            
-            // Ensure upload directory exists
-            if (!is_dir($uploadDir)) {
-                @mkdir($uploadDir, 0777, true);
-            }
             
             foreach ($request->file('images') as $index => $image) {
                 if ($image && $image->isValid()) {
-                    $imageName = time() . '_' . $imageIndex . '_' . $image->getClientOriginalName();
-                    $image->move($uploadDir, $imageName);
+                    $storedPath = null;
+                    
+                    // Try Cloudinary first (production)
+                    if ($cloudinary->isEnabled()) {
+                        $result = $cloudinary->uploadFile($image, 'products');
+                        if ($result) {
+                            $storedPath = $result['url'];
+                        }
+                    }
+                    
+                    // Fallback to local storage
+                    if (!$storedPath) {
+                        $uploadDir = public_path('uploads/products');
+                        if (!is_dir($uploadDir)) {
+                            @mkdir($uploadDir, 0777, true);
+                        }
+                        $imageName = time() . '_' . $imageIndex . '_' . $image->getClientOriginalName();
+                        $image->move($uploadDir, $imageName);
+                        $storedPath = $imageName;
+                    }
                     
                     $allImages[] = [
-                        'path' => $imageName,
+                        'path' => $storedPath,
                         'color' => $imageColors[$index] ?? null,
                         'sort_order' => $imageIndex
                     ];
                     
                     // Track first new image
                     if ($firstNewImage === null) {
-                        $firstNewImage = $imageName;
+                        $firstNewImage = $storedPath;
                     }
                     
                     $imageIndex++;

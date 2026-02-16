@@ -10,7 +10,7 @@
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
                     <h1 class="text-xl font-semibold text-gray-900">Create Custom Order</h1>
-                    <span class="ml-3 px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">Step 1: Select Fabric</span>
+                    <span class="ml-3 px-2 py-1 text-xs font-medium bg-red-50 text-[#800000] rounded-full">Step 1: Select Fabric</span>
                 </div>
                 <a href="{{ route('admin_custom_orders.create.choice') }}" class="text-gray-500 hover:text-gray-700">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,7 +65,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label for="user_id" class="block text-sm font-medium text-gray-700 mb-2">Customer *</label>
-                        <select name="user_id" id="user_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                        <select name="user_id" id="user_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent">
                             <option value="">Choose a customer...</option>
                             @foreach($users as $user)
                                 <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
@@ -83,7 +83,7 @@
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Choose Fabric Type</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     @foreach(['Cotton', 'Silk', 'Polyester Cotton Blend', 'Linen', 'Canvas', 'Jersey Knit'] as $fabricType)
-                        <div class="fabric-option border-2 border-gray-200 rounded-lg p-4 cursor-pointer hover:border-purple-500 hover:shadow-md transition-all duration-200" 
+                        <div class="fabric-option border-2 border-gray-200 rounded-lg p-4 cursor-pointer hover:border-[#800000] hover:shadow-md transition-all duration-200" 
                              onclick="selectFabric('{{ $fabricType }}')" 
                              data-fabric="{{ $fabricType }}">
                             <div class="flex items-center mb-3">
@@ -111,7 +111,7 @@
                         <input type="number" 
                                id="fabric_quantity_meters" 
                                name="fabric_quantity_meters" 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
                                step="0.1" 
                                min="0.5" 
                                max="100" 
@@ -128,7 +128,7 @@
                         <select id="intended_use" 
                                 name="intended_use" 
                                 required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent">
                             <option value="">Select intended use...</option>
                             <option value="clothing">Clothing</option>
                             <option value="accessories">Accessories</option>
@@ -146,14 +146,14 @@
             </div>
 
             <!-- Admin Notes Section -->
-            <div class="bg-purple-50 border border-purple-200 rounded-lg p-6">
+            <div class="bg-red-50 border border-red-200 rounded-lg p-6">
                 <div class="flex items-start">
-                    <svg class="w-6 h-6 text-purple-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6 text-[#800000] mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     <div>
-                        <h3 class="text-lg font-semibold text-purple-900 mb-2">Fabric Selection Guidelines</h3>
-                        <div class="text-sm text-purple-700 space-y-2">
+                        <h3 class="text-lg font-semibold text-[#800000] mb-2">Fabric Selection Guidelines</h3>
+                        <div class="text-sm text-[#800000] space-y-2">
                             <p>• <strong>Cotton:</strong> Best for everyday items, breathable and easy to work with</p>
                             <p>• <strong>Silk:</strong> Premium choice for luxury items, beautiful drape</p>
                             <p>• <strong>Polyester Cotton Blend:</strong> Durable and wrinkle-resistant</p>
@@ -171,7 +171,7 @@
                     ← Back to Choices
                 </a>
                 
-                <button type="submit" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center">
+                <button type="submit" class="px-6 py-3 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-medium flex items-center">
                     <span>Continue to Pattern Design</span>
                     <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -190,24 +190,24 @@ function selectFabric(fabricType) {
     
     // Clear all selections
     document.querySelectorAll('.fabric-radio').forEach(div => {
-        div.classList.remove('bg-purple-600', 'border-purple-600');
+        div.classList.remove('bg-[#800000]', 'border-[#800000]');
         div.classList.add('border-gray-300');
     });
     
     // Set selected
     radio.checked = true;
     radioDiv.classList.remove('border-gray-300');
-    radioDiv.classList.add('bg-purple-600', 'border-purple-600');
+    radioDiv.classList.add('bg-[#800000]', 'border-[#800000]');
     
     // Update card border
     document.querySelectorAll('.fabric-option').forEach(card => {
-        card.classList.remove('border-purple-500', 'bg-purple-50');
+        card.classList.remove('border-[#800000]', 'bg-red-50');
         card.classList.add('border-gray-200');
     });
     
     const selectedCard = document.querySelector(`[data-fabric="${fabricType}"]`);
     selectedCard.classList.remove('border-gray-200');
-    selectedCard.classList.add('border-purple-500', 'bg-purple-50');
+    selectedCard.classList.add('border-[#800000]', 'bg-red-50');
 }
 
 // Add form validation

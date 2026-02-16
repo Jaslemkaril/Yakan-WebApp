@@ -23,7 +23,7 @@
                     <div class="flex items-start justify-between pb-4 border-b border-gray-200 last:border-b-0">
                         <div class="flex items-start gap-4">
                             @if($item->product && $item->product->image)
-                                <img src="{{ asset('storage/' . $item->product->image) }}" alt="{{ $item->product_name }}" class="w-20 h-20 object-cover rounded">
+                                <img src="{{ $item->product->image_src }}" alt="{{ $item->product_name }}" class="w-20 h-20 object-cover rounded">
                             @else
                                 <div class="w-20 h-20 bg-gray-200 rounded flex items-center justify-center">
                                     <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

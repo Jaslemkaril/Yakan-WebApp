@@ -106,4 +106,20 @@ return [
         'timeout' => env('REPLICATE_TIMEOUT', 300),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cloudinary Image Storage
+    |--------------------------------------------------------------------------
+    |
+    | Cloudinary is used for persistent image storage in production.
+    | Sign up at https://cloudinary.com (free tier: 25GB).
+    |
+    */
+
+    'cloudinary' => [
+        'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+        'api_key' => env('CLOUDINARY_API_KEY'),
+        'api_secret' => env('CLOUDINARY_API_SECRET'),
+    ],
+
 ];

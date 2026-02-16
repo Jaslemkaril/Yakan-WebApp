@@ -16,7 +16,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import colors from '../constants/colors';
 import { trackingStages } from '../constants/tracking';
 import ApiService from '../services/api';
-import useOrderNotifications from '../hooks/useOrderNotifications';
+import { useOrderNotifications } from '../hooks/useOrderNotifications';
+import ScreenHeader from '../components/ScreenHeader';
+import { useTheme } from '../context/ThemeContext';
 
 const normalizeStatus = (apiStatus, paymentStatus, fallback) => {
   // Map all variations to the 4 main stages: pending, processing, shipped, delivered
@@ -40,6 +42,7 @@ const normalizeStatus = (apiStatus, paymentStatus, fallback) => {
 };
 
 const OrderDetailsScreen = ({ navigation, route }) => {
+  const { theme } = useTheme();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const scaleAnim = new Animated.Value(0);
@@ -268,15 +271,12 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   const displayStageIndex = Math.max(0, currentStageIndex);
 
   return (
-    <View style={styles.container}>
-      {/* Enhanced Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backButtonHeader}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Order Tracking</Text>
-        <View style={{ width: 50 }} />
-      </View>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader 
+        title="Order Tracking" 
+        navigation={navigation} 
+        showBack={true}
+      />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Status Summary Card */}

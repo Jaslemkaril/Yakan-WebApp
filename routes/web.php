@@ -825,6 +825,9 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     // Dashboard CSV Export - Direct route
     Route::get('/dashboard/export-csv', [DashboardController::class, 'exportReport'])->name('dashboard.export');
 
+    // Print Report - printable page with selectable sections
+    Route::get('/dashboard/print-report', [DashboardController::class, 'printReport'])->name('dashboard.print');
+
     // User Management
     Route::prefix('users')->group(function () {
         Route::get('/', [UserManagementController::class, 'index'])->name('users.index');

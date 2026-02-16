@@ -86,7 +86,7 @@ class DashboardController extends Controller
             $totalProducts = \App\Models\Product::count();
             
             // Out-of-stock items
-            $outOfStockItems = \App\Models\Product::where('stock', '<=', 0)->get();
+            $outOfStockItems = \App\Models\Product::where('stock', '<=', 0)->with('category')->get();
             $outOfStockCount = $outOfStockItems->count();
 
             // Top products by sold quantity (Best Sellers)
@@ -232,6 +232,256 @@ class DashboardController extends Controller
         } catch (\Exception $e) {
             \Log::error('Analytics error: ' . $e->getMessage());
             return redirect()->route('admin.dashboard')->with('error', 'Unable to load analytics.');
+        }
+    }
+
+    /**
+     * Sales Report page
+     */
+    public function salesReport(Request $request)
+    {
+        try {
+            $period = $request->get('period', 30);
+            
+            $salesData = Order::where('status', 'completed')
+                ->where('created_at', '>=', now()->subDays($period))
+                ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue, COUNT(*) as orders')
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get();
+
+            $totalRevenue = (float) Order::where('status', 'completed')->sum('total_amount');
+            $totalOrders = Order::count();
+            $completedOrders = Order::where('status', 'completed')->count();
+            $averageOrderValue = $completedOrders > 0 ? $totalRevenue / $completedOrders : 0;
+
+            // Monthly revenue for the past 12 months
+            $monthlyRevenue = Order::where('status', 'completed')
+                ->where('created_at', '>=', now()->subMonths(12))
+                ->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, SUM(total_amount) as revenue, COUNT(*) as orders')
+                ->groupBy('year', 'month')
+                ->orderBy('year')
+                ->orderBy('month')
+                ->get();
+
+            // Payment method breakdown
+            $paymentMethods = Order::selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
+                ->groupBy('payment_method')
+                ->get();
+
+            // Top products by revenue
+            $topProducts = OrderItem::selectRaw('product_id, SUM(quantity) as sold, SUM(price * quantity) as revenue')
+                ->groupBy('product_id')
+                ->orderByDesc('revenue')
+                ->with('product')
+                ->take(10)
+                ->get();
+
+            return view('admin.analytics.sales', compact(
+                'salesData',
+                'totalRevenue',
+                'totalOrders',
+                'completedOrders',
+                'averageOrderValue',
+                'monthlyRevenue',
+                'paymentMethods',
+                'topProducts',
+                'period'
+            ));
+        } catch (\Exception $e) {
+            \Log::error('Sales report error: ' . $e->getMessage());
+            return redirect()->route('admin.dashboard')->with('error', 'Unable to load sales report.');
+        }
+    }
+
+    /**
+     * Products Report page
+     */
+    public function productsReport()
+    {
+        try {
+            $topProducts = OrderItem::selectRaw('product_id, SUM(quantity) as sold, SUM(price * quantity) as revenue')
+                ->groupBy('product_id')
+                ->orderByDesc('sold')
+                ->with('product')
+                ->take(20)
+                ->get();
+
+            $totalProducts = Product::count();
+            $outOfStockCount = Product::where('stock', '<=', 0)->count();
+            $outOfStockItems = Product::where('stock', '<=', 0)->with('category')->get();
+
+            return view('admin.analytics.products', compact(
+                'topProducts',
+                'totalProducts',
+                'outOfStockCount',
+                'outOfStockItems'
+            ));
+        } catch (\Exception $e) {
+            \Log::error('Products report error: ' . $e->getMessage());
+            return redirect()->route('admin.dashboard')->with('error', 'Unable to load products report.');
+        }
+    }
+
+    /**
+     * Users Report page
+     */
+    public function usersReport()
+    {
+        try {
+            $totalUsers = User::count();
+            $newUsersThisMonth = User::where('created_at', '>=', now()->startOfMonth())->count();
+            $newUsersThisWeek = User::where('created_at', '>=', now()->startOfWeek())->count();
+            
+            // User growth by month
+            $userGrowth = User::where('created_at', '>=', now()->subMonths(12))
+                ->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, COUNT(*) as users')
+                ->groupBy('year', 'month')
+                ->orderBy('year')
+                ->orderBy('month')
+                ->get();
+
+            // Top customers by orders
+            $topCustomers = User::withCount('orders')
+                ->orderByDesc('orders_count')
+                ->take(10)
+                ->get();
+
+            $recentUsers = User::orderByDesc('created_at')->take(10)->get();
+
+            return view('admin.analytics.users', compact(
+                'totalUsers',
+                'newUsersThisMonth',
+                'newUsersThisWeek',
+                'userGrowth',
+                'topCustomers',
+                'recentUsers'
+            ));
+        } catch (\Exception $e) {
+            \Log::error('Users report error: ' . $e->getMessage());
+            return redirect()->route('admin.dashboard')->with('error', 'Unable to load users report.');
+        }
+    }
+
+    /**
+     * Print Report - renders a printable page with selectable report sections
+     */
+    public function printReport(Request $request)
+    {
+        try {
+            $period = $request->get('period', 'all');
+            $sections = $request->get('sections', []);
+
+            // If no sections selected, show all
+            if (empty($sections)) {
+                $sections = ['revenue', 'product_sales', 'transactions', 'users'];
+            }
+
+            // Date filtering
+            $dateQuery = Order::query();
+            switch ($period) {
+                case 'daily':
+                    $dateQuery->whereDate('created_at', today());
+                    break;
+                case 'weekly':
+                    $dateQuery->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                    break;
+                case 'yearly':
+                    $dateQuery->whereYear('created_at', now()->year);
+                    break;
+            }
+
+            $data = ['period' => $period, 'sections' => $sections];
+
+            // --- Total Revenue ---
+            if (in_array('revenue', $sections)) {
+                $data['totalRevenue'] = (float) (clone $dateQuery)->where('status', 'completed')->sum('total_amount');
+                $data['totalOrders'] = (clone $dateQuery)->count();
+                $data['completedOrders'] = (clone $dateQuery)->where('status', 'completed')->count();
+                $data['pendingOrders'] = (clone $dateQuery)->where('status', 'pending')->count();
+                $data['averageOrderValue'] = $data['completedOrders'] > 0 ? $data['totalRevenue'] / $data['completedOrders'] : 0;
+
+                // Monthly revenue for chart (last 12 months)
+                $data['monthlyRevenue'] = Order::where('status', 'completed')
+                    ->where('created_at', '>=', now()->subMonths(12))
+                    ->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, SUM(total_amount) as revenue, COUNT(*) as orders')
+                    ->groupBy('year', 'month')
+                    ->orderBy('year')
+                    ->orderBy('month')
+                    ->get();
+
+                // Daily revenue for the selected period
+                $daysRange = match($period) {
+                    'daily' => 1,
+                    'weekly' => 7,
+                    'yearly' => 365,
+                    default => 30,
+                };
+                $data['dailyRevenue'] = Order::where('status', 'completed')
+                    ->where('created_at', '>=', now()->subDays($daysRange))
+                    ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue, COUNT(*) as orders')
+                    ->groupBy('date')
+                    ->orderBy('date')
+                    ->get();
+
+                // Payment method breakdown
+                $data['paymentMethods'] = (clone $dateQuery)->selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
+                    ->groupBy('payment_method')
+                    ->get();
+            }
+
+            // --- Product Sales Report ---
+            if (in_array('product_sales', $sections)) {
+                $topProductsQuery = OrderItem::selectRaw('product_id, SUM(quantity) as sold, SUM(price * quantity) as revenue')
+                    ->groupBy('product_id')
+                    ->orderByDesc('sold')
+                    ->with('product');
+
+                if ($period !== 'all') {
+                    $topProductsQuery->whereHas('order', function($q) use ($dateQuery) {
+                        $q->whereIn('id', (clone $dateQuery)->pluck('id'));
+                    });
+                }
+
+                $data['productSales'] = $topProductsQuery->get();
+                $data['totalProducts'] = Product::count();
+                $data['outOfStockCount'] = Product::where('stock', '<=', 0)->count();
+            }
+
+            // --- Transaction History ---
+            if (in_array('transactions', $sections)) {
+                $data['transactions'] = (clone $dateQuery)->with(['user', 'items.product'])
+                    ->orderByDesc('created_at')
+                    ->get();
+            }
+
+            // --- Total Users ---
+            if (in_array('users', $sections)) {
+                $data['totalUsers'] = User::count();
+                $data['adminUsers'] = User::where('role', 'admin')->count();
+                $data['customerUsers'] = User::where('role', '!=', 'admin')->count();
+                $data['newUsersThisMonth'] = User::where('created_at', '>=', now()->startOfMonth())->count();
+                $data['newUsersThisWeek'] = User::where('created_at', '>=', now()->startOfWeek())->count();
+
+                // User growth by month (last 12 months)
+                $data['userGrowth'] = User::where('created_at', '>=', now()->subMonths(12))
+                    ->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, COUNT(*) as users')
+                    ->groupBy('year', 'month')
+                    ->orderBy('year')
+                    ->orderBy('month')
+                    ->get();
+
+                // Top customers
+                $data['topCustomers'] = User::withCount('orders')
+                    ->orderByDesc('orders_count')
+                    ->take(10)
+                    ->get();
+            }
+
+            return view('admin.print-report', $data);
+        } catch (\Exception $e) {
+            \Log::error('Print report error: ' . $e->getMessage());
+            return redirect()->route('admin.dashboard')->with('error', 'Unable to generate print report: ' . $e->getMessage());
         }
     }
 

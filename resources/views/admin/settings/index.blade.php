@@ -10,7 +10,7 @@
             <div class="flex items-center">
                 <div>
                     <h1 class="text-3xl font-black text-white">System Settings</h1>
-                    <p class="text-maroon-100 mt-2">Manage pricing and system configuration</p>
+                    <p class="text-red-100 mt-2">Manage pricing and system configuration</p>
                 </div>
             </div>
         </div>
@@ -28,7 +28,7 @@
 
             <!-- Info Box -->
             <div class="bg-white rounded-xl shadow-lg p-6">
-                <div class="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                <div class="p-4 bg-red-50 rounded-lg border-l-4 border-[#800000]">
                     <h4 class="font-semibold text-gray-800 mb-2">ℹ️ Pricing Information</h4>
                     <p class="text-sm text-gray-700">
                         <strong>Pattern prices are now managed individually for each pattern.</strong>
@@ -48,11 +48,11 @@
                 
                 <div class="space-y-4">
                     <!-- Quality Check Days -->
-                    <div class="p-4 bg-purple-50 border-l-4 border-purple-500 rounded">
+                    <div class="p-4 bg-red-50 border-l-4 border-[#800000] rounded">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Quality Check Days *</label>
                         <p class="text-xs text-gray-600 mb-3">How many days for quality check after design production</p>
                         <input type="number" min="1" max="30" name="quality_check_days" value="{{ $settings['quality_check_days'] }}" required 
-                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000]" />
                         @error('quality_check_days') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
                 </div>

@@ -273,19 +273,19 @@ if (dropzone) {
     dropzone.addEventListener('dragover', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        dropzone.classList.add('border-blue-500', 'bg-blue-50');
+        dropzone.classList.add('border-[#800000]', 'bg-red-50');
     });
 
     dropzone.addEventListener('dragleave', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        dropzone.classList.remove('border-blue-500', 'bg-blue-50');
+        dropzone.classList.remove('border-[#800000]', 'bg-red-50');
     });
 
     dropzone.addEventListener('drop', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        dropzone.classList.remove('border-blue-500', 'bg-blue-50');
+        dropzone.classList.remove('border-[#800000]', 'bg-red-50');
         
         const files = e.dataTransfer.files;
         if (files.length > 0 && mediaUpload) {
@@ -321,7 +321,7 @@ function displayMediaPreviews(files) {
                         </div>
                     </div>
                     <input type="text" name="media_alt[${index}]" placeholder="Enter alt text for accessibility..." 
-                           class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                           class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#800000] focus:border-[#800000]" />
                 `;
                 mediaPreview.appendChild(div);
             };

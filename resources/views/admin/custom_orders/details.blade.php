@@ -22,7 +22,7 @@
             <span class="px-4 py-2 rounded-full text-sm font-semibold
                 {{ $order->status === 'delivered' || $order->status === 'completed' ? 'bg-green-100 text-green-700' : 
                    ($order->status === 'out_for_delivery' ? 'bg-blue-100 text-blue-700' : 
-                   ($order->status === 'production_complete' ? 'bg-purple-100 text-purple-700' : 
+                   ($order->status === 'production_complete' ? 'bg-purple-100 text-[#800000]' : 
                    ($order->status === 'processing' || $order->status === 'in_production' ? 'bg-orange-100 text-orange-700' : 
                    ($order->status === 'cancelled' || $order->status === 'rejected' ? 'bg-red-100 text-red-700' : 
                    'bg-yellow-100 text-yellow-700')))) }}">
@@ -72,12 +72,12 @@
             @if($patternModel && $patternModel->hasSvg())
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
                     Pattern Preview
                     @if($order->design_method === 'pattern')
-                        <span class="text-sm font-normal text-purple-600">(Customized Pattern: {{ $patternModel->name }})</span>
+                        <span class="text-sm font-normal text-[#800000]">(Customized Pattern: {{ $patternModel->name }})</span>
                     @endif
                 </h2>
                 
@@ -105,7 +105,7 @@
                     }
                 @endphp
                 
-                <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border-2 border-purple-200">
+                <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border-2 border-red-200">
                     <div class="w-full max-w-2xl mx-auto rounded-lg shadow-lg bg-white p-4 overflow-hidden">
                         <div class="w-full h-96 flex items-center justify-center">
                             <div style="{{ $filterStyle }} transform-origin: center; max-width: 100%; max-height: 100%;">
@@ -120,15 +120,15 @@
                     @if(isset($order->design_metadata['customization_settings']))
                         <div class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3">
                             <h3 class="col-span-full text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
                                 </svg>
                                 Customization Settings
                             </h3>
                             @foreach($order->design_metadata['customization_settings'] as $key => $value)
-                                <div class="bg-white rounded-lg p-3 border-2 border-purple-200 hover:border-purple-400 transition-colors">
+                                <div class="bg-white rounded-lg p-3 border-2 border-red-200 hover:border-[#800000] transition-colors">
                                     <div class="text-xs text-gray-500 uppercase font-semibold">{{ ucfirst(str_replace('_', ' ', $key)) }}</div>
-                                    <div class="text-sm font-bold text-purple-900">{{ $value }}</div>
+                                    <div class="text-sm font-bold text-[#800000]">{{ $value }}</div>
                                 </div>
                             @endforeach
                         </div>
@@ -138,16 +138,16 @@
             @elseif($order->design_upload)
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
                     Pattern Preview
                     @if($order->design_method === 'pattern')
-                        <span class="text-sm font-normal text-purple-600">(Customized Pattern)</span>
+                        <span class="text-sm font-normal text-[#800000]">(Customized Pattern)</span>
                     @endif
                 </h2>
                 
-                <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border-2 border-purple-200">
+                <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border-2 border-red-200">
                     @if(str_starts_with($order->design_upload, 'data:image'))
                         <img src="{{ $order->design_upload }}" alt="Pattern Preview" 
                              class="w-full max-h-96 object-contain rounded-lg shadow-lg">
@@ -162,15 +162,15 @@
                     @if(isset($order->design_metadata['customization_settings']))
                         <div class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3">
                             <h3 class="col-span-full text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
                                 </svg>
                                 Customization Settings
                             </h3>
                             @foreach($order->design_metadata['customization_settings'] as $key => $value)
-                                <div class="bg-white rounded-lg p-3 border-2 border-purple-200 hover:border-purple-400 transition-colors">
+                                <div class="bg-white rounded-lg p-3 border-2 border-red-200 hover:border-[#800000] transition-colors">
                                     <div class="text-xs text-gray-500 uppercase font-semibold">{{ ucfirst(str_replace('_', ' ', $key)) }}</div>
-                                    <div class="text-sm font-bold text-purple-900">{{ $value }}</div>
+                                    <div class="text-sm font-bold text-[#800000]">{{ $value }}</div>
                                 </div>
                             @endforeach
                         </div>
@@ -186,16 +186,16 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {{-- Fabric Type --}}
                     @if($order->fabric_type)
-                    <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                        <div class="text-sm text-purple-600 font-semibold mb-1">Fabric Type</div>
+                    <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+                        <div class="text-sm text-[#800000] font-semibold mb-1">Fabric Type</div>
                         <div class="text-lg font-bold text-gray-900">{{ $order->fabric_type_name }}</div>
                     </div>
                     @endif
                     
                     {{-- Quantity --}}
                     @if($order->fabric_quantity_meters)
-                    <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                        <div class="text-sm text-blue-600 font-semibold mb-1">Quantity</div>
+                    <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+                        <div class="text-sm text-[#800000] font-semibold mb-1">Quantity</div>
                         <div class="text-lg font-bold text-gray-900">{{ $order->fabric_quantity_meters }} meters</div>
                     </div>
                     @endif
@@ -375,7 +375,7 @@
                 <h2 class="text-lg font-bold text-gray-900 mb-4">Customer</h2>
                 
                 <div class="flex items-center gap-3 mb-4">
-                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                    <div class="w-12 h-12 bg-gradient-to-br from-[#800000] to-[#600000] rounded-full flex items-center justify-center">
                         <span class="text-lg font-bold text-white">{{ strtoupper(substr($order->user->name ?? 'U', 0, 1)) }}</span>
                     </div>
                     <div>
@@ -471,7 +471,7 @@
                        class="block bg-gray-50 border border-gray-200 rounded-lg p-2 hover:bg-gray-100 transition">
                         <img src="{{ $receiptUrl }}" alt="Payment Receipt" 
                              class="w-full h-32 object-contain rounded">
-                        <div class="text-xs text-center text-blue-600 mt-1">Click to view full size</div>
+                        <div class="text-xs text-center text-[#800000] mt-1">Click to view full size</div>
                     </a>
                 </div>
                 @endif
@@ -491,7 +491,7 @@
             {{-- Admin Actions --}}
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                     </svg>
                     Quick Actions
@@ -611,7 +611,7 @@
                         
                         <div class="bg-white rounded-lg p-3 mb-4 border border-yellow-200">
                             <div class="flex items-center gap-2 text-sm text-gray-700">
-                                <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
                                 <span class="font-medium">Customer has submitted payment proof</span>
@@ -646,9 +646,9 @@
                     
                     {{-- 3. Smart Workflow Progress (Only shows after quote sent) --}}
                     @if(!empty($order->price_quoted_at))
-                    <div class="bg-white rounded-lg p-5 border-2 border-purple-200 shadow-sm">
+                    <div class="bg-white rounded-lg p-5 border-2 border-red-200 shadow-sm">
                         <div class="flex items-center gap-2 mb-4">
-                            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <h3 class="text-sm font-bold text-gray-800">Order Progress</h3>
@@ -755,17 +755,17 @@
                             </button>
                         </form>
                         @elseif($order->status === 'delivered')
-                        <div class="bg-gradient-to-r from-purple-100 to-pink-100 border-2 border-purple-300 rounded-lg p-4 text-center">
+                        <div class="bg-gradient-to-r from-red-50 to-red-100 border-2 border-red-300 rounded-lg p-4 text-center">
                             <div class="flex justify-center mb-2">
-                                <svg class="w-12 h-12 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-12 h-12 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
                             </div>
-                            <div class="font-bold text-purple-900">Order Completed!</div>
-                            <div class="text-sm text-purple-700">This order has been successfully delivered</div>
+                            <div class="font-bold text-[#800000]">Order Completed!</div>
+                            <div class="text-sm text-[#800000]">This order has been successfully delivered</div>
                         </div>
                         @else
-                        <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-3 text-center text-sm text-blue-800">
+                        <div class="bg-red-50 border-2 border-red-200 rounded-lg p-3 text-center text-sm text-[#800000]">
                             <strong>Status:</strong> {{ ucwords(str_replace('_', ' ', $order->status)) }}
                         </div>
                         @endif
@@ -859,7 +859,7 @@
             {{-- Timeline --}}
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 class="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     Order Timeline

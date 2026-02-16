@@ -986,55 +986,48 @@
         </a>
     </div>
 
-    <!-- Divider -->
-    <div class="pt-4 pb-2">
-        <div class="h-px bg-gray-200"></div>
-    </div>
-
     <!-- Quick Actions -->
-    <div class="px-4 py-2 mt-4">
-        <span class="sidebar-text text-xs font-semibold text-gray-400 uppercase tracking-wider">Quick Actions</span>
+    <div class="pt-4 mt-4 border-t" style="border-color: rgba(255,255,255,0.1);">
+        <div class="px-4 py-2">
+            <span class="sidebar-text text-xs font-semibold" style="color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.05em;">Quick Actions</span>
+        </div>
+        <a href="{{ route('admin.products.create') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-2 rounded-lg group" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.6);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="sidebar-text text-sm font-medium" style="color: rgba(255,255,255,0.8);">Add Product</span>
+        </a>
+        <a href="{{ route('admin.users.create') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-2 rounded-lg group" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.6);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+            <span class="sidebar-text text-sm font-medium" style="color: rgba(255,255,255,0.8);">Add User</span>
+        </a>
     </div>
-    <a href="{{ route('admin.products.create') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-gray-100 group">
-        <i class="fas fa-plus-circle text-gray-400 group-hover:text-green-600 w-4"></i>
-        <span class="sidebar-text text-sm font-medium text-gray-600 group-hover:text-gray-900">Add Product</span>
-    </a>
-    <!-- <a href="{{ route('admin.inventory.create') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-gray-100 group">
-            <i class="fas fa-plus w-5 h-5 text-gray-400 group-hover:text-green-500 transition-colors flex-shrink-0"></i>
-            <span class="sidebar-text font-medium text-gray-700 group-hover:text-gray-900">Add Inventory</span>
-        </a> -->
-    <a href="{{ route('admin.users.create') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-gray-100 group">
-        <i class="fas fa-user-plus text-gray-400 group-hover:text-blue-600 w-4"></i>
-        <span class="sidebar-text text-sm font-medium text-gray-600 group-hover:text-gray-900">Add User</span>
-    </a>
 </nav>
 
             <!-- User Profile & Logout Section -->
-<div class="p-4 border-t border-gray-200">
+<div class="p-4 border-t" style="border-color: rgba(255,255,255,0.1);">
     <!-- Desktop Collapse Toggle -->
     <button @click="sidebarCollapsed = !sidebarCollapsed" 
-            class="hidden md:flex items-center justify-center w-full p-2 mb-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            class="hidden md:flex items-center justify-center w-full p-2 mb-3 rounded-lg transition-colors" style="color: rgba(255,255,255,0.6);" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'; this.style.color='white'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='rgba(255,255,255,0.6)'"
             title="Toggle Sidebar">
         <i class="fas fa-chevron-left" :class="{ 'fa-chevron-right': sidebarCollapsed, 'fa-chevron-left': !sidebarCollapsed }"></i>
     </button>
     
-    <div class="bg-gray-50 rounded-lg p-3 mb-3">
+    <div class="rounded-lg p-3 mb-3" style="background: rgba(255,255,255,0.1);">
         <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <span class="text-sm font-bold text-white">AD</span>
+            <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style="background: rgba(255,255,255,0.2);">
+                <span class="text-sm font-bold text-white">{{ strtoupper(substr(auth()->user()?->name ?? 'A', 0, 1)) }}{{ strtoupper(substr(auth()->user()?->name ?? 'D', strpos(auth()->user()?->name ?? 'Admin D', ' ') + 1, 1)) }}</span>
             </div>
             <div class="sidebar-text flex-1 min-w-0">
-                <p class="text-sm font-medium text-gray-900 truncate">{{ auth()->user()?->name ?? 'Admin User' }}</p>
-                <p class="text-xs text-gray-500 truncate">{{ auth()->user()?->email ?? 'admin@example.com' }}</p>
+                <p class="text-sm font-medium text-white truncate">{{ auth()->user()?->name ?? 'Admin User' }}</p>
+                <p class="text-xs truncate" style="color: rgba(255,255,255,0.6);">{{ auth()->user()?->email ?? 'admin@example.com' }}</p>
             </div>
         </div>
     </div>
     
     <form method="POST" action="{{ route('admin.logout') }}">
         @csrf
-        <button type="submit" class="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-all group">
+        <button type="submit" class="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg transition-all group" style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8);" onmouseover="this.style.backgroundColor='rgba(255,80,80,0.3)'; this.style.color='#fecaca'" onmouseout="this.style.backgroundColor='rgba(255,255,255,0.1)'; this.style.color='rgba(255,255,255,0.8)'">
             <i class="fas fa-sign-out-alt w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
-            <span class="font-medium">Logout</span>
+            <span class="font-medium sidebar-text">Logout</span>
         </button>
     </form>
 </div>
@@ -1248,5 +1241,14 @@
     
     <!-- Page-specific scripts -->
     @stack('scripts')
+    <script>
+        // Fallback for broken product images
+        document.addEventListener('error', function(e) {
+            if (e.target.tagName === 'IMG' && !e.target.dataset.fallback) {
+                e.target.dataset.fallback = '1';
+                e.target.src = '{{ asset("images/no-image.svg") }}';
+            }
+        }, true);
+    </script>
 </body>
 </html>

@@ -35,7 +35,7 @@
 
     <!-- Actions -->
     <td class="py-3 px-4 flex space-x-2">
-        <a href="{{ route('admin.orders.show', $order->id) }}" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
+        <a href="{{ route('admin.orders.show', $order->id) }}" class="bg-[#800000] text-white px-3 py-1 rounded hover:bg-[#600000]">
             View
         </a>
 
@@ -43,7 +43,7 @@
         <form action="{{ route('admin.orders.refund', $order->id) }}" method="POST" onsubmit="return confirm('Refund this order?');">
             @csrf
             @method('PUT')
-            <button class="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700">
+            <button class="bg-[#800000] text-white px-3 py-1 rounded hover:bg-[#600000]">
                 Refund
             </button>
         </form>

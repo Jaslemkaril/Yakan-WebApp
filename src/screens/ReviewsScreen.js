@@ -10,11 +10,13 @@ import {
   Modal,
   Alert,
   FlatList,
-  Rating,
 } from 'react-native';
 import colors from '../constants/colors';
+import ScreenHeader from '../components/ScreenHeader';
+import { useTheme } from '../context/ThemeContext';
 
 export default function ReviewsScreen({ navigation, route }) {
+  const { theme } = useTheme();
   const { productId, productName } = route.params || {};
   const [reviews, setReviews] = useState([
     {
@@ -129,15 +131,12 @@ export default function ReviewsScreen({ navigation, route }) {
   );
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Reviews & Ratings</Text>
-        <View style={{ width: 50 }} />
-      </View>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader 
+        title="Reviews & Ratings" 
+        navigation={navigation} 
+        showBack={true}
+      />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Rating Summary */}

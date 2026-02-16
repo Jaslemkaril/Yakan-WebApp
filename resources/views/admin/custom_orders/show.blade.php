@@ -237,10 +237,10 @@
                                     @if($isImage)
                                         <img src="{{ $receiptUrl }}" 
                                              alt="Payment Receipt" 
-                                             class="w-full max-w-md h-auto rounded-lg shadow-md border-2 border-gray-300 hover:border-blue-400 transition-colors"
+                                             class="w-full max-w-md h-auto rounded-lg shadow-md border-2 border-gray-300 hover:border-[#800000] transition-colors"
                                              onerror="this.onerror=null; this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22><rect width=%22400%22 height=%22300%22 fill=%22%23f3f4f6%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2216%22 fill=%22%23666%22>Image not found</text></svg>';">
                                     @else
-                                        <div class="flex items-center gap-2 text-blue-600 hover:text-blue-800">
+                                        <div class="flex items-center gap-2 text-[#800000] hover:text-[#600000]">
                                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                                             </svg>
@@ -250,7 +250,7 @@
                                 </a>
                                 <div class="mt-2 text-xs text-gray-500 flex items-center justify-between">
                                     <span>Click to view full size</span>
-                                    <a href="{{ $receiptUrl }}" download class="text-blue-600 hover:underline">Download</a>
+                                    <a href="{{ $receiptUrl }}" download class="text-[#800000] hover:underline">Download</a>
                                 </div>
                             </div>
                         </div>
@@ -295,8 +295,8 @@
                                      class="w-full max-w-lg h-auto rounded-lg shadow-lg border-2 border-green-300 hover:border-green-500 transition-all duration-200"
                                      onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'bg-red-50 border-2 border-red-300 rounded-lg p-6 text-center\'><svg class=\'w-12 h-12 text-red-400 mx-auto mb-2\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z\'/></svg><p class=\'text-red-700 font-medium\'>Image not found or failed to load</p><p class=\'text-sm text-red-600 mt-1\'>Path: {{ $order->payment_receipt }}</p></div>';">
                             @else
-                                <div class="flex items-center gap-3 bg-white rounded-lg p-4 border-2 border-gray-300 hover:border-blue-400 transition-colors">
-                                    <svg class="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div class="flex items-center gap-3 bg-white rounded-lg p-4 border-2 border-gray-300 hover:border-[#800000] transition-colors">
+                                    <svg class="w-12 h-12 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                                     </svg>
                                     <div>
@@ -308,7 +308,7 @@
                         </a>
                         
                         <div class="mt-3 flex items-center gap-4">
-                            <a href="{{ $receiptUrl }}" target="_blank" class="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                            <a href="{{ $receiptUrl }}" target="_blank" class="text-sm text-[#800000] hover:underline flex items-center gap-1">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/>
                                 </svg>
@@ -354,12 +354,12 @@
                         <div class="rounded-xl border border-gray-200 p-4 bg-gray-50">
                             <div class="mb-3">
                                 <p class="text-sm text-gray-600 mb-2">
-                                    <span class="font-semibold text-purple-700">Pattern: {{ $patternModel->name }}</span>
+                                    <span class="font-semibold text-[#800000]">Pattern: {{ $patternModel->name }}</span>
                                     <span class="block text-xs text-gray-500 mt-1">Authentic Yakan weaving pattern</span>
                                 </p>
                             </div>
                             
-                            <div class="w-full max-w-lg rounded-lg shadow-md border-2 border-purple-200 bg-white p-4 overflow-hidden">
+                            <div class="w-full max-w-lg rounded-lg shadow-md border-2 border-red-200 bg-white p-4 overflow-hidden">
                                 <div class="w-full h-96 flex items-center justify-center">
                                     {!! $patternModel->getSvgContent() !!}
                                 </div>
@@ -387,7 +387,7 @@
                             <div class="mb-3">
                                 @if($order->design_method === 'pattern')
                                     <p class="text-sm text-gray-600 mb-2">
-                                        <span class="font-semibold text-purple-700">Pattern Customization Preview</span>
+                                        <span class="font-semibold text-[#800000]">Pattern Customization Preview</span>
                                         <span class="block text-xs text-gray-500 mt-1">This image shows how the user customized the pattern on the fabric</span>
                                     </p>
                                 @endif
@@ -397,32 +397,32 @@
                             @if(str_starts_with($order->design_upload, 'data:image'))
                                 {{-- Base64 encoded image --}}
                                 <a href="{{ $order->design_upload }}" target="_blank" class="block">
-                                    <img src="{{ $order->design_upload }}" alt="Pattern Preview" class="w-full max-w-lg h-auto rounded-lg shadow-md border-2 border-purple-200">
+                                    <img src="{{ $order->design_upload }}" alt="Pattern Preview" class="w-full max-w-lg h-auto rounded-lg shadow-md border-2 border-red-200">
                                 </a>
                             @else
                                 {{-- File path --}}
                                 <a href="{{ asset('storage/' . $order->design_upload) }}" target="_blank" class="block">
-                                    <img src="{{ asset('storage/' . $order->design_upload) }}" alt="Pattern Preview" class="w-full max-w-lg h-auto rounded-lg shadow-md border-2 border-purple-200">
+                                    <img src="{{ asset('storage/' . $order->design_upload) }}" alt="Pattern Preview" class="w-full max-w-lg h-auto rounded-lg shadow-md border-2 border-red-200">
                                 </a>
                             @endif
                             
                             <div class="mt-3 flex items-center gap-4">
                                 @if(str_starts_with($order->design_upload, 'data:image'))
-                                    <a href="{{ $order->design_upload }}" download="pattern-preview-{{ $order->id }}.png" class="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                                    <a href="{{ $order->design_upload }}" download="pattern-preview-{{ $order->id }}.png" class="text-sm text-[#800000] hover:underline flex items-center gap-1">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                         </svg>
                                         Download Preview
                                     </a>
                                 @else
-                                    <a href="{{ asset('storage/' . $order->design_upload) }}" download class="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                                    <a href="{{ asset('storage/' . $order->design_upload) }}" download class="text-sm text-[#800000] hover:underline flex items-center gap-1">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                         </svg>
                                         Download
                                     </a>
                                 @endif
-                                <a href="{{ $order->design_upload }}" target="_blank" class="text-sm text-purple-600 hover:underline flex items-center gap-1">
+                                <a href="{{ $order->design_upload }}" target="_blank" class="text-sm text-[#800000] hover:underline flex items-center gap-1">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/>
                                     </svg>
@@ -499,13 +499,13 @@
                     <h2 class="text-lg font-semibold mb-3 text-gray-900">Update Status</h2>
                     <form action="{{ route('admin.custom_orders.update_status', $order->id) }}" method="POST" class="flex flex-col gap-3">
                         @csrf
-                        <select name="status" class="border border-gray-300 rounded-lg px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select name="status" class="border border-gray-300 rounded-lg px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#800000]">
                             <option value="pending" @selected($order->status === 'pending')>Pending</option>
                             <option value="processing" @selected($order->status === 'processing')>Processing</option>
                             <option value="completed" @selected($order->status === 'completed')>Completed</option>
                             <option value="cancelled" @selected($order->status === 'cancelled')>Cancelled</option>
                         </select>
-                        <button type="submit" class="inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                        <button type="submit" class="inline-flex items-center justify-center gap-2 bg-[#800000] text-white px-4 py-2 rounded-lg hover:bg-[#600000]">
                             <span>Update</span>
                         </button>
                     </form>
@@ -558,8 +558,8 @@
                     </form>
                 </div>
                 @elseif($order->status === 'price_quoted')
-                <div class="bg-blue-50 mt-4 p-4 rounded-xl border border-blue-200">
-                    <h2 class="text-lg font-semibold mb-2 text-blue-800">⏳ Waiting for Customer Decision</h2>
+                <div class="bg-red-50 mt-4 p-4 rounded-xl border border-red-200">
+                    <h2 class="text-lg font-semibold mb-2 text-[#800000]">⏳ Waiting for Customer Decision</h2>
                     <div class="space-y-2 text-sm">
                         <p class="text-gray-700">
                             <span class="font-semibold">Quoted Price:</span> ₱{{ number_format($order->final_price, 2) }}
@@ -671,7 +671,7 @@
                             @endphp
                             <p class="text-sm text-gray-700 mb-2">
                                 Receipt uploaded:
-                                <a href="{{ $receiptUrl }}" target="_blank" class="text-blue-600 hover:underline ml-1">View</a>
+                                <a href="{{ $receiptUrl }}" target="_blank" class="text-[#800000] hover:underline ml-1">View</a>
                             </p>
                         @endif
                         @if($order->payment_notes)
@@ -743,15 +743,15 @@
 
                 {{-- API Payment Status Check --}}
                 @if(in_array($order->payment_method, ['gcash', 'online_banking']) && in_array($order->payment_status, ['pending', 'unpaid']))
-                    <div class="bg-blue-50 border border-blue-200 mt-4 p-4 rounded-xl">
-                        <h2 class="text-lg font-semibold mb-2 text-blue-800">API Payment Status</h2>
+                    <div class="bg-red-50 border border-red-200 mt-4 p-4 rounded-xl">
+                        <h2 class="text-lg font-semibold mb-2 text-[#800000]">API Payment Status</h2>
                         <p class="text-sm text-gray-700 mb-3">
                             This payment was processed via {{ ucfirst($order->payment_method) }}. Status will be updated automatically via webhook.
                         </p>
                         @if($order->transaction_id)
                             <form action="{{ route('admin.custom_orders.check_payment', $order->id) }}" method="POST" class="inline">
                                 @csrf
-                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-semibold">
+                                <button type="submit" class="bg-[#800000] hover:bg-[#600000] text-white px-3 py-2 rounded-lg text-sm font-semibold">
                                     Check Status Manually
                                 </button>
                             </form>

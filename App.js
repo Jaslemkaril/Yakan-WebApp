@@ -1,9 +1,11 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { CartProvider } from './src/context/CartContext';
+import { CartProvider, useCart } from './src/context/CartContext';
 import { NotificationProvider } from './src/context/NotificationContext';
+import { ThemeProvider } from './src/context/ThemeContext';
 import NotificationBar from './src/components/NotificationBar';
+import ErrorBoundary from './src/components/ErrorBoundary';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
@@ -29,7 +31,7 @@ import ChatScreen from './src/screens/ChatScreen';
 
 const Stack = createNativeStackNavigator();
 
-const AppNavigator = () => (
+const AppStack = () => (
   <Stack.Navigator
     initialRouteName="Home"
     screenOptions={{
@@ -53,9 +55,6 @@ const AppNavigator = () => (
     <Stack.Screen name="TrackOrders" component={TrackOrderScreen} />
     <Stack.Screen name="Orders" component={OrdersScreen} />
     <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
-    <Stack.Screen name="Login" component={LoginScreen} />
-    <Stack.Screen name="Register" component={RegisterScreen} />
-    <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     <Stack.Screen name="Payment" component={PaymentScreen} />
     <Stack.Screen name="SavedAddresses" component={SavedAddressesScreen} />
     <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
@@ -63,15 +62,55 @@ const AppNavigator = () => (
   </Stack.Navigator>
 );
 
+const AuthStackNavigator = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: false,
+      animation: 'fade',
+      animationDuration: 300,
+    }}
+  >
+    <Stack.Screen name="Login" component={LoginScreen} />
+    <Stack.Screen name="Register" component={RegisterScreen} />
+    <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+  </Stack.Navigator>
+);
+
+const AppNavigator = ({ isLoggedIn }) => (
+  <Stack.Navigator
+    initialRouteName={isLoggedIn ? 'App' : 'Auth'}
+    screenOptions={{
+      headerShown: false,
+      animation: 'fade',
+      animationDuration: 300,
+    }}
+  >
+    <Stack.Screen name="App" component={AppStack} />
+    <Stack.Screen name="Auth" component={AuthStackNavigator} />
+  </Stack.Navigator>
+);
+
+function RootNavigator() {
+  const { isLoggedIn } = useCart();
+  
+  return <AppNavigator isLoggedIn={isLoggedIn} />;
+}
+
 export default function App() {
+  console.log('🚀 App: Starting...');
+  
   return (
-    <NotificationProvider>
-      <CartProvider>
-        <NavigationContainer>
-          <NotificationBar />
-          <AppNavigator />
-        </NavigationContainer>
-      </CartProvider>
-    </NotificationProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <NotificationProvider>
+          <CartProvider>
+            <NavigationContainer>
+              <NotificationBar />
+              <RootNavigator />
+            </NavigationContainer>
+          </CartProvider>
+        </NotificationProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }

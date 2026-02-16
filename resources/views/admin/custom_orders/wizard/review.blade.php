@@ -41,7 +41,7 @@
                 <div class="w-16 h-1 bg-green-600 rounded-full"></div>
                 <div class="flex items-center group">
                     <div class="relative">
-                        <div class="w-8 h-8 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg animate-pulse">
+                        <div class="w-8 h-8 bg-gradient-to-r from-[#800000] to-[#600000] text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg animate-pulse">
                             3
                         </div>
                         <div class="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
@@ -64,7 +64,7 @@
                 <!-- Customer Information -->
                 <div>
                     <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-5 h-5 text-[#800000] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                         </svg>
                         Customer Information
@@ -95,7 +95,7 @@
                                 @endif
                                 <div class="pt-3 mt-3 border-t border-gray-200">
                                     <div class="flex items-start">
-                                        <svg class="w-4 h-4 text-blue-600 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-4 h-4 text-[#800000] mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                                         </svg>
@@ -103,7 +103,7 @@
                                             <div class="flex items-center mb-1">
                                                 <span class="font-semibold text-gray-700 text-sm">{{ $defaultAddress->label ?? 'Default Address' }}</span>
                                                 @if($defaultAddress->is_default)
-                                                    <span class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">Default</span>
+                                                    <span class="ml-2 px-2 py-0.5 bg-red-50 text-[#800000] text-xs font-medium rounded-full">Default</span>
                                                 @endif
                                             </div>
                                             @if($defaultAddress->full_name)
@@ -122,12 +122,12 @@
                 <div>
                     <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                         @if(isset($wizardData['product']))
-                            <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-[#800000] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                             </svg>
                             Product Information
                         @else
-                            <svg class="w-5 h-5 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-[#800000] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
                             </svg>
                             Fabric Information
@@ -181,7 +181,7 @@
         <!-- Design Information -->
         <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
             <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <svg class="w-5 h-5 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 text-[#800000] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
                 </svg>
                 Design Specifications
@@ -211,7 +211,7 @@
                         <div class="space-y-2">
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Estimated Price:</span>
-                                <span class="font-bold text-lg text-blue-600">₱{{ number_format($wizardData['estimated_price'], 2) }}</span>
+                                <span class="font-bold text-lg text-[#800000]">₱{{ number_format($wizardData['estimated_price'], 2) }}</span>
                             </div>
                             <div class="text-xs text-gray-500">Final price will be confirmed after review</div>
                         </div>

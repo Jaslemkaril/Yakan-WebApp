@@ -5,7 +5,7 @@
 @section('content')
 <div class="space-y-6">
     <!-- Settings Header -->
-    <div class="bg-gradient-to-r from-gray-600 to-gray-800 rounded-2xl p-8 text-white shadow-xl">
+    <div class="bg-gradient-to-r from-[#800000] to-[#600000] rounded-2xl p-8 text-white shadow-xl">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
                 <h1 class="text-3xl font-bold mb-2">General Settings</h1>
@@ -23,7 +23,7 @@
     <div class="bg-white rounded-xl shadow-lg border border-gray-100">
         <div class="border-b border-gray-200">
             <nav class="flex space-x-8 px-6" aria-label="Tabs">
-                <a href="{{ route('admin.settings.general') }}" class="py-4 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600">
+                <a href="{{ route('admin.settings.general') }}" class="py-4 px-1 border-b-2 border-[#800000] font-medium text-sm text-[#800000]">
                     <i class="fas fa-cog mr-2"></i>General
                 </a>
                 <a href="#" class="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
@@ -58,7 +58,7 @@
                                    name="site_name" 
                                    value="{{ old('site_name', $settings['site_name']) }}"
                                    required
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
                                    placeholder="Yakan E-commerce">
                             @error('site_name')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -74,7 +74,7 @@
                                    name="site_email" 
                                    value="{{ old('site_email', $settings['site_email']) }}"
                                    required
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
                                    placeholder="admin@yakan.com">
                             @error('site_email')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -89,7 +89,7 @@
                         <textarea id="site_description" 
                                   name="site_description" 
                                   rows="3"
-                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
                                   placeholder="A brief description of your e-commerce platform">{{ old('site_description') }}</textarea>
                         @error('site_description')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -108,7 +108,7 @@
                             </label>
                             <select id="timezone" 
                                     name="timezone" 
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent">
                                 <option value="UTC" {{ old('timezone', config('app.timezone')) == 'UTC' ? 'selected' : '' }}>UTC</option>
                                 <option value="Asia/Manila" {{ old('timezone', config('app.timezone')) == 'Asia/Manila' ? 'selected' : '' }}>Asia/Manila (UTC+8)</option>
                                 <option value="America/New_York" {{ old('timezone', config('app.timezone')) == 'America/New_York' ? 'selected' : '' }}>America/New_York (UTC-5)</option>
@@ -125,7 +125,7 @@
                             </label>
                             <select id="locale" 
                                     name="locale" 
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent">
                                 <option value="en" {{ old('locale', config('app.locale')) == 'en' ? 'selected' : '' }}>English</option>
                                 <option value="es" {{ old('locale', config('app.locale')) == 'es' ? 'selected' : '' }}>Spanish</option>
                                 <option value="fr" {{ old('locale', config('app.locale')) == 'fr' ? 'selected' : '' }}>French</option>
@@ -144,7 +144,7 @@
                                    name="maintenance_mode" 
                                    value="1"
                                    {{ old('maintenance_mode', $settings['maintenance_mode']) ? 'checked' : '' }}
-                                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                   class="h-4 w-4 text-[#800000] focus:ring-[#800000] border-gray-300 rounded">
                             <label for="maintenance_mode" class="ml-2 block text-sm text-gray-900">
                                 Enable Maintenance Mode
                             </label>
@@ -166,7 +166,7 @@
                                    id="contact_phone" 
                                    name="contact_phone" 
                                    value="{{ old('contact_phone') }}"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
                                    placeholder="+63 912 345 6789">
                             @error('contact_phone')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -181,7 +181,7 @@
                                    id="contact_address" 
                                    name="contact_address" 
                                    value="{{ old('contact_address') }}"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
                                    placeholder="123 Main St, City, Country">
                             @error('contact_address')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -203,7 +203,7 @@
                                    id="facebook_url" 
                                    name="facebook_url" 
                                    value="{{ old('facebook_url') }}"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
                                    placeholder="https://facebook.com/yourpage">
                             @error('facebook_url')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -218,7 +218,7 @@
                                    id="twitter_url" 
                                    name="twitter_url" 
                                    value="{{ old('twitter_url') }}"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
                                    placeholder="https://twitter.com/yourhandle">
                             @error('twitter_url')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -233,7 +233,7 @@
                                    id="instagram_url" 
                                    name="instagram_url" 
                                    value="{{ old('instagram_url') }}"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
                                    placeholder="https://instagram.com/yourhandle">
                             @error('instagram_url')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -248,7 +248,7 @@
                                    id="youtube_url" 
                                    name="youtube_url" 
                                    value="{{ old('youtube_url') }}"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
                                    placeholder="https://youtube.com/yourchannel">
                             @error('youtube_url')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -269,7 +269,7 @@
                             <i class="fas fa-times mr-2"></i>Cancel
                         </a>
                         <button type="submit" 
-                                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                class="px-6 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors">
                             <i class="fas fa-save mr-2"></i>Save Settings
                         </button>
                     </div>

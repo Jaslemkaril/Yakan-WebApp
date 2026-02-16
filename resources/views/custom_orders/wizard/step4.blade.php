@@ -192,7 +192,7 @@
                         <div class="flex items-start space-x-4 pb-6 border-b-2 border-gray-200">
                             <div class="w-24 h-24 bg-gradient-to-br from-maroon-100 to-maroon-200 rounded-xl flex items-center justify-center shadow-lg">
                                 @if(isset($product) && $product->image)
-                                    <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover rounded-xl">
+                                    <img src="{{ $product->image_src }}" alt="{{ $product->name }}" class="w-full h-full object-cover rounded-xl">
                                 @else
                                     <span class="text-3xl font-bold" style="color:#800000;">{{ isset($product) ? substr($product->name, 0, 1) : 'Y' }}</span>
                                 @endif

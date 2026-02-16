@@ -2,11 +2,25 @@
 @section('title', 'Add Product')
 
 @section('content')
-<div class="max-w-3xl mx-auto p-6 bg-white shadow rounded-lg mt-6">
-    <h2 class="text-2xl font-bold mb-6">Add Product</h2>
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-[#800000] rounded-2xl p-6 sm:p-8 text-white shadow-xl">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+                <h1 class="text-xl md:text-3xl font-bold mb-2">Add New Product</h1>
+                <p class="text-red-100 text-lg">Create a new product for your catalog</p>
+            </div>
+            <a href="{{ route('admin.products.index') }}" class="mt-4 md:mt-0 inline-flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white text-sm font-medium transition">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                Back to Products
+            </a>
+        </div>
+    </div>
+
+<div class="max-w-3xl mx-auto p-6 bg-white shadow rounded-lg">
 
     @if ($errors->any())
-        <div class="mb-4 p-4 border border-red-200 bg-red-50 rounded">
+        <div class="mb-4 p-4 border border-red-200 bg-red-50 rounded-lg">
             <ul class="list-disc list-inside text-sm text-red-700">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -22,7 +36,7 @@
         <div>
             <label class="block font-medium text-gray-700">Name</label>
             <input type="text" name="name" value="{{ old('name') }}"
-                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-red-600" required>
+                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#800000]" required>
         </div>
 
         <!-- Category -->
@@ -30,7 +44,7 @@
             <label class="block font-medium text-gray-700 mb-2">Category</label>
             <div class="flex gap-2">
                 <select name="category_id" id="categorySelect"
-                    class="border rounded px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-red-600"
+                    class="border rounded px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-[#800000]"
                     style="border-color: #800000;">
                     <option value="">-- Select Category --</option>
                     @foreach($categories as $category)
@@ -210,7 +224,7 @@
         <div>
             <label class="block font-medium text-gray-700">Price (₱)</label>
             <input type="number" name="price" value="{{ old('price') }}"
-                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-red-600" step="0.01"
+                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#800000]" step="0.01"
                 placeholder="0.00" required>
         </div>
 
@@ -218,7 +232,7 @@
         <div>
             <label class="block font-medium text-gray-700">Stock</label>
             <input type="number" name="stock" value="{{ old('stock', 0) }}"
-                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-red-600" min="0"
+                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#800000]" min="0"
                 required>
         </div>
 
@@ -226,7 +240,7 @@
         <div>
             <label class="block font-medium text-gray-700">Description</label>
             <textarea name="description" rows="4"
-                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-red-600">{{ old('description') }}</textarea>
+                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#800000]">{{ old('description') }}</textarea>
         </div>
 
         <!-- Professional Image Upload Section -->
@@ -291,10 +305,10 @@
             </div>
 
             <!-- Image Guidelines -->
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div class="bg-red-50 border border-red-200 rounded-lg p-3">
                 <div class="flex items-start">
-                    <i class="fas fa-info-circle text-blue-600 mt-1 mr-2"></i>
-                    <div class="text-sm text-blue-800">
+                    <i class="fas fa-info-circle text-[#800000] mt-1 mr-2"></i>
+                    <div class="text-sm text-[#800000]">
                         <p class="font-medium mb-1">Image Guidelines:</p>
                         <ul class="list-disc list-inside space-y-1 text-xs">
                             <li>Format: JPG, PNG, WEBP</li>
@@ -369,7 +383,7 @@
         <div>
             <label class="block font-medium text-gray-700">Status</label>
             <select name="status"
-                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-red-600" required>
+                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#800000]" required>
                 <option value="active" {{ old('status', 'active') == 'active' ? 'selected' : '' }}>Active</option>
                 <option value="inactive" {{ old('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
             </select>
@@ -377,9 +391,10 @@
 
         <!-- Submit Button -->
         <button type="submit"
-            class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors duration-200">
-            Create Product
+            class="bg-[#800000] text-white px-6 py-3 rounded-lg hover:bg-[#600000] transition-colors duration-200 font-medium shadow-lg">
+            <i class="fas fa-plus mr-2"></i>Create Product
         </button>
     </form>
+</div>
 </div>
 @endsection

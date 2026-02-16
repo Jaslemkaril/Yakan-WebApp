@@ -15,6 +15,8 @@ import ApiService from '../services/api';
 import API_CONFIG from '../config/config';
 import colors from '../constants/colors';
 import BottomNav from '../components/BottomNav';
+import ScreenHeader from '../components/ScreenHeader';
+import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -24,6 +26,8 @@ const CulturalHeritageScreen = ({ navigation }) => {
   const [artisans, setArtisans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
 
   useEffect(() => {
     fetchCulturalHeritage();
@@ -219,15 +223,12 @@ const CulturalHeritageScreen = ({ navigation }) => {
   );
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cultural Heritage</Text>
-        <View style={styles.placeholder} />
-      </View>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader 
+        title="Cultural Heritage" 
+        navigation={navigation} 
+        showBack={true}
+      />
 
       {/* Tabs */}
       <View style={styles.tabContainer}>
@@ -257,16 +258,16 @@ const CulturalHeritageScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: theme.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.primary,
+    backgroundColor: theme.headerBg,
     paddingTop: 50,
     paddingBottom: 15,
     paddingHorizontal: 20,
@@ -291,7 +292,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 15,
     fontSize: 16,
-    color: colors.textLight,
+    color: theme.textSecondary,
   },
   emptyContainer: {
     flex: 1,
@@ -301,26 +302,26 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: colors.textLight,
+    color: theme.textSecondary,
     marginTop: 15,
     marginBottom: 20,
   },
   retryButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: theme.primary,
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: colors.white,
+    color: '#fff',
     fontSize: 15,
     fontWeight: '600',
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
   },
   tab: {
     flex: 1,
@@ -330,15 +331,15 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: '#8B1A1A',
+    borderBottomColor: theme.primary,
   },
   tabText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.textSecondary,
     fontWeight: '500',
   },
   activeTabText: {
-    color: '#8B1A1A',
+    color: theme.primary,
     fontWeight: 'bold',
   },
   tabContent: {
@@ -350,10 +351,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginVertical: 20,
     paddingHorizontal: 20,
-    color: '#333',
+    color: theme.text,
   },
   patternCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     marginBottom: 20,
     paddingBottom: 20,
   },
@@ -391,12 +392,12 @@ const styles = StyleSheet.create({
   patternDescription: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#333',
+    color: theme.text,
     paddingHorizontal: 20,
     textAlign: 'center',
   },
   artisanCard: {
-    backgroundColor: colors.white,
+    backgroundColor: theme.cardBackground,
     padding: 20,
     marginBottom: 20,
     borderRadius: 10,
@@ -411,13 +412,13 @@ const styles = StyleSheet.create({
   artisanName: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: colors.text,
+    color: theme.text,
     marginBottom: 12,
   },
   artisanStory: {
     fontSize: 16,
     lineHeight: 26,
-    color: colors.text,
+    color: theme.text,
     textAlign: 'justify',
   },
 });

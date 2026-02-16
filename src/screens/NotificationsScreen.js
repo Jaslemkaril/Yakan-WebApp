@@ -10,8 +10,12 @@ import {
   Alert,
 } from 'react-native';
 import { useNotification } from '../context/NotificationContext';
+import ScreenHeader from '../components/ScreenHeader';
+import { useTheme } from '../context/ThemeContext';
 
 const NotificationsScreen = ({ navigation }) => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
   const { notifications, clearNotifications, removeNotification } = useNotification();
   const [refreshing, setRefreshing] = useState(false);
   const [allNotifications, setAllNotifications] = useState([]);
@@ -125,18 +129,14 @@ const NotificationsScreen = ({ navigation }) => {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Notifications</Text>
-        {allNotifications.length > 0 && (
-          <TouchableOpacity onPress={handleClearAll}>
-            <Text style={styles.clearButton}>Clear All</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader 
+        title="Notifications" 
+        navigation={navigation} 
+        showBack={true}
+        rightIcon={allNotifications.length > 0 ? <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>Clear All</Text> : null}
+        onRightIconPress={allNotifications.length > 0 ? handleClearAll : null}
+      />
 
       {allNotifications.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -161,13 +161,13 @@ const NotificationsScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   header: {
-    backgroundColor: '#8B1A1A',
+    backgroundColor: theme.headerBg,
     padding: 20,
     paddingTop: 50,
     flexDirection: 'row',
@@ -175,19 +175,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButton: {
-    color: '#fff',
+    color: theme.headerText,
     fontSize: 16,
     fontWeight: '600',
   },
   title: {
-    color: '#fff',
+    color: theme.headerText,
     fontSize: 24,
     fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
   },
   clearButton: {
-    color: '#fff',
+    color: theme.headerText,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   notificationItem: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -226,13 +226,13 @@ const styles = StyleSheet.create({
   notificationMessage: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 4,
     lineHeight: 20,
   },
   notificationTime: {
     fontSize: 12,
-    color: '#999',
+    color: theme.textMuted,
   },
   removeButton: {
     padding: 8,
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   },
   removeIcon: {
     fontSize: 18,
-    color: '#ccc',
+    color: theme.iconMuted,
     fontWeight: 'bold',
   },
   emptyContainer: {
@@ -256,12 +256,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
     marginBottom: 10,
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },

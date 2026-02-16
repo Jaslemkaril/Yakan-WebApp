@@ -20,6 +20,20 @@ class Product extends Model
                 $product->sku = 'YKN-' . strtoupper(substr(uniqid(), -8));
             }
         });
+
+        // Auto-repair: if image is null but all_images has entries, set image from first all_images entry
+        static::retrieved(function ($product) {
+            if (empty($product->image) && !empty($product->all_images)) {
+                $allImages = is_string($product->all_images) ? json_decode($product->all_images, true) : $product->all_images;
+                if (!empty($allImages) && is_array($allImages) && !empty($allImages[0]['path'])) {
+                    $product->image = $allImages[0]['path'];
+                    // Persist the fix silently so it doesn't need repair again
+                    static::withoutEvents(function () use ($product) {
+                        $product->updateQuietly(['image' => $product->image]);
+                    });
+                }
+            }
+        });
     }
 
     protected $fillable = [
@@ -150,7 +164,7 @@ class Product extends Model
 
         $imagePath = $this->image;
         
-        // If it's already a full URL, return as is
+        // If it's already a full URL (Cloudinary or other CDN), return as is
         if (str_starts_with($imagePath, 'http')) {
             return $imagePath;
         }
@@ -168,7 +182,7 @@ class Product extends Model
         // Generate full absolute URL for API/mobile access
         $baseUrl = config('app.url');
         
-        // Check if file exists in new uploads directory
+        // Check if file exists in uploads directory
         if (file_exists(public_path('uploads/' . $imagePath))) {
             return $baseUrl . '/uploads/' . $imagePath;
         }
@@ -178,15 +192,65 @@ class Product extends Model
             return $baseUrl . '/storage/' . $imagePath;
         }
         
-        // Default to storage for compatibility
-        return $baseUrl . '/storage/' . $imagePath;
+        // File doesn't exist anywhere - return placeholder
+        return $baseUrl . '/images/no-image.svg';
     }
 
     /**
-     * Check if product has an image
+     * Get the product image source for use in views
+     * Handles both Cloudinary URLs and local file paths
+     * Returns placeholder if image is missing
+     */
+    public function getImageSrcAttribute(): string
+    {
+        if (!$this->image) {
+            return asset('images/no-image.svg');
+        }
+
+        // If it's a full URL (Cloudinary), return as is
+        if (str_starts_with($this->image, 'http')) {
+            return $this->image;
+        }
+
+        // Local file: check if it actually exists, otherwise show placeholder
+        $localPath = public_path('uploads/products/' . $this->image);
+        if (file_exists($localPath)) {
+            return asset('uploads/products/' . $this->image);
+        }
+
+        // File doesn't exist (Railway ephemeral filesystem) - show placeholder
+        return asset('images/no-image.svg');
+    }
+
+    /**
+     * Check if product has an actual accessible image
      */
     public function hasImage(): bool
     {
-        return !empty($this->image);
+        if (empty($this->image)) {
+            return false;
+        }
+        // Cloudinary URLs are always accessible
+        if (str_starts_with($this->image, 'http')) {
+            return true;
+        }
+        // Local files: check existence
+        return file_exists(public_path('uploads/products/' . $this->image));
+    }
+
+    /**
+     * Check if this product needs its image re-uploaded to Cloudinary
+     */
+    public function getNeedsImageUploadAttribute(): bool
+    {
+        if (empty($this->image)) {
+            return true;
+        }
+        // Already on Cloudinary
+        if (str_starts_with($this->image, 'http')) {
+            return false;
+        }
+        // Has a local path but file doesn't exist
+        return !file_exists(public_path('uploads/products/' . $this->image));
     }
 }

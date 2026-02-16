@@ -248,7 +248,7 @@
 @endpush
 
 @section('content')
-<div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50">
+<div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-red-50">
     <!-- Print Only Header -->
     <div class="hidden print:block print-header" style="display: none;">
         <h1 style="font-size: 24pt; color: #800000; margin-bottom: 5px;">Yakan E-commerce Dashboard Report</h1>
@@ -258,8 +258,8 @@
     
     <!-- Animated Background Elements -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none no-print">
-        <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation"></div>
-        <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation" style="animation-delay: 2s;"></div>
+        <div class="absolute -top-40 -right-40 w-80 h-80 bg-red-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation"></div>
+        <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-red-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation" style="animation-delay: 2s;"></div>
         <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 float-animation" style="animation-delay: 4s;"></div>
     </div>
 
@@ -310,7 +310,7 @@
                         <span class="sm:hidden">CSV</span>
                     </a>
                     
-                    <button onclick="window.print()" class="px-4 py-2 bg-[#800000] text-white rounded-lg font-medium hover:bg-[#600000] transition-colors flex items-center gap-2">
+                    <button onclick="document.getElementById('printReportModal').classList.remove('hidden')" class="px-4 py-2 bg-[#800000] text-white rounded-lg font-medium hover:bg-[#600000] transition-colors flex items-center gap-2">
                         <i class="fas fa-print"></i>
                         <span class="hidden sm:inline">Print Report</span>
                         <span class="sm:hidden">Print</span>
@@ -388,7 +388,7 @@
         <!-- Enhanced Stats Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 animate-slide-in-left">
             <!-- Total Revenue Card -->
-            <div class="group relative">
+            <a href="{{ route('admin.analytics.sales') }}" class="group relative block cursor-pointer">
                 <div class="absolute -inset-0.5 bg-[#800000] rounded-xl sm:rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
                 <div class="relative bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 card-hover-lift">
                     <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
@@ -414,10 +414,10 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
 
             <!-- Total Orders Card -->
-            <div class="group relative">
+            <a href="{{ route('admin.orders.index') }}" class="group relative block cursor-pointer">
                 <div class="absolute -inset-0.5 bg-[#800000] rounded-xl sm:rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
                 <div class="relative bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 card-hover-lift">
                     <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
@@ -443,10 +443,10 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
 
             <!-- Total Users Card -->
-            <div class="group relative">
+            <a href="{{ route('admin.users.index') }}" class="group relative block cursor-pointer">
                 <div class="absolute -inset-0.5 bg-[#800000] rounded-xl sm:rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
                 <div class="relative bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 card-hover-lift">
                     <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
@@ -472,10 +472,10 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
 
             <!-- Completed Orders Card -->
-            <div class="group relative">
+            <a href="{{ route('admin.orders.index') }}?status=completed" class="group relative block cursor-pointer">
                 <div class="absolute -inset-0.5 bg-[#800000] rounded-xl sm:rounded-2xl opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
                 <div class="relative bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 card-hover-lift">
                     <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
@@ -501,13 +501,13 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <!-- Additional Analytics Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <!-- Average Order Value -->
-            <div class="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift">
+            <a href="{{ route('admin.analytics.sales') }}" class="block bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift hover:shadow-xl transition-shadow cursor-pointer">
                 <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
                     <div class="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-[#800000] rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
                         <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3v3m-6-1v-6a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
@@ -521,10 +521,10 @@
                     <p class="text-gray-600 text-xs sm:text-sm font-medium">Avg Order Value</p>
                     <p class="text-xs text-gray-500 hidden sm:block">Per completed order</p>
                 </div>
-            </div>
+            </a>
 
             <!-- Today's Orders -->
-            <div class="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift">
+            <a href="{{ route('admin.orders.index') }}?date=today" class="block bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift hover:shadow-xl transition-shadow cursor-pointer">
                 <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
                     <div class="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-[#800000] rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
                         <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -538,10 +538,10 @@
                     <p class="text-gray-600 text-xs sm:text-sm font-medium">Orders Today</p>
                     <p class="text-xs text-gray-500 hidden sm:block">₱{{ number_format($todayRevenue, 0) }} revenue</p>
                 </div>
-            </div>
+            </a>
 
             <!-- Shipped Orders -->
-            <div class="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift">
+            <a href="{{ route('admin.orders.index') }}?status=shipped" class="block bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift hover:shadow-xl transition-shadow cursor-pointer">
                 <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
                     <div class="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-[#800000] rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
                         <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
@@ -555,10 +555,10 @@
                     <p class="text-gray-600 text-xs sm:text-sm font-medium">Shipped Orders</p>
                     <p class="text-xs text-gray-500 hidden sm:block">On the way to customers</p>
                 </div>
-            </div>
+            </a>
 
             <!-- Orders with Notes -->
-            <div class="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift">
+            <a href="{{ route('admin.orders.index') }}" class="block bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg border border-gray-100 card-hover-lift hover:shadow-xl transition-shadow cursor-pointer">
                 <div class="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
                     <div class="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-[#800000] rounded-lg sm:rounded-xl flex items-center justify-center shadow-md">
                         <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
@@ -572,7 +572,7 @@
                     <p class="text-gray-600 text-xs sm:text-sm font-medium">Orders with Notes</p>
                     <p class="text-xs text-gray-500 hidden sm:block">{{ $totalOrders > 0 ? round(($ordersWithNotes / $totalOrders) * 100) : 0 }}% of total orders</p>
                 </div>
-            </div>
+            </a>
         </div>
 
         <!-- Payment & Delivery Analytics -->
@@ -654,7 +654,7 @@
             <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 card-hover-lift">
                 <div class="flex items-center justify-between mb-6">
                     <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-lg flex items-center justify-center">
+                        <div class="w-10 h-10 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center">
                             <i class="fas fa-chart-line text-white"></i>
                         </div>
                         <div>
@@ -663,7 +663,7 @@
                         </div>
                     </div>
                     <div class="flex items-center space-x-2">
-                        <button class="px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                        <button class="px-3 py-1 text-xs font-medium text-[#800000] bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
                             Export
                         </button>
                         <button class="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
@@ -680,7 +680,7 @@
             <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 card-hover-lift">
                 <div class="flex items-center justify-between mb-6">
                     <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-600 rounded-lg flex items-center justify-center">
+                        <div class="w-10 h-10 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center">
                             <i class="fas fa-chart-pie text-white"></i>
                         </div>
                         <div>
@@ -688,7 +688,7 @@
                             <p class="text-sm text-gray-500">Real-time distribution</p>
                         </div>
                     </div>
-                    <a href="{{ route('admin.regular.index') }}" class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1">
+                    <a href="{{ route('admin.regular.index') }}" class="text-sm text-[#800000] hover:text-[#600000] font-medium flex items-center space-x-1">
                         <span>View All</span>
                         <i class="fas fa-arrow-right text-xs"></i>
                     </a>
@@ -731,10 +731,18 @@
             <div x-show="activeTab === 'bestsellers'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
                 @if($topProducts->count() > 0)
                     <!-- Best Sellers Chart -->
-                    <div class="mb-8 bg-gray-50 rounded-xl p-6 border border-gray-200">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-4">
-                            <i class="fas fa-chart-bar mr-2 text-green-600"></i>Sales Comparison
-                        </h3>
+                    <div class="mb-8 bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-6 border border-emerald-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-bold text-gray-800 flex items-center">
+                                <span class="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-600 rounded-lg flex items-center justify-center mr-2 shadow-sm">
+                                    <i class="fas fa-chart-bar text-white text-xs"></i>
+                                </span>
+                                Sales Comparison
+                            </h3>
+                            <span class="text-xs text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full font-medium">
+                                <i class="fas fa-arrow-up mr-1"></i>Top Performers
+                            </span>
+                        </div>
                         <div class="relative h-80">
                             <canvas id="bestSellersChart"></canvas>
                         </div>
@@ -751,9 +759,9 @@
                                     <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-600 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-lg">
                                         <span class="text-white font-bold text-lg">{{ $index + 1 }}</span>
                                     </div>
-                                    @if($product && $product->image)
+                                    @if($product && $product->image_src)
                                         <div class="w-16 h-16 mx-auto mb-3 rounded-lg overflow-hidden bg-white shadow-md">
-                                            <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                                            <img src="{{ $product->image_src }}" alt="{{ $product->name }}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\'w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center\'><i class=\'fas fa-box text-green-600 text-2xl\'></i></div>'">
                                         </div>
                                     @else
                                         <div class="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-md">
@@ -795,10 +803,18 @@
             <div x-show="activeTab === 'lowsales'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
                 @if($lowSalesProducts->count() > 0)
                     <!-- Low Sales Chart -->
-                    <div class="mb-8 bg-gray-50 rounded-xl p-6 border border-gray-200">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-4">
-                            <i class="fas fa-chart-bar mr-2 text-orange-600"></i>Sales Comparison
-                        </h3>
+                    <div class="mb-8 bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-bold text-gray-800 flex items-center">
+                                <span class="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-500 rounded-lg flex items-center justify-center mr-2 shadow-sm">
+                                    <i class="fas fa-chart-bar text-white text-xs"></i>
+                                </span>
+                                Sales Comparison
+                            </h3>
+                            <span class="text-xs text-orange-600 bg-orange-100 px-3 py-1 rounded-full font-medium">
+                                <i class="fas fa-arrow-down mr-1"></i>Needs Attention
+                            </span>
+                        </div>
                         <div class="relative h-80">
                             <canvas id="lowSalesChart"></canvas>
                         </div>
@@ -815,9 +831,9 @@
                                     <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-600 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-lg">
                                         <i class="fas fa-arrow-down text-white text-lg"></i>
                                     </div>
-                                    @if($product && $product->image)
+                                    @if($product && $product->image_src)
                                         <div class="w-16 h-16 mx-auto mb-3 rounded-lg overflow-hidden bg-white shadow-md">
-                                            <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                                            <img src="{{ $product->image_src }}" alt="{{ $product->name }}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\'w-full h-full bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center\'><i class=\'fas fa-box text-orange-600 text-2xl\'></i></div>'">
                                         </div>
                                     @else
                                         <div class="w-16 h-16 bg-gradient-to-br from-orange-100 to-red-100 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-md">
@@ -884,7 +900,7 @@
                         <p class="text-sm text-red-600">{{ $outOfStockCount }} product(s) need restocking</p>
                     </div>
                 </div>
-                <a href="{{ route('admin.products.index') }}" class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1">
+                <a href="{{ route('admin.products.index') }}" class="text-sm text-[#800000] hover:text-[#600000] font-medium flex items-center space-x-1">
                     <span>Manage Stock</span>
                     <i class="fas fa-arrow-right text-xs"></i>
                 </a>
@@ -905,7 +921,7 @@
                         </p>
                         @if($product->category)
                             <p class="text-xs text-gray-500">
-                                <i class="fas fa-folder mr-1"></i>{{ $product->category }}
+                                <i class="fas fa-folder mr-1"></i>{{ $product->category->name }}
                             </p>
                         @endif
                     </div>
@@ -920,7 +936,7 @@
             <div class="xl:col-span-2 bg-white rounded-2xl shadow-xl p-6 border border-gray-100 card-hover-lift">
                 <div class="flex items-center justify-between mb-6">
                     <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-lg flex items-center justify-center">
+                        <div class="w-10 h-10 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center">
                             <i class="fas fa-shopping-bag text-white"></i>
                         </div>
                         <div>
@@ -928,7 +944,7 @@
                             <p class="text-sm text-gray-500">Latest customer activity</p>
                         </div>
                     </div>
-                    <a href="{{ route('admin.regular.index') }}" class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1">
+                    <a href="{{ route('admin.regular.index') }}" class="text-sm text-[#800000] hover:text-[#600000] font-medium flex items-center space-x-1">
                         <span>View All</span>
                         <i class="fas fa-arrow-right text-xs"></i>
                     </a>
@@ -937,11 +953,11 @@
                     @if($recentOrders->count() > 0)
                         @foreach($recentOrders as $order)
                             <div class="group relative">
-                                <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-400 to-indigo-600 rounded-xl opacity-0 group-hover:opacity-10 transition duration-300"></div>
-                                <div class="relative bg-white rounded-xl p-4 border border-gray-100 hover:border-blue-200 transition-all duration-300">
+                                <div class="absolute -inset-0.5 bg-gradient-to-r from-[#800000] to-[#600000] rounded-xl opacity-0 group-hover:opacity-10 transition duration-300"></div>
+                                <div class="relative bg-white rounded-xl p-4 border border-gray-100 hover:border-red-200 transition-all duration-300">
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center space-x-4">
-                                            <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
+                                            <div class="w-12 h-12 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center shadow-lg">
                                                 <i class="fas fa-shopping-bag text-white"></i>
                                             </div>
                                             <div>
@@ -965,7 +981,7 @@
                                                 </span>
                                             </div>
                                             <div class="flex space-x-1">
-                                                <button class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-200 transition-colors">
+                                                <button class="w-8 h-8 bg-red-100 text-[#800000] rounded-lg flex items-center justify-center hover:bg-red-200 transition-colors">
                                                     <i class="fas fa-eye text-sm"></i>
                                                 </button>
                                             </div>
@@ -998,9 +1014,9 @@
                     </div>
                 </div>
                 <div class="space-y-3">
-                    <a href="{{ route('admin.products.create') }}" class="group block w-full text-left p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 rounded-xl transition-all duration-300 border border-blue-100 hover:border-blue-200">
+                    <a href="{{ route('admin.products.create') }}" class="group block w-full text-left p-4 bg-gradient-to-r from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 rounded-xl transition-all duration-300 border border-red-100 hover:border-red-200">
                         <div class="flex items-center space-x-3">
-                            <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-lg flex items-center justify-center">
+                            <div class="w-10 h-10 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center">
                                 <i class="fas fa-plus text-white group-hover:scale-110 transition-transform"></i>
                             </div>
                             <div>
@@ -1022,9 +1038,9 @@
                         </div>
                     </a>
 
-                    <a href="{{ route('admin.users.index') }}" class="group block w-full text-left p-4 bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 rounded-xl transition-all duration-300 border border-purple-100 hover:border-purple-200">
+                    <a href="{{ route('admin.users.index') }}" class="group block w-full text-left p-4 bg-gradient-to-r from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 rounded-xl transition-all duration-300 border border-red-100 hover:border-red-200">
                         <div class="flex items-center space-x-3">
-                            <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-600 rounded-lg flex items-center justify-center">
+                            <div class="w-10 h-10 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center">
                                 <i class="fas fa-users text-white group-hover:scale-110 transition-transform"></i>
                             </div>
                             <div>
@@ -1150,10 +1166,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Order Status Chart
     const statusCtx = document.getElementById('orderStatusChart').getContext('2d');
+    const statusIcons = ['\u2705', '\u2699\uFE0F', '\u23F3', '\u274C'];
     new Chart(statusCtx, {
         type: 'doughnut',
         data: {
-            labels: ['Completed', 'Processing', 'Pending', 'Cancelled'],
+            labels: ['\u2705 Completed', '\u2699\uFE0F Processing', '\u23F3 Pending', '\u274C Cancelled'],
             datasets: [{
                 data: [
                     {{ $ordersByStatus['completed'] ?? 0 }},
@@ -1167,28 +1184,40 @@ document.addEventListener('DOMContentLoaded', function() {
                     'rgb(250, 204, 21)',
                     'rgb(239, 68, 68)'
                 ],
-                borderWidth: 0,
-                hoverOffset: 4
+                borderWidth: 3,
+                borderColor: '#ffffff',
+                hoverOffset: 8,
+                hoverBorderWidth: 0
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            cutout: '65%',
+            animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: 1000,
+                easing: 'easeOutQuart'
+            },
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
-                        padding: 15,
+                        padding: 18,
                         usePointStyle: true,
+                        pointStyle: 'rectRounded',
                         font: {
-                            size: 12
-                        }
+                            size: 13,
+                            weight: '500'
+                        },
+                        color: '#374151'
                     }
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    padding: 12,
-                    cornerRadius: 8,
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    padding: 14,
+                    cornerRadius: 10,
                     titleFont: {
                         size: 14,
                         weight: 'bold'
@@ -1196,13 +1225,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     bodyFont: {
                         size: 13
                     },
+                    displayColors: true,
+                    boxPadding: 6,
                     callbacks: {
                         label: function(context) {
                             const label = context.label || '';
                             const value = context.parsed || 0;
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((value / total) * 100).toFixed(1);
-                            return label + ': ' + value + ' (' + percentage + '%)';
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return ' ' + value + ' orders (' + percentage + '%)';
                         }
                     }
                 }
@@ -1213,54 +1244,53 @@ document.addEventListener('DOMContentLoaded', function() {
     // Best Sellers Chart
     const bestSellersCtx = document.getElementById('bestSellersChart');
     if (bestSellersCtx) {
-        new Chart(bestSellersCtx.getContext('2d'), {
+        const bestSellersChart = bestSellersCtx.getContext('2d');
+        const bestSellersGradient = bestSellersChart.createLinearGradient(0, 0, bestSellersCtx.width, 0);
+        bestSellersGradient.addColorStop(0, 'rgba(16, 185, 129, 0.9)');
+        bestSellersGradient.addColorStop(1, 'rgba(5, 150, 105, 0.9)');
+
+        new Chart(bestSellersChart, {
             type: 'bar',
             data: {
                 labels: @json($topProducts->map(function($item) { return optional($item->product)->name ?? 'Product'; })),
                 datasets: [{
                     label: 'Units Sold',
                     data: @json($topProducts->pluck('sold')),
-                    backgroundColor: [
-                        'rgba(34, 197, 94, 0.8)',
-                        'rgba(22, 163, 74, 0.8)',
-                        'rgba(16, 185, 129, 0.8)',
-                        'rgba(5, 150, 105, 0.8)',
-                        'rgba(4, 120, 87, 0.8)',
-                        'rgba(6, 95, 70, 0.8)',
-                        'rgba(5, 83, 58, 0.8)',
-                        'rgba(4, 72, 50, 0.8)',
-                        'rgba(3, 60, 43, 0.8)',
-                        'rgba(2, 50, 35, 0.8)'
-                    ],
-                    borderColor: [
-                        'rgb(34, 197, 94)',
-                        'rgb(22, 163, 74)',
-                        'rgb(16, 185, 129)',
-                        'rgb(5, 150, 105)',
-                        'rgb(4, 120, 87)',
-                        'rgb(6, 95, 70)',
-                        'rgb(5, 83, 58)',
-                        'rgb(4, 72, 50)',
-                        'rgb(3, 60, 43)',
-                        'rgb(2, 50, 35)'
-                    ],
-                    borderRadius: 8,
-                    borderWidth: 2,
-                    borderSkipped: false
+                    backgroundColor: function(context) {
+                        const chart = context.chart;
+                        const {ctx, chartArea} = chart;
+                        if (!chartArea) return 'rgba(16, 185, 129, 0.85)';
+                        const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+                        gradient.addColorStop(0, 'rgba(16, 185, 129, 0.85)');
+                        gradient.addColorStop(1, 'rgba(5, 150, 105, 0.95)');
+                        return gradient;
+                    },
+                    borderColor: 'rgba(5, 150, 105, 1)',
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderSkipped: false,
+                    barThickness: 28,
+                    hoverBackgroundColor: 'rgba(5, 150, 105, 1)',
+                    hoverBorderColor: 'rgba(4, 120, 87, 1)',
+                    hoverBorderWidth: 2
                 }]
             },
             options: {
                 indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                    duration: 1000,
+                    easing: 'easeOutQuart'
+                },
                 plugins: {
                     legend: {
                         display: false
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
-                        cornerRadius: 8,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        padding: 14,
+                        cornerRadius: 10,
                         titleFont: {
                             size: 14,
                             weight: 'bold'
@@ -1268,7 +1298,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         bodyFont: {
                             size: 13
                         },
+                        displayColors: false,
                         callbacks: {
+                            title: function(context) {
+                                return '\uD83C\uDFC6 ' + context[0].label;
+                            },
                             label: function(context) {
                                 return 'Sold: ' + context.parsed.x + ' units';
                             }
@@ -1279,15 +1313,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     x: {
                         beginAtZero: true,
                         grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
+                            color: 'rgba(0, 0, 0, 0.06)',
+                            drawBorder: false
                         },
                         ticks: {
+                            stepSize: 1,
+                            precision: 0,
                             callback: function(value) {
-                                return value + ' units';
+                                if (Math.floor(value) === value) {
+                                    return value + ' units';
+                                }
                             },
                             font: {
-                                size: 11
-                            }
+                                size: 12,
+                                weight: '500'
+                            },
+                            color: '#6b7280'
+                        },
+                        border: {
+                            display: false
                         }
                     },
                     y: {
@@ -1296,8 +1340,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                         ticks: {
                             font: {
-                                size: 11
-                            }
+                                size: 13,
+                                weight: '600'
+                            },
+                            color: '#374151',
+                            padding: 8
+                        },
+                        border: {
+                            display: false
                         }
                     }
                 }
@@ -1308,54 +1358,50 @@ document.addEventListener('DOMContentLoaded', function() {
     // Low Sales Chart
     const lowSalesCtx = document.getElementById('lowSalesChart');
     if (lowSalesCtx) {
-        new Chart(lowSalesCtx.getContext('2d'), {
+        const lowSalesChart = lowSalesCtx.getContext('2d');
+
+        new Chart(lowSalesChart, {
             type: 'bar',
             data: {
                 labels: @json($lowSalesProducts->map(function($item) { return optional($item->product)->name ?? 'Product'; })),
                 datasets: [{
                     label: 'Units Sold',
                     data: @json($lowSalesProducts->pluck('sold')),
-                    backgroundColor: [
-                        'rgba(251, 146, 60, 0.8)',
-                        'rgba(249, 115, 22, 0.8)',
-                        'rgba(234, 88, 12, 0.8)',
-                        'rgba(194, 65, 12, 0.8)',
-                        'rgba(154, 52, 18, 0.8)',
-                        'rgba(120, 40, 13, 0.8)',
-                        'rgba(92, 31, 11, 0.8)',
-                        'rgba(88, 28, 12, 0.8)',
-                        'rgba(78, 22, 6, 0.8)',
-                        'rgba(69, 19, 5, 0.8)'
-                    ],
-                    borderColor: [
-                        'rgb(251, 146, 60)',
-                        'rgb(249, 115, 22)',
-                        'rgb(234, 88, 12)',
-                        'rgb(194, 65, 12)',
-                        'rgb(154, 52, 18)',
-                        'rgb(120, 40, 13)',
-                        'rgb(92, 31, 11)',
-                        'rgb(88, 28, 12)',
-                        'rgb(78, 22, 6)',
-                        'rgb(69, 19, 5)'
-                    ],
-                    borderRadius: 8,
-                    borderWidth: 2,
-                    borderSkipped: false
+                    backgroundColor: function(context) {
+                        const chart = context.chart;
+                        const {ctx, chartArea} = chart;
+                        if (!chartArea) return 'rgba(251, 146, 60, 0.85)';
+                        const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+                        gradient.addColorStop(0, 'rgba(251, 146, 60, 0.85)');
+                        gradient.addColorStop(1, 'rgba(234, 88, 12, 0.95)');
+                        return gradient;
+                    },
+                    borderColor: 'rgba(234, 88, 12, 1)',
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderSkipped: false,
+                    barThickness: 28,
+                    hoverBackgroundColor: 'rgba(234, 88, 12, 1)',
+                    hoverBorderColor: 'rgba(194, 65, 12, 1)',
+                    hoverBorderWidth: 2
                 }]
             },
             options: {
                 indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                    duration: 1000,
+                    easing: 'easeOutQuart'
+                },
                 plugins: {
                     legend: {
                         display: false
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
-                        cornerRadius: 8,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        padding: 14,
+                        cornerRadius: 10,
                         titleFont: {
                             size: 14,
                             weight: 'bold'
@@ -1363,7 +1409,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         bodyFont: {
                             size: 13
                         },
+                        displayColors: false,
                         callbacks: {
+                            title: function(context) {
+                                return '\uD83D\uDCC9 ' + context[0].label;
+                            },
                             label: function(context) {
                                 return 'Sold: ' + context.parsed.x + ' units';
                             }
@@ -1374,15 +1424,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     x: {
                         beginAtZero: true,
                         grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
+                            color: 'rgba(0, 0, 0, 0.06)',
+                            drawBorder: false
                         },
                         ticks: {
+                            stepSize: 1,
+                            precision: 0,
                             callback: function(value) {
-                                return value + ' units';
+                                if (Math.floor(value) === value) {
+                                    return value + ' units';
+                                }
                             },
                             font: {
-                                size: 11
-                            }
+                                size: 12,
+                                weight: '500'
+                            },
+                            color: '#6b7280'
+                        },
+                        border: {
+                            display: false
                         }
                     },
                     y: {
@@ -1391,8 +1451,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                         ticks: {
                             font: {
-                                size: 11
-                            }
+                                size: 13,
+                                weight: '600'
+                            },
+                            color: '#374151',
+                            padding: 8
+                        },
+                        border: {
+                            display: false
                         }
                     }
                 }
@@ -1400,5 +1466,166 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+</script>
+
+<!-- Print Report Options Modal -->
+<div id="printReportModal" class="hidden fixed inset-0 z-[9999] overflow-y-auto" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 py-6">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onclick="document.getElementById('printReportModal').classList.add('hidden')"></div>
+        
+        <!-- Modal Content -->
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-auto transform transition-all">
+            <!-- Header -->
+            <div class="bg-[#800000] rounded-t-2xl px-6 py-5">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-print text-white text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-white">Print Report</h3>
+                            <p class="text-sm text-red-200">Choose which sections to include</p>
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('printReportModal').classList.add('hidden')" class="text-white/70 hover:text-white transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <form id="printReportForm" action="{{ route('admin.dashboard.print') }}" method="GET" target="_blank">
+                <input type="hidden" name="period" value="{{ $period }}">
+                
+                <div class="p-6 space-y-4">
+                    <!-- Select All -->
+                    <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                        <span class="text-sm font-semibold text-gray-700">Select Report Sections</span>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" id="selectAllSections" onchange="toggleAllSections(this)" checked
+                                class="w-4 h-4 text-[#800000] rounded focus:ring-[#800000] border-gray-300">
+                            <span class="text-xs font-medium text-gray-500">Select All</span>
+                        </label>
+                    </div>
+
+                    <!-- Section: Total Revenue -->
+                    <label class="flex items-start space-x-4 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[#800000] hover:bg-red-50/50 transition-all duration-200 report-section-label">
+                        <input type="checkbox" name="sections[]" value="revenue" checked
+                            class="mt-1 w-5 h-5 text-[#800000] rounded focus:ring-[#800000] border-gray-300 section-checkbox">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-peso-sign text-[#800000]"></i>
+                                <span class="font-semibold text-gray-800">Total Revenue</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Revenue summary with graph, monthly breakdown, and payment method analysis</p>
+                        </div>
+                    </label>
+
+                    <!-- Section: Product Sales -->
+                    <label class="flex items-start space-x-4 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[#800000] hover:bg-red-50/50 transition-all duration-200 report-section-label">
+                        <input type="checkbox" name="sections[]" value="product_sales" checked
+                            class="mt-1 w-5 h-5 text-[#800000] rounded focus:ring-[#800000] border-gray-300 section-checkbox">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-box text-[#800000]"></i>
+                                <span class="font-semibold text-gray-800">Product Sales Report</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Sales per product with quantities, unit prices, and total revenue per item</p>
+                        </div>
+                    </label>
+
+                    <!-- Section: Transaction History -->
+                    <label class="flex items-start space-x-4 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[#800000] hover:bg-red-50/50 transition-all duration-200 report-section-label">
+                        <input type="checkbox" name="sections[]" value="transactions" checked
+                            class="mt-1 w-5 h-5 text-[#800000] rounded focus:ring-[#800000] border-gray-300 section-checkbox">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-receipt text-[#800000]"></i>
+                                <span class="font-semibold text-gray-800">Transaction History</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Complete list with date, order ID, products purchased, and total amounts</p>
+                        </div>
+                    </label>
+
+                    <!-- Section: Total Users -->
+                    <label class="flex items-start space-x-4 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[#800000] hover:bg-red-50/50 transition-all duration-200 report-section-label">
+                        <input type="checkbox" name="sections[]" value="users" checked
+                            class="mt-1 w-5 h-5 text-[#800000] rounded focus:ring-[#800000] border-gray-300 section-checkbox">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-users text-[#800000]"></i>
+                                <span class="font-semibold text-gray-800">Total Users</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">User summary count, role breakdown, growth chart, and top customers</p>
+                        </div>
+                    </label>
+
+                    <!-- Validation message -->
+                    <p id="printValidation" class="hidden text-sm text-red-600 font-medium">
+                        <i class="fas fa-exclamation-circle mr-1"></i>Please select at least one section.
+                    </p>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex items-center justify-between px-6 py-4 bg-gray-50 rounded-b-2xl border-t border-gray-200">
+                    <button type="button" onclick="document.getElementById('printReportModal').classList.add('hidden')" 
+                        class="px-5 py-2.5 text-gray-600 bg-white border border-gray-300 rounded-lg font-medium hover:bg-gray-100 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" id="printReportBtn"
+                        class="px-6 py-2.5 bg-[#800000] text-white rounded-lg font-semibold hover:bg-[#600000] transition-colors flex items-center space-x-2">
+                        <i class="fas fa-external-link-alt"></i>
+                        <span>Generate & Print</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleAllSections(selectAllCheckbox) {
+    document.querySelectorAll('.section-checkbox').forEach(cb => {
+        cb.checked = selectAllCheckbox.checked;
+        updateLabelStyle(cb);
+    });
+}
+
+function updateLabelStyle(checkbox) {
+    const label = checkbox.closest('.report-section-label');
+    if (checkbox.checked) {
+        label.classList.add('border-[#800000]', 'bg-red-50/50');
+        label.classList.remove('border-gray-200', 'opacity-60');
+    } else {
+        label.classList.remove('border-[#800000]', 'bg-red-50/50');
+        label.classList.add('border-gray-200', 'opacity-60');
+    }
+}
+
+// Handle individual checkbox changes
+document.querySelectorAll('.section-checkbox').forEach(cb => {
+    cb.addEventListener('change', function() {
+        updateLabelStyle(this);
+        // Update Select All state
+        const allChecked = document.querySelectorAll('.section-checkbox:checked').length === document.querySelectorAll('.section-checkbox').length;
+        document.getElementById('selectAllSections').checked = allChecked;
+        document.getElementById('printValidation').classList.add('hidden');
+    });
+});
+
+// Form submission validation
+document.getElementById('printReportForm').addEventListener('submit', function(e) {
+    const checked = document.querySelectorAll('.section-checkbox:checked');
+    if (checked.length === 0) {
+        e.preventDefault();
+        document.getElementById('printValidation').classList.remove('hidden');
+        return false;
+    }
+    // Close modal after short delay
+    setTimeout(() => document.getElementById('printReportModal').classList.add('hidden'), 300);
+});
+
+// Initialize label styles
+document.querySelectorAll('.section-checkbox').forEach(cb => updateLabelStyle(cb));
 </script>
 @endsection

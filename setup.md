@@ -1,213 +1,374 @@
-# YAKAN Project Setup Guide
+# Yakan E-Commerce - XAMPP Local Setup Guide
 
-This guide provides automatic setup instructions for the YAKAN mobile application.
+## Overview
+This guide documents the complete setup process for running the Yakan E-Commerce Laravel project locally using XAMPP, including resolving database driver mismatches (SQLite → MySQL).
 
-## Prerequisites
+## Prerequisites Installed
+- ✅ XAMPP with PHP 8.2.12 (Located at `C:\Users\HP\Desktop\xampp`)
+- ✅ Composer (Global installation)
+- ✅ Node.js and npm
 
-Before running the setup, ensure you have the following installed:
+## Issues Resolved During Setup
 
-- **Node.js** (v16 or higher) - [Download](https://nodejs.org/)
-- **npm** (comes with Node.js) or **yarn**
-- **Expo CLI** - Install globally with: `npm install -g expo-cli`
-- **Git** (for version control)
+### 1. PHP Version Mismatch
+**Problem:** Initial XAMPP installation had PHP 8.0.30, but Laravel 11 requires PHP 8.2+
 
-For mobile development:
-- **Android Studio** (for Android development)
-- **Xcode** (for iOS development on macOS)
+**Solution:** Updated to XAMPP with PHP 8.2.12 installed at `C:\Users\HP\Desktop\xampp`
 
-## Quick Start Setup
-
-### 1. **Clone the Repository**
-
+**Verification:**
 ```bash
-git clone <repository-url>
-cd YAKAN-main-main
+C:\Users\HP\Desktop\xampp\php\php.exe -v
+# Output: PHP 8.2.12
 ```
 
-### 2. **Install Dependencies**
+### 2. Database Driver Mismatch (SQLite → MySQL)
+**Problem:** Project was initially configured for SQLite, but XAMPP uses MySQL/MariaDB
 
+**Solution:** Updated `.env` configuration to use MySQL
+
+**Changes Made:**
+```env
+# Before (SQLite)
+DB_CONNECTION=sqlite
+DB_DATABASE=/path/to/database.sqlite
+
+# After (MySQL with XAMPP)
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=yakan_db
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+### 3. Missing Yakan Patterns Data
+**Problem:** Custom order patterns page was empty after migration
+
+**Solution:** Ran the YakanPatternSeeder to populate 14 traditional patterns
+
+**Command:**
 ```bash
+php artisan db:seed --class=YakanPatternSeeder
+```
+
+**Patterns Added:**
+- Sinaluan (Sacred wedding pattern)
+- Bunga Sama (Floral pattern)
+- Pinalantikan (Nested diamond)
+- Suhul (Ocean wave)
+- Kabkaban (Interlocking squares)
+- Laggi (Eight-pointed star)
+- Bennig (Sacred spiral)
+- Pangapun (Triangle/mountain)
+- Sarang Kayu (Honeycomb)
+- Ikan Mas (Fish pattern)
+- Kalasag (Shield pattern)
+- Tali (Rope/knot)
+- Langgal (Mosque pattern)
+- Saput Tangan (Handkerchief)
+
+## Complete Setup Process
+
+### Step 1: Environment Configuration
+Created `.env` file with XAMPP-compatible settings:
+
+```env
+APP_NAME=Yakan
+APP_ENV=local
+APP_KEY=base64:generated_key_here
+APP_DEBUG=true
+APP_URL=http://127.0.0.1:8000
+
+LOG_CHANNEL=stack
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=debug
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=yakan_db
+DB_USERNAME=root
+DB_PASSWORD=
+
+BROADCAST_DRIVER=log
+CACHE_DRIVER=file
+FILESYSTEM_DISK=public
+QUEUE_CONNECTION=sync
+SESSION_DRIVER=file
+SESSION_LIFETIME=120
+
+MEMCACHED_HOST=127.0.0.1
+
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+MAIL_MAILER=smtp
+MAIL_HOST=mailpit
+MAIL_PORT=1025
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_ENCRYPTION=null
+MAIL_FROM_ADDRESS="hello@example.com"
+MAIL_FROM_NAME="${APP_NAME}"
+
+VITE_APP_NAME="${APP_NAME}"
+```
+
+### Step 2: Start XAMPP Services
+1. Opened XAMPP Control Panel: `C:\Users\HP\Desktop\xampp\xampp-control.exe`
+2. Started **Apache** module
+3. Started **MySQL** module
+
+### Step 3: Create Database
+1. Accessed phpMyAdmin: http://localhost/phpmyadmin
+2. Created new database: `yakan_db`
+3. Used default collation: `utf8mb4_general_ci`
+
+### Step 4: Install Dependencies
+```bash
+# Install PHP dependencies
+composer install
+
+# Install Node.js dependencies
 npm install
 ```
 
-Or if using Yarn:
+### Step 5: Generate Application Key
+```bash
+php artisan key:generate
+```
+
+### Step 6: Run Database Migrations
+```bash
+php artisan migrate
+```
+
+**Migrations Created:**
+- users table
+- password_reset_tokens table
+- sessions table
+- cache tables
+- jobs/failed_jobs tables
+- products table
+- categories table
+- orders table
+- order_items table
+- custom_orders table
+- yakan_patterns table
+- inventories table
+- payments table
+- And more...
+
+### Step 7: Seed Database
+```bash
+# Run all seeders
+php artisan db:seed
+
+# Specifically seed Yakan patterns
+php artisan db:seed --class=YakanPatternSeeder
+```
+
+**Seeded Data:**
+- Admin users (AdminUserSeederUpdated)
+- Sample products and categories
+- Inventory items
+- 14 Traditional Yakan patterns
+
+### Step 8: Link Storage
+```bash
+php artisan storage:link
+```
+
+This creates a symbolic link from `public/storage` to `storage/app/public` for file uploads.
+
+### Step 9: Build Frontend Assets
+```bash
+# Development build with hot reload
+npm run dev
+
+# Or production build
+npm run build
+```
+
+### Step 10: Start Development Server
+```bash
+php artisan serve
+```
+
+Server started at: **http://127.0.0.1:8000**
+
+## Login Credentials
+
+### Admin Accounts
+- **Email:** admin@yakan.com  
+  **Password:** admin123
+
+- **Email:** kariljaslem@gmail.com  
+  **Password:** admin123
+
+### User Account
+- **Email:** user@yakan.com  
+  **Password:** user123
+
+## Key Routes Verified
 
 ```bash
-yarn install
+php artisan route:list
 ```
 
-### 3. **Start the Application**
+Important routes available:
+- `/` - Homepage
+- `/login` - User login
+- `/register` - User registration
+- `/dashboard` - User dashboard
+- `/products` - Product listing
+- `/custom-orders/create/pattern` - Pattern selection (now populated)
+- `/admin/*` - Admin panel routes
 
-#### For Web:
-```bash
-npm run web
-```
+## File Structure Changes
 
-#### For Android:
-```bash
-npm run android
-```
+### Created Files:
+- `.env` - Environment configuration
+- `public/storage` - Symbolic link to storage
 
-#### For iOS (macOS only):
-```bash
-npm run ios
-```
+### Modified Files:
+- `composer.lock` - After dependency installation
+- `package-lock.json` - After npm installation
 
-#### General Expo Start:
-```bash
-npm start
-```
+## Database Schema
 
-## Project Structure
-
-```
-YAKAN-main-main/
-├── src/
-│   ├── assets/          # Images and media files
-│   ├── components/      # Reusable React components
-│   ├── config/          # Configuration files
-│   ├── constants/       # App constants (colors, tracking, etc.)
-│   ├── context/         # React Context for state management
-│   ├── screens/         # Screen components
-│   └── services/        # API and service files
-├── LARAVEL_API_SETUP/   # Backend Laravel setup documentation
-├── App.js               # Root app component
-├── index.js             # Entry point
-├── app.json             # Expo configuration
-├── package.json         # Dependencies and scripts
-└── setup.md            # This file
-```
-
-## Environment Configuration
-
-### Create `.env` file (if needed)
-
-Create a `.env` file in the root directory for API endpoints and configuration:
-
-```env
-REACT_APP_API_URL=http://your-api-endpoint.com/api
-REACT_APP_API_TIMEOUT=10000
-```
-
-Update the `src/config/config.js` file with your environment-specific settings.
-
-## Available Scripts
-
-| Command | Purpose |
-|---------|---------|
-| `npm start` | Start Expo development server |
-| `npm run web` | Run on web browser |
-| `npm run android` | Run on Android emulator/device |
-| `npm run ios` | Run on iOS simulator/device |
-
-## Backend Setup (Laravel)
-
-If you need to set up the backend API:
-
-1. Navigate to the `LARAVEL_API_SETUP/` folder
-2. Follow the instructions in the included PHP files for:
-   - AuthController setup
-   - Models and Migrations
-   - API Routes configuration
-   - Payment integration
-
-Refer to `BACKEND_INTEGRATION_SETUP.md` for detailed backend integration steps.
-
-## API Integration
-
-The project uses **Axios** for HTTP requests. Key service files:
-
-- `src/services/api.js` - Main API configuration and base setup
-- `src/services/orderService.js` - Order-related API calls
-- `useOrders.js` - Custom hook for order management
-
-### API Configuration
-
-Configure your API endpoint in `src/config/config.js`:
-
-```javascript
-const API_BASE_URL = 'http://your-api-endpoint.com/api';
-```
-
-## State Management
-
-The project uses **React Context** for state management:
-
-- `src/context/CartContext.js` - Shopping cart state and operations
+### Key Tables:
+- **users** - User authentication and profiles
+- **yakan_patterns** - Traditional weaving patterns (14 records)
+- **products** - Product catalog
+- **custom_orders** - Custom weaving orders
+- **orders** - Regular orders
+- **inventories** - Stock management
 
 ## Troubleshooting
 
-### Common Issues
+### Issue: "Driver not found" Error
+**Cause:** Using SQLite driver with XAMPP's MySQL
+**Fix:** Updated `DB_CONNECTION=mysql` in `.env`
 
-#### Port Already in Use
-If the default Expo port (8081) is in use:
-```bash
-npm start -- --port 8090
+### Issue: Empty Patterns Page
+**Cause:** Patterns table not seeded
+**Fix:** Ran `php artisan db:seed --class=YakanPatternSeeder`
+
+### Issue: PHP Version Error
+**Cause:** XAMPP had PHP 8.0, Laravel needs 8.2+
+**Fix:** Updated XAMPP to version with PHP 8.2.12
+
+### Issue: Composer Not Found
+**Cause:** Composer not in system PATH
+**Fix:** Used full path `C:\ProgramData\ComposerSetup\bin\composer.bat`
+
+## Optional: Apache VirtualHost Setup
+
+If you prefer `http://yakan.local` instead of `http://127.0.0.1:8000`:
+
+### 1. Configure VirtualHost
+Edit: `C:\Users\HP\Desktop\xampp\apache\conf\extra\httpd-vhosts.conf`
+
+```apache
+<VirtualHost *:80>
+    ServerName yakan.local
+    DocumentRoot "C:/Users/HP/Desktop/yakan-ecommerce-main/yakan-ecommerce-main/public"
+    <Directory "C:/Users/HP/Desktop/yakan-ecommerce-main/yakan-ecommerce-main/public">
+        AllowOverride All
+        Require all granted
+    </Directory>
+    ErrorLog "logs/yakan-error.log"
+    CustomLog "logs/yakan-access.log" common
+</VirtualHost>
 ```
 
-#### Dependencies Not Installing
-Clear cache and reinstall:
-```bash
-rm -r node_modules package-lock.json
-npm install
+### 2. Edit Hosts File
+Edit: `C:\Windows\System32\drivers\etc\hosts` (as Administrator)
+
+Add:
+```
+127.0.0.1   yakan.local
 ```
 
-#### Expo Issues
-Update Expo CLI:
-```bash
-npm install -g expo-cli@latest
+### 3. Enable VirtualHost in Apache
+Edit: `C:\Users\HP\Desktop\xampp\apache\conf\httpd.conf`
+
+Uncomment:
+```apache
+Include conf/extra/httpd-vhosts.conf
 ```
 
-#### Module Not Found
-Clear Expo cache:
+### 4. Restart Apache
+Restart Apache in XAMPP Control Panel, then access: http://yakan.local
+
+## Maintenance Commands
+
+### Clear Cache
 ```bash
-expo start -c
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+```
+
+### Reset Database
+```bash
+php artisan migrate:fresh --seed
+```
+
+### Check Application Status
+```bash
+php artisan about
 ```
 
 ## Development Workflow
 
-1. **Make changes** to your code in the `src/` directory
-2. **Save files** - The app will hot-reload automatically
-3. **Test on device** - Use the Expo Go app or emulator
-4. **Commit changes** using Git
+### Daily Startup:
+1. Start XAMPP (Apache + MySQL)
+2. Navigate to project directory
+3. Run `php artisan serve`
+4. Run `npm run dev` (in separate terminal for hot reload)
+5. Access http://127.0.0.1:8000
 
-## Build for Production
-
-### Web Build
+### Before Committing Code:
 ```bash
-expo export --platform web
+composer dump-autoload
+php artisan optimize:clear
+npm run build
 ```
 
-### Android Build
-```bash
-expo build:android
-```
+## Project Paths
 
-### iOS Build
-```bash
-expo build:ios
-```
+- **Project Root:** `C:\Users\HP\Desktop\yakan-ecommerce-main\yakan-ecommerce-main`
+- **XAMPP Root:** `C:\Users\HP\Desktop\xampp`
+- **PHP Executable:** `C:\Users\HP\Desktop\xampp\php\php.exe`
+- **Public Directory:** `C:\Users\HP\Desktop\yakan-ecommerce-main\yakan-ecommerce-main\public`
 
-## Additional Resources
+## Success Indicators
 
-- [Expo Documentation](https://docs.expo.dev/)
-- [React Native Documentation](https://reactnative.dev/)
-- [Axios Documentation](https://axios-http.com/)
-- [React Navigation Documentation](https://reactnavigation.org/)
+✅ Composer dependencies installed (vendor folder exists)  
+✅ NPM dependencies installed (node_modules folder exists)  
+✅ Application key generated in `.env`  
+✅ Database `yakan_db` created  
+✅ All migrations ran successfully  
+✅ Seeders populated data (including 14 Yakan patterns)  
+✅ Storage linked  
+✅ Assets compiled  
+✅ Server running at http://127.0.0.1:8000  
 
-## Support
+## Notes
 
-For issues or questions:
-1. Check the troubleshooting section above
-2. Review `INTEGRATION_GUIDE.md` for integration details
-3. Check `API_IMPLEMENTATION_EXAMPLES.md` for API usage examples
-4. Consult the backend setup guides in `LARAVEL_API_SETUP/`
-
-## License
-
-[Specify your license here]
+- This setup uses **MySQL** instead of **SQLite** to match XAMPP's database server
+- All 14 traditional Yakan weaving patterns are now available in custom orders
+- The project is configured for local development with `APP_DEBUG=true`
+- File uploads use the `public` disk and are accessible via `/storage/*`
 
 ---
 
-**Last Updated**: December 2025
-**Version**: 1.0.0
+**Setup Completed:** December 5, 2025  
+**Laravel Version:** 11.x  
+**PHP Version:** 8.2.12  
+**Database:** MySQL (XAMPP)  
+**Server:** http://127.0.0.1:8000

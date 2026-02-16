@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Yakan App",
-    "slug": "yakan-app",
+    "slug": "yakanapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,9 +13,13 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yakan.app",
+      "buildNumber": "1.0.0"
     },
     "android": {
+      "package": "com.yakan.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -24,11 +28,25 @@
       "usesCleartextTraffic": true,
       "permissions": [
         "INTERNET",
-        "ACCESS_NETWORK_STATE"
+        "ACCESS_NETWORK_STATE",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "CAMERA"
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/b217594d-ba23-4e62-a63d-0fc749175838"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b217594d-ba23-4e62-a63d-0fc749175838"
+      }
     }
   }
 }

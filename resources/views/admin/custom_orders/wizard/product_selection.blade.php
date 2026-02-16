@@ -10,7 +10,7 @@
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
                     <h1 class="text-xl font-semibold text-gray-900">Create Custom Order</h1>
-                    <span class="ml-3 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">Step 1: Select Product</span>
+                    <span class="ml-3 px-2 py-1 text-xs font-medium bg-red-50 text-[#800000] rounded-full">Step 1: Select Product</span>
                 </div>
                 <a href="{{ route('admin_custom_orders.create.choice') }}" class="text-gray-500 hover:text-gray-700">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,7 +63,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label for="user_id" class="block text-sm font-medium text-gray-700 mb-2">Customer *</label>
-                        <select name="user_id" id="user_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <select name="user_id" id="user_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent">
                             <option value="">Choose a customer...</option>
                             @foreach($users as $user)
                                 <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
@@ -89,17 +89,17 @@
             @if($products->count() > 0)
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="productsGrid">
                     @foreach($products as $product)
-                        <div class="product-card border-2 border-gray-200 rounded-lg overflow-hidden hover:border-blue-500 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                        <div class="product-card border-2 border-gray-200 rounded-lg overflow-hidden hover:border-[#800000] hover:shadow-lg transition-all duration-300 cursor-pointer"
                              onclick="selectProduct({{ $product->id }}, '{{ $product->name }}', '{{ $product->category ?? 'other' }}', '{{ $product->price ?? 0 }}')">
                             
                             <div class="relative">
                                 @if($product->image)
-                                    <img src="{{ asset('storage/' . $product->image) }}" 
+                                    <img src="{{ $product->image_src }}" 
                                          alt="{{ $product->name }}" 
                                          class="w-full h-48 object-cover">
                                 @else
-                                    <div class="w-full h-48 bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
-                                        <svg class="w-16 h-16 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <div class="w-full h-48 bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center">
+                                        <svg class="w-16 h-16 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                                         </svg>
                                     </div>
@@ -107,7 +107,7 @@
                                 
                                 <!-- Category Badge -->
                                 <div class="absolute top-2 left-2">
-                                    <span class="bg-white bg-opacity-90 text-xs px-2 py-1 rounded-full font-semibold text-blue-600">
+                                    <span class="bg-white bg-opacity-90 text-xs px-2 py-1 rounded-full font-semibold text-[#800000]">
                                         {{ ucfirst($product->category ?? 'Other') }}
                                     </span>
                                 </div>
@@ -130,7 +130,7 @@
                                 <div class="flex items-center justify-between mb-2">
                                     <div class="flex items-center">
                                         @if($product->price > 0)
-                                            <span class="text-lg font-bold text-blue-600">₱{{ number_format($product->price, 2) }}</span>
+                                            <span class="text-lg font-bold text-[#800000]">₱{{ number_format($product->price, 2) }}</span>
                                         @else
                                             <span class="text-sm text-gray-500">Price on quote</span>
                                         @endif
@@ -138,8 +138,8 @@
                                 </div>
                                 
                                 <div class="flex flex-wrap gap-1">
-                                    <span class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">Yakan Patterns</span>
-                                    <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">Custom Colors</span>
+                                    <span class="text-xs bg-red-50 text-[#800000] px-2 py-1 rounded-full">Yakan Patterns</span>
+                                    <span class="text-xs bg-red-50 text-[#800000] px-2 py-1 rounded-full">Custom Colors</span>
                                 </div>
                             </div>
                         </div>
@@ -152,7 +152,7 @@
                     </svg>
                     <h3 class="text-lg font-medium text-gray-900 mb-2">No Products Available</h3>
                     <p class="text-gray-500 mb-4">There are no products available for customization at the moment.</p>
-                    <a href="{{ route('admin_custom_orders.create.choice') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <a href="{{ route('admin_custom_orders.create.choice') }}" class="inline-flex items-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                         </svg>
@@ -163,14 +163,14 @@
         </div>
 
         <!-- Admin Notes -->
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div class="bg-red-50 border border-red-200 rounded-lg p-6">
             <div class="flex items-start">
-                <svg class="w-6 h-6 text-blue-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-6 h-6 text-[#800000] mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
                 <div>
-                    <h3 class="text-lg font-semibold text-blue-900 mb-2">Admin Product Selection</h3>
-                    <div class="text-sm text-blue-700 space-y-2">
+                    <h3 class="text-lg font-semibold text-[#800000] mb-2">Admin Product Selection</h3>
+                    <div class="text-sm text-[#800000] space-y-2">
                         <p>• Select a customer first before choosing a product</p>
                         <p>• All products shown are available for customization with Yakan patterns</p>
                         <p>• After product selection, you'll be able to choose patterns and colors</p>
@@ -205,7 +205,7 @@ function selectProduct(productId, productName, productCategory, productPrice) {
     loadingDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
     loadingDiv.innerHTML = `
         <div class="bg-white rounded-lg p-6 flex flex-col items-center">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#800000] mb-3"></div>
             <span class="text-gray-700">Preparing customization for ${productName}...</span>
         </div>
     `;

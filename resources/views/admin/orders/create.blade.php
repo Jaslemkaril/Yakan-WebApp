@@ -9,7 +9,7 @@
         <div class="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
                 <h1 class="text-3xl font-bold mb-2">Create New Order</h1>
-                <p class="text-blue-100 text-lg">Create a manual order for a customer</p>
+                <p class="text-red-100 text-lg">Create a manual order for a customer</p>
             </div>
             <div class="mt-4 md:mt-0">
                 <a href="{{ route('admin.regular.index') }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
@@ -36,7 +36,7 @@
                         <select id="user_id" 
                                 name="user_id" 
                                 required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent">
                             <option value="">Choose a customer...</option>
                             @foreach($users as $user)
                             <option value="{{ $user->id }}" {{ old('user_id') == $user->id ? 'selected' : '' }}>
@@ -56,7 +56,7 @@
                         <h3 class="text-lg font-semibold text-gray-900">Order Items</h3>
                         <button type="button" 
                                 id="addItemBtn"
-                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                                class="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors text-sm">
                             <i class="fas fa-plus mr-2"></i>Add Item
                         </button>
                     </div>
@@ -71,7 +71,7 @@
                                     </label>
                                     <select name="items[0][product_id]" 
                                             required
-                                            class="product-select w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                            class="product-select w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent">
                                         <option value="">Select a product...</option>
                                         @foreach($products as $product)
                                         <option value="{{ $product->id }}" 
@@ -92,7 +92,7 @@
                                            min="1" 
                                            value="1"
                                            required
-                                           class="quantity-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                           class="quantity-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent">
                                 </div>
                             </div>
                             
@@ -125,7 +125,7 @@
                             </div>
                             <div class="border-t pt-2 flex justify-between">
                                 <span class="font-semibold text-gray-900">Total:</span>
-                                <span class="font-bold text-lg text-blue-600" id="totalAmount">₱0.00</span>
+                                <span class="font-bold text-lg text-[#800000]" id="totalAmount">₱0.00</span>
                             </div>
                         </div>
                     </div>
@@ -142,7 +142,7 @@
                         <textarea id="notes" 
                                   name="notes" 
                                   rows="3"
-                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent"
                                   placeholder="Add any special instructions or notes for this order...">{{ old('notes') }}</textarea>
                         @error('notes')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -162,7 +162,7 @@
                             <i class="fas fa-times mr-2"></i>Cancel
                         </a>
                         <button type="submit" 
-                                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                class="px-6 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors">
                             <i class="fas fa-shopping-cart mr-2"></i>Create Order
                         </button>
                     </div>
@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </label>
                         <select name="items[${index}][product_id]" 
                                 required
-                                class="product-select w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                class="product-select w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent">
                             <option value="">Select a product...</option>
                             ${productOptions}
                         </select>
@@ -259,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                min="1" 
                                value="1"
                                required
-                               class="quantity-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                               class="quantity-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent">
                     </div>
                 </div>
                 

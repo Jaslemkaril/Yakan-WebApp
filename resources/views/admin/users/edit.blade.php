@@ -3,28 +3,23 @@
 @section('title', 'Edit User')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-2xl mx-auto">
-        <!-- Header -->
-        <div class="mb-6">
-            <h1 class="text-3xl font-bold text-gray-900">Edit User</h1>
-            <p class="text-gray-600 mt-2">Update user information and settings</p>
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-[#800000] rounded-2xl p-6 sm:p-8 text-white shadow-xl">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+                <h1 class="text-xl md:text-3xl font-bold mb-2">Edit User</h1>
+                <p class="text-red-100 text-lg">Update information for {{ $user->name }}</p>
+            </div>
+            <a href="{{ route('admin.users.index') }}" class="mt-4 md:mt-0 inline-flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white text-sm font-medium transition">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                Back to Users
+            </a>
         </div>
+    </div>
 
-        <!-- Breadcrumb -->
-        <nav class="flex mb-6" aria-label="Breadcrumb">
-            <ol class="flex items-center space-x-2">
-                <li>
-                    <a href="{{ route('admin.dashboard') }}" class="text-gray-500 hover:text-gray-700">Dashboard</a>
-                </li>
-                <li class="text-gray-500">/</li>
-                <li>
-                    <a href="{{ route('admin.users.index') }}" class="text-gray-500 hover:text-gray-700">Users</a>
-                </li>
-                <li class="text-gray-500">/</li>
-                <li class="text-gray-900 font-medium">Edit</li>
-            </ol>
-        </nav>
+<div class="container mx-auto">
+    <div class="max-w-2xl mx-auto">
 
         <!-- Edit Form -->
         <div class="bg-white shadow-sm rounded-lg">
@@ -44,7 +39,7 @@
                                name="name" 
                                value="{{ old('name', $user->name) }}"
                                required
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-maroon-500 focus:border-maroon-500 sm:text-sm">
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-[#800000] focus:border-[#800000] sm:text-sm">
                         @error('name')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
@@ -60,7 +55,7 @@
                                name="email" 
                                value="{{ old('email', $user->email) }}"
                                required
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-maroon-500 focus:border-maroon-500 sm:text-sm">
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-[#800000] focus:border-[#800000] sm:text-sm">
                         @error('email')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
@@ -75,7 +70,7 @@
                                id="phone" 
                                name="phone" 
                                value="{{ old('phone', $user->phone) }}"
-                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-maroon-500 focus:border-maroon-500 sm:text-sm"
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-[#800000] focus:border-[#800000] sm:text-sm"
                                placeholder="+63 XXX XXX XXXX">
                         @error('phone')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -90,7 +85,7 @@
                         <select id="role" 
                                 name="role" 
                                 required
-                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-maroon-500 focus:border-maroon-500 sm:text-sm">
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-[#800000] focus:border-[#800000] sm:text-sm">
                             <option value="user" {{ old('role', $user->role) == 'user' ? 'selected' : '' }}>Regular User</option>
                             <option value="admin" {{ old('role', $user->role) == 'admin' ? 'selected' : '' }}>Administrator</option>
                         </select>
@@ -107,7 +102,7 @@
                         <select id="status" 
                                 name="status" 
                                 required
-                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-maroon-500 focus:border-maroon-500 sm:text-sm">
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-[#800000] focus:border-[#800000] sm:text-sm">
                             <option value="active" {{ ($user->last_login_at && $user->last_login_at->greaterThan(now()->subDays(30))) ? 'selected' : '' }}>Active</option>
                             <option value="inactive" {{ (!$user->last_login_at || $user->last_login_at->lessThanOrEqualTo(now()->subDays(30))) ? 'selected' : '' }}>Inactive</option>
                         </select>
@@ -171,7 +166,7 @@
                 <div class="border-t pt-6 flex justify-between">
                     <div>
                         <a href="{{ route('admin.users.show', $user->id) }}" 
-                           class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-maroon-500">
+                           class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                             </svg>
@@ -180,11 +175,11 @@
                     </div>
                     <div class="space-x-3">
                         <a href="{{ route('admin.users.index') }}" 
-                           class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-maroon-500">
+                           class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]">
                             Cancel
                         </a>
                         <button type="submit" 
-                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-maroon-600 hover:bg-maroon-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-maroon-500">
+                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#800000] hover:bg-[#600000] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                             </svg>
@@ -202,7 +197,7 @@
                 <form method="POST" action="{{ route('admin.users.toggle', $user->id) }}" class="inline">
                     @csrf
                     <button type="submit" 
-                            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-maroon-500">
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#800000]">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/>
                         </svg>
@@ -226,5 +221,6 @@
             </div>
         </div>
     </div>
+</div>
 </div>
 @endsection

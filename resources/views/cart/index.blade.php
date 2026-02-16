@@ -333,7 +333,7 @@
                                         <!-- Product Image -->
                                         <div class="w-28 h-28 flex-shrink-0 product-image-wrapper">
                                             @if($product->image)
-                                                <img src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                                                <img src="{{ $product->image_src }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
                                             @else
                                                 <div class="w-full h-full flex items-center justify-center">
                                                     <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

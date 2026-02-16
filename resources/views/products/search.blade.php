@@ -116,7 +116,7 @@
                                 <a href="{{ route('products.show', $product) }}">
                                     <div class="relative h-64 bg-gray-200">
                                         @if($product->image)
-                                            <img src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                                            <img src="{{ $product->image_src }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
                                         @else
                                             <div class="w-full h-full flex items-center justify-center">
                                                 <svg class="w-20 h-20 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

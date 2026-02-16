@@ -21,7 +21,7 @@
         <div class="bg-maroon-50 border border-maroon-200 rounded-xl p-4 mb-6">
             <div class="flex items-center">
                 @if($inventory->product->image)
-                    <img class="h-12 w-12 rounded-lg object-cover" src="{{ asset('storage/' . $inventory->product->image) }}" alt="">
+                    <img class="h-12 w-12 rounded-lg object-cover" src="{{ $inventory->product->image_src }}" alt="">
                 @else
                     <div class="h-12 w-12 rounded-lg bg-maroon-200 flex items-center justify-center">
                         <svg class="w-6 h-6 text-maroon-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

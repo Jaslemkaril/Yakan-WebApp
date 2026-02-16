@@ -229,7 +229,7 @@
         <!-- Total Orders -->
         <div class="dashboard-card glass-effect rounded-xl p-6">
             <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-r from-[#800000] to-[#600000] flex items-center justify-center">
                     <i class="fas fa-shopping-bag text-white"></i>
                 </div>
                 <span class="text-sm text-gray-500">+12.5%</span>
@@ -274,7 +274,7 @@
         <!-- Products -->
         <div class="dashboard-card glass-effect rounded-xl p-6">
             <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-r from-[#800000] to-[#600000] flex items-center justify-center">
                     <i class="fas fa-box text-white"></i>
                 </div>
                 <span class="text-sm text-gray-500">+5.7%</span>
@@ -302,7 +302,7 @@
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
             <div class="space-y-3">
                 <div class="activity-item">
-                    <div class="activity-icon bg-blue-100 text-blue-600">
+                    <div class="activity-icon bg-red-50 text-[#800000]">
                         <i class="fas fa-shopping-cart"></i>
                     </div>
                     <div class="flex-1">
@@ -320,7 +320,7 @@
                     </div>
                 </div>
                 <div class="activity-item">
-                    <div class="activity-icon bg-purple-100 text-purple-600">
+                    <div class="activity-icon bg-red-50 text-[#800000]">
                         <i class="fas fa-star"></i>
                     </div>
                     <div class="flex-1">
@@ -383,7 +383,7 @@
         <div class="glass-effect rounded-xl p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Avg Order Value</h3>
             <div class="flex items-center justify-center">
-                <div class="text-3xl font-bold text-blue-600">₱2,450</div>
+                <div class="text-3xl font-bold text-[#800000]">₱2,450</div>
             </div>
             <div class="progress-modern mt-4">
                 <div class="progress-bar-modern" style="width: 65%;"></div>
@@ -394,7 +394,7 @@
         <div class="glass-effect rounded-xl p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Customer Satisfaction</h3>
             <div class="flex items-center justify-center">
-                <div class="text-3xl font-bold text-purple-600">4.8★</div>
+                <div class="text-3xl font-bold text-[#800000]">4.8★</div>
             </div>
             <div class="progress-modern mt-4">
                 <div class="progress-bar-modern" style="width: 96%; background: var(--warning-gradient);"></div>

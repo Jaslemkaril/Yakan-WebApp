@@ -335,7 +335,7 @@
                         <div class="product-card animate-fade-in-up" style="animation-delay: {{ $index * 0.1 }}s">
                             <div class="product-image">
                                 @if($product->image)
-                                    <img src="{{ asset('uploads/products/' . $product->image) }}" alt="{{ $product->name }}" 
+                                    <img src="{{ $product->image_src }}" alt="{{ $product->name }}" 
                                          class="w-full h-full object-cover"
                                          onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200\'><div class=\'text-center\'><div class=\'text-6xl mb-2\'>🧵</div><div class=\'text-sm text-gray-500 font-semibold\'>{{ $product->name }}</div></div></div>';">
                                 @else

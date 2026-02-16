@@ -9,9 +9,9 @@
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-xl md:text-3xl font-bold">Coupons Management</h1>
-                <p class="text-purple-100 text-lg mt-2">Manage promotional codes and discounts</p>
+                <p class="text-red-100 text-lg mt-2">Manage promotional codes and discounts</p>
             </div>
-            <a href="{{ route('admin.coupons.create') }}" class="inline-flex items-center px-6 py-3 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+            <a href="{{ route('admin.coupons.create') }}" class="inline-flex items-center px-6 py-3 bg-white text-[#800000] rounded-lg font-semibold hover:bg-gray-100 transition-colors">
                 <i class="fas fa-plus mr-2"></i>New Coupon
             </a>
         </div>
@@ -71,7 +71,7 @@
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <div class="flex items-center justify-end gap-2">
-                                    <a href="{{ route('admin.coupons.edit', $coupon) }}" class="inline-flex items-center px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium">
+                                    <a href="{{ route('admin.coupons.edit', $coupon) }}" class="inline-flex items-center px-3 py-2 bg-red-50 text-[#800000] rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
                                         <i class="fas fa-edit mr-1"></i>Edit
                                     </a>
                                     <form action="{{ route('admin.coupons.destroy', $coupon) }}" method="POST" class="inline" onsubmit="return confirm('Delete this coupon?');">

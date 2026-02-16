@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, Alert, Animated } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
+import ScreenHeader from '../components/ScreenHeader';
+import { useTheme } from '../context/ThemeContext';
 import ApiService from '../services/api';
 
 const AccountScreen = ({ navigation }) => {
   const { isLoggedIn, userInfo, logout, updateUserInfo, setUserInfo } = useCart();
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
   
   // Debug logging
   console.log('[AccountScreen] Render - isLoggedIn:', isLoggedIn);
@@ -65,7 +70,7 @@ const AccountScreen = ({ navigation }) => {
           style: 'destructive',
           onPress: () => {
             logout();
-            navigation.navigate('Home');
+            navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
           },
         },
       ]
@@ -95,13 +100,13 @@ const AccountScreen = ({ navigation }) => {
   // Show login prompt if not logged in
   if (!isLoggedIn) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backButton}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Account</Text>
-        </View>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <ScreenHeader 
+          title="Account" 
+          navigation={navigation}
+          showBack={false}
+          showHamburger={true}
+        />
 
         <View style={styles.notLoggedInContainer}>
           <View style={styles.notLoggedInContent}>
@@ -131,13 +136,13 @@ const AccountScreen = ({ navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Account</Text>
-      </View>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader 
+        title="Account" 
+        navigation={navigation}
+        showBack={false}
+        showHamburger={true}
+      />
       
       <ScrollView style={styles.content}>
         <View style={styles.profileSection}>
@@ -171,8 +176,10 @@ const AccountScreen = ({ navigation }) => {
               setEditedEmail(email);
               setIsEditModalVisible(true);
             }}
+            activeOpacity={0.7}
           >
-            <Text style={styles.editProfileText}> Edit Profile</Text>
+            <MaterialCommunityIcons name="pencil-outline" size={16} color="#8B1A1A" style={{ marginRight: 6 }} />
+            <Text style={styles.editProfileText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
 
@@ -180,49 +187,71 @@ const AccountScreen = ({ navigation }) => {
           <TouchableOpacity 
             style={styles.menuItem}
             onPress={() => navigation.navigate('Orders')}
+            activeOpacity={0.6}
           >
-            <Text style={styles.menuText}> My Orders</Text>
-            <Text style={styles.menuArrow}>→</Text>
+            <View style={styles.menuItemLeft}>
+              <MaterialCommunityIcons name="package-box-multiple" size={24} color="#8B1A1A" style={styles.menuIcon} />
+              <Text style={styles.menuText}>My Orders</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.iconMuted} />
           </TouchableOpacity>
           
           <TouchableOpacity 
             style={styles.menuItem}
             onPress={() => navigation.navigate('Wishlist')}
+            activeOpacity={0.6}
           >
-            <Text style={styles.menuText}> My Wishlists</Text>
-            <Text style={styles.menuArrow}>→</Text>
+            <View style={styles.menuItemLeft}>
+              <MaterialCommunityIcons name="heart-outline" size={24} color="#E74C3C" style={styles.menuIcon} />
+              <Text style={styles.menuText}>My Wishlists</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.iconMuted} />
           </TouchableOpacity>
           
           <TouchableOpacity 
             style={styles.menuItem}
             onPress={() => navigation.navigate('SavedAddresses')}
+            activeOpacity={0.6}
           >
-            <Text style={styles.menuText}> Saved Addresses</Text>
-            <Text style={styles.menuArrow}>→</Text>
+            <View style={styles.menuItemLeft}>
+              <MaterialCommunityIcons name="map-marker-multiple" size={24} color="#3498DB" style={styles.menuIcon} />
+              <Text style={styles.menuText}>Saved Addresses</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.iconMuted} />
           </TouchableOpacity>
           
           <TouchableOpacity 
             style={styles.menuItem}
             onPress={() => navigation.navigate('PaymentMethods')}
+            activeOpacity={0.6}
           >
-            <Text style={styles.menuText}>Payment Methods</Text>
-            <Text style={styles.menuArrow}>→</Text>
+            <View style={styles.menuItemLeft}>
+              <MaterialCommunityIcons name="credit-card-multiple" size={24} color="#27AE60" style={styles.menuIcon} />
+              <Text style={styles.menuText}>Payment Methods</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.iconMuted} />
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={styles.menuItem}
+            style={[styles.menuItem, styles.lastMenuItem]}
             onPress={() => navigation.navigate('Settings')}
+            activeOpacity={0.6}
           >
-            <Text style={styles.menuText}> Settings</Text>
-            <Text style={styles.menuArrow}>→</Text>
+            <View style={styles.menuItemLeft}>
+              <MaterialCommunityIcons name="cog-outline" size={24} color="#95A5A6" style={styles.menuIcon} />
+              <Text style={styles.menuText}>Settings</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.iconMuted} />
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity 
           style={styles.logoutButton}
           onPress={handleLogout}
+          activeOpacity={0.7}
         >
-          <Text style={styles.logoutText}> Log Out</Text>
+          <MaterialCommunityIcons name="logout" size={20} color="#FF6B6B" style={{ marginRight: 8 }} />
+          <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -233,12 +262,20 @@ const AccountScreen = ({ navigation }) => {
         transparent={true}
         onRequestClose={() => setIsEditModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsEditModalVisible(false)}
+        >
+          <TouchableOpacity 
+            activeOpacity={1}
+            style={styles.modalContent}
+            onPress={() => {}} // Prevent closing when tapping inside modal
+          >
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Edit Profile</Text>
               <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
-                <Text style={styles.modalClose}>✕</Text>
+                <MaterialCommunityIcons name="close" size={26} color="#BDC3C7" />
               </TouchableOpacity>
             </View>
 
@@ -249,7 +286,7 @@ const AccountScreen = ({ navigation }) => {
                 value={editedName}
                 onChangeText={setEditedName}
                 placeholder="Enter your name"
-                placeholderTextColor="#999"
+                placeholderTextColor="#BDC3C7"
               />
             </View>
 
@@ -260,7 +297,7 @@ const AccountScreen = ({ navigation }) => {
                 value={editedEmail}
                 onChangeText={setEditedEmail}
                 placeholder="Enter your email"
-                placeholderTextColor="#999"
+                placeholderTextColor="#BDC3C7"
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
@@ -270,6 +307,7 @@ const AccountScreen = ({ navigation }) => {
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={() => setIsEditModalVisible(false)}
+                activeOpacity={0.7}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
@@ -277,39 +315,26 @@ const AccountScreen = ({ navigation }) => {
               <TouchableOpacity
                 style={styles.saveButton}
                 onPress={handleSaveProfile}
+                activeOpacity={0.8}
               >
-                <Text style={styles.saveButtonText}>Save</Text>
+                <Text style={styles.saveButtonText}>Save Changes</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    backgroundColor: '#8B1A1A',
-    padding: 20,
-    paddingTop: 50,
-  },
-  backButton: {
-    color: '#fff',
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  title: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
+    backgroundColor: theme.background,
   },
   content: {
     flex: 1,
+    paddingVertical: 10,
   },
   // Not Logged In Styles
   notLoggedInContainer: {
@@ -317,222 +342,301 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: theme.background,
   },
   notLoggedInContent: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     borderRadius: 20,
-    padding: 30,
+    padding: 40,
     alignItems: 'center',
     width: '100%',
     maxWidth: 400,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
   lockIcon: {
-    fontSize: 60,
-    marginBottom: 20,
+    fontSize: 80,
+    marginBottom: 25,
   },
   notLoggedInTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
+    fontSize: 26,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 12,
     textAlign: 'center',
   },
   notLoggedInText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.textSecondary,
     textAlign: 'center',
-    marginBottom: 30,
-    lineHeight: 22,
+    marginBottom: 35,
+    lineHeight: 24,
+    fontWeight: '500',
   },
   loginButton: {
-    backgroundColor: '#8B1A1A',
-    paddingVertical: 15,
+    backgroundColor: theme.primary,
+    paddingVertical: 16,
     paddingHorizontal: 50,
-    borderRadius: 10,
+    borderRadius: 12,
     width: '100%',
     marginBottom: 15,
+    elevation: 3,
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   loginButtonText: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   registerButton: {
-    backgroundColor: '#fff',
-    paddingVertical: 15,
+    backgroundColor: theme.cardBackground,
+    paddingVertical: 16,
     paddingHorizontal: 50,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#8B1A1A',
+    borderRadius: 12,
+    borderWidth: 2.5,
+    borderColor: theme.primary,
     width: '100%',
   },
   registerButtonText: {
-    color: '#8B1A1A',
+    color: theme.primary,
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   // Profile Styles
   profileSection: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
+    marginHorizontal: 15,
+    marginVertical: 15,
     padding: 30,
     alignItems: 'center',
-    marginBottom: 20,
+    borderRadius: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#8B1A1A',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 20,
+    elevation: 5,
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    borderWidth: 2,
+    borderColor: theme.cardBackground,
   },
   avatarText: {
     color: '#fff',
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 42,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   userName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
+    fontSize: 24,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 6,
+    textAlign: 'center',
   },
   userEmail: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
+    marginBottom: 22,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: theme.primary,
+    fontWeight: '600',
     marginBottom: 15,
   },
   editProfileButton: {
-    marginTop: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 20,
+    marginTop: 15,
+    paddingVertical: 11,
+    paddingHorizontal: 28,
+    backgroundColor: theme.surfaceBg,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: theme.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   editProfileText: {
-    color: '#8B1A1A',
-    fontSize: 14,
-    fontWeight: '600',
+    color: theme.primary,
+    fontSize: 15,
+    fontWeight: '700',
+    marginLeft: 6,
+    letterSpacing: 0.3,
   },
   menuSection: {
-    backgroundColor: '#fff',
-    marginBottom: 20,
+    backgroundColor: theme.cardBackground,
+    marginHorizontal: 15,
+    marginVertical: 10,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
   },
   menuItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.borderLight,
+    backgroundColor: theme.cardBackground,
+  },
+  lastMenuItem: {
+    borderBottomWidth: 0,
+  },
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  menuIcon: {
+    marginRight: 16,
+    width: 28,
   },
   menuText: {
     fontSize: 16,
-    color: '#333',
-  },
-  menuArrow: {
-    fontSize: 20,
-    color: '#999',
+    color: theme.text,
+    fontWeight: '600',
+    flex: 1,
   },
   logoutButton: {
-    backgroundColor: '#fff',
-    padding: 20,
+    backgroundColor: theme.dangerBg,
+    padding: 16,
     alignItems: 'center',
+    marginHorizontal: 15,
+    marginVertical: 20,
     marginBottom: 30,
-    borderRadius: 10,
-    marginHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: theme.dangerBorder,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   logoutText: {
-    color: '#dc3545',
+    color: theme.dangerText,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: 'rgba(44, 62, 80, 0.5)',
+    justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 25,
-    width: '90%',
-    maxWidth: 400,
+    backgroundColor: theme.cardBackground,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 28,
+    maxHeight: '80%',
+    paddingBottom: 35,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 25,
   },
   modalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 24,
+    fontWeight: '700',
+    color: theme.text,
   },
   modalClose: {
     fontSize: 28,
-    color: '#999',
+    color: theme.iconMuted,
     fontWeight: '300',
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 22,
   },
   inputLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 10,
+    letterSpacing: 0.3,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: theme.inputBorder,
+    borderRadius: 12,
     padding: 15,
     fontSize: 16,
-    color: '#333',
-    backgroundColor: '#f9f9f9',
+    color: theme.text,
+    backgroundColor: theme.inputBg,
+    fontWeight: '500',
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 28,
+    gap: 12,
   },
   cancelButton: {
     flex: 1,
     padding: 15,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#ddd',
-    marginRight: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: theme.inputBorder,
+    backgroundColor: theme.inputBg,
   },
   cancelButtonText: {
-    color: '#666',
+    color: theme.text,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   saveButton: {
     flex: 1,
     padding: 15,
-    borderRadius: 10,
-    backgroundColor: '#8B1A1A',
+    borderRadius: 12,
+    backgroundColor: theme.primary,
+    elevation: 3,
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
   },
   saveButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
 });
 

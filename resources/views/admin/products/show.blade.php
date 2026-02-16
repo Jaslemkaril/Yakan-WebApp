@@ -9,7 +9,7 @@
         <div class="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
                 <h1 class="text-xl md:text-3xl font-bold mb-2">Product Details</h1>
-                <p class="text-purple-100 text-lg">View complete product information and statistics</p>
+                <p class="text-red-100 text-lg">View complete product information and statistics</p>
             </div>
             <div class="mt-4 md:mt-0 flex space-x-3">
                 <a href="{{ route('admin.products.edit', $product->id) }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
@@ -28,20 +28,20 @@
             <!-- Product Image Section -->
             <div class="lg:w-1/3 p-6 bg-gray-50 border-r border-gray-200">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <i class="fas fa-image text-purple-600 mr-2"></i>
+                    <i class="fas fa-image text-[#800000] mr-2"></i>
                     Product Image
                 </h3>
                 
                 @if($product->image)
                     <div class="relative group">
-                        <img src="{{ asset('uploads/products/' . $product->image) }}" 
+                        <img src="{{ $product->image_src }}" 
                              alt="{{ $product->name }}" 
                              class="w-full h-80 object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-shadow">
                         <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded-lg transition-all duration-300"></div>
                         
                         <!-- Image Actions -->
                         <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="window.open('{{ asset('uploads/products/' . $product->image) }}', '_blank')" 
+                            <button onclick="window.open('{{ $product->image_src }}', '_blank')" 
                                     class="bg-white/90 backdrop-blur-sm text-gray-700 rounded-lg p-2 hover:bg-white transition-colors shadow-lg">
                                 <i class="fas fa-expand"></i>
                             </button>
@@ -126,7 +126,7 @@
                     <div class="space-y-4">
                         <div class="bg-gray-50 rounded-lg p-4">
                             <div class="text-sm text-gray-600 mb-1">Total Inventory Value</div>
-                            <div class="text-2xl font-bold text-purple-600">₱{{ number_format($product->price * $product->stock, 2) }}</div>
+                            <div class="text-2xl font-bold text-[#800000]">₱{{ number_format($product->price * $product->stock, 2) }}</div>
                         </div>
                         
                         <div class="bg-gray-50 rounded-lg p-4">
@@ -146,7 +146,7 @@
                 <!-- Product Description -->
                 <div class="bg-gray-50 rounded-lg p-6">
                     <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                        <i class="fas fa-align-left text-purple-600 mr-2"></i>
+                        <i class="fas fa-align-left text-[#800000] mr-2"></i>
                         Product Description
                     </h3>
                     <div class="prose prose-sm max-w-none">
@@ -165,7 +165,7 @@
     <div class="bg-white rounded-xl shadow-lg border border-gray-100">
         <div class="border-b border-gray-200">
             <nav class="flex space-x-8 px-6" aria-label="Tabs">
-                <button onclick="showTab('analytics')" id="analytics-tab" class="py-4 px-1 border-b-2 border-purple-500 font-medium text-sm text-purple-600 tab-button">
+                <button onclick="showTab('analytics')" id="analytics-tab" class="py-4 px-1 border-b-2 border-[#800000] font-medium text-sm text-[#800000] tab-button">
                     <i class="fas fa-chart-line mr-2"></i>Analytics
                 </button>
                 <button onclick="showTab('history')" id="history-tab" class="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 tab-button">
@@ -213,25 +213,25 @@
                                 </div>
                             </div>
                             
-                            <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+                            <div class="bg-gradient-to-r from-red-50 to-red-100 rounded-lg p-6 border border-red-200">
                                 <div class="flex items-center justify-between">
                                     <div>
-                                        <p class="text-sm text-blue-600 font-medium">Revenue</p>
-                                        <p class="text-2xl font-bold text-blue-900">₱{{ number_format($product->inventory->total_revenue ?? 0, 0) }}</p>
-                                        <p class="text-xs text-blue-700 mt-1">From sales</p>
+                                        <p class="text-sm text-[#800000] font-medium">Revenue</p>
+                                        <p class="text-2xl font-bold text-[#800000]">₱{{ number_format($product->inventory->total_revenue ?? 0, 0) }}</p>
+                                        <p class="text-xs text-[#800000] mt-1">From sales</p>
                                     </div>
-                                    <i class="fas fa-chart-line text-blue-500 text-2xl"></i>
+                                    <i class="fas fa-chart-line text-[#800000] text-2xl"></i>
                                 </div>
                             </div>
                             
-                            <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-6 border border-purple-200">
+                            <div class="bg-gradient-to-r from-amber-50 to-amber-100 rounded-lg p-6 border border-amber-200">
                                 <div class="flex items-center justify-between">
                                     <div>
-                                        <p class="text-sm text-purple-600 font-medium">Stock Range</p>
-                                        <p class="text-2xl font-bold text-purple-900">{{ $product->inventory->min_stock_level }}-{{ $product->inventory->max_stock_level }}</p>
-                                        <p class="text-xs text-purple-700 mt-1">Min/Max levels</p>
+                                        <p class="text-sm text-amber-600 font-medium">Stock Range</p>
+                                        <p class="text-2xl font-bold text-amber-900">{{ $product->inventory->min_stock_level }}-{{ $product->inventory->max_stock_level }}</p>
+                                        <p class="text-xs text-amber-700 mt-1">Min/Max levels</p>
                                     </div>
-                                    <i class="fas fa-sliders-h text-purple-500 text-2xl"></i>
+                                    <i class="fas fa-sliders-h text-amber-500 text-2xl"></i>
                                 </div>
                             </div>
                         </div>
@@ -274,13 +274,13 @@
                 
                 <!-- Basic Analytics -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+                    <div class="bg-gradient-to-r from-red-50 to-red-100 rounded-lg p-6 border border-red-200">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm text-blue-600 font-medium">Potential Revenue</p>
-                                <p class="text-2xl font-bold text-blue-900">₱{{ number_format($product->price * $product->stock, 2) }}</p>
+                                <p class="text-sm text-[#800000] font-medium">Potential Revenue</p>
+                                <p class="text-2xl font-bold text-[#800000]">₱{{ number_format($product->price * $product->stock, 2) }}</p>
                             </div>
-                            <i class="fas fa-dollar-sign text-blue-500 text-2xl"></i>
+                            <i class="fas fa-dollar-sign text-[#800000] text-2xl"></i>
                         </div>
                     </div>
                     
@@ -296,13 +296,13 @@
                         </div>
                     </div>
                     
-                    <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-6 border border-purple-200">
+                    <div class="bg-gradient-to-r from-amber-50 to-amber-100 rounded-lg p-6 border border-amber-200">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm text-purple-600 font-medium">Product Age</p>
-                                <p class="text-2xl font-bold text-purple-900">{{ $product->created_at->diffInDays() }} days</p>
+                                <p class="text-sm text-amber-600 font-medium">Product Age</p>
+                                <p class="text-2xl font-bold text-amber-900">{{ $product->created_at->diffInDays() }} days</p>
                             </div>
-                            <i class="fas fa-calendar text-purple-500 text-2xl"></i>
+                            <i class="fas fa-calendar text-amber-500 text-2xl"></i>
                         </div>
                     </div>
                 </div>
@@ -330,8 +330,8 @@
             <div id="history-content" class="tab-content hidden">
                 <div class="space-y-4">
                     <div class="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
-                        <div class="flex-shrink-0 w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-plus text-purple-600 text-xs"></i>
+                        <div class="flex-shrink-0 w-8 h-8 bg-red-50 rounded-full flex items-center justify-center">
+                            <i class="fas fa-plus text-[#800000] text-xs"></i>
                         </div>
                         <div class="flex-1">
                             <p class="text-sm font-medium text-gray-900">Product Created</p>
@@ -340,8 +340,8 @@
                     </div>
                     
                     <div class="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
-                        <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-edit text-blue-600 text-xs"></i>
+                        <div class="flex-shrink-0 w-8 h-8 bg-red-50 rounded-full flex items-center justify-center">
+                            <i class="fas fa-edit text-[#800000] text-xs"></i>
                         </div>
                         <div class="flex-1">
                             <p class="text-sm font-medium text-gray-900">Last Updated</p>
@@ -380,7 +380,7 @@
         </div>
         <div class="flex space-x-3">
             <a href="{{ route('admin.products.edit', $product->id) }}" 
-               class="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105 shadow-lg">
+               class="px-6 py-3 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-all transform hover:scale-105 shadow-lg">
                 <i class="fas fa-edit mr-2"></i>Edit Product
             </a>
             <a href="{{ route('admin.products.index') }}" 
@@ -400,7 +400,7 @@ function showTab(tabName) {
     
     // Remove active state from all tabs
     document.querySelectorAll('.tab-button').forEach(button => {
-        button.classList.remove('border-purple-500', 'text-purple-600');
+        button.classList.remove('border-[#800000]', 'text-[#800000]');
         button.classList.add('border-transparent', 'text-gray-500');
     });
     
@@ -410,7 +410,7 @@ function showTab(tabName) {
     // Add active state to selected tab
     const activeTab = document.getElementById(tabName + '-tab');
     activeTab.classList.remove('border-transparent', 'text-gray-500');
-    activeTab.classList.add('border-purple-500', 'text-purple-600');
+    activeTab.classList.add('border-[#800000]', 'text-[#800000]');
 }
 
 function copyProductLink() {

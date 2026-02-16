@@ -9,7 +9,7 @@
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
                     <h1 class="text-xl font-semibold text-gray-900">{{ isset($product) ? 'Customize Product' : 'Pattern Selection' }}</h1>
-                    <span class="ml-3 px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">Step 2: Design</span>
+                    <span class="ml-3 px-2 py-1 text-xs font-medium bg-red-50 text-[#800000] rounded-full">Step 2: Design</span>
                 </div>
                 <a href="{{ route('admin_custom_orders.create.choice') }}" class="text-gray-500 hover:text-gray-700">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,7 +55,7 @@
                             @endphp
                             <label class="block group cursor-pointer transition-transform hover:scale-105">
                                 <input type="radio" name="pattern" value="{{ $pattern->id }}" class="sr-only pattern-radio" required>
-                                <div class="border-2 border-gray-200 rounded-xl overflow-hidden transition-all duration-200 group-hover:border-purple-500 group-hover:shadow-lg">
+                                <div class="border-2 border-gray-200 rounded-xl overflow-hidden transition-all duration-200 group-hover:border-[#800000] group-hover:shadow-lg">
                                     <div class="aspect-square bg-gray-100">
                                         <img src="{{ $imageUrl }}" alt="{{ $pattern->name }}" class="w-full h-full object-cover">
                                     </div>
@@ -129,7 +129,7 @@
 
             <div class="flex justify-between items-center">
                 <a href="{{ route('admin_custom_orders.create.choice') }}" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium">← Back</a>
-                <button type="submit" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium">Continue</button>
+                <button type="submit" class="px-6 py-3 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-medium">Continue</button>
             </div>
         </form>
     </div>
@@ -140,10 +140,10 @@
     document.addEventListener('click', function(e) {
         const card = e.target.closest('label');
         if (!card) return;
-        document.querySelectorAll('.pattern-radio').forEach(r => r.closest('label').querySelector('div').classList.remove('border-purple-600'));
+        document.querySelectorAll('.pattern-radio').forEach(r => r.closest('label').querySelector('div').classList.remove('border-[#800000]'));
         const radio = card.querySelector('.pattern-radio');
         radio.checked = true;
-        card.querySelector('div').classList.add('border-purple-600');
+        card.querySelector('div').classList.add('border-[#800000]');
     });
 </script>
 @endpush

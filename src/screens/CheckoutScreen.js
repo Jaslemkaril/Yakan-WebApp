@@ -17,12 +17,16 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import useShippingFee from '../hooks/useShippingFee';
+import { useShippingFee } from '../hooks/useShippingFee';
 import API_CONFIG from '../config/config';
 import ApiService from '../services/api';
+import ScreenHeader from '../components/ScreenHeader';
+import { useTheme } from '../context/ThemeContext';
 
 const CheckoutScreen = ({ navigation }) => {
   const { cartItems, checkoutItems, getCartTotal, clearCart, userInfo, updateUserInfo } = useCart();
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
   const { notifyOrderCreated } = useNotification();
   const { calculateFee, loading: shippingLoading, error: shippingError } = useShippingFee();
   
@@ -460,14 +464,12 @@ const CheckoutScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Checkout</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader 
+        title="Checkout" 
+        navigation={navigation} 
+        showBack={true}
+      />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Delivery Option Section */}
@@ -882,36 +884,36 @@ const CheckoutScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: theme.textSecondary,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
     padding: 20,
   },
   emptyText: {
     fontSize: 18,
-    color: '#666',
+    color: theme.textSecondary,
     marginBottom: 20,
   },
   shopButton: {
-    backgroundColor: '#8B1A1A',
+    backgroundColor: theme.primary,
     paddingHorizontal: 30,
     paddingVertical: 15,
     borderRadius: 8,
@@ -928,25 +930,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 15,
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
   },
   backButton: {
     fontSize: 28,
-    color: '#8B1A1A',
+    color: theme.primary,
     fontWeight: 'bold',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
   },
   content: {
     flex: 1,
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     padding: 20,
     marginTop: 15,
   },
@@ -959,10 +961,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
   },
   editButton: {
-    color: '#8B1A1A',
+    color: theme.primary,
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -972,21 +974,21 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textSecondary,
     width: 60,
   },
   infoValue: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     flex: 1,
   },
   // Customer Information Card Styles
   customerInfoCard: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: theme.surfaceBg,
     borderRadius: 10,
     padding: 15,
     borderWidth: 1,
-    borderColor: '#e8e8e8',
+    borderColor: theme.border,
   },
   customerInfoRow: {
     flexDirection: 'row',
@@ -997,7 +999,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFF5F5',
+    backgroundColor: theme.dangerBg,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -1010,26 +1012,26 @@ const styles = StyleSheet.create({
   },
   customerInfoLabel: {
     fontSize: 11,
-    color: '#999',
+    color: theme.textMuted,
     marginBottom: 2,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   customerInfoValue: {
     fontSize: 15,
-    color: '#333',
+    color: theme.text,
     fontWeight: '600',
   },
   customerInfoDivider: {
     height: 1,
-    backgroundColor: '#e8e8e8',
+    backgroundColor: theme.border,
     marginVertical: 5,
     marginLeft: 52,
   },
   customerInfoWarning: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF3E0',
+    backgroundColor: theme.warningBg,
     padding: 10,
     borderRadius: 8,
     marginTop: 10,
@@ -1040,7 +1042,7 @@ const styles = StyleSheet.create({
   },
   customerInfoWarningText: {
     fontSize: 12,
-    color: '#E65100',
+    color: theme.warningText,
     flex: 1,
   },
   addressList: {
@@ -1048,16 +1050,16 @@ const styles = StyleSheet.create({
   },
   addressCard: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 15,
     marginBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
   },
   addressCardSelected: {
-    borderColor: '#8B1A1A',
+    borderColor: theme.primary,
     borderWidth: 2,
-    backgroundColor: '#FFF5F5',
+    backgroundColor: theme.dangerBg,
   },
   addressCardHeader: {
     flexDirection: 'row',
@@ -1073,18 +1075,18 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   radioButtonSelected: {
-    borderColor: '#8B1A1A',
+    borderColor: theme.primary,
   },
   radioButtonInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#8B1A1A',
+    backgroundColor: theme.primary,
   },
   addressNameSection: {
     flex: 1,
@@ -1092,11 +1094,11 @@ const styles = StyleSheet.create({
   addressName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
   },
   addressPhone: {
     fontSize: 13,
-    color: '#666',
+    color: theme.textSecondary,
     marginTop: 2,
   },
   editAddressButton: {
@@ -1104,19 +1106,19 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   editAddressText: {
-    color: '#8B1A1A',
+    color: theme.primary,
     fontSize: 13,
     fontWeight: '600',
   },
   addressStreet: {
     fontSize: 13,
-    color: '#333',
+    color: theme.text,
     marginBottom: 4,
     lineHeight: 18,
   },
   addressDetails: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textSecondary,
     marginBottom: 3,
   },
   addressTags: {
@@ -1126,25 +1128,25 @@ const styles = StyleSheet.create({
   },
   tagDefault: {
     borderWidth: 1,
-    borderColor: '#8B1A1A',
+    borderColor: theme.primary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
   },
   tagDefaultText: {
-    color: '#8B1A1A',
+    color: theme.primary,
     fontSize: 11,
     fontWeight: '600',
   },
   tagLabel: {
     borderWidth: 1,
-    borderColor: '#999',
+    borderColor: theme.textMuted,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
   },
   tagLabelText: {
-    color: '#666',
+    color: theme.textSecondary,
     fontSize: 11,
   },
   addAddressButton: {
@@ -1153,19 +1155,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 16,
     borderWidth: 2,
-    borderColor: '#8B1A1A',
+    borderColor: theme.primary,
     borderStyle: 'dashed',
     borderRadius: 8,
-    backgroundColor: '#FFF5F5',
+    backgroundColor: theme.dangerBg,
   },
   addAddressIcon: {
     fontSize: 24,
-    color: '#8B1A1A',
+    color: theme.primary,
     marginRight: 8,
     fontWeight: 'bold',
   },
   addAddressText: {
-    color: '#8B1A1A',
+    color: theme.primary,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -1179,7 +1181,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 15,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: theme.surfaceBg,
     padding: 10,
     borderRadius: 8,
   },
@@ -1197,31 +1199,31 @@ const styles = StyleSheet.create({
   },
   orderItemText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     flex: 1,
   },
   orderItemPrice: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     fontWeight: '600',
   },
   divider: {
     height: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: theme.border,
     marginVertical: 15,
   },
   totalText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
   },
   totalPrice: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#8B1A1A',
+    color: theme.primary,
   },
   placeOrderButton: {
-    backgroundColor: '#8B1A1A',
+    backgroundColor: theme.primary,
     marginHorizontal: 20,
     marginTop: 20,
     padding: 18,
@@ -1229,7 +1231,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   placeOrderButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: theme.iconMuted,
   },
   placeOrderText: {
     color: '#fff',
@@ -1243,7 +1245,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     padding: 24,
     width: '85%',
@@ -1252,24 +1254,24 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
     marginBottom: 20,
   },
   modalLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 8,
   },
   modalInput: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: theme.surfaceBg,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 14,
     marginBottom: 15,
-    color: '#333',
+    color: theme.text,
   },
   modalButtonRow: {
     flexDirection: 'row',
@@ -1280,19 +1282,19 @@ const styles = StyleSheet.create({
   modalCancelButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   modalCancelText: {
-    color: '#666',
+    color: theme.textSecondary,
     fontSize: 14,
     fontWeight: '600',
   },
   modalSaveButton: {
     flex: 1,
-    backgroundColor: '#8B1A1A',
+    backgroundColor: theme.primary,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -1304,7 +1306,7 @@ const styles = StyleSheet.create({
   },
   addressFormContainer: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   addressFormHeader: {
     flexDirection: 'row',
@@ -1313,54 +1315,54 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 15,
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
   },
   addressFormTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
   },
   addressFormContent: {
     flex: 1,
   },
   addressFormSection: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     padding: 20,
     marginTop: 15,
   },
   addressFormSectionLabel: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
     marginBottom: 15,
   },
   addressFormLabel: {
     fontSize: 12,
-    color: '#999',
+    color: theme.textMuted,
     marginBottom: 8,
   },
   addressFormInput: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
     padding: 12,
     fontSize: 14,
     marginBottom: 20,
-    color: '#333',
+    color: theme.text,
   },
   addressFormSelectInput: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
     padding: 12,
     marginBottom: 20,
     justifyContent: 'center',
   },
   addressFormSelectText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
   },
   addressFormInputLarge: {
     height: 80,
@@ -1372,11 +1374,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
   },
   defaultAddressText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
   },
   switch: {
     marginHorizontal: 10,
@@ -1384,11 +1386,11 @@ const styles = StyleSheet.create({
   labelAsRow: {
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
   },
   labelAsText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     marginBottom: 10,
   },
   labelButtons: {
@@ -1399,18 +1401,18 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
   },
   labelButtonSelected: {
-    backgroundColor: '#8B1A1A',
-    borderColor: '#8B1A1A',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   labelButtonText: {
     fontSize: 13,
-    color: '#333',
+    color: theme.text,
     fontWeight: '600',
   },
   labelButtonTextSelected: {
@@ -1423,18 +1425,18 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     borderWidth: 2,
-    borderColor: '#8B1A1A',
+    borderColor: theme.primary,
     paddingVertical: 15,
     borderRadius: 8,
     alignItems: 'center',
   },
   deleteButtonText: {
-    color: '#8B1A1A',
+    color: theme.primary,
     fontSize: 15,
     fontWeight: 'bold',
   },
   submitButton: {
-    backgroundColor: '#8B1A1A',
+    backgroundColor: theme.primary,
     paddingVertical: 15,
     borderRadius: 8,
     alignItems: 'center',
@@ -1454,33 +1456,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 15,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
   },
   deliveryOptionCardSelected: {
-    borderColor: '#8B1A1A',
+    borderColor: theme.primary,
     borderWidth: 2,
-    backgroundColor: '#FFF5F5',
+    backgroundColor: theme.dangerBg,
   },
   deliveryRadio: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   deliveryRadioSelected: {
-    borderColor: '#8B1A1A',
+    borderColor: theme.primary,
   },
   deliveryRadioInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#8B1A1A',
+    backgroundColor: theme.primary,
   },
   deliveryOptionContent: {
     flexDirection: 'row',
@@ -1493,24 +1495,24 @@ const styles = StyleSheet.create({
   deliveryOptionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
   },
   deliveryOptionDesc: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textSecondary,
     marginTop: 2,
   },
   noAddressText: {
     textAlign: 'center',
-    color: '#666',
+    color: theme.textSecondary,
     fontSize: 14,
     marginVertical: 20,
     fontStyle: 'italic',
   },
   selectedAddressCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 16,
     marginBottom: 12,
@@ -1524,11 +1526,11 @@ const styles = StyleSheet.create({
   addressNameWithPhone: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: theme.text,
     flex: 1,
   },
   defaultBadge: {
-    backgroundColor: '#8B1A1A',
+    backgroundColor: theme.primary,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 4,
@@ -1540,20 +1542,20 @@ const styles = StyleSheet.create({
   },
   fullAddress: {
     fontSize: 13,
-    color: '#666',
+    color: theme.textSecondary,
     lineHeight: 20,
     marginBottom: 2,
   },
   changeAddressButton: {
     borderWidth: 2,
-    borderColor: '#8B1A1A',
+    borderColor: theme.primary,
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
     marginTop: 8,
   },
   changeAddressText: {
-    color: '#8B1A1A',
+    color: theme.primary,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -1565,9 +1567,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   storeInfoCard: {
-    backgroundColor: '#FFF5F5',
+    backgroundColor: theme.dangerBg,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
     borderRadius: 12,
     padding: 16,
     marginTop: 10,
@@ -1581,7 +1583,7 @@ const styles = StyleSheet.create({
   storeIconContainer: {
     width: 50,
     height: 50,
-    backgroundColor: '#8B1A1A',
+    backgroundColor: theme.primary,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1592,7 +1594,7 @@ const styles = StyleSheet.create({
   storeName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: theme.text,
     flex: 1,
   },
   storeDetailRow: {
@@ -1608,29 +1610,29 @@ const styles = StyleSheet.create({
   storeDetailLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: theme.text,
   },
   storeDetailText: {
     fontSize: 13,
-    color: '#666',
+    color: theme.textSecondary,
     lineHeight: 20,
   },
   storeHoursBox: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.cardBackground,
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
   },
   storeHoursText: {
     fontSize: 13,
-    color: '#333',
+    color: theme.text,
     marginTop: 4,
     lineHeight: 20,
   },
   storeClosedText: {
     fontSize: 12,
-    color: '#8B1A1A',
+    color: theme.primary,
     marginTop: 4,
     fontWeight: '500',
   },

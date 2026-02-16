@@ -12,8 +12,11 @@ import {
   FlatList,
 } from 'react-native';
 import colors from '../constants/colors';
+import ScreenHeader from '../components/ScreenHeader';
+import { useTheme } from '../context/ThemeContext';
 
 export default function PaymentMethodsScreen({ navigation }) {
+  const { theme } = useTheme();
   const [paymentMethods, setPaymentMethods] = useState([
     {
       id: '1',
@@ -182,13 +185,12 @@ export default function PaymentMethodsScreen({ navigation }) {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Payment Methods</Text>
-      </View>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader 
+        title="Payment Methods" 
+        navigation={navigation} 
+        showBack={true}
+      />
 
       <ScrollView style={styles.content}>
         {paymentMethods.length > 0 ? (
