@@ -96,8 +96,14 @@ class ChatController extends Controller
                 // Store file directly in storage folder
                 $image->move($dir, $filename);
                 
-                // Build the URL path
-                $messageData['image_path'] = url('/storage/chats/' . $filename);
+                // Build the URL path using dedicated chat-image route
+                $messageData['image_path'] = route('chat.image', ['folder' => 'chats', 'filename' => $filename]);
+                
+                \Log::info('Chat image uploaded', [
+                    'filename' => $filename,
+                    'url' => $messageData['image_path'],
+                    'chat_id' => $chat->id,
+                ]);
             } catch (\Exception $e) {
                 \Log::error('Chat image upload failed on chat creation', [
                     'error' => $e->getMessage(),
@@ -154,8 +160,8 @@ class ChatController extends Controller
                 // Store file directly in storage folder
                 $image->move($dir, $filename);
                 
-                // Build the URL path
-                $messageData['image_path'] = url('/storage/chats/' . $filename);
+                // Build the URL path using dedicated chat-image route
+                $messageData['image_path'] = route('chat.image', ['folder' => 'chats', 'filename' => $filename]);
                 
                 \Log::info('Chat image uploaded', [
                     'filename' => $filename,

@@ -22,6 +22,28 @@ Route::get('/storage/{path}', function ($path) {
     ]);
 })->where('path', '.*')->name('storage.fallback');
 
+// Dedicated route for chat images (more reliable than /storage fallback)
+Route::get('/chat-image/{folder}/{filename}', function ($folder, $filename) {
+    $filePath = storage_path('app/public/' . $folder . '/' . $filename);
+    \Log::info('Chat image request', [
+        'folder' => $folder,
+        'filename' => $filename,
+        'full_path' => $filePath,
+        'exists' => file_exists($filePath),
+    ]);
+    
+    if (!file_exists($filePath)) {
+        \Log::error('Chat image not found', ['path' => $filePath]);
+        abort(404, 'Image not found: ' . $filePath);
+    }
+    
+    $mimeType = mime_content_type($filePath);
+    return response()->file($filePath, [
+        'Content-Type' => $mimeType,
+        'Cache-Control' => 'public, max-age=31536000',
+    ]);
+})->where('folder', '(chats|payments)')->where('filename', '.*')->name('chat.image');
+
 // Create sessions table route (for Railway setup)
 Route::get('/setup/create-sessions-table', function () {
     // Clear route cache first

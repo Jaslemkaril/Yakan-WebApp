@@ -78,8 +78,8 @@ class ChatPaymentController extends Controller
                 // Store file directly in storage folder
                 $file->move($dir, $filename);
                 
-                // Build the URL path
-                $imageUrl = url('/storage/payments/' . $filename);
+                // Build the URL path using dedicated chat-image route
+                $imageUrl = route('chat.image', ['folder' => 'payments', 'filename' => $filename]);
                 
                 $payment->update([
                     'payment_proof' => $imageUrl,
