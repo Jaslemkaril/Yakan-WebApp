@@ -12,6 +12,10 @@ php artisan view:clear || true
 echo "📦 Running database migrations..."
 php artisan migrate --force --no-interaction
 
+# Seed Philippine address data
+echo "🗺️ Seeding Philippine address data..."
+php artisan db:seed --class=PhilippineAddressSeeder --force || echo "⚠️ Seeder already ran or failed, continuing..."
+
 # Create storage link (critical for image visibility)
 echo "🔗 Creating storage link..."
 # Remove old symlink if it exists
