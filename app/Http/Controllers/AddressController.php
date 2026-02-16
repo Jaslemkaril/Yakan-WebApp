@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\UserAddress;
+use App\Models\PhilippineRegion;
+use App\Models\PhilippineProvince;
+use App\Models\PhilippineCity;
+use App\Models\PhilippineBarangay;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -39,13 +43,19 @@ class AddressController extends Controller
             'full_name' => 'required|string|max:255',
             'phone_number' => 'required|string|max:20',
             'formatted_address' => 'required|string|max:255',
-            'region' => 'required|string|max:500',
+            'region_id' => 'required|exists:philippine_regions,id',
+            'province_id' => 'required|exists:philippine_provinces,id',
+            'city_id' => 'required|exists:philippine_cities,id',
+            'barangay_id' => 'required|exists:philippine_barangays,id',
             'postal_code' => 'required|string|max:10',
             'is_default' => 'boolean',
         ]);
 
-        // Parse region field (format: "Mindanao, Zamboanga Del Sur, Zamboanga City, Tumaga")
-        $regionParts = array_map('trim', explode(',', $validated['region']));
+        // Get the actual names from the database
+        $region = PhilippineRegion::find($validated['region_id']);
+        $province = PhilippineProvince::find($validated['province_id']);
+        $city = PhilippineCity::find($validated['city_id']);
+        $barangay = PhilippineBarangay::find($validated['barangay_id']);
         
         // Map form fields to database columns
         $addressData = [
@@ -53,9 +63,9 @@ class AddressController extends Controller
             'full_name' => $validated['full_name'],
             'phone_number' => $validated['phone_number'],
             'street' => $validated['formatted_address'],
-            'barangay' => $regionParts[3] ?? null,
-            'city' => $regionParts[2] ?? '',
-            'province' => $regionParts[1] ?? '',
+            'barangay' => $barangay->name,
+            'city' => $city->name,
+            'province' => $province->name,
             'postal_code' => $validated['postal_code'],
             'user_id' => Auth::id(),
         ];
@@ -103,13 +113,19 @@ class AddressController extends Controller
             'full_name' => 'required|string|max:255',
             'phone_number' => 'required|string|max:20',
             'formatted_address' => 'required|string|max:255',
-            'region' => 'required|string|max:500',
+            'region_id' => 'required|exists:philippine_regions,id',
+            'province_id' => 'required|exists:philippine_provinces,id',
+            'city_id' => 'required|exists:philippine_cities,id',
+            'barangay_id' => 'required|exists:philippine_barangays,id',
             'postal_code' => 'required|string|max:10',
             'is_default' => 'boolean',
         ]);
 
-        // Parse region field (format: "Mindanao, Zamboanga Del Sur, Zamboanga City, Tumaga")
-        $regionParts = array_map('trim', explode(',', $validated['region']));
+        // Get the actual names from the database
+        $region = PhilippineRegion::find($validated['region_id']);
+        $province = PhilippineProvince::find($validated['province_id']);
+        $city = PhilippineCity::find($validated['city_id']);
+        $barangay = PhilippineBarangay::find($validated['barangay_id']);
 
         // Map form fields to database columns
         $addressData = [
@@ -117,9 +133,9 @@ class AddressController extends Controller
             'full_name' => $validated['full_name'],
             'phone_number' => $validated['phone_number'],
             'street' => $validated['formatted_address'],
-            'barangay' => $regionParts[3] ?? null,
-            'city' => $regionParts[2] ?? '',
-            'province' => $regionParts[1] ?? '',
+            'barangay' => $barangay->name,
+            'city' => $city->name,
+            'province' => $province->name,
             'postal_code' => $validated['postal_code'],
         ];
 
@@ -207,6 +223,64 @@ class AddressController extends Controller
         return response()->json([
             'success' => true,
             'data' => $addresses,
+        ]);
+    }
+
+    /**
+     * Get all Philippine regions
+     */
+    public function getRegions()
+    {
+        $regions = PhilippineRegion::orderBy('name')->get(['id', 'name']);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $regions,
+        ]);
+    }
+
+    /**
+     * Get provinces by region
+     */
+    public function getProvinces($regionId)
+    {
+        $provinces = PhilippineProvince::where('region_id', $regionId)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $provinces,
+        ]);
+    }
+
+    /**
+     * Get cities by province
+     */
+    public function getCities($provinceId)
+    {
+        $cities = PhilippineCity::where('province_id', $provinceId)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $cities,
+        ]);
+    }
+
+    /**
+     * Get barangays by city
+     */
+    public function getBarangays($cityId)
+    {
+        $barangays = PhilippineBarangay::where('city_id', $cityId)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $barangays,
         ]);
     }
 }

@@ -144,8 +144,31 @@
             </div>
             
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Region, Province, City, Barangay</label>
-                <input type="text" name="region" placeholder="Mindanao, Zamboanga Del Sur, Zamboanga City, Tumaga" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Region</label>
+                <select name="region_id" id="region_id" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
+                    <option value="">-- Select Region --</option>
+                </select>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Province</label>
+                <select name="province_id" id="province_id" required disabled class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent bg-gray-100">
+                    <option value="">-- Select Province --</option>
+                </select>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">City/Municipality</label>
+                <select name="city_id" id="city_id" required disabled class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent bg-gray-100">
+                    <option value="">-- Select City/Municipality --</option>
+                </select>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Barangay</label>
+                <select name="barangay_id" id="barangay_id" required disabled class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent bg-gray-100">
+                    <option value="">-- Select Barangay --</option>
+                </select>
             </div>
             
             <div class="mb-4">
@@ -212,6 +235,150 @@ function editAddress(addressId) {
             document.getElementById('editAddressModal').classList.remove('hidden');
         });
 }
+
+// Cascading dropdown logic
+document.addEventListener('DOMContentLoaded', function() {
+    const regionSelect = document.getElementById('region_id');
+    const provinceSelect = document.getElementById('province_id');
+    const citySelect = document.getElementById('city_id');
+    const barangaySelect = document.getElementById('barangay_id');
+    
+    // Load regions on page load
+    loadRegions();
+    
+    // Region change event
+    regionSelect.addEventListener('change', function() {
+        const regionId = this.value;
+        
+        // Reset dependent dropdowns
+        resetDropdown(provinceSelect, 'Select Province');
+        resetDropdown(citySelect, 'Select City/Municipality');
+        resetDropdown(barangaySelect, 'Select Barangay');
+        
+        if (regionId) {
+            loadProvinces(regionId);
+        }
+    });
+    
+    // Province change event
+    provinceSelect.addEventListener('change', function() {
+        const provinceId = this.value;
+        
+        // Reset dependent dropdowns
+        resetDropdown(citySelect, 'Select City/Municipality');
+        resetDropdown(barangaySelect, 'Select Barangay');
+        
+        if (provinceId) {
+            loadCities(provinceId);
+        }
+    });
+    
+    // City change event
+    citySelect.addEventListener('change', function() {
+        const cityId = this.value;
+        
+        // Reset dependent dropdown
+        resetDropdown(barangaySelect, 'Select Barangay');
+        
+        if (cityId) {
+            loadBarangays(cityId);
+        }
+    });
+    
+    // Load regions
+    function loadRegions() {
+        fetch('/addresses/api/regions')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    regionSelect.innerHTML = '<option value="">-- Select Region --</option>';
+                    data.data.forEach(region => {
+                        const option = document.createElement('option');
+                        option.value = region.id;
+                        option.textContent = region.name;
+                        regionSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => console.error('Error loading regions:', error));
+    }
+    
+    // Load provinces
+    function loadProvinces(regionId) {
+        provinceSelect.disabled = true;
+        provinceSelect.classList.add('bg-gray-100');
+        
+        fetch(`/addresses/api/provinces/${regionId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    provinceSelect.innerHTML = '<option value="">-- Select Province --</option>';
+                    data.data.forEach(province => {
+                        const option = document.createElement('option');
+                        option.value = province.id;
+                        option.textContent = province.name;
+                        provinceSelect.appendChild(option);
+                    });
+                    provinceSelect.disabled = false;
+                    provinceSelect.classList.remove('bg-gray-100');
+                }
+            })
+            .catch(error => console.error('Error loading provinces:', error));
+    }
+    
+    // Load cities
+    function loadCities(provinceId) {
+        citySelect.disabled = true;
+        citySelect.classList.add('bg-gray-100');
+        
+        fetch(`/addresses/api/cities/${provinceId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    citySelect.innerHTML = '<option value="">-- Select City/Municipality --</option>';
+                    data.data.forEach(city => {
+                        const option = document.createElement('option');
+                        option.value = city.id;
+                        option.textContent = city.name;
+                        citySelect.appendChild(option);
+                    });
+                    citySelect.disabled = false;
+                    citySelect.classList.remove('bg-gray-100');
+                }
+            })
+            .catch(error => console.error('Error loading cities:', error));
+    }
+    
+    // Load barangays
+    function loadBarangays(cityId) {
+        barangaySelect.disabled = true;
+        barangaySelect.classList.add('bg-gray-100');
+        
+        fetch(`/addresses/api/barangays/${cityId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
+                    data.data.forEach(barangay => {
+                        const option = document.createElement('option');
+                        option.value = barangay.id;
+                        option.textContent = barangay.name;
+                        barangaySelect.appendChild(option);
+                    });
+                    barangaySelect.disabled = false;
+                    barangaySelect.classList.remove('bg-gray-100');
+                }
+            })
+            .catch(error => console.error('Error loading barangays:', error));
+    }
+    
+    // Reset dropdown helper
+    function resetDropdown(selectElement, placeholder) {
+        selectElement.innerHTML = `<option value="">-- ${placeholder} --</option>`;
+        selectElement.disabled = true;
+        selectElement.classList.add('bg-gray-100');
+    }
+});
 </script>
 
 @endsection
