@@ -827,19 +827,6 @@
             alert('An error occurred. Please try again.');
         });
     }
-    
-    // Receipt Preview
-    function previewReceipt(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('receiptPreviewImg').src = e.target.result;
-                document.getElementById('receiptPreview').classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
-        }
-    }
 </script>
 
 <!-- Address Selection Modal -->

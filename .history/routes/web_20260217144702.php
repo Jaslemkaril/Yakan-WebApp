@@ -491,7 +491,6 @@ Route::middleware(['auth'])->group(function () {
     
     // Order payment method selection (for chat-based orders)
     Route::post('/orders/{order}/set-payment-method', [\App\Http\Controllers\ChatController::class, 'setPaymentMethod'])->name('orders.set_payment_method')->middleware('auth');
-    Route::post('/orders/{order}/upload-receipt', [\App\Http\Controllers\ChatController::class, 'uploadReceipt'])->name('orders.upload_receipt')->middleware('auth');
 
     // Redirect old colors route to pattern selection
     Route::get('/custom-orders/create/colors', function() {

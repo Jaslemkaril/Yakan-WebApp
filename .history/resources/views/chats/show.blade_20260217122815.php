@@ -313,211 +313,6 @@
                                 @endif
                             @endif
                             
-                            {{-- Payment Method Selection after Quote Accepted --}}
-                            @if($message->sender_type === 'user' && str_contains($message->message, 'accepted the price quote'))
-                                @php
-                                    // Find the order created for this chat
-                                    $chatOrder = \App\Models\Order::where('user_id', auth()->id())
-                                        ->where('source', 'chat')
-                                        ->where('customer_notes', 'LIKE', '%chat ID: ' . $chat->id . '%')
-                                        ->latest()
-                                        ->first();
-                                @endphp
-                                
-                                @if($chatOrder)
-                                    {{-- Show payment summary and method buttons if no payment method chosen yet --}}
-                                    @if(!$chatOrder->payment_method)
-                                        <div class="mt-4 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-5 border-2 border-green-300 shadow-lg max-w-md">
-                                            <div class="flex items-center gap-2 mb-3">
-                                                <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
-                                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                    </svg>
-                                                </div>
-                                                <div>
-                                                    <h3 class="font-bold text-green-900 text-lg">Quote Accepted!</h3>
-                                                    <p class="text-xs text-green-700">Order #{{{ $chatOrder->order_ref }}}</p>
-                                                </div>
-                                            </div>
-                                            
-                                            {{-- Payment Summary --}}
-                                            <div class="bg-white rounded-xl p-4 mb-4 border border-green-200">
-                                                <p class="text-xs font-semibold text-gray-600 mb-2">PAYMENT BREAKDOWN</p>
-                                                <div class="space-y-2 text-sm">
-                                                    <div class="flex justify-between">
-                                                        <span class="text-gray-700">Quoted Price:</span>
-                                                        <span class="font-semibold text-gray-900">₱{{ number_format($chatOrder->subtotal, 2) }}</span>
-                                                    </div>
-                                                    <div class="flex justify-between">
-                                                        <span class="text-gray-700">Shipping Fee:</span>
-                                                        <span class="font-semibold text-gray-900">₱{{ number_format($chatOrder->shipping_fee, 2) }}</span>
-                                                    </div>
-                                                    <div class="border-t border-gray-200 pt-2 flex justify-between">
-                                                        <span class="font-bold text-gray-900">TOTAL TO PAY:</span>
-                                                        <span class="font-bold text-green-600 text-lg">₱{{ number_format($chatOrder->total_amount, 2) }}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            {{-- Payment Method Buttons --}}
-                                            <p class="text-sm font-semibold text-gray-800 mb-3">Choose your payment method:</p>
-                                            <div class="grid grid-cols-2 gap-3">
-                                                <button onclick="selectPaymentMethod('{{ $chatOrder->id }}', 'gcash')" class="payment-method-btn flex flex-col items-center gap-2 bg-white hover:bg-blue-50 border-2 border-blue-300 hover:border-blue-500 rounded-xl p-4 transition-all hover:shadow-md">
-                                                    <span class="text-3xl">📱</span>
-                                                    <span class="font-bold text-sm text-gray-900">GCash</span>
-                                                </button>
-                                                <button onclick="selectPaymentMethod('{{ $chatOrder->id }}', 'bank_transfer')" class="payment-method-btn flex flex-col items-center gap-2 bg-white hover:bg-green-50 border-2 border-green-300 hover:border-green-500 rounded-xl p-4 transition-all hover:shadow-md">
-                                                    <span class="text-3xl">🏦</span>
-                                                    <span class="font-bold text-sm text-gray-900">Bank Transfer</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    @endif
-                                    
-                                    {{-- Payment Details Display (after method selected) --}}
-                                    @if($chatOrder && $chatOrder->payment_method && $chatOrder->payment_status !== 'paid')
-                                        <div class="mt-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-5 shadow-md border-2 border-blue-200">
-                                            {{-- Order Reference --}}
-                                            <div class="mb-4 pb-3 border-b border-blue-200">
-                                                <p class="text-xs font-semibold text-gray-600 mb-1">Order Reference:</p>
-                                                <p class="text-lg font-bold text-gray-900">{{ $chatOrder->order_ref }}</p>
-                                            </div>
-                                            
-                                            @if($chatOrder->payment_method === 'gcash')
-                                                {{-- GCash Payment Details --}}
-                                                <div class="bg-white/70 backdrop-blur rounded-xl p-4 mb-4">
-                                                    <div class="flex items-center gap-2 mb-3">
-                                                        <span class="text-2xl">📱</span>
-                                                        <h4 class="text-lg font-bold text-gray-900">GCash Payment</h4>
-                                                    </div>
-                                                    
-                                                    <div class="space-y-2">
-                                                        <div class="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
-                                                            <span class="text-sm font-semibold text-gray-700">GCash Number:</span>
-                                                            <span class="font-bold text-blue-600 text-lg">09123456789</span>
-                                                        </div>
-                                                        <div class="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
-                                                            <span class="text-sm font-semibold text-gray-700">Account Name:</span>
-                                                            <span class="font-bold text-gray-900">Tuwas Yakan</span>
-                                                        </div>
-                                                        <div class="flex justify-between items-center bg-green-100 p-3 rounded-lg border-2 border-green-300">
-                                                            <span class="text-sm font-bold text-gray-800">Amount to Pay:</span>
-                                                            <span class="font-bold text-green-700 text-xl">₱{{ number_format($chatOrder->total_amount, 2) }}</span>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                                        <p class="text-xs font-semibold text-yellow-800 mb-1">📝 Instructions:</p>
-                                                        <ol class="text-xs text-yellow-900 space-y-1 list-decimal list-inside">
-                                                            <li>Open your GCash app</li>
-                                                            <li>Select "Send Money"</li>
-                                                            <li>Enter the GCash number above</li>
-                                                            <li>Send the exact amount shown</li>
-                                                            <li>Take a screenshot of the receipt</li>
-                                                            <li>Upload it below</li>
-                                                        </ol>
-                                                    </div>
-                                                </div>
-                                            @elseif($chatOrder->payment_method === 'bank_transfer')
-                                                {{-- Bank Transfer Payment Details --}}
-                                                <div class="bg-white/70 backdrop-blur rounded-xl p-4 mb-4">
-                                                    <div class="flex items-center gap-2 mb-3">
-                                                        <span class="text-2xl">🏦</span>
-                                                        <h4 class="text-lg font-bold text-gray-900">Bank Transfer Payment</h4>
-                                                    </div>
-                                                    
-                                                    <div class="space-y-2">
-                                                        <div class="flex justify-between items-center bg-green-50 p-3 rounded-lg">
-                                                            <span class="text-sm font-semibold text-gray-700">Bank Name:</span>
-                                                            <span class="font-bold text-gray-900">Sample Bank</span>
-                                                        </div>
-                                                        <div class="flex justify-between items-center bg-green-50 p-3 rounded-lg">
-                                                            <span class="text-sm font-semibold text-gray-700">Account Number:</span>
-                                                            <span class="font-bold text-green-600 text-lg">1234567890</span>
-                                                        </div>
-                                                        <div class="flex justify-between items-center bg-green-50 p-3 rounded-lg">
-                                                            <span class="text-sm font-semibold text-gray-700">Account Name:</span>
-                                                            <span class="font-bold text-gray-900">Tuwas Yakan</span>
-                                                        </div>
-                                                        <div class="flex justify-between items-center bg-green-100 p-3 rounded-lg border-2 border-green-300">
-                                                            <span class="text-sm font-bold text-gray-800">Amount to Pay:</span>
-                                                            <span class="font-bold text-green-700 text-xl">₱{{ number_format($chatOrder->total_amount, 2) }}</span>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                                        <p class="text-xs font-semibold text-yellow-800 mb-1">📝 Instructions:</p>
-                                                        <ol class="text-xs text-yellow-900 space-y-1 list-decimal list-inside">
-                                                            <li>Go to your bank or use online banking</li>
-                                                            <li>Transfer to the account details above</li>
-                                                            <li>Send the exact amount shown</li>
-                                                            <li>Get your transfer receipt/confirmation</li>
-                                                            <li>Take a photo of the receipt</li>
-                                                            <li>Upload it below</li>
-                                                        </ol>
-                                                    </div>
-                                                </div>
-                                            @endif
-                                            
-                                            {{-- Receipt Upload Form --}}
-                                            <form action="{{ route('orders.upload_receipt', $chatOrder) }}" method="POST" enctype="multipart/form-data">
-                                                @csrf
-                                                
-                                                <div class="bg-white/70 backdrop-blur rounded-xl p-4">
-                                                    <label class="block text-sm font-bold text-gray-800 mb-3">📸 Upload Payment Receipt</label>
-                                                    
-                                                    {{-- Image Preview --}}
-                                                    <div id="receiptPreview" class="hidden mb-3">
-                                                        <img id="receiptPreviewImg" src="" alt="Receipt Preview" class="max-h-48 max-w-full rounded-lg shadow-md border-2 border-gray-300 mx-auto">
-                                                    </div>
-                                                    
-                                                    {{-- File Input --}}
-                                                    <div class="flex items-center justify-center w-full mb-3">
-                                                        <label for="receipt_upload" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
-                                                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                                                                <svg class="w-8 h-8 mb-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                                                                </svg>
-                                                                <p class="mb-1 text-sm text-gray-700"><span class="font-semibold">Click to upload</span> receipt</p>
-                                                                <p class="text-xs text-gray-500">PNG, JPG, JPEG (MAX. 5MB)</p>
-                                                            </div>
-                                                            <input id="receipt_upload" name="payment_proof" type="file" accept="image/*" class="hidden" onchange="previewReceipt(event)" required />
-                                                        </label>
-                                                    </div>
-                                                    
-                                                    {{-- Submit Button --}}
-                                                    <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition shadow-md hover:shadow-lg">
-                                                        ✅ Submit Payment Proof
-                                                    </button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    @endif
-                                    
-                                    {{-- Payment Submitted Message --}}
-                                    @if($chatOrder && $chatOrder->payment_proof && $chatOrder->payment_status === 'paid')
-                                        <div class="mt-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-5 shadow-md border-2 border-green-300">
-                                            <div class="flex items-center gap-3 mb-3">
-                                                <div class="bg-green-500 rounded-full p-2">
-                                                    <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                                    </svg>
-                                                </div>
-                                                <div>
-                                                    <h4 class="text-lg font-bold text-green-900">Payment Submitted!</h4>
-                                                    <p class="text-sm text-green-700">We're verifying your payment. You'll be notified once confirmed.</p>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="bg-white/60 rounded-lg p-3">
-                                                <p class="text-xs font-semibold text-gray-600 mb-1">Order Reference:</p>
-                                                <p class="text-sm font-bold text-gray-900">{{ $chatOrder->order_ref }}</p>
-                                            </div>
-                                        </div>
-                                    @endif
-                                @endif
-                            @endif
-                            
                             <p class="text-xs text-gray-400 mt-2 px-2">
                                 {{ $message->created_at->format('M d, Y H:i') }}
                             </p>
@@ -795,50 +590,21 @@
         document.getElementById('addNewAddressModal').classList.add('hidden');
     }
     
+    function openAddNewAddressModal() {
+        closeAddressModal();
+        document.getElementById('addNewAddressModal').classList.remove('hidden');
+        loadRegions();
+    }
+    
+    function closeAddNewAddressModal() {
+        document.getElementById('addNewAddressModal').classList.add('hidden');
+    }
+    
     function selectAddress(addressId) {
         // Update form action and submit
         const form = document.getElementById('changeAddressForm');
         form.action = `/addresses/${addressId}/set-default`;
         form.submit();
-    }
-    
-    // Payment Method Selection
-    function selectPaymentMethod(orderId, method) {
-        // Update order with selected payment method
-        fetch(`/orders/${orderId}/set-payment-method`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            },
-            body: JSON.stringify({ payment_method: method })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Reload page to show payment details
-                window.location.reload();
-            } else {
-                alert('Failed to set payment method. Please try again.');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred. Please try again.');
-        });
-    }
-    
-    // Receipt Preview
-    function previewReceipt(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('receiptPreviewImg').src = e.target.result;
-                document.getElementById('receiptPreview').classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
-        }
     }
 </script>
 
@@ -1013,16 +779,14 @@
 <script>
 // Philippine Address API Functions
 function loadRegions() {
-    fetch('/addresses/api/regions')
+    fetch('/api/philippines/regions')
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                const select = document.getElementById('chat_region_id');
-                select.innerHTML = '<option value="">-- Select Region --</option>';
-                data.data.forEach(region => {
-                    select.innerHTML += `<option value="${region.id}">${region.name}</option>`;
-                });
-            }
+            const select = document.getElementById('chat_region_id');
+            select.innerHTML = '<option value="">-- Select Region --</option>';
+            data.forEach(region => {
+                select.innerHTML += `<option value="${region.id}">${region.name}</option>`;
+            });
         })
         .catch(error => console.error('Error loading regions:', error));
 }
@@ -1038,16 +802,14 @@ function loadProvinces(regionId, prefix) {
     
     if (!regionId) return;
     
-    fetch(`/addresses/api/provinces/${regionId}`)
+    fetch(`/api/philippines/provinces/${regionId}`)
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                provinceSelect.innerHTML = '<option value="">-- Select Province --</option>';
-                data.data.forEach(province => {
-                    provinceSelect.innerHTML += `<option value="${province.id}">${province.name}</option>`;
-                });
-                provinceSelect.disabled = false;
-            }
+            provinceSelect.innerHTML = '<option value="">-- Select Province --</option>';
+            data.forEach(province => {
+                provinceSelect.innerHTML += `<option value="${province.id}">${province.name}</option>`;
+            });
+            provinceSelect.disabled = false;
         })
         .catch(error => console.error('Error loading provinces:', error));
 }
@@ -1061,16 +823,14 @@ function loadCities(provinceId, prefix) {
     
     if (!provinceId) return;
     
-    fetch(`/addresses/api/cities/${provinceId}`)
+    fetch(`/api/philippines/cities/${provinceId}`)
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                citySelect.innerHTML = '<option value="">-- Select City/Municipality --</option>';
-                data.data.forEach(city => {
-                    citySelect.innerHTML += `<option value="${city.id}">${city.name}</option>`;
-                });
-                citySelect.disabled = false;
-            }
+            citySelect.innerHTML = '<option value="">-- Select City/Municipality --</option>';
+            data.forEach(city => {
+                citySelect.innerHTML += `<option value="${city.id}">${city.name}</option>`;
+            });
+            citySelect.disabled = false;
         })
         .catch(error => console.error('Error loading cities:', error));
 }
@@ -1082,16 +842,14 @@ function loadBarangays(cityId, prefix) {
     
     if (!cityId) return;
     
-    fetch(`/addresses/api/barangays/${cityId}`)
+    fetch(`/api/philippines/barangays/${cityId}`)
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
-                data.data.forEach(barangay => {
-                    barangaySelect.innerHTML += `<option value="${barangay.id}">${barangay.name}</option>`;
-                });
-                barangaySelect.disabled = false;
-            }
+            barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
+            data.forEach(barangay => {
+                barangaySelect.innerHTML += `<option value="${barangay.id}">${barangay.name}</option>`;
+            });
+            barangaySelect.disabled = false;
         })
         .catch(error => console.error('Error loading barangays:', error));
 }
