@@ -68,38 +68,22 @@ class ChatPaymentController extends Controller
         if ($request->hasFile('payment_proof')) {
             try {
                 $file = $request->file('payment_proof');
-                $cloudinary = new CloudinaryService();
-                $storedPath = null;
+                $filename = 'payment_proof_' . $payment->id . '_' . time() . '.' . $file->getClientOriginalExtension();
                 
-                // Try Cloudinary first (persistent storage)
-                if ($cloudinary->isEnabled()) {
-                    $result = $cloudinary->uploadFile($file, 'payments');
-                    if ($result) {
-                        $storedPath = $result['url'];
-                        \Log::info('Payment proof uploaded to Cloudinary', [
-                            'url' => $storedPath,
-                            'payment_id' => $payment->id,
-                        ]);
-                    }
+                // Ensure directory exists
+                $dir = storage_path('app/public/payments');
+                if (!is_dir($dir)) {
+                    mkdir($dir, 0755, true);
                 }
                 
-                // Fallback to local storage
-                if (!$storedPath) {
-                    $filename = 'payment_proof_' . $payment->id . '_' . time() . '.' . $file->getClientOriginalExtension();
-                    $dir = storage_path('app/public/payments');
-                    if (!is_dir($dir)) {
-                        mkdir($dir, 0755, true);
-                    }
-                    $file->move($dir, $filename);
-                    $storedPath = route('chat.image', ['folder' => 'payments', 'filename' => $filename]);
-                    \Log::info('Payment proof uploaded to local storage', [
-                        'url' => $storedPath,
-                        'payment_id' => $payment->id,
-                    ]);
-                }
+                // Store file directly in storage folder
+                $file->move($dir, $filename);
+                
+                // Build the URL path using dedicated chat-image route
+                $imageUrl = route('chat.image', ['folder' => 'payments', 'filename' => $filename]);
                 
                 $payment->update([
-                    'payment_proof' => $storedPath,
+                    'payment_proof' => $imageUrl,
                     'payment_method' => $validated['payment_method'],
                     'status' => 'paid',
                 ]);
@@ -110,7 +94,13 @@ class ChatPaymentController extends Controller
                     'user_id' => Auth::id(),
                     'sender_type' => 'user',
                     'message' => "Payment proof uploaded for Payment ID: #" . $payment->id . "\n\nPayment Method: " . ucfirst(str_replace('_', ' ', $validated['payment_method'])),
-                    'image_path' => $storedPath,
+                    'image_path' => $imageUrl,
+                ]);
+                
+                \Log::info('Payment proof uploaded', [
+                    'filename' => $filename,
+                    'url' => $imageUrl,
+                    'payment_id' => $payment->id,
                 ]);
             } catch (\Exception $e) {
                 \Log::error('Chat payment proof upload failed', [

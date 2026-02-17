@@ -162,37 +162,25 @@ class ChatController extends Controller
         if ($request->hasFile('image')) {
             try {
                 $image = $request->file('image');
-                $cloudinary = new CloudinaryService();
-                $storedPath = null;
+                $filename = time() . '_' . $image->getClientOriginalName();
                 
-                // Try Cloudinary first (persistent storage)
-                if ($cloudinary->isEnabled()) {
-                    $result = $cloudinary->uploadFile($image, 'chats');
-                    if ($result) {
-                        $storedPath = $result['url'];
-                        \Log::info('Chat image uploaded to Cloudinary', [
-                            'url' => $storedPath,
-                            'chat_id' => $chat->id,
-                        ]);
-                    }
+                // Ensure directory exists
+                $dir = storage_path('app/public/chats');
+                if (!is_dir($dir)) {
+                    mkdir($dir, 0755, true);
                 }
                 
-                // Fallback to local storage
-                if (!$storedPath) {
-                    $filename = time() . '_' . $image->getClientOriginalName();
-                    $dir = storage_path('app/public/chats');
-                    if (!is_dir($dir)) {
-                        mkdir($dir, 0755, true);
-                    }
-                    $image->move($dir, $filename);
-                    $storedPath = route('chat.image', ['folder' => 'chats', 'filename' => $filename]);
-                    \Log::info('Chat image uploaded to local storage', [
-                        'url' => $storedPath,
-                        'chat_id' => $chat->id,
-                    ]);
-                }
+                // Store file directly in storage folder
+                $image->move($dir, $filename);
                 
-                $messageData['image_path'] = $storedPath;
+                // Build the URL path using dedicated chat-image route
+                $messageData['image_path'] = route('chat.image', ['folder' => 'chats', 'filename' => $filename]);
+                
+                \Log::info('Chat image uploaded', [
+                    'filename' => $filename,
+                    'url' => $messageData['image_path'],
+                    'chat_id' => $chat->id,
+                ]);
             } catch (\Exception $e) {
                 \Log::error('Chat image upload failed', [
                     'error' => $e->getMessage(),
