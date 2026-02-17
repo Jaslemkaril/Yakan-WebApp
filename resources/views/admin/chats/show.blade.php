@@ -362,19 +362,59 @@
         document.getElementById('quoteModal').classList.add('hidden');
     }
 
+    function calculateQuoteTotal() {
+        const materialCost = parseFloat(document.getElementById('quoteMaterialCost').value) || 0;
+        const patternFee = parseFloat(document.getElementById('quotePatternFee').value) || 0;
+        const discount = parseFloat(document.getElementById('quoteDiscount').value) || 0;
+        
+        const total = materialCost + patternFee - discount;
+        document.getElementById('quoteTotalDisplay').textContent = '₱' + total.toFixed(2);
+        document.getElementById('quoteTotal').value = total;
+        
+        return total;
+    }
+
     function sendQuote() {
-        const price = document.getElementById('quotePrice').value;
+        const materialCost = parseFloat(document.getElementById('quoteMaterialCost').value) || 0;
+        const patternFee = parseFloat(document.getElementById('quotePatternFee').value) || 0;
+        const discount = parseFloat(document.getElementById('quoteDiscount').value) || 0;
+        const total = calculateQuoteTotal();
         const description = document.getElementById('quoteDescription').value;
         
-        if (!price || !description) {
-            alert('Please fill in both price and description');
+        if (total <= 0) {
+            alert('Please enter valid pricing amounts');
             return;
         }
 
-        const quoteMessage = `📋 PRICE QUOTE\n\nPrice: ₱${parseFloat(price).toLocaleString()}\n\nDescription:\n${description}\n\nPlease review and let us know if you'd like to proceed with this custom order.`;
+        let quoteMessage = `📋 PRICE QUOTE\n\n`;
+        
+        if (materialCost > 0) {
+            quoteMessage += `Material Cost: ₱${materialCost.toLocaleString('en-PH', {minimumFractionDigits: 2})}\n`;
+        }
+        if (patternFee > 0) {
+            quoteMessage += `Pattern Fee: ₱${patternFee.toLocaleString('en-PH', {minimumFractionDigits: 2})}\n`;
+        }
+        if (discount > 0) {
+            quoteMessage += `Discount: -₱${discount.toLocaleString('en-PH', {minimumFractionDigits: 2})}\n`;
+        }
+        
+        quoteMessage += `\n━━━━━━━━━━━━━━━━\nTotal: ₱${total.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+        
+        if (description.trim()) {
+            quoteMessage += `\n\nNotes:\n${description}`;
+        }
+        
+        quoteMessage += `\n\nPlease review and let us know if you'd like to proceed with this order.`;
         
         document.getElementById('message').value = quoteMessage;
         closeQuoteModal();
+        
+        // Reset form
+        document.getElementById('quoteMaterialCost').value = '';
+        document.getElementById('quotePatternFee').value = '';
+        document.getElementById('quoteDiscount').value = '';
+        document.getElementById('quoteDescription').value = '';
+        calculateQuoteTotal();
         
         // Scroll to reply form
         document.querySelector('.reply-card').scrollIntoView({ behavior: 'smooth' });
@@ -392,19 +432,68 @@
         </div>
         
         <div class="space-y-4">
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Price (₱)</label>
-                <input type="number" id="quotePrice" step="0.01" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000] focus:border-transparent" placeholder="0.00">
+            <!-- Price Breakdown -->
+            <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border-2 border-green-200">
+                <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <i class="fas fa-calculator text-green-600"></i>
+                    Update Price Breakdown
+                </h4>
+                
+                <div class="space-y-2.5">
+                    <!-- Material Cost -->
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs text-gray-600 w-24 flex-shrink-0">Material Cost</label>
+                        <div class="relative flex-1">
+                            <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₱</span>
+                            <input type="number" id="quoteMaterialCost" step="0.01" min="0" 
+                                   class="w-full border border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-200 rounded-lg pl-6 pr-3 py-2 text-sm transition-all" 
+                                   placeholder="0.00" oninput="calculateQuoteTotal()">
+                        </div>
+                    </div>
+                    
+                    <!-- Pattern Fee -->
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs text-gray-600 w-24 flex-shrink-0">Pattern Fee</label>
+                        <div class="relative flex-1">
+                            <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₱</span>
+                            <input type="number" id="quotePatternFee" step="0.01" min="0" 
+                                   class="w-full border border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-200 rounded-lg pl-6 pr-3 py-2 text-sm transition-all" 
+                                   placeholder="0.00" oninput="calculateQuoteTotal()">
+                        </div>
+                    </div>
+                    
+                    <!-- Discount -->
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs text-gray-600 w-24 flex-shrink-0">Discount</label>
+                        <div class="relative flex-1">
+                            <span class="absolute left-2 top-1/2 -translate-y-1/2 text-red-400 text-sm">-₱</span>
+                            <input type="number" id="quoteDiscount" step="0.01" min="0" 
+                                   class="w-full border border-gray-300 focus:border-red-400 focus:ring-1 focus:ring-red-200 rounded-lg pl-7 pr-3 py-2 text-sm transition-all text-red-600" 
+                                   placeholder="0.00" oninput="calculateQuoteTotal()">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Total -->
+                <div class="bg-white rounded-lg p-3 mt-3 border-2 border-green-300">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-bold text-gray-700">Total Quoted Price</span>
+                        <span class="text-2xl font-bold text-green-600" id="quoteTotalDisplay">₱0.00</span>
+                    </div>
+                    <input type="hidden" id="quoteTotal" value="0">
+                </div>
             </div>
             
+            <!-- Description/Notes -->
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-                <textarea id="quoteDescription" rows="4" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000] focus:border-transparent resize-none" placeholder="Describe what's included in this quote..."></textarea>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Additional Notes (optional)</label>
+                <textarea id="quoteDescription" rows="3" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none text-sm" placeholder="Add pricing notes or details (optional)"></textarea>
             </div>
             
+            <!-- Action Buttons -->
             <div class="flex gap-3 pt-2">
-                <button onclick="sendQuote()" class="flex-1 bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] text-white font-semibold py-3 rounded-lg transition-all">
-                    <i class="fas fa-paper-plane mr-2"></i> Send Quote
+                <button onclick="sendQuote()" class="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+                    <i class="fas fa-paper-plane"></i> Send Quote
                 </button>
                 <button onclick="closeQuoteModal()" class="px-6 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 rounded-lg transition-all">
                     Cancel
