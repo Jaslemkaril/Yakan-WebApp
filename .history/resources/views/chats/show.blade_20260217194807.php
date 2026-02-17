@@ -376,12 +376,26 @@
                                         ->orderBy('created_at', 'desc')
                                         ->first();
                                     
-                                    // Get the most recent order for this chat
-                                    $chatOrder = \App\Models\Order::where('source', 'chat')
+                                    // Debug: Get ALL orders for comparison
+                                    $allChatOrders = \App\Models\Order::where('source', 'chat')
                                         ->where('user_id', auth()->id())
-                                        ->where('notes', 'like', '%chat ID: ' . $chat->id . '%')
-                                        ->orderBy('created_at', 'desc')
-                                        ->first();
+                                        ->get(['id', 'order_ref', 'notes', 'created_at', 'payment_method']);
+                                    
+                                    // Debug: Log if order not found
+                                    if (!$chatOrder) {
+                                        \Log::info('Chat Order Not Found', [
+                                            'chat_id' => $chat->id,
+                                            'user_id' => auth()->id(),
+                                            'searching_for' => 'chat ID: ' . $chat->id,
+                                            'all_user_chat_orders' => $allChatOrders->toArray()
+                                        ]);
+                                    } else {
+                                        \Log::info('Chat Order Found!', [
+                                            'order_id' => $chatOrder->id,
+                                            'order_ref' => $chatOrder->order_ref,
+                                            'notes' => $chatOrder->notes
+                                        ]);
+                                    }
                                 @endphp
                                 
                                 @if($chatOrder)

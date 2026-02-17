@@ -376,13 +376,48 @@
                                         ->orderBy('created_at', 'desc')
                                         ->first();
                                     
-                                    // Get the most recent order for this chat
-                                    $chatOrder = \App\Models\Order::where('source', 'chat')
+                                    // Debug: Get ALL orders for comparison
+                                    $allChatOrders = \App\Models\Order::where('source', 'chat')
                                         ->where('user_id', auth()->id())
-                                        ->where('notes', 'like', '%chat ID: ' . $chat->id . '%')
-                                        ->orderBy('created_at', 'desc')
-                                        ->first();
+                                        ->get(['id', 'order_ref', 'notes', 'created_at', 'payment_method']);
+                                    
+                                    // Debug: Log if order not found
+                                    if (!$chatOrder) {
+                                        \Log::info('Chat Order Not Found', [
+                                            'chat_id' => $chat->id,
+                                            'user_id' => auth()->id(),
+                                            'searching_for' => 'chat ID: ' . $chat->id,
+                                            'all_user_chat_orders' => $allChatOrders->toArray()
+                                        ]);
+                                    } else {
+                                        \Log::info('Chat Order Found!', [
+                                            'order_id' => $chatOrder->id,
+                                            'order_ref' => $chatOrder->order_ref,
+                                            'notes' => $chatOrder->notes
+                                        ]);
+                                    }
                                 @endphp
+                                
+                                {{-- Debug Display --}}
+                                <div class="mt-3 mx-2 p-3 bg-gray-800 text-white rounded-lg text-xs font-mono">
+                                    <div class="font-bold mb-2">🔍 DEBUG INFO:</div>
+                                    <div>Chat ID: {{ $chat->id }}</div>
+                                    <div>User ID: {{ auth()->id() }}</div>
+                                    <div>Looking for: "chat ID: {{ $chat->id }}"</div>
+                                    <div>Orders found: {{ $allChatOrders->count() }}</div>
+                                    @if($allChatOrders->count() > 0)
+                                        <div class="mt-2 border-t border-gray-600 pt-2">
+                                            @foreach($allChatOrders as $ord)
+                                                <div class="mb-2 p-2 bg-gray-700 rounded">
+                                                    <div>ID: {{ $ord->id }} | Ref: {{ $ord->order_ref }}</div>
+                                                    <div>Notes: "{{ $ord->notes }}"</div>
+                                                    <div>Created: {{ $ord->created_at }}</div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                    <div class="mt-2">Match found: {{ $chatOrder ? 'YES ✓' : 'NO ✗' }}</div>
+                                </div>
                                 
                                 @if($chatOrder)
                                     {{-- Show payment summary and method buttons if payment hasn't been chosen yet --}}
