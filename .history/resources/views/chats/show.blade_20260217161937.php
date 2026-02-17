@@ -347,8 +347,8 @@
                                     // Find the order created for this chat  
                                     $chatOrder = \App\Models\Order::where('source', 'chat')
                                         ->where(function($q) use ($chat) {
-                                            $q->where('notes', 'LIKE', '%chat ID: ' . $chat->id . '%')
-                                              ->orWhere('notes', 'LIKE', '%Chat ID: ' . $chat->id . '%');
+                                            $q->where('customer_notes', 'LIKE', '%chat ID: ' . $chat->id . '%')
+                                              ->orWhere('customer_notes', 'LIKE', '%Chat ID: ' . $chat->id . '%');
                                         })
                                         ->where('user_id', auth()->id())
                                         ->orderBy('created_at', 'desc')
@@ -357,7 +357,7 @@
                                     // Debug: Get ALL orders for comparison
                                     $allChatOrders = \App\Models\Order::where('source', 'chat')
                                         ->where('user_id', auth()->id())
-                                        ->get(['id', 'order_ref', 'notes', 'created_at', 'payment_method']);
+                                        ->get(['id', 'order_ref', 'customer_notes', 'created_at', 'payment_method']);
                                     
                                     // Debug: Log if order not found
                                     if (!$chatOrder) {
@@ -371,7 +371,7 @@
                                         \Log::info('Chat Order Found!', [
                                             'order_id' => $chatOrder->id,
                                             'order_ref' => $chatOrder->order_ref,
-                                            'notes' => $chatOrder->notes
+                                            'customer_notes' => $chatOrder->customer_notes
                                         ]);
                                     }
                                 @endphp
@@ -388,7 +388,7 @@
                                             @foreach($allChatOrders as $ord)
                                                 <div class="mb-2 p-2 bg-gray-700 rounded">
                                                     <div>ID: {{ $ord->id }} | Ref: {{ $ord->order_ref }}</div>
-                                                    <div>Notes: "{{ $ord->notes }}"</div>
+                                                    <div>Notes: "{{ $ord->customer_notes }}"</div>
                                                     <div>Created: {{ $ord->created_at }}</div>
                                                 </div>
                                             @endforeach

@@ -371,7 +371,7 @@
                                         \Log::info('Chat Order Found!', [
                                             'order_id' => $chatOrder->id,
                                             'order_ref' => $chatOrder->order_ref,
-                                            'notes' => $chatOrder->notes
+                                            'customer_notes' => $chatOrder->customer_notes
                                         ]);
                                     }
                                 @endphp
@@ -388,7 +388,7 @@
                                             @foreach($allChatOrders as $ord)
                                                 <div class="mb-2 p-2 bg-gray-700 rounded">
                                                     <div>ID: {{ $ord->id }} | Ref: {{ $ord->order_ref }}</div>
-                                                    <div>Notes: "{{ $ord->notes }}"</div>
+                                                    <div>Notes: "{{ $ord->customer_notes }}"</div>
                                                     <div>Created: {{ $ord->created_at }}</div>
                                                 </div>
                                             @endforeach

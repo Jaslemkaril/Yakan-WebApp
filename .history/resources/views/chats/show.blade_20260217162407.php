@@ -371,7 +371,7 @@
                                         \Log::info('Chat Order Found!', [
                                             'order_id' => $chatOrder->id,
                                             'order_ref' => $chatOrder->order_ref,
-                                            'notes' => $chatOrder->notes
+                                            'customer_notes' => $chatOrder->customer_notes
                                         ]);
                                     }
                                 @endphp

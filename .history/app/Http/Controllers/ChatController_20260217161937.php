@@ -305,29 +305,22 @@ class ChatController extends Controller
             // Get formatted address
             $formattedAddress = $userAddress ? $userAddress->formatted_address : 'Address not provided';
             
-            // Get design images from quote message (only if column exists)
-            $designImages = [];
-            try {
-                if (method_exists($quoteMessage, 'getAttribute')) {
-                    $designImages = $quoteMessage->reference_images ?? [];
-                }
-            } catch (\Exception $e) {
-                \Log::warning('reference_images column might not exist yet', ['error' => $e->getMessage()]);
-            }
-            
-            $orderNotes = 'Custom order from chat ID: ' . $chat->id;
+            // Get design images from quote message
+            $designImages = $quoteMessage->reference_images ?? [];
+            $customerNotes = 'Custom order from chat ID: ' . $chat->id;
             
             if (!empty($designImages)) {
-                $orderNotes .= "\n\nDesign References:\n";
+                $customerNotes .= "\n\nDesign References:\n";
                 foreach ($designImages as $index => $imageUrl) {
-                    $orderNotes .= "- Image " . ($index + 1) . ": " . $imageUrl . "\n";
+                    $customerNotes .= "- Image " . ($index + 1) . ": " . $imageUrl . "\n";
                 }
             }
             
-            // Create order - ONLY use fields that exist in database!
+            // Create order
             try {
                 $order = \App\Models\Order::create([
                     'order_ref' => $orderRef,
+                    'tracking_number' => 'TRK-' . strtoupper(substr(md5(uniqid()), 0, 10)),
                     'user_id' => auth()->id(),
                     'customer_name' => auth()->user()->name,
                     'customer_email' => auth()->user()->email,
@@ -335,15 +328,20 @@ class ChatController extends Controller
                     'subtotal' => $quotedPrice,
                     'shipping_fee' => $shippingFee,
                     'discount' => 0,
+                    'discount_amount' => 0,
                     'total' => $totalAmount,
-                    'delivery_type' => 'deliver',
+                    'total_amount' => $totalAmount,
+                    'delivery_type' => 'standard',
                     'shipping_address' => $formattedAddress,
+                    'delivery_address' => $formattedAddress,
                     'shipping_city' => $userAddress ? $userAddress->city : '',
                     'shipping_province' => $userAddress ? $userAddress->province : '',
+                    // Don't set payment_method - let it use database default, we'll update it when customer chooses
                     'payment_status' => 'pending',
                     'status' => 'pending_confirmation',
                     'source' => 'chat',
-                    'notes' => $orderNotes,
+                    'customer_notes' => $customerNotes,
+                    'user_address_id' => $userAddress ? $userAddress->id : null,
                 ]);
                 
                 \Log::info('Chat order created successfully', [
