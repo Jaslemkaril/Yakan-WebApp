@@ -769,14 +769,16 @@
 <script>
 // Philippine Address API Functions
 function loadRegions() {
-    fetch('/api/philippines/regions')
+    fetch('/addresses/api/regions')
         .then(response => response.json())
         .then(data => {
-            const select = document.getElementById('chat_region_id');
-            select.innerHTML = '<option value="">-- Select Region --</option>';
-            data.forEach(region => {
-                select.innerHTML += `<option value="${region.id}">${region.name}</option>`;
-            });
+            if (data.success) {
+                const select = document.getElementById('chat_region_id');
+                select.innerHTML = '<option value="">-- Select Region --</option>';
+                data.data.forEach(region => {
+                    select.innerHTML += `<option value="${region.id}">${region.name}</option>`;
+                });
+            }
         })
         .catch(error => console.error('Error loading regions:', error));
 }
@@ -792,14 +794,16 @@ function loadProvinces(regionId, prefix) {
     
     if (!regionId) return;
     
-    fetch(`/api/philippines/provinces/${regionId}`)
+    fetch(`/addresses/api/provinces/${regionId}`)
         .then(response => response.json())
         .then(data => {
-            provinceSelect.innerHTML = '<option value="">-- Select Province --</option>';
-            data.forEach(province => {
-                provinceSelect.innerHTML += `<option value="${province.id}">${province.name}</option>`;
-            });
-            provinceSelect.disabled = false;
+            if (data.success) {
+                provinceSelect.innerHTML = '<option value="">-- Select Province --</option>';
+                data.data.forEach(province => {
+                    provinceSelect.innerHTML += `<option value="${province.id}">${province.name}</option>`;
+                });
+                provinceSelect.disabled = false;
+            }
         })
         .catch(error => console.error('Error loading provinces:', error));
 }
@@ -813,14 +817,16 @@ function loadCities(provinceId, prefix) {
     
     if (!provinceId) return;
     
-    fetch(`/api/philippines/cities/${provinceId}`)
+    fetch(`/addresses/api/cities/${provinceId}`)
         .then(response => response.json())
         .then(data => {
-            citySelect.innerHTML = '<option value="">-- Select City/Municipality --</option>';
-            data.forEach(city => {
-                citySelect.innerHTML += `<option value="${city.id}">${city.name}</option>`;
-            });
-            citySelect.disabled = false;
+            if (data.success) {
+                citySelect.innerHTML = '<option value="">-- Select City/Municipality --</option>';
+                data.data.forEach(city => {
+                    citySelect.innerHTML += `<option value="${city.id}">${city.name}</option>`;
+                });
+                citySelect.disabled = false;
+            }
         })
         .catch(error => console.error('Error loading cities:', error));
 }
@@ -832,14 +838,16 @@ function loadBarangays(cityId, prefix) {
     
     if (!cityId) return;
     
-    fetch(`/api/philippines/barangays/${cityId}`)
+    fetch(`/addresses/api/barangays/${cityId}`)
         .then(response => response.json())
         .then(data => {
-            barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
-            data.forEach(barangay => {
-                barangaySelect.innerHTML += `<option value="${barangay.id}">${barangay.name}</option>`;
-            });
-            barangaySelect.disabled = false;
+            if (data.success) {
+                barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
+                data.data.forEach(barangay => {
+                    barangaySelect.innerHTML += `<option value="${barangay.id}">${barangay.name}</option>`;
+                });
+                barangaySelect.disabled = false;
+            }
         })
         .catch(error => console.error('Error loading barangays:', error));
 }
