@@ -680,26 +680,7 @@ class CustomOrderController extends Controller
             // Handle image upload
             if ($request->hasFile('reference_image')) {
                 $image = $request->file('reference_image');
-                $cloudinary = new CloudinaryService();
-                
-                // Try Cloudinary first (persistent storage)
-                if ($cloudinary->isEnabled()) {
-                    $result = $cloudinary->uploadFile($image, 'custom-orders/references');
-                    if ($result) {
-                        $imagePath = $result['url'];
-                        \Log::info('Custom order reference image uploaded to Cloudinary', [
-                            'url' => $imagePath,
-                        ]);
-                    }
-                }
-                
-                // Fallback to local storage
-                if (!$imagePath) {
-                    $imagePath = $image->store('custom_orders/references', 'public');
-                    \Log::info('Custom order reference image uploaded to local storage', [
-                        'path' => $imagePath,
-                    ]);
-                }
+                $imagePath = $image->store('custom_orders/references', 'public');
             }
 
             // Store in session
@@ -1675,30 +1656,7 @@ class CustomOrderController extends Controller
                 }
 
                 if ($request->hasFile('design_upload')) {
-                    $designFile = $request->file('design_upload');
-                    $cloudinary = new CloudinaryService();
-                    $storedPath = null;
-                    
-                    // Try Cloudinary first (persistent storage)
-                    if ($cloudinary->isEnabled()) {
-                        $result = $cloudinary->uploadFile($designFile, 'custom-orders/designs');
-                        if ($result) {
-                            $storedPath = $result['url'];
-                            \Log::info('Custom order design uploaded to Cloudinary', [
-                                'url' => $storedPath,
-                            ]);
-                        }
-                    }
-                    
-                    // Fallback to local storage
-                    if (!$storedPath) {
-                        $storedPath = $designFile->store('custom_designs', 'public');
-                        \Log::info('Custom order design uploaded to local storage', [
-                            'path' => $storedPath,
-                        ]);
-                    }
-                    
-                    $order->design_upload = $storedPath;
+                    $order->design_upload = $request->file('design_upload')->store('custom_designs', 'public');
                 }
 
                 $order->save();
@@ -1966,32 +1924,7 @@ class CustomOrderController extends Controller
 
         // Store receipt if uploaded
         if ($request->hasFile('receipt')) {
-            $receiptFile = $request->file('receipt');
-            $cloudinary = new CloudinaryService();
-            $storedPath = null;
-            
-            // Try Cloudinary first (persistent storage)
-            if ($cloudinary->isEnabled()) {
-                $result = $cloudinary->uploadFile($receiptFile, 'custom-orders/receipts');
-                if ($result) {
-                    $storedPath = $result['url'];
-                    \Log::info('Custom order payment receipt uploaded to Cloudinary', [
-                        'url' => $storedPath,
-                        'order_id' => $order->id,
-                    ]);
-                }
-            }
-            
-            // Fallback to local storage
-            if (!$storedPath) {
-                $storedPath = $receiptFile->store('payment_receipts', 'public');
-                \Log::info('Custom order payment receipt uploaded to local storage', [
-                    'path' => $storedPath,
-                    'order_id' => $order->id,
-                ]);
-            }
-            
-            $order->payment_receipt = $storedPath;
+            $order->payment_receipt = $request->file('receipt')->store('payment_receipts', 'public');
         }
 
         $order->transaction_id = $request->transaction_id;

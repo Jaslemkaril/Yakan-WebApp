@@ -246,46 +246,23 @@ class PatternController extends Controller
         $pattern->tags()->sync($validated['tags'] ?? []);
 
         // Automatic media record creation for new SVG file (for user-side visibility)
-        if ($newSvgPath || $newSvgFileName) {
+        if ($newSvgFileName) {
             $pattern->media()->create([
                 'type' => 'svg',
-                'path' => $newSvgPath ?: ('patterns/svg/' . $newSvgFileName),
+                'path' => 'patterns/svg/' . $newSvgFileName,
                 'alt_text' => $pattern->name . ' pattern',
                 'sort_order' => 0,
             ]);
         }
 
         if ($request->hasFile('media')) {
-            $cloudinary = new CloudinaryService();
             foreach ($request->file('media') as $index => $file) {
-                $storedPath = null;
-                
-                // Try Cloudinary first (persistent storage)
-                if ($cloudinary->isEnabled()) {
-                    $result = $cloudinary->uploadFile($file, 'patterns/media');
-                    if ($result) {
-                        $storedPath = $result['url'];
-                        \Log::info('Pattern media uploaded to Cloudinary (update)', [
-                            'url' => $storedPath,
-                            'pattern_id' => $pattern->id,
-                        ]);
-                    }
-                }
-                
-                // Fallback to local storage
-                if (!$storedPath) {
-                    $filename = time() . '_' . $index . '_' . $file->getClientOriginalName();
-                    $file->move(public_path('uploads/patterns'), $filename);
-                    $storedPath = 'patterns/' . $filename;
-                    \Log::info('Pattern media uploaded to local storage (update)', [
-                        'path' => $storedPath,
-                        'pattern_id' => $pattern->id,
-                    ]);
-                }
+                $filename = time() . '_' . $index . '_' . $file->getClientOriginalName();
+                $file->move(public_path('uploads/patterns'), $filename);
                 
                 $pattern->media()->create([
                     'type' => 'image',
-                    'path' => $storedPath,
+                    'path' => 'patterns/' . $filename,
                     'alt_text' => $validated['media_alt'][$index] ?? $pattern->name . ' pattern',
                     'sort_order' => $pattern->media()->max('sort_order') + 1 + $index,
                 ]);

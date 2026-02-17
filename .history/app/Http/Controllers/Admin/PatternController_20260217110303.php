@@ -73,38 +73,18 @@ class PatternController extends Controller
 
         // Handle SVG file upload
         $svgFileName = null;
-        $svgPath = null;
         if ($request->hasFile('svg_file')) {
             $svgFile = $request->file('svg_file');
-            $cloudinary = new CloudinaryService();
+            $svgFileName = Str::slug($request->name) . '-' . time() . '.svg';
             
-            // Try Cloudinary first (persistent storage)
-            if ($cloudinary->isEnabled()) {
-                $result = $cloudinary->uploadFile($svgFile, 'patterns/svg');
-                if ($result) {
-                    $svgPath = $result['url'];
-                    $validated['svg_path'] = $svgPath;
-                    \Log::info('Pattern SVG uploaded to Cloudinary', [
-                        'url' => $svgPath,
-                        'pattern' => $request->name,
-                    ]);
-                }
+            // Create directory if it doesn't exist
+            $svgDirectory = public_path('uploads/patterns/svg');
+            if (!file_exists($svgDirectory)) {
+                mkdir($svgDirectory, 0755, true);
             }
             
-            // Fallback to local storage
-            if (!$svgPath) {
-                $svgFileName = Str::slug($request->name) . '-' . time() . '.svg';
-                $svgDirectory = public_path('uploads/patterns/svg');
-                if (!file_exists($svgDirectory)) {
-                    mkdir($svgDirectory, 0755, true);
-                }
-                $svgFile->move($svgDirectory, $svgFileName);
-                $validated['svg_path'] = $svgFileName;
-                \Log::info('Pattern SVG uploaded to local storage', [
-                    'path' => $svgFileName,
-                    'pattern' => $request->name,
-                ]);
-            }
+            $svgFile->move($svgDirectory, $svgFileName);
+            $validated['svg_path'] = $svgFileName;
         }
 
         $pattern = YakanPattern::create($validated);
@@ -114,46 +94,24 @@ class PatternController extends Controller
         }
 
         // Automatic media record creation for SVG file (for user-side visibility)
-        if ($svgPath || $svgFileName) {
+        if ($svgFileName) {
             $pattern->media()->create([
                 'type' => 'svg',
-                'path' => $svgPath ?: ('patterns/svg/' . $svgFileName),
+                'path' => 'patterns/svg/' . $svgFileName,
                 'alt_text' => $pattern->name . ' pattern',
                 'sort_order' => 0,
             ]);
         }
 
         if ($request->hasFile('media')) {
-            $cloudinary = new CloudinaryService();
             foreach ($request->file('media') as $index => $file) {
-                $storedPath = null;
-                
-                // Try Cloudinary first (persistent storage)
-                if ($cloudinary->isEnabled()) {
-                    $result = $cloudinary->uploadFile($file, 'patterns/media');
-                    if ($result) {
-                        $storedPath = $result['url'];
-                        \Log::info('Pattern media uploaded to Cloudinary', [
-                            'url' => $storedPath,
-                            'pattern_id' => $pattern->id,
-                        ]);
-                    }
-                }
-                
-                // Fallback to local storage
-                if (!$storedPath) {
-                    $filename = time() . '_' . $index . '_' . $file->getClientOriginalName();
-                    $file->move(public_path('uploads/patterns'), $filename);
-                    $storedPath = 'patterns/' . $filename;
-                    \Log::info('Pattern media uploaded to local storage', [
-                        'path' => $storedPath,
-                        'pattern_id' => $pattern->id,
-                    ]);
-                }
+                // Store file in public/uploads/patterns directory
+                $filename = time() . '_' . $index . '_' . $file->getClientOriginalName();
+                $file->move(public_path('uploads/patterns'), $filename);
                 
                 $pattern->media()->create([
                     'type' => 'image',
-                    'path' => $storedPath,
+                    'path' => 'patterns/' . $filename,
                     'alt_text' => $request->input("media_alt.{$index}") ?? $pattern->name . ' pattern',
                     'sort_order' => $index + 1,
                 ]);
@@ -200,92 +158,44 @@ class PatternController extends Controller
 
         // Handle SVG file upload
         $newSvgFileName = null;
-        $newSvgPath = null;
         if ($request->hasFile('svg_file')) {
-            $svgFile = $request->file('svg_file');
-            $cloudinary = new CloudinaryService();
-            
-            // Try Cloudinary first (persistent storage)
-            if ($cloudinary->isEnabled()) {
-                $result = $cloudinary->uploadFile($svgFile, 'patterns/svg');
-                if ($result) {
-                    $newSvgPath = $result['url'];
-                    $validated['svg_path'] = $newSvgPath;
-                    // Delete old SVG media record since we have new one
-                    $pattern->media()->where('type', 'svg')->delete();
-                    \Log::info('Pattern SVG updated to Cloudinary', [
-                        'url' => $newSvgPath,
-                        'pattern_id' => $pattern->id,
-                    ]);
-                }
-            }
-            
-            // Fallback to local storage
-            if (!$newSvgPath) {
-                // Delete old SVG if exists and not from Cloudinary
-                if ($pattern->svg_path && !str_contains($pattern->svg_path, 'cloudinary.com')) {
-                    $oldSvgPath = public_path('uploads/patterns/svg/' . $pattern->svg_path);
-                    if (file_exists($oldSvgPath)) {
-                        unlink($oldSvgPath);
-                    }
+            // Delete old SVG if exists
+            if ($pattern->svg_path) {
+                $oldSvgPath = public_path('uploads/patterns/svg/' . $pattern->svg_path);
+                if (file_exists($oldSvgPath)) {
+                    unlink($oldSvgPath);
                 }
                 // Delete old SVG media record
                 $pattern->media()->where('type', 'svg')->delete();
-                
-                $newSvgFileName = Str::slug($request->name) . '-' . time() . '.svg';
-                $svgFile->move(public_path('uploads/patterns/svg'), $newSvgFileName);
-                $validated['svg_path'] = $newSvgFileName;
-                \Log::info('Pattern SVG updated to local storage', [
-                    'path' => $newSvgFileName,
-                    'pattern_id' => $pattern->id,
-                ]);
             }
+            
+            $svgFile = $request->file('svg_file');
+            $newSvgFileName = Str::slug($request->name) . '-' . time() . '.svg';
+            $svgFile->move(public_path('uploads/patterns/svg'), $newSvgFileName);
+            $validated['svg_path'] = $newSvgFileName;
         }
 
         $pattern->update($validated);
         $pattern->tags()->sync($validated['tags'] ?? []);
 
         // Automatic media record creation for new SVG file (for user-side visibility)
-        if ($newSvgPath || $newSvgFileName) {
+        if ($newSvgFileName) {
             $pattern->media()->create([
                 'type' => 'svg',
-                'path' => $newSvgPath ?: ('patterns/svg/' . $newSvgFileName),
+                'path' => 'patterns/svg/' . $newSvgFileName,
                 'alt_text' => $pattern->name . ' pattern',
                 'sort_order' => 0,
             ]);
         }
 
         if ($request->hasFile('media')) {
-            $cloudinary = new CloudinaryService();
             foreach ($request->file('media') as $index => $file) {
-                $storedPath = null;
-                
-                // Try Cloudinary first (persistent storage)
-                if ($cloudinary->isEnabled()) {
-                    $result = $cloudinary->uploadFile($file, 'patterns/media');
-                    if ($result) {
-                        $storedPath = $result['url'];
-                        \Log::info('Pattern media uploaded to Cloudinary (update)', [
-                            'url' => $storedPath,
-                            'pattern_id' => $pattern->id,
-                        ]);
-                    }
-                }
-                
-                // Fallback to local storage
-                if (!$storedPath) {
-                    $filename = time() . '_' . $index . '_' . $file->getClientOriginalName();
-                    $file->move(public_path('uploads/patterns'), $filename);
-                    $storedPath = 'patterns/' . $filename;
-                    \Log::info('Pattern media uploaded to local storage (update)', [
-                        'path' => $storedPath,
-                        'pattern_id' => $pattern->id,
-                    ]);
-                }
+                $filename = time() . '_' . $index . '_' . $file->getClientOriginalName();
+                $file->move(public_path('uploads/patterns'), $filename);
                 
                 $pattern->media()->create([
                     'type' => 'image',
-                    'path' => $storedPath,
+                    'path' => 'patterns/' . $filename,
                     'alt_text' => $validated['media_alt'][$index] ?? $pattern->name . ' pattern',
                     'sort_order' => $pattern->media()->max('sort_order') + 1 + $index,
                 ]);

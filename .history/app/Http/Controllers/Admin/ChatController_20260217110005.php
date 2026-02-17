@@ -78,32 +78,8 @@ class ChatController extends Controller
         ];
 
         if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $cloudinary = new CloudinaryService();
-            $storedPath = null;
-            
-            // Try Cloudinary first (persistent storage)
-            if ($cloudinary->isEnabled()) {
-                $result = $cloudinary->uploadFile($image, 'admin-chats');
-                if ($result) {
-                    $storedPath = $result['url'];
-                    \Log::info('Admin chat image uploaded to Cloudinary', [
-                        'url' => $storedPath,
-                        'chat_id' => $chat->id,
-                    ]);
-                }
-            }
-            
-            // Fallback to local storage
-            if (!$storedPath) {
-                $storedPath = $image->store('chat-images', 'public');
-                \Log::info('Admin chat image uploaded to local storage', [
-                    'path' => $storedPath,
-                    'chat_id' => $chat->id,
-                ]);
-            }
-            
-            $messageData['image_path'] = $storedPath;
+            $path = $request->file('image')->store('chat-images', 'public');
+            $messageData['image_path'] = $path;
         }
 
         ChatMessage::create($messageData);

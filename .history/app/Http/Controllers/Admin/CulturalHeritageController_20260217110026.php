@@ -73,31 +73,11 @@ class CulturalHeritageController extends Controller
         if ($request->hasFile('image')) {
             try {
                 $image = $request->file('image');
-                $cloudinary = new CloudinaryService();
-                $storedPath = null;
-                
-                // Try Cloudinary first (persistent storage)
-                if ($cloudinary->isEnabled()) {
-                    $result = $cloudinary->uploadFile($image, 'cultural-heritage');
-                    if ($result) {
-                        $storedPath = $result['url'];
-                        \Log::info('Cultural heritage image uploaded to Cloudinary', [
-                            'url' => $storedPath,
-                            'original_name' => $image->getClientOriginalName()
-                        ]);
-                    }
-                }
-                
-                // Fallback to local storage
-                if (!$storedPath) {
-                    $storedPath = $image->store('cultural-heritage', 'uploads');
-                    \Log::info('Cultural heritage image uploaded to local storage', [
-                        'path' => $storedPath,
-                        'original_name' => $image->getClientOriginalName()
-                    ]);
-                }
-                
-                $validated['image'] = $storedPath;
+                $validated['image'] = $image->store('cultural-heritage', 'uploads');
+                \Log::info('Cultural heritage image uploaded', [
+                    'path' => $validated['image'],
+                    'original_name' => $image->getClientOriginalName()
+                ]);
             } catch (\Exception $e) {
                 \Log::error('Cultural heritage image upload failed', [
                     'error' => $e->getMessage()
@@ -163,42 +143,17 @@ class CulturalHeritageController extends Controller
         // Handle image upload
         if ($request->hasFile('image')) {
             try {
+                // Delete old image
+                if ($heritage->image) {
+                    Storage::disk('uploads')->delete($heritage->image);
+                }
                 $image = $request->file('image');
-                $cloudinary = new CloudinaryService();
-                $storedPath = null;
-                
-                // Try Cloudinary first (persistent storage)
-                if ($cloudinary->isEnabled()) {
-                    $result = $cloudinary->uploadFile($image, 'cultural-heritage');
-                    if ($result) {
-                        $storedPath = $result['url'];
-                        // Delete old image if it's not a Cloudinary URL
-                        if ($heritage->image && !str_contains($heritage->image, 'cloudinary.com')) {
-                            Storage::disk('uploads')->delete($heritage->image);
-                        }
-                        \Log::info('Cultural heritage image updated to Cloudinary', [
-                            'heritage_id' => $heritage->id,
-                            'url' => $storedPath,
-                            'original_name' => $image->getClientOriginalName()
-                        ]);
-                    }
-                }
-                
-                // Fallback to local storage
-                if (!$storedPath) {
-                    // Delete old image
-                    if ($heritage->image && !str_contains($heritage->image, 'cloudinary.com')) {
-                        Storage::disk('uploads')->delete($heritage->image);
-                    }
-                    $storedPath = $image->store('cultural-heritage', 'uploads');
-                    \Log::info('Cultural heritage image updated to local storage', [
-                        'heritage_id' => $heritage->id,
-                        'path' => $storedPath,
-                        'original_name' => $image->getClientOriginalName()
-                    ]);
-                }
-                
-                $validated['image'] = $storedPath;
+                $validated['image'] = $image->store('cultural-heritage', 'uploads');
+                \Log::info('Cultural heritage image updated', [
+                    'heritage_id' => $heritage->id,
+                    'path' => $validated['image'],
+                    'original_name' => $image->getClientOriginalName()
+                ]);
             } catch (\Exception $e) {
                 \Log::error('Cultural heritage image update failed', [
                     'heritage_id' => $heritage->id,
