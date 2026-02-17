@@ -49,6 +49,8 @@ class Order extends Model
         'shipping_fee' => 'decimal:2',
         'discount' => 'decimal:2',
         'total' => 'decimal:2',
+        'total_amount' => 'decimal:2',
+        'tracking_history' => 'array',
         'payment_verified_at' => 'datetime',
         'confirmed_at' => 'datetime',
         'shipped_at' => 'datetime',
