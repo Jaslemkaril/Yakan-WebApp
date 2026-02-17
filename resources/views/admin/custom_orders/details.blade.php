@@ -540,30 +540,6 @@
                                     </div>
                                 </div>
                                 
-                                {{-- Labor/Production Cost --}}
-                                <div class="flex items-center gap-2">
-                                    <label class="text-xs text-gray-600 w-28 flex-shrink-0">Labor Cost</label>
-                                    <div class="relative flex-1">
-                                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₱</span>
-                                        <input type="number" name="labor_cost" id="labor_cost" step="0.01" min="0" 
-                                               value="{{ $breakdown['labor_cost'] ?? '' }}"
-                                               class="w-full border border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-200 rounded-lg pl-6 pr-3 py-2 text-sm transition-all" 
-                                               placeholder="0.00" onchange="calculateTotal()" oninput="calculateTotal()">
-                                    </div>
-                                </div>
-                                
-                                {{-- Delivery Fee --}}
-                                <div class="flex items-center gap-2">
-                                    <label class="text-xs text-gray-600 w-28 flex-shrink-0">Delivery Fee</label>
-                                    <div class="relative flex-1">
-                                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₱</span>
-                                        <input type="number" name="delivery_fee" id="delivery_fee" step="0.01" min="0" 
-                                               value="{{ $breakdown['delivery_fee'] ?? '' }}"
-                                               class="w-full border border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-200 rounded-lg pl-6 pr-3 py-2 text-sm transition-all" 
-                                               placeholder="0.00" onchange="calculateTotal()" oninput="calculateTotal()">
-                                    </div>
-                                </div>
-                                
                                 {{-- Discount (optional) --}}
                                 <div class="flex items-center gap-2">
                                     <label class="text-xs text-gray-600 w-28 flex-shrink-0">Discount</label>
@@ -1349,8 +1325,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         notes: formData.get('notes'),
                         material_cost: formData.get('material_cost') || 0,
                         pattern_fee: formData.get('pattern_fee') || 0,
-                        labor_cost: formData.get('labor_cost') || 0,
-                        delivery_fee: formData.get('delivery_fee') || 0,
                         discount: formData.get('discount') || 0
                     })
                 });
@@ -1380,11 +1354,9 @@ document.addEventListener('DOMContentLoaded', function() {
     window.calculateTotal = function() {
         const materialCost = parseFloat(document.getElementById('material_cost')?.value) || 0;
         const patternFee = parseFloat(document.getElementById('pattern_fee')?.value) || 0;
-        const laborCost = parseFloat(document.getElementById('labor_cost')?.value) || 0;
-        const deliveryFee = parseFloat(document.getElementById('delivery_fee')?.value) || 0;
         const discount = parseFloat(document.getElementById('discount')?.value) || 0;
         
-        const total = materialCost + patternFee + laborCost + deliveryFee - discount;
+        const total = materialCost + patternFee - discount;
         const finalTotal = Math.max(0, total); // Ensure non-negative
         
         // Update display
