@@ -580,6 +580,26 @@
         document.getElementById('addressModal').classList.add('hidden');
     }
     
+    function openAddNewAddressModal() {
+        closeAddressModal();
+        document.getElementById('addNewAddressModal').classList.remove('hidden');
+        loadRegions();
+    }
+    
+    function closeAddNewAddressModal() {
+        document.getElementById('addNewAddressModal').classList.add('hidden');
+    }
+    
+    function openAddNewAddressModal() {
+        closeAddressModal();
+        document.getElementById('addNewAddressModal').classList.remove('hidden');
+        loadRegions();
+    }
+    
+    function closeAddNewAddressModal() {
+        document.getElementById('addNewAddressModal').classList.add('hidden');
+    }
+    
     function selectAddress(addressId) {
         // Update form action and submit
         const form = document.getElementById('changeAddressForm');
@@ -646,18 +666,194 @@
         </div>
         
         <div class="flex gap-3 p-6 border-t border-gray-200">
-            <a href="{{ route('addresses.index') }}" class="flex-1 px-6 py-3 bg-[#8B0000] hover:bg-[#6B0000] text-white font-semibold rounded-lg transition-all text-center">
+            <button onclick="openAddNewAddressModal()" type="button" class="flex-1 px-6 py-3 bg-[#8B0000] hover:bg-[#6B0000] text-white font-semibold rounded-lg transition-all text-center">
                 <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
                 Add New Address
-            </a>
+            </button>
             <button onclick="closeAddressModal()" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-all">
                 Cancel
             </button>
         </div>
     </div>
 </div>
+
+<!-- Add New Address Modal -->
+<div id="addNewAddressModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+        <div class="flex justify-between items-center p-6 border-b border-gray-200">
+            <h3 class="text-xl font-bold text-gray-900">Add New Delivery Address</h3>
+            <button onclick="closeAddNewAddressModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        
+        <form action="{{ route('addresses.store') }}" method="POST" class="overflow-y-auto max-h-[calc(90vh-160px)]">
+            @csrf
+            <input type="hidden" name="from_chat" value="1">
+            
+            <div class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm fond-medium text-gray-700 mb-2">Full Name *</label>
+                        <input type="text" name="full_name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B0000] focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                        <input type="tel" name="phone_number" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B0000] focus:border-transparent">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Region *</label>
+                    <select name="region_id" id="chat_region_id" required onchange="loadProvinces(this.value, 'chat')" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B0000] focus:border-transparent">
+                        <option value="">-- Select Region --</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Province *</label>
+                    <select name="province_id" id="chat_province_id" required disabled onchange="loadCities(this.value, 'chat')" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B0000] focus:border-transparent bg-gray-100">
+                        <option value="">-- Select Province --</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">City/Municipality *</label>
+                    <select name="city_id" id="chat_city_id" required disabled onchange="loadBarangays(this.value, 'chat')" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B0000] focus:border-transparent bg-gray-100">
+                        <option value="">-- Select City/Municipality --</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Barangay *</label>
+                    <select name="barangay_id" id="chat_barangay_id" required disabled class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B0000] focus:border-transparent bg-gray-100">
+                        <option value="">-- Select Barangay --</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Postal Code *</label>
+                    <input type="text" name="postal_code" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B0000] focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Street Name, Building, House No. *</label>
+                    <input type="text" name="formatted_address" placeholder="Complete address details" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B0000] focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Label As: *</label>
+                    <div class="flex gap-3">
+                        <label class="flex items-center">
+                            <input type="radio" name="label" value="Home" checked class="mr-2 text-[#8B0000] focus:ring-[#8B0000]">
+                            <span class="text-gray-700">Home</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="label" value="Work" class="mr-2 text-[#8B0000] focus:ring-[#8B0000]">
+                            <span class="text-gray-700">Work</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="label" value="Other" class="mr-2 text-[#8B0000] focus:ring-[#8B0000]">
+                            <span class="text-gray-700">Other</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 p-6 border-t border-gray-200">
+                <button type="button" onclick="closeAddNewAddressModal()" class="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" class="flex-1 px-6 py-3 bg-[#8B0000] hover:bg-[#6B0000] text-white font-semibold rounded-lg transition-colors">
+                    Save Address
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Philippine Address API Functions
+function loadRegions() {
+    fetch('/api/philippines/regions')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('chat_region_id');
+            select.innerHTML = '<option value="">-- Select Region --</option>';
+            data.forEach(region => {
+                select.innerHTML += `<option value="${region.id}">${region.name}</option>`;
+            });
+        })
+        .catch(error => console.error('Error loading regions:', error));
+}
+
+function loadProvinces(regionId, prefix) {
+    const provinceSelect = document.getElementById(`${prefix}_province_id`);
+    const citySelect = document.getElementById(`${prefix}_city_id`);
+    const barangaySelect = document.getElementById(`${prefix}_barangay_id`);
+    
+    provinceSelect.disabled = true;
+    citySelect.disabled = true;
+    barangaySelect.disabled = true;
+    
+    if (!regionId) return;
+    
+    fetch(`/api/philippines/provinces/${regionId}`)
+        .then(response => response.json())
+        .then(data => {
+            provinceSelect.innerHTML = '<option value="">-- Select Province --</option>';
+            data.forEach(province => {
+                provinceSelect.innerHTML += `<option value="${province.id}">${province.name}</option>`;
+            });
+            provinceSelect.disabled = false;
+        })
+        .catch(error => console.error('Error loading provinces:', error));
+}
+
+function loadCities(provinceId, prefix) {
+    const citySelect = document.getElementById(`${prefix}_city_id`);
+    const barangaySelect = document.getElementById(`${prefix}_barangay_id`);
+    
+    citySelect.disabled = true;
+    barangaySelect.disabled = true;
+    
+    if (!provinceId) return;
+    
+    fetch(`/api/philippines/cities/${provinceId}`)
+        .then(response => response.json())
+        .then(data => {
+            citySelect.innerHTML = '<option value="">-- Select City/Municipality --</option>';
+            data.forEach(city => {
+                citySelect.innerHTML += `<option value="${city.id}">${city.name}</option>`;
+            });
+            citySelect.disabled = false;
+        })
+        .catch(error => console.error('Error loading cities:', error));
+}
+
+function loadBarangays(cityId, prefix) {
+    const barangaySelect = document.getElementById(`${prefix}_barangay_id`);
+    
+    barangaySelect.disabled = true;
+    
+    if (!cityId) return;
+    
+    fetch(`/api/philippines/barangays/${cityId}`)
+        .then(response => response.json())
+        .then(data => {
+            barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
+            data.forEach(barangay => {
+                barangaySelect.innerHTML += `<option value="${barangay.id}">${barangay.name}</option>`;
+            });
+            barangaySelect.disabled = false;
+        })
+        .catch(error => console.error('Error loading barangays:', error));
+}
+</script>
 
 <!-- Hidden form for changing address -->
 <form id="changeAddressForm" action="{{ route('addresses.setDefault', 0) }}" method="POST" class="hidden">

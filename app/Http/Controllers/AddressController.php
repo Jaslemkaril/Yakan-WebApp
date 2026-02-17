@@ -80,6 +80,12 @@ class AddressController extends Controller
 
         $address = UserAddress::create($addressData);
 
+        // Check if request came from chat
+        $referer = request()->headers->get('referer');
+        if ($request->has('from_chat') || ($referer && str_contains($referer, '/chats/'))) {
+            return redirect($referer)->with('success', 'Address added successfully!');
+        }
+
         // Check if request came from checkout
         if ($request->has('from_checkout') || str_contains($request->header('referer', ''), 'checkout')) {
             return redirect()->route('cart.checkout')
