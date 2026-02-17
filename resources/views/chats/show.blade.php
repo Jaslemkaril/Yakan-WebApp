@@ -141,10 +141,15 @@
                                         ->where('created_at', '>', $message->created_at)
                                         ->exists();
                                     
-                                    // Get user's default address
+                                    // Get user's default address and all addresses
                                     $userDefaultAddress = auth()->check() ? \App\Models\UserAddress::where('user_id', auth()->id())
                                         ->where('is_default', true)
                                         ->first() : null;
+                                    
+                                    $userAddresses = auth()->check() ? \App\Models\UserAddress::where('user_id', auth()->id())
+                                        ->orderBy('is_default', 'desc')
+                                        ->orderBy('created_at', 'desc')
+                                        ->get() : collect();
                                     
                                     // Parse quoted price from message (extract Total: ₱1,500.00)
                                     $quotedPrice = 0;
@@ -247,12 +252,12 @@
                                                         </div>
                                                     </div>
                                                     
-                                                    <a href="{{ route('addresses.index') }}" class="inline-flex items-center gap-2 text-xs font-semibold text-[#8B0000] hover:text-[#6B0000] transition-colors mt-1">
+                                                    <button onclick="openAddressModal()" type="button" class="inline-flex items-center gap-2 text-xs font-semibold text-[#8B0000] hover:text-[#6B0000] transition-colors mt-1">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                                         </svg>
                                                         Change delivery address
-                                                    </a>
+                                                    </button>
                                                 @else
                                                     {{-- No Address Warning --}}
                                                     <div class="bg-white border-2 border-red-300 rounded-lg p-4 mb-3">
@@ -565,6 +570,98 @@
             reader.readAsDataURL(input.files[0]);
         }
     }
+    
+    // Address Modal Functions
+    function openAddressModal() {
+        document.getElementById('addressModal').classList.remove('hidden');
+    }
+    
+    function closeAddressModal() {
+        document.getElementById('addressModal').classList.add('hidden');
+    }
+    
+    function selectAddress(addressId) {
+        // Update form action and submit
+        const form = document.getElementById('changeAddressForm');
+        form.action = `/addresses/${addressId}/set-default`;
+        form.submit();
+    }
 </script>
+
+<!-- Address Selection Modal -->
+<div id="addressModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+        <div class="flex justify-between items-center p-6 border-b border-gray-200">
+            <h3 class="text-xl font-bold text-gray-900">Select Delivery Address</h3>
+            <button onclick="closeAddressModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+            @if(isset($userAddresses) && $userAddresses->count() > 0)
+                <div class="space-y-3">
+                    @foreach($userAddresses as $address)
+                        <div class="border-2 {{ $address->is_default ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-blue-300' }} rounded-lg p-4 transition-all cursor-pointer" onclick="selectAddress({{ $address->id }})">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-start gap-3 flex-1">
+                                    <div class="flex-shrink-0 mt-1">
+                                        <svg class="w-5 h-5 {{ $address->is_default ? 'text-green-600' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="font-semibold text-gray-900">{{ $address->label }}</span>
+                                            @if($address->is_default)
+                                                <span class="px-2 py-0.5 bg-green-600 text-white text-xs font-bold rounded-full">CURRENT</span>
+                                            @endif
+                                        </div>
+                                        <p class="text-sm text-gray-600 mb-1">{{ $address->full_name }} • {{ $address->phone_number }}</p>
+                                        <p class="text-sm text-gray-700">{{ $address->formatted_address }}</p>
+                                    </div>
+                                </div>
+                                @if(!$address->is_default)
+                                    <button onclick="event.stopPropagation(); selectAddress({{ $address->id }})" class="ml-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all">
+                                        Use This
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <div class="text-center py-8">
+                    <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <p class="text-gray-600 font-semibold mb-2">No saved addresses</p>
+                    <p class="text-gray-500 text-sm mb-4">Add a delivery address to continue</p>
+                </div>
+            @endif
+        </div>
+        
+        <div class="flex gap-3 p-6 border-t border-gray-200">
+            <a href="{{ route('addresses.index') }}" class="flex-1 px-6 py-3 bg-[#8B0000] hover:bg-[#6B0000] text-white font-semibold rounded-lg transition-all text-center">
+                <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Add New Address
+            </a>
+            <button onclick="closeAddressModal()" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-all">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden form for changing address -->
+<form id="changeAddressForm" action="{{ route('addresses.setDefault', 0) }}" method="POST" class="hidden">
+    @csrf
+</form>
 
 @endsection

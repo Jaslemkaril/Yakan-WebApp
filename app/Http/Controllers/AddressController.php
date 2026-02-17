@@ -185,6 +185,12 @@ class AddressController extends Controller
         $this->authorize('update', $address);
         $address->setAsDefault();
 
+        // Check if request came from chat, redirect back there
+        $referer = request()->headers->get('referer');
+        if ($referer && str_contains($referer, '/chats/')) {
+            return redirect($referer)->with('success', 'Delivery address updated!');
+        }
+
         return redirect()->route('addresses.index')
             ->with('success', 'Default address updated!');
     }
