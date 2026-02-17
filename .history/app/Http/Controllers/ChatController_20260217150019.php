@@ -393,7 +393,7 @@ class ChatController extends Controller
             
             // Update order
             $order->update([
-                'payment_proof_path' => $path,
+                'payment_proof' => $path,
                 'payment_status' => 'paid',
                 'status' => 'processing'
             ]);

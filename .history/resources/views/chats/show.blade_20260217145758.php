@@ -495,7 +495,7 @@
                                     @endif
                                     
                                     {{-- Payment Submitted Message --}}
-                                    @if($chatOrder && $chatOrder->payment_proof_path && $chatOrder->payment_status === 'paid')
+                                    @if($chatOrder && $chatOrder->payment_proof && $chatOrder->payment_status === 'paid')
                                         <div class="mt-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-5 shadow-md border-2 border-green-300">
                                             <div class="flex items-center gap-3 mb-3">
                                                 <div class="bg-green-500 rounded-full p-2">

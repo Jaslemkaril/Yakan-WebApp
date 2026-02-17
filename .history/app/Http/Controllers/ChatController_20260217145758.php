@@ -302,9 +302,6 @@ class ChatController extends Controller
             // Generate unique order reference
             $orderRef = 'CHAT-' . strtoupper(substr(md5(uniqid()), 0, 8));
             
-            // Get formatted address
-            $formattedAddress = $userAddress ? $userAddress->formatted_address : 'Address not provided';
-            
             // Create order
             $order = \App\Models\Order::create([
                 'order_ref' => $orderRef,
@@ -312,7 +309,7 @@ class ChatController extends Controller
                 'user_id' => auth()->id(),
                 'customer_name' => auth()->user()->name,
                 'customer_email' => auth()->user()->email,
-                'customer_phone' => $userAddress ? $userAddress->phone_number : (auth()->user()->phone ?? ''),
+                'customer_phone' => $userAddress->phone_number ?? auth()->user()->phone,
                 'subtotal' => $quotedPrice,
                 'shipping_fee' => $shippingFee,
                 'discount' => 0,
@@ -320,16 +317,16 @@ class ChatController extends Controller
                 'total' => $totalAmount,
                 'total_amount' => $totalAmount,
                 'delivery_type' => 'standard',
-                'shipping_address' => $formattedAddress,
-                'delivery_address' => $formattedAddress,
-                'shipping_city' => $userAddress ? $userAddress->city : '',
-                'shipping_province' => $userAddress ? $userAddress->province : '',
+                'shipping_address' => $userAddress ? $userAddress->formatted_address : '',
+                'delivery_address' => $userAddress ? $userAddress->full_address : '',
+                'shipping_city' => $userAddress->city ?? '',
+                'shipping_province' => $userAddress->province ?? '',
                 'payment_method' => null, // Will be set when customer chooses
                 'payment_status' => 'pending',
                 'status' => 'pending_payment',
                 'source' => 'chat',
                 'customer_notes' => 'Custom order from chat ID: ' . $chat->id,
-                'user_address_id' => $userAddress ? $userAddress->id : null,
+                'user_address_id' => $userAddress->id ?? null,
             ]);
             
             $chat->update(['updated_at' => now()]);
@@ -393,7 +390,7 @@ class ChatController extends Controller
             
             // Update order
             $order->update([
-                'payment_proof_path' => $path,
+                'payment_proof' => $path,
                 'payment_status' => 'paid',
                 'status' => 'processing'
             ]);
