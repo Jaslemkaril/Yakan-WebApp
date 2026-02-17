@@ -590,16 +590,6 @@
         document.getElementById('addNewAddressModal').classList.add('hidden');
     }
     
-    function openAddNewAddressModal() {
-        closeAddressModal();
-        document.getElementById('addNewAddressModal').classList.remove('hidden');
-        loadRegions();
-    }
-    
-    function closeAddNewAddressModal() {
-        document.getElementById('addNewAddressModal').classList.add('hidden');
-    }
-    
     function selectAddress(addressId) {
         // Update form action and submit
         const form = document.getElementById('changeAddressForm');
