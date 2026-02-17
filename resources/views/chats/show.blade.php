@@ -140,9 +140,61 @@
                                         ->orWhere('message', 'like', '%declined the price quote%')
                                         ->where('created_at', '>', $message->created_at)
                                         ->exists();
+                                    
+                                    // Get user's default address
+                                    $userDefaultAddress = auth()->check() ? \App\Models\UserAddress::where('user_id', auth()->id())
+                                        ->where('is_default', true)
+                                        ->first() : null;
                                 @endphp
                                 
                                 @if(!$hasResponse)
+                                    {{-- Shipping Fee Notice --}}
+                                    <div class="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-lg p-4 mt-3 mx-2">
+                                        <div class="flex items-start gap-3">
+                                            <div class="flex-shrink-0 bg-yellow-400 rounded-full p-2">
+                                                <svg class="w-5 h-5 text-yellow-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                            </div>
+                                            <div class="flex-1">
+                                                <h4 class="font-bold text-gray-900 text-sm mb-1">📦 Shipping Fee Notice</h4>
+                                                <p class="text-xs text-gray-700 mb-3">Shipping fee may vary based on your delivery address. Please make sure your address is up to date.</p>
+                                                
+                                                @if($userDefaultAddress)
+                                                    <div class="bg-white border border-yellow-200 rounded-lg p-3 mb-2">
+                                                        <div class="flex items-start gap-2">
+                                                            <svg class="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                            </svg>
+                                                            <div class="flex-1 min-w-0">
+                                                                <p class="text-xs font-semibold text-gray-900 mb-0.5">Current Delivery Address:</p>
+                                                                <p class="text-xs text-gray-700 break-words">{{ $userDefaultAddress->formatted_address }}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                @else
+                                                    <div class="bg-white border border-red-200 rounded-lg p-3 mb-2">
+                                                        <div class="flex items-center gap-2">
+                                                            <svg class="w-4 h-4 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                                            </svg>
+                                                            <p class="text-xs text-red-700 font-semibold">No delivery address set</p>
+                                                        </div>
+                                                    </div>
+                                                @endif
+                                                
+                                                <a href="{{ route('addresses.index') }}" class="inline-flex items-center gap-2 text-xs font-semibold text-[#8B0000] hover:text-[#6B0000] transition-colors">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                    </svg>
+                                                    {{ $userDefaultAddress ? 'Change Address or Add New' : 'Add Delivery Address' }}
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {{-- Accept/Decline Buttons --}}
                                     <div class="flex gap-2 mt-3 px-2">
                                         <form action="{{ route('chats.respond-quote', $chat) }}" method="POST" class="inline">
                                             @csrf
