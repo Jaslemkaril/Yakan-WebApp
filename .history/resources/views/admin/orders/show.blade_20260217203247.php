@@ -152,13 +152,7 @@
                         <div class="flex items-center justify-between">
                             <span class="text-sm font-medium text-gray-700">GCash Receipt:</span>
                             @if($order->gcash_receipt)
-                                @php
-                                    // Handle Cloudinary URLs vs local storage paths
-                                    $gcashReceiptUrl = (str_starts_with($order->gcash_receipt, 'http://') || str_starts_with($order->gcash_receipt, 'https://'))
-                                        ? $order->gcash_receipt
-                                        : asset('storage/' . $order->gcash_receipt);
-                                @endphp
-                                <button type="button" onclick="viewAdminReceipt('{{ $gcashReceiptUrl }}')" 
+                                <button type="button" onclick="viewAdminReceipt('{{ asset('storage/' . $order->gcash_receipt) }}')" 
                                     class="inline-flex items-center px-3 py-2 text-white rounded-lg transition-colors text-sm font-medium" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#A05050'" onmouseout="this.style.backgroundColor='#800000'">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
