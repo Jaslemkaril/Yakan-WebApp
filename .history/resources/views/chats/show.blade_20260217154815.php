@@ -129,31 +129,6 @@
                                         </div>
                                     </a>
                                 @endif
-                                
-                                {{-- Display reference images for quotes --}}
-                                @if($message->sender_type === 'admin' && str_contains($message->message, 'PRICE QUOTE') && !empty($message->reference_images))
-                                    <div class="mt-3 pt-3 border-t border-gray-200/50">
-                                        <p class="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                            </svg>
-                                            Your Design Reference:
-                                        </p>
-                                        <div class="grid gap-2 {{ count($message->reference_images) > 1 ? 'grid-cols-2' : 'grid-cols-1' }}">
-                                            @foreach($message->reference_images as $refImg)
-                                                <a href="{{ $refImg }}" target="_blank" class="block">
-                                                    <img src="{{ $refImg }}" 
-                                                         alt="Design reference" 
-                                                         class="w-full rounded-lg shadow-md border-2 border-gray-300 hover:border-[#8B0000] transition-all"
-                                                         style="max-height: 180px; object-fit: cover; cursor: pointer;"
-                                                         loading="lazy"
-                                                         onerror="this.style.display='none';">
-                                                </a>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @endif
-                                
                                 <p class="break-words leading-relaxed whitespace-pre-line">{{ $message->message }}</p>
                             </div>
                             

@@ -305,17 +305,6 @@ class ChatController extends Controller
             // Get formatted address
             $formattedAddress = $userAddress ? $userAddress->formatted_address : 'Address not provided';
             
-            // Get design images from quote message
-            $designImages = $quoteMessage->reference_images ?? [];
-            $customerNotes = 'Custom order from chat ID: ' . $chat->id;
-            
-            if (!empty($designImages)) {
-                $customerNotes .= "\n\nDesign References:\n";
-                foreach ($designImages as $index => $imageUrl) {
-                    $customerNotes .= "- Image " . ($index + 1) . ": " . $imageUrl . "\n";
-                }
-            }
-            
             // Create order
             try {
                 $order = \App\Models\Order::create([
@@ -340,7 +329,7 @@ class ChatController extends Controller
                     'payment_status' => 'pending',
                     'status' => 'pending_confirmation',
                     'source' => 'chat',
-                    'customer_notes' => $customerNotes,
+                    'customer_notes' => 'Custom order from chat ID: ' . $chat->id,
                     'user_address_id' => $userAddress ? $userAddress->id : null,
                 ]);
                 

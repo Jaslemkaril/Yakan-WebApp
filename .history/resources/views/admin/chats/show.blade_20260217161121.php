@@ -389,35 +389,6 @@
             return;
         }
 
-        // Find all customer images from the conversation
-        const customerImages = [];
-        const messagesContainer = document.getElementById('messagesContainer');
-        const userMessages = messagesContainer.querySelectorAll('.message-user');
-        
-        userMessages.forEach(message => {
-            const img = message.querySelector('img');
-            if (img && img.src && !img.src.includes('data:image')) {
-                customerImages.push(img.src);
-            }
-        });
-        
-        // Store reference images in hidden input
-        if (customerImages.length > 0) {
-            // Remove existing hidden inputs
-            const existingInputs = document.querySelectorAll('input[name="reference_images[]"]');
-            existingInputs.forEach(input => input.remove());
-            
-            // Add new hidden inputs for each image
-            const form = document.getElementById('replyForm');
-            customerImages.forEach(imgUrl => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'reference_images[]';
-                input.value = imgUrl;
-                form.insertBefore(input, form.firstChild);
-            });
-        }
-
         let quoteMessage = `📋 PRICE QUOTE\n\n`;
         
         if (materialCost > 0) {
