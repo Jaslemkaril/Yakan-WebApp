@@ -411,6 +411,12 @@ Route::middleware(['auth'])->group(function () {
         // API endpoints
         Route::get('/api/default', [\App\Http\Controllers\AddressController::class, 'getDefault'])->name('api.default');
         Route::get('/api/all', [\App\Http\Controllers\AddressController::class, 'getAll'])->name('api.all');
+        
+        // Philippine address cascading endpoints
+        Route::get('/api/regions', [\App\Http\Controllers\AddressController::class, 'getRegions'])->name('api.regions');
+        Route::get('/api/provinces/{regionId}', [\App\Http\Controllers\AddressController::class, 'getProvinces'])->name('api.provinces');
+        Route::get('/api/cities/{provinceId}', [\App\Http\Controllers\AddressController::class, 'getCities'])->name('api.cities');
+        Route::get('/api/barangays/{cityId}', [\App\Http\Controllers\AddressController::class, 'getBarangays'])->name('api.barangays');
     });
 
     // Cart & Checkout
