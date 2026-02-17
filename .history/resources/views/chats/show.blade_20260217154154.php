@@ -374,7 +374,7 @@
                                 
                                 @if($chatOrder)
                                     {{-- Show payment summary and method buttons if payment hasn't been chosen yet --}}
-                                    @if($chatOrder->status === 'pending_confirmation' && $chatOrder->payment_status === 'pending')
+                                    @if($chatOrder->status === 'pending_payment' && $chatOrder->payment_status === 'pending')
                                         <div class="mt-4 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-5 border-2 border-green-300 shadow-lg max-w-md">
                                             <div class="flex items-center gap-2 mb-3">
                                                 <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
@@ -423,7 +423,7 @@
                                     @endif
                                     
                                     {{-- Payment Details Display (after method selected) --}}
-                                    @if($chatOrder && $chatOrder->status === 'confirmed' && $chatOrder->payment_status !== 'paid')
+                                    @if($chatOrder && $chatOrder->status === 'awaiting_payment' && $chatOrder->payment_status !== 'paid')
                                         <div class="mt-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-5 shadow-md border-2 border-blue-200">
                                             {{-- Order Reference --}}
                                             <div class="mb-4 pb-3 border-b border-blue-200">

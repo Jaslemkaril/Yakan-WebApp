@@ -327,7 +327,7 @@ class ChatController extends Controller
                     'shipping_province' => $userAddress ? $userAddress->province : '',
                     // Don't set payment_method - let it use database default, we'll update it when customer chooses
                     'payment_status' => 'pending',
-                    'status' => 'pending_confirmation',
+                    'status' => 'pending_payment',
                     'source' => 'chat',
                     'customer_notes' => 'Custom order from chat ID: ' . $chat->id,
                     'user_address_id' => $userAddress ? $userAddress->id : null,
@@ -376,8 +376,7 @@ class ChatController extends Controller
         
         // Update payment method
         $order->update([
-            'payment_method' => $validated['payment_method'],
-            'status' => 'confirmed' // Change status to show payment details instead of buttons
+            'payment_method' => $validated['payment_method']
         ]);
         
         return response()->json(['success' => true, 'message' => 'Payment method set successfully!']);
