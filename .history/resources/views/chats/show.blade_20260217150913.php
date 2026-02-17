@@ -527,12 +527,6 @@
                                             </div>
                                         </div>
                                     @endif
-                                @else
-                                    {{-- Debug: Order not found --}}
-                                    <div class="mt-4 bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4">
-                                        <p class="text-sm text-yellow-800">⚠️ <strong>Order not found.</strong> Please refresh the page or contact support.</p>
-                                        <p class="text-xs text-yellow-700 mt-1">Chat ID: {{ $chat->id }} | User: {{ auth()->id() }}</p>
-                                    </div>
                                 @endif
                             @endif
                             
