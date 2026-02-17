@@ -145,51 +145,143 @@
                                     $userDefaultAddress = auth()->check() ? \App\Models\UserAddress::where('user_id', auth()->id())
                                         ->where('is_default', true)
                                         ->first() : null;
+                                    
+                                    // Parse quoted price from message (extract Total: ₱1,500.00)
+                                    $quotedPrice = 0;
+                                    if (preg_match('/Total:\s*₱?([\d,]+\.?\d*)/i', $message->message, $matches)) {
+                                        $quotedPrice = floatval(str_replace(',', '', $matches[1]));
+                                    }
+                                    
+                                    // Calculate shipping fee based on address (same logic as CartController)
+                                    $shippingFee = 0;
+                                    $shippingLabel = '';
+                                    
+                                    if ($userDefaultAddress) {
+                                        $cityLower = strtolower($userDefaultAddress->city ?? '');
+                                        $regionLower = strtolower($userDefaultAddress->province ?? '');
+                                        $postalCode = $userDefaultAddress->postal_code ?? '';
+                                        
+                                        if (str_contains($cityLower, 'zamboanga') && str_starts_with($postalCode, '7')) {
+                                            $shippingFee = 0;
+                                            $shippingLabel = 'FREE DELIVERY! 🎉';
+                                        } elseif (str_contains($regionLower, 'zamboanga') || in_array($cityLower, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
+                                            $shippingFee = 80;
+                                            $shippingLabel = 'Zamboanga Peninsula';
+                                        } elseif (in_array($cityLower, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) || str_contains($regionLower, 'barmm') || str_contains($regionLower, 'armm')) {
+                                            $shippingFee = 120;
+                                            $shippingLabel = 'BARMM Region';
+                                        } elseif (str_contains($regionLower, 'mindanao') || in_array($cityLower, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'])) {
+                                            $shippingFee = 150;
+                                            $shippingLabel = 'Mindanao';
+                                        } elseif (str_contains($regionLower, 'visayas') || in_array($cityLower, ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'])) {
+                                            $shippingFee = 180;
+                                            $shippingLabel = 'Visayas';
+                                        } elseif (str_contains($cityLower, 'manila') || str_contains($regionLower, 'ncr') || in_array($cityLower, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'])) {
+                                            $shippingFee = 220;
+                                            $shippingLabel = 'NCR/Metro Manila';
+                                        } elseif (str_contains($regionLower, 'luzon') || in_array($cityLower, ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'])) {
+                                            $shippingFee = 250;
+                                            $shippingLabel = 'Luzon';
+                                        } else {
+                                            $shippingFee = 280;
+                                            $shippingLabel = 'Remote Area';
+                                        }
+                                    }
+                                    
+                                    $totalWithShipping = $quotedPrice + $shippingFee;
                                 @endphp
                                 
                                 @if(!$hasResponse)
-                                    {{-- Shipping Fee Notice --}}
-                                    <div class="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-lg p-4 mt-3 mx-2">
+                                    {{-- Shipping Fee & Total Breakdown --}}
+                                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-4 mt-3 mx-2">
                                         <div class="flex items-start gap-3">
-                                            <div class="flex-shrink-0 bg-yellow-400 rounded-full p-2">
-                                                <svg class="w-5 h-5 text-yellow-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            <div class="flex-shrink-0 bg-blue-400 rounded-full p-2">
+                                                <svg class="w-5 h-5 text-blue-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                                                 </svg>
                                             </div>
                                             <div class="flex-1">
-                                                <h4 class="font-bold text-gray-900 text-sm mb-1">📦 Shipping Fee Notice</h4>
-                                                <p class="text-xs text-gray-700 mb-3">Shipping fee may vary based on your delivery address. Please make sure your address is up to date.</p>
+                                                <h4 class="font-bold text-gray-900 text-sm mb-3">💰 Payment Breakdown</h4>
                                                 
                                                 @if($userDefaultAddress)
-                                                    <div class="bg-white border border-yellow-200 rounded-lg p-3 mb-2">
+                                                    {{-- Delivery Address --}}
+                                                    <div class="bg-white border border-blue-200 rounded-lg p-3 mb-3">
                                                         <div class="flex items-start gap-2">
                                                             <svg class="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                                                             </svg>
                                                             <div class="flex-1 min-w-0">
-                                                                <p class="text-xs font-semibold text-gray-900 mb-0.5">Current Delivery Address:</p>
+                                                                <p class="text-xs font-semibold text-gray-900 mb-0.5">Delivering to:</p>
                                                                 <p class="text-xs text-gray-700 break-words">{{ $userDefaultAddress->formatted_address }}</p>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                @else
-                                                    <div class="bg-white border border-red-200 rounded-lg p-3 mb-2">
-                                                        <div class="flex items-center gap-2">
-                                                            <svg class="w-4 h-4 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                                            </svg>
-                                                            <p class="text-xs text-red-700 font-semibold">No delivery address set</p>
+                                                    
+                                                    {{-- Price Breakdown --}}
+                                                    <div class="bg-white border border-blue-200 rounded-lg p-3 mb-2">
+                                                        <div class="space-y-2">
+                                                            <div class="flex justify-between items-center text-sm">
+                                                                <span class="text-gray-700">Quoted Price:</span>
+                                                                <span class="font-semibold text-gray-900">₱{{ number_format($quotedPrice, 2) }}</span>
+                                                            </div>
+                                                            <div class="flex justify-between items-center text-sm">
+                                                                <span class="text-gray-700">Shipping Fee:</span>
+                                                                <span class="font-semibold {{ $shippingFee == 0 ? 'text-green-600' : 'text-blue-700' }}">
+                                                                    @if($shippingFee == 0)
+                                                                        FREE 🎉
+                                                                    @else
+                                                                        ₱{{ number_format($shippingFee, 2) }}
+                                                                    @endif
+                                                                    @if($shippingLabel)
+                                                                        <span class="text-xs text-gray-500">({{ $shippingLabel }})</span>
+                                                                    @endif
+                                                                </span>
+                                                            </div>
+                                                            <div class="border-t-2 border-dashed border-gray-300 pt-2 mt-2">
+                                                                <div class="flex justify-between items-center">
+                                                                    <span class="text-base font-bold text-gray-900">TOTAL TO PAY:</span>
+                                                                    <span class="text-xl font-bold text-green-600">₱{{ number_format($totalWithShipping, 2) }}</span>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                    
+                                                    <a href="{{ route('addresses.index') }}" class="inline-flex items-center gap-2 text-xs font-semibold text-[#8B0000] hover:text-[#6B0000] transition-colors mt-1">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                        </svg>
+                                                        Change delivery address
+                                                    </a>
+                                                @else
+                                                    {{-- No Address Warning --}}
+                                                    <div class="bg-white border-2 border-red-300 rounded-lg p-4 mb-3">
+                                                        <div class="flex items-center gap-2 mb-2">
+                                                            <svg class="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                                            </svg>
+                                                            <p class="text-sm font-bold text-red-900">No delivery address set</p>
+                                                        </div>
+                                                        <p class="text-xs text-gray-700 mb-3">Please add your delivery address to see the shipping fee and total amount to pay.</p>
+                                                        <div class="bg-yellow-50 border border-yellow-200 rounded p-2 mb-2">
+                                                            <div class="flex justify-between items-center text-sm">
+                                                                <span class="text-gray-700">Quoted Price:</span>
+                                                                <span class="font-semibold text-gray-900">₱{{ number_format($quotedPrice, 2) }}</span>
+                                                            </div>
+                                                            <div class="flex justify-between items-center text-sm mt-1">
+                                                                <span class="text-gray-700">Shipping Fee:</span>
+                                                                <span class="text-xs text-gray-500 italic">Add address to calculate</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <a href="{{ route('addresses.index') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-[#8B0000] hover:bg-[#6B0000] text-white text-sm font-semibold rounded-lg transition-all shadow-sm">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                        </svg>
+                                                        Add Delivery Address Now
+                                                    </a>
                                                 @endif
-                                                
-                                                <a href="{{ route('addresses.index') }}" class="inline-flex items-center gap-2 text-xs font-semibold text-[#8B0000] hover:text-[#6B0000] transition-colors">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                                                    </svg>
-                                                    {{ $userDefaultAddress ? 'Change Address or Add New' : 'Add Delivery Address' }}
-                                                </a>
                                             </div>
                                         </div>
                                     </div>
