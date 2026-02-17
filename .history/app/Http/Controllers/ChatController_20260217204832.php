@@ -452,21 +452,12 @@ class ChatController extends Controller
                 ]);
             }
             
-            // Update order - store in the correct receipt field based on payment method
-            $updateData = [
+            // Update order - store in payment_proof_path
+            $order->update([
                 'payment_proof_path' => $storedPath,
                 'payment_status' => 'paid',
-                'status' => 'processing',
-            ];
-            
-            // Also save to the specific receipt field so admin view displays correctly
-            if ($order->payment_method === 'gcash') {
-                $updateData['gcash_receipt'] = $storedPath;
-            } elseif ($order->payment_method === 'bank_transfer') {
-                $updateData['bank_receipt'] = $storedPath;
-            }
-            
-            $order->update($updateData);
+                'status' => 'processing'
+            ]);
             
             // Create admin notification message in chat
             $chat = \App\Models\Chat::where('id', (int) str_replace('chat ID: ', '', $order->customer_notes))->first();
