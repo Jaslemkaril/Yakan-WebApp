@@ -17,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Trust Railway's reverse proxy (required for HTTPS detection & sessions)
+        $middleware->trustProxies(at: '*');
+        
         $middleware->api(prepend: [
             // Only add stateful middleware for web requests, not mobile API
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
