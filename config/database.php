@@ -49,11 +49,11 @@ return [
             'driver' => 'mysql',
             // PRIORITY: Railway's MYSQL* vars FIRST, then fallback to DB_* vars
             'host' => env('MYSQLHOST', env('DB_HOST', '127.0.0.1')),
-            'port' => env('MYSQLPORT', env('DB_PORT', '3306')),
+            'port' => env('MYSQLPORT', env('DB_PORT', 3306)),
             'database' => env('MYSQLDATABASE', env('DB_DATABASE', 'laravel')),
             'username' => env('MYSQLUSER', env('DB_USERNAME', 'root')),
             'password' => env('MYSQLPASSWORD', env('DB_PASSWORD', '')),
-            'unix_socket' => env('DB_SOCKET', ''),
+            'unix_socket' => env('DB_SOCKET'),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
             'prefix' => '',
@@ -62,6 +62,8 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                PDO::ATTR_PERSISTENT => false,
+                PDO::MYSQL_ATTR_COMPRESS => true,
             ]) : [],
         ],
 
