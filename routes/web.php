@@ -380,35 +380,59 @@ Route::middleware(['auth','verified'])->get('/dashboard', [App\Http\Controllers\
 // TEMPORARY DEBUG - public route to diagnose /chats 500 error
 Route::get('/debug-chats-error', function () {
     try {
-        // Test 1: Can we query chats table?
-        $chatCount = \App\Models\Chat::count();
-        $info = "Step 1 OK: chats table has {$chatCount} rows\n";
+        // Test 1: Find a user that has chats
+        $chatWithUser = \App\Models\Chat::first();
+        if (!$chatWithUser) {
+            return response("No chats found in database", 200)->header('Content-Type', 'text/plain');
+        }
+        $userId = $chatWithUser->user_id;
+        $info = "Testing with user_id: {$userId}\n";
         
-        // Test 2: Can we query chat_messages table?
-        $msgCount = \App\Models\ChatMessage::count();
-        $info .= "Step 2 OK: chat_messages table has {$msgCount} rows\n";
-        
-        // Test 3: Check chat_messages columns
-        $columns = \Illuminate\Support\Facades\Schema::getColumnListing('chat_messages');
-        $info .= "Step 3 OK: chat_messages columns: " . implode(', ', $columns) . "\n";
-        
-        // Test 4: Test the exact query from ChatController@index with a fake user
-        $chats = \App\Models\Chat::where('user_id', 1)
+        // Test 2: Run the exact ChatController index query
+        $chats = \App\Models\Chat::where('user_id', $userId)
             ->with(['messages' => function($query) {
                 $query->orderBy('created_at', 'desc')->limit(1);
             }])
             ->orderBy('updated_at', 'desc')
             ->paginate(10);
-        $info .= "Step 4 OK: Query returned {$chats->count()} chats\n";
+        $info .= "Query OK: {$chats->count()} chats found\n";
         
-        // Test 5: Try rendering the view
+        // Test 3: Check each chat's messages for issues
+        foreach ($chats as $chat) {
+            $info .= "\nChat #{$chat->id} (subject: {$chat->subject}):\n";
+            $info .= "  Messages loaded: " . $chat->messages->count() . "\n";
+            if ($chat->messages->first()) {
+                $msg = $chat->messages->first();
+                $info .= "  Latest msg id: {$msg->id}, type: " . ($msg->message_type ?? 'null') . "\n";
+                $info .= "  form_data: " . json_encode($msg->form_data) . "\n";
+            }
+            
+            // Test unreadCount
+            try {
+                $unread = $chat->unreadCount();
+                $info .= "  unreadCount(): {$unread}\n";
+            } catch (\Throwable $e) {
+                $info .= "  unreadCount() ERROR: {$e->getMessage()}\n";
+            }
+            
+            // Test messages count
+            try {
+                $count = $chat->messages()->count();
+                $info .= "  messages()->count(): {$count}\n";
+            } catch (\Throwable $e) {
+                $info .= "  messages()->count() ERROR: {$e->getMessage()}\n";
+            }
+        }
+        
+        // Test 4: Try rendering the view  
+        $info .= "\n--- Attempting view render ---\n";
         $rendered = view('chats.index', compact('chats'))->render();
-        $info .= "Step 5 OK: View rendered successfully (" . strlen($rendered) . " bytes)\n";
+        $info .= "View rendered successfully (" . strlen($rendered) . " bytes)\n";
         
         return response($info, 200)->header('Content-Type', 'text/plain');
     } catch (\Throwable $e) {
         return response(
-            "ERROR at: " . $e->getMessage() . 
+            "ERROR: " . $e->getMessage() . 
             "\n\nFile: " . $e->getFile() . ':' . $e->getLine() . 
             "\n\nTrace:\n" . $e->getTraceAsString(), 
             500
