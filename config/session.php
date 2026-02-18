@@ -18,10 +18,8 @@ return [
     |
     */
 
-    // IMPORTANT: HARDCODED to 'cookie' to fix 419 error on Railway
-    // Cookie sessions don't need database and always work
-    // Once confirmed working, you can change SESSION_DRIVER in Railway dashboard
-    'driver' => 'cookie',
+    // Use database sessions for Railway - more reliable than cookies behind proxy
+    'driver' => env('SESSION_DRIVER', 'database'),
 
     /*
     |--------------------------------------------------------------------------
