@@ -47,14 +47,16 @@ return [
 
         'mysql' => [
             'driver' => 'mysql',
-            // PRIORITY: Railway's MYSQL* vars FIRST, then fallback to DB_* vars
+            // Railway provides MYSQL_URL - Laravel will parse this automatically
+            'url' => env('MYSQL_URL', env('DATABASE_URL')),
+            // Fallback values if URL is not provided
             'host' => env('MYSQLHOST', env('DB_HOST', '127.0.0.1')),
-            'port' => env('MYSQLPORT', env('DB_PORT', 3306)),
+            'port' => env('MYSQLPORT', env('DB_PORT', '3306')),
             'database' => env('MYSQLDATABASE', env('DB_DATABASE', 'laravel')),
             'username' => env('MYSQLUSER', env('DB_USERNAME', 'root')),
             'password' => env('MYSQLPASSWORD', env('DB_PASSWORD', '')),
-            // Force TCP/IP connection by setting empty socket (required for Railway)
-            'unix_socket' => env('DB_SOCKET', ''),
+            // Force TCP/IP connection - empty string prevents socket usage
+            'unix_socket' => '',
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
             'prefix' => '',
@@ -64,7 +66,6 @@ return [
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
                 PDO::ATTR_PERSISTENT => false,
-                PDO::MYSQL_ATTR_COMPRESS => true,
             ]) : [],
         ],
 
