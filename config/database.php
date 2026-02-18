@@ -47,14 +47,12 @@ return [
 
         'mysql' => [
             'driver' => 'mysql',
-            // Railway provides MYSQL_URL - Laravel will parse this automatically
-            'url' => env('MYSQL_URL', env('DATABASE_URL')),
-            // Fallback values if URL is not provided
-            'host' => env('MYSQLHOST', env('DB_HOST', '127.0.0.1')),
-            'port' => env('MYSQLPORT', env('DB_PORT', '3306')),
-            'database' => env('MYSQLDATABASE', env('DB_DATABASE', 'laravel')),
-            'username' => env('MYSQLUSER', env('DB_USERNAME', 'root')),
-            'password' => env('MYSQLPASSWORD', env('DB_PASSWORD', '')),
+            // Use DB_* variables directly (set in Railway)
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '3306'),
+            'database' => env('DB_DATABASE', 'railway'),
+            'username' => env('DB_USERNAME', 'root'),
+            'password' => env('DB_PASSWORD', ''),
             // Force TCP/IP connection - empty string prevents socket usage
             'unix_socket' => '',
             'charset' => env('DB_CHARSET', 'utf8mb4'),
