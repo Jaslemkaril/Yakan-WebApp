@@ -377,6 +377,45 @@ Route::get('/auth/facebook/callback', [SocialAuthController::class, 'callback'])
 */
 Route::middleware(['auth','verified'])->get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 
+// TEMPORARY DEBUG - public route to diagnose /chats 500 error
+Route::get('/debug-chats-error', function () {
+    try {
+        // Test 1: Can we query chats table?
+        $chatCount = \App\Models\Chat::count();
+        $info = "Step 1 OK: chats table has {$chatCount} rows\n";
+        
+        // Test 2: Can we query chat_messages table?
+        $msgCount = \App\Models\ChatMessage::count();
+        $info .= "Step 2 OK: chat_messages table has {$msgCount} rows\n";
+        
+        // Test 3: Check chat_messages columns
+        $columns = \Illuminate\Support\Facades\Schema::getColumnListing('chat_messages');
+        $info .= "Step 3 OK: chat_messages columns: " . implode(', ', $columns) . "\n";
+        
+        // Test 4: Test the exact query from ChatController@index with a fake user
+        $chats = \App\Models\Chat::where('user_id', 1)
+            ->with(['messages' => function($query) {
+                $query->orderBy('created_at', 'desc')->limit(1);
+            }])
+            ->orderBy('updated_at', 'desc')
+            ->paginate(10);
+        $info .= "Step 4 OK: Query returned {$chats->count()} chats\n";
+        
+        // Test 5: Try rendering the view
+        $rendered = view('chats.index', compact('chats'))->render();
+        $info .= "Step 5 OK: View rendered successfully (" . strlen($rendered) . " bytes)\n";
+        
+        return response($info, 200)->header('Content-Type', 'text/plain');
+    } catch (\Throwable $e) {
+        return response(
+            "ERROR at: " . $e->getMessage() . 
+            "\n\nFile: " . $e->getFile() . ':' . $e->getLine() . 
+            "\n\nTrace:\n" . $e->getTraceAsString(), 
+            500
+        )->header('Content-Type', 'text/plain');
+    }
+});
+
 /*
 |--------------------------------------------------------------------------
 | Authenticated User Routes
