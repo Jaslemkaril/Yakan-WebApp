@@ -26,6 +26,15 @@ echo "  APP_KEY: $([ -n \"$APP_KEY\" ] && echo 'SET' || echo 'NOT SET - CRITICAL
 echo "  APP_ENV: ${APP_ENV:-not set}"
 echo "  DB_HOST: $([ -n \"$DB_HOST\" ] && echo 'SET' || echo 'NOT SET')"
 echo "  MYSQLHOST: $([ -n \"$MYSQLHOST\" ] && echo 'SET' || echo 'NOT SET')"
+echo "  MYSQL_URL: $([ -n \"$MYSQL_URL\" ] && echo 'SET' || echo 'NOT SET')"
+echo "  DATABASE_URL: $([ -n \"$DATABASE_URL\" ] && echo 'SET' || echo 'NOT SET')"
+echo "  MYSQLPORT: $([ -n \"$MYSQLPORT\" ] && echo 'SET' || echo 'NOT SET')"
+echo "  MYSQLDATABASE: $([ -n \"$MYSQLDATABASE\" ] && echo 'SET' || echo 'NOT SET')"
+echo "  MYSQLUSER: $([ -n \"$MYSQLUSER\" ] && echo 'SET' || echo 'NOT SET')"
+
+# Test MySQL connection
+echo "🔌 Testing MySQL connection..."
+php artisan tinker --execute="try { DB::connection()->getPdo(); echo 'SUCCESS: Connected to MySQL'; } catch (Exception \$e) { echo 'FAILED: ' . \$e->getMessage(); }" 2>/dev/null || echo "Connection test skipped"
 
 # Run migrations
 echo "📦 Running database migrations..."
