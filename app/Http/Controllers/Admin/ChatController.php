@@ -192,20 +192,14 @@ class ChatController extends Controller
             ]
         ];
         
-        // TEMPORARILY DISABLED: Requires migration to add message_type and form_data columns
-        // ChatMessage::create([
-        //     'chat_id' => $chat->id,
-        //     'sender_type' => 'admin',
-        //     'message_type' => 'form_request',
-        //     'message' => '📋 Please provide the following details for your custom order request:',
-        //     'form_data' => $formData,
-        //     'is_read' => false,
-        // ]);
-        
-        return response()->json([
-            'success' => false, 
-            'message' => 'Form request feature temporarily disabled pending database migration'
-        ], 503);
+        ChatMessage::create([
+            'chat_id' => $chat->id,
+            'sender_type' => 'admin',
+            'message_type' => 'form_request',
+            'message' => '📋 Please provide the following details for your custom order request:',
+            'form_data' => $formData,
+            'is_read' => false,
+        ]);
         
         $chat->update(['updated_at' => now()]);
         

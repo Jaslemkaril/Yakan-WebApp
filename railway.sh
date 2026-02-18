@@ -1,36 +1,40 @@
 #!/bin/bash
-set -e
+# Do NOT use set -e — we want the server to start even if some steps fail
 
 echo "🚀 Starting Railway deployment..."
 
-# Clear caches
-php artisan config:clear || true
-php artisan cache:clear || true
-php artisan view:clear || true
+# Clear ALL caches first to ensure fresh state
+echo "🧹 Clearing caches..."
+php artisan config:clear 2>/dev/null || true
+php artisan cache:clear 2>/dev/null || true
+php artisan route:clear 2>/dev/null || true
+php artisan view:clear 2>/dev/null || true
 
 # Run migrations
 echo "📦 Running database migrations..."
-php artisan migrate --force --no-interaction
+php artisan migrate --force --no-interaction || echo "⚠️ Migration failed, continuing..."
 
 # Seed Philippine address data
 echo "🗺️ Seeding Philippine address data..."
-php artisan db:seed --class=PhilippineAddressSeeder --force || echo "⚠️ Seeder already ran or failed, continuing..."
+php artisan db:seed --class=PhilippineAddressSeeder --force 2>/dev/null || echo "⚠️ Seeder already ran or failed, continuing..."
 
 # Create storage link (critical for image visibility)
 echo "🔗 Creating storage link..."
-# Remove old symlink if it exists
-rm -f public/storage || true
-# Create new symlink
-php artisan storage:link --force || {
-    echo "⚠️ Warning: storage:link failed, but continuing..."
+rm -f public/storage 2>/dev/null || true
+php artisan storage:link --force 2>/dev/null || {
+    echo "⚠️ Warning: storage:link failed, creating manually..."
     mkdir -p storage/app/public
     ln -sf ../storage/app/public public/storage || true
 }
 
-# Cache for performance
+# Cache for performance (config:cache must run at RUNTIME, not build time)
 echo "⚡ Caching configuration..."
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+php artisan config:cache || echo "⚠️ config:cache failed, using uncached config"
 
-echo "✅ Deployment complete!"
+# NOTE: route:cache CANNOT be used - routes/web.php contains Closure-based routes
+# php artisan route:cache
+
+# View cache (already done in build phase, but refresh just in case)
+php artisan view:cache 2>/dev/null || echo "⚠️ view:cache failed, views will compile on-the-fly"
+
+echo "✅ Deployment startup complete!"

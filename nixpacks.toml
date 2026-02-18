@@ -23,11 +23,13 @@ cmds = [
 ]
 
 [phases.build]
+# NOTE: Do NOT run config:cache or route:cache in build phase
+# - config:cache would cache empty env vars (DB credentials not available during build)
+# - route:cache fails because routes/web.php contains Closure-based routes
+# - view:cache is safe during build (only compiles Blade syntax, doesn't execute PHP)
 cmds = [
-    "php artisan config:cache",
-    "php artisan route:cache",
-    "php artisan view:cache"
+    "php artisan view:cache || true"
 ]
 
 [start]
-cmd = "bash railway.sh && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"
+cmd = "bash railway.sh ; php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"

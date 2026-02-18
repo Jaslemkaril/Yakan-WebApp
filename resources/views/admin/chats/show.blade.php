@@ -203,9 +203,8 @@
                         @endif
                         <p class="message-text">{{ $message->message }}</p>
                         
-                        {{-- TEMPORARILY DISABLED: Display structured form response data --}}
-                        {{-- Requires migration to add message_type and form_data columns --}}
-                        @if(false && isset($message->message_type) && $message->message_type === 'form_response' && !empty($message->form_data['responses']))
+                        {{-- Display structured form response data --}}
+                        @if(isset($message->message_type) && $message->message_type === 'form_response' && !empty($message->form_data['responses']))
                             <div style="margin-top: 12px; padding: 12px; background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-radius: 10px; border: 2px solid #059669;">
                                 <p style="font-size: 0.75rem; font-weight: 700; color: #065f46; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
                                     <i class="fas fa-check-circle"></i> Custom Order Details:

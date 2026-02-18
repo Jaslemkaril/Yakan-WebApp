@@ -936,12 +936,13 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     // Chat Management
     Route::prefix('chats')->name('chats.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\ChatController::class, 'index'])->name('index');
+        // Static routes MUST come before wildcard {chat} routes
+        Route::get('/unread-count', [\App\Http\Controllers\Admin\ChatController::class, 'unreadCount'])->name('unread-count');
         Route::get('/{chat}', [\App\Http\Controllers\Admin\ChatController::class, 'show'])->name('show');
         Route::post('/{chat}/reply', [\App\Http\Controllers\Admin\ChatController::class, 'sendReply'])->name('reply');
         Route::post('/{chat}/request-details/{messageId}', [\App\Http\Controllers\Admin\ChatController::class, 'requestDetails'])->name('request-details');
         Route::patch('/{chat}/status', [\App\Http\Controllers\Admin\ChatController::class, 'updateStatus'])->name('update-status');
         Route::delete('/{chat}', [\App\Http\Controllers\Admin\ChatController::class, 'destroy'])->name('destroy');
-        Route::get('/unread-count', [\App\Http\Controllers\Admin\ChatController::class, 'unreadCount'])->name('unread-count');
         
         // Payment management routes
         Route::post('/{chat}/payment/send', [\App\Http\Controllers\ChatPaymentController::class, 'sendPaymentRequest'])->name('payment.send');

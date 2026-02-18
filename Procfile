@@ -1,1 +1,1 @@
-web: bash railway.sh && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
+web: bash railway.sh ; php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
