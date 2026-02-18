@@ -11,9 +11,9 @@ class ChatMessage extends Model
         'chat_id',
         'user_id',
         'sender_type',
-        'message_type',
+        // 'message_type', // Temporarily commented - requires migration to run first
         'message',
-        'form_data',
+        // 'form_data', // Temporarily commented - requires migration to run first
         'image_path',
         'reference_images',
         'file_path',
@@ -24,9 +24,14 @@ class ChatMessage extends Model
     protected $casts = [
         'is_read' => 'boolean',
         'reference_images' => 'array',
-        'form_data' => 'array',
+        // 'form_data' => 'array', // Temporarily commented - requires migration to run first
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+    ];
+    
+    protected $attributes = [
+        // 'message_type' => 'text', // Temporarily commented - requires migration to run first
+        // 'form_data' => null, // Temporarily commented - requires migration to run first
     ];
 
     /**

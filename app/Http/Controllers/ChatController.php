@@ -498,20 +498,24 @@ class ChatController extends Controller
             }
         }
         
+        // TEMPORARILY DISABLED: Requires migration to add message_type and form_data columns
         // Store the form response as a message
-        ChatMessage::create([
-            'chat_id' => $chat->id,
-            'user_id' => auth()->id(),
-            'sender_type' => 'user',
-            'message_type' => 'form_response',
-            'message' => $messageText,
-            'form_data' => [
-                'original_message_id' => $validated['original_message_id'],
-                'responses' => $formResponses,
-                'submitted_at' => now()->toDateTimeString(),
-            ],
-            'is_read' => false,
-        ]);
+        // ChatMessage::create([
+        //     'chat_id' => $chat->id,
+        //     'user_id' => auth()->id(),
+        //     'sender_type' => 'user',
+        //     'message_type' => 'form_response',
+        //     'message' => $messageText,
+        //     'form_data' => [
+        //         'original_message_id' => $validated['original_message_id'],
+        //         'responses' => $formResponses,
+        //         'submitted_at' => now()->toDateTimeString(),
+        //     ],
+        //     'is_read' => false,
+        // ]);
+        
+        return redirect()->route('chats.show', $chat)
+            ->with('error', 'Form submission feature temporarily disabled pending database migration');
         
         $chat->update(['updated_at' => now()]);
         

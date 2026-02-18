@@ -178,15 +178,17 @@
                                 
                                 <p class="break-words leading-relaxed whitespace-pre-line">{{ $message->message }}</p>
                                 
-                                {{-- Display custom order details form if this is a form_request --}}
-                                @if(isset($message->message_type) && $message->message_type === 'form_request' && !empty($message->form_data))
+                                {{-- TEMPORARILY DISABLED: Display custom order details form if this is a form_request --}}
+                                {{-- Requires migration to add message_type and form_data columns --}}
+                                @if(false && isset($message->message_type) && $message->message_type === 'form_request' && !empty($message->form_data))
                                     @php
                                         // Check if customer has already responded to this form
-                                        $hasResponded = \App\Models\ChatMessage::where('chat_id', $chat->id)
-                                            ->where('sender_type', 'user')
-                                            ->where('message_type', 'form_response')
-                                            ->where('form_data->original_message_id', $message->id)
-                                            ->exists();
+                                        // $hasResponded = \App\Models\ChatMessage::where('chat_id', $chat->id)
+                                        //     ->where('sender_type', 'user')
+                                        //     ->where('message_type', 'form_response')
+                                        //     ->where('form_data->original_message_id', $message->id)
+                                        //     ->exists();
+                                        $hasResponded = false;
                                     @endphp
                                     
                                     @if(!$hasResponded)
