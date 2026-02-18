@@ -202,28 +202,7 @@
                             @endif
                         @endif
                         <p class="message-text">{{ $message->message }}</p>
-                        
-                        {{-- Display structured form response data --}}
-                        @if(isset($message->message_type) && $message->message_type === 'form_response' && !empty($message->form_data['responses']))
-                            <div style="margin-top: 12px; padding: 12px; background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-radius: 10px; border: 2px solid #059669;">
-                                <p style="font-size: 0.75rem; font-weight: 700; color: #065f46; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
-                                    <i class="fas fa-check-circle"></i> Custom Order Details:
-                                </p>
-                                <div style="display: grid; gap: 6px;">
-                                    @foreach($message->form_data['responses'] as $fieldName => $fieldValue)
-                                        <div style="background: white; padding: 8px; border-radius: 6px; font-size: 0.8rem;">
-                                            <span style="color: #6b7280; font-weight: 600;">{{ ucwords(str_replace('_', ' ', $fieldName)) }}:</span>
-                                            <span style="color: #1f2937; font-weight: 500;">{{ $fieldValue }}</span>
-                                        </div>
-                                    @endforeach
-                                </div>
-                                <p style="font-size: 0.7rem; color: #059669; margin-top: 8px; font-style: italic;">
-                                    <i class="fas fa-clock"></i> Submitted: {{ \Carbon\Carbon::parse($message->form_data['submitted_at'])->format('M d, Y H:i') }}
-                                </p>
-                            </div>
-                        @endif
-                        
-                        <p class="message-time">{{ $message->created_at ->format('M d, Y H:i') }}</p>
+                        <p class="message-time">{{ $message->created_at->format('M d, Y H:i') }}</p>
                     </div>
                 </div>
             @empty

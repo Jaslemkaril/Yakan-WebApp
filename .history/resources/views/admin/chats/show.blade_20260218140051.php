@@ -191,39 +191,9 @@
                                     Image unavailable
                                 </div>
                             </a>
-                            
-                            @if($message->sender_type === 'user')
-                                <button type="button" onclick="requestCustomOrderDetails({{ $message->id }})" 
-                                        style="margin-top: 8px; padding: 6px 12px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border: none; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.2s;"
-                                        onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'"
-                                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
-                                    <i class="fas fa-clipboard-list"></i> Request Details
-                                </button>
-                            @endif
                         @endif
                         <p class="message-text">{{ $message->message }}</p>
-                        
-                        {{-- Display structured form response data --}}
-                        @if(isset($message->message_type) && $message->message_type === 'form_response' && !empty($message->form_data['responses']))
-                            <div style="margin-top: 12px; padding: 12px; background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-radius: 10px; border: 2px solid #059669;">
-                                <p style="font-size: 0.75rem; font-weight: 700; color: #065f46; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
-                                    <i class="fas fa-check-circle"></i> Custom Order Details:
-                                </p>
-                                <div style="display: grid; gap: 6px;">
-                                    @foreach($message->form_data['responses'] as $fieldName => $fieldValue)
-                                        <div style="background: white; padding: 8px; border-radius: 6px; font-size: 0.8rem;">
-                                            <span style="color: #6b7280; font-weight: 600;">{{ ucwords(str_replace('_', ' ', $fieldName)) }}:</span>
-                                            <span style="color: #1f2937; font-weight: 500;">{{ $fieldValue }}</span>
-                                        </div>
-                                    @endforeach
-                                </div>
-                                <p style="font-size: 0.7rem; color: #059669; margin-top: 8px; font-style: italic;">
-                                    <i class="fas fa-clock"></i> Submitted: {{ \Carbon\Carbon::parse($message->form_data['submitted_at'])->format('M d, Y H:i') }}
-                                </p>
-                            </div>
-                        @endif
-                        
-                        <p class="message-time">{{ $message->created_at ->format('M d, Y H:i') }}</p>
+                        <p class="message-time">{{ $message->created_at->format('M d, Y H:i') }}</p>
                     </div>
                 </div>
             @empty
@@ -418,34 +388,6 @@
         
         // Scroll to reply form
         document.querySelector('.reply-card').scrollIntoView({ behavior: 'smooth' });
-    }
-    
-    // Request custom order details from customer
-    function requestCustomOrderDetails(messageId) {
-        if (!confirm('Send a details request form to the customer for this design?')) {
-            return;
-        }
-        
-        fetch(`/admin/chats/{{ $chat->id }}/request-details/${messageId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Details request sent to customer!');
-                location.reload();
-            } else {
-                alert('Failed to send request: ' + (data.message || 'Unknown error'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while sending the request.');
-        });
     }
 </script>
 

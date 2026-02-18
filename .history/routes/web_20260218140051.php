@@ -484,7 +484,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{chat}/message', [\App\Http\Controllers\ChatController::class, 'sendMessage'])->name('send-message');
         Route::post('/{chat}/close', [\App\Http\Controllers\ChatController::class, 'close'])->name('close');
         Route::post('/{chat}/respond-quote', [\App\Http\Controllers\ChatController::class, 'respondToQuote'])->name('respond-quote');
-        Route::post('/{chat}/submit-form-response', [\App\Http\Controllers\ChatController::class, 'submitFormResponse'])->name('submit-form-response');
         
         // Payment routes for in-chat payments
         Route::post('/{chat}/payment/submit', [\App\Http\Controllers\ChatPaymentController::class, 'submitPaymentProof'])->name('payment.submit');
@@ -938,7 +937,6 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         Route::get('/', [\App\Http\Controllers\Admin\ChatController::class, 'index'])->name('index');
         Route::get('/{chat}', [\App\Http\Controllers\Admin\ChatController::class, 'show'])->name('show');
         Route::post('/{chat}/reply', [\App\Http\Controllers\Admin\ChatController::class, 'sendReply'])->name('reply');
-        Route::post('/{chat}/request-details/{messageId}', [\App\Http\Controllers\Admin\ChatController::class, 'requestDetails'])->name('request-details');
         Route::patch('/{chat}/status', [\App\Http\Controllers\Admin\ChatController::class, 'updateStatus'])->name('update-status');
         Route::delete('/{chat}', [\App\Http\Controllers\Admin\ChatController::class, 'destroy'])->name('destroy');
         Route::get('/unread-count', [\App\Http\Controllers\Admin\ChatController::class, 'unreadCount'])->name('unread-count');

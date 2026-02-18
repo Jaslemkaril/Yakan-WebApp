@@ -484,7 +484,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{chat}/message', [\App\Http\Controllers\ChatController::class, 'sendMessage'])->name('send-message');
         Route::post('/{chat}/close', [\App\Http\Controllers\ChatController::class, 'close'])->name('close');
         Route::post('/{chat}/respond-quote', [\App\Http\Controllers\ChatController::class, 'respondToQuote'])->name('respond-quote');
-        Route::post('/{chat}/submit-form-response', [\App\Http\Controllers\ChatController::class, 'submitFormResponse'])->name('submit-form-response');
         
         // Payment routes for in-chat payments
         Route::post('/{chat}/payment/submit', [\App\Http\Controllers\ChatPaymentController::class, 'submitPaymentProof'])->name('payment.submit');
