@@ -91,3 +91,5 @@ composer.phar
 /database/*.sqlite-journal
 *.sqlite
 *.sqlite-journal
+
+.history/

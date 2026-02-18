@@ -16,14 +16,32 @@ class ChatController extends Controller
      */
     public function index()
     {
-        $chats = Chat::where('user_id', auth()->id())
-            ->with(['messages' => function($query) {
-                $query->orderBy('created_at', 'desc')->limit(1);
-            }])
-            ->orderBy('updated_at', 'desc')
-            ->paginate(10);
+        try {
+            $chats = Chat::where('user_id', auth()->id())
+                ->with(['messages' => function($query) {
+                    $query->latest('created_at')->limit(1);
+                }])
+                ->orderBy('updated_at', 'desc')
+                ->paginate(10);
 
-        return view('chats.index', compact('chats'));
+            // Explicitly render to catch view errors inside try-catch
+            $html = view('chats.index', compact('chats'))->render();
+            return response($html);
+        } catch (\Throwable $e) {
+            \Log::error('Chat index error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response(
+                "<h2 style='color:red'>Chat Page Error</h2>" .
+                "<pre style='background:#f5f5f5;padding:15px;border-radius:8px;overflow:auto'>" .
+                htmlspecialchars($e->getMessage()) . "\n\n" .
+                "File: " . htmlspecialchars($e->getFile()) . ":" . $e->getLine() . "\n\n" .
+                htmlspecialchars($e->getTraceAsString()) . "</pre>",
+                500
+            );
+        }
     }
 
     /**
@@ -31,20 +49,39 @@ class ChatController extends Controller
      */
     public function show(Chat $chat)
     {
-        // Check if user owns this chat
-        if ($chat->user_id !== auth()->id()) {
-            abort(403);
+        try {
+            // Check if user owns this chat
+            if ($chat->user_id !== auth()->id()) {
+                abort(403);
+            }
+
+            // Mark messages as read
+            $chat->messages()
+                ->where('sender_type', 'admin')
+                ->where('is_read', false)
+                ->update(['is_read' => true]);
+
+            $messages = $chat->messages()->get();
+
+            // Explicitly render to catch view errors inside try-catch
+            $html = view('chats.show', compact('chat', 'messages'))->render();
+            return response($html);
+        } catch (\Throwable $e) {
+            \Log::error('Chat show error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'chat_id' => $chat->id ?? 'unknown',
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response(
+                "<h2 style='color:red'>Chat View Error</h2>" .
+                "<pre style='background:#f5f5f5;padding:15px;border-radius:8px;overflow:auto'>" .
+                htmlspecialchars($e->getMessage()) . "\n\n" .
+                "File: " . htmlspecialchars($e->getFile()) . ":" . $e->getLine() . "\n\n" .
+                htmlspecialchars($e->getTraceAsString()) . "</pre>",
+                500
+            );
         }
-
-        // Mark messages as read
-        $chat->messages()
-            ->where('sender_type', 'admin')
-            ->where('is_read', false)
-            ->update(['is_read' => true]);
-
-        $messages = $chat->messages()->get();
-
-        return view('chats.show', compact('chat', 'messages'));
     }
 
     /**
@@ -52,7 +89,23 @@ class ChatController extends Controller
      */
     public function create()
     {
-        return view('chats.create');
+        try {
+            $html = view('chats.create')->render();
+            return response($html);
+        } catch (\Throwable $e) {
+            \Log::error('Chat create error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response(
+                "<h2 style='color:red'>Chat Create Error</h2>" .
+                "<pre style='background:#f5f5f5;padding:15px;border-radius:8px;overflow:auto'>" .
+                htmlspecialchars($e->getMessage()) . "\n\n" .
+                "File: " . htmlspecialchars($e->getFile()) . ":" . $e->getLine() . "\n\n" .
+                htmlspecialchars($e->getTraceAsString()) . "</pre>",
+                500
+            );
+        }
     }
 
     /**

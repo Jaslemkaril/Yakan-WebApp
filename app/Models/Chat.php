@@ -75,7 +75,9 @@ class Chat extends Model
      */
     public function verifiedPayment()
     {
-        return $this->payments()->where('status', 'verified')->orWhere('status', 'paid')->first();
+        return $this->payments()->where(function ($query) {
+            $query->where('status', 'verified')->orWhere('status', 'paid');
+        })->first();
     }
 
     /**

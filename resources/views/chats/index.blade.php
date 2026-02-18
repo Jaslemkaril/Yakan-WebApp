@@ -148,7 +148,7 @@
                                 @endphp
                                 @if($latestMsg)
                                     <div class="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-100 group-hover:bg-red-50 group-hover:border-red-100 transition">
-                                        <p class="text-sm text-gray-700 line-clamp-2 leading-relaxed">{{ Str::limit($latestMsg->message, 120) }}</p>
+                                        <p class="text-sm text-gray-700 line-clamp-2 leading-relaxed">{{ \Illuminate\Support\Str::limit($latestMsg->message ?? '', 120) }}</p>
                                     </div>
                                 @endif
 
@@ -158,13 +158,14 @@
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                         </svg>
-                                        {{ $chat->created_at->diffForHumans() }}
+                                        {{ $chat->created_at?->diffForHumans() ?? 'N/A' }}
                                     </span>
                                     <span class="flex items-center gap-1.5">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2h-3l-4 4z"/>
                                         </svg>
-                                        {{ $chat->messages()->count() }} message{{ $chat->messages()->count() !== 1 ? 's' : '' }}
+                                        @php $msgCount = $chat->messages()->count(); @endphp
+                                        {{ $msgCount }} message{{ $msgCount !== 1 ? 's' : '' }}
                                     </span>
                                 </div>
                             </div>
@@ -183,7 +184,7 @@
                                         {{ $chat->unreadCount() }} new
                                     </span>
                                 @else
-                                    <span class="text-gray-400 text-xs">Updated {{ $chat->updated_at->diffForHumans() }}</span>
+                                    <span class="text-gray-400 text-xs">Updated {{ $chat->updated_at?->diffForHumans() ?? 'N/A' }}</span>
                                 @endif
                             </div>
                         </div>
