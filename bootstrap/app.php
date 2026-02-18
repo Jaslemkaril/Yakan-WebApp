@@ -18,7 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         // Trust Railway's reverse proxy (required for HTTPS detection & sessions)
-        $middleware->trustProxies(at: '*', headers: \Illuminate\Http\Request::HEADER_X_FORWARDED_ALL);
+        $middleware->trustProxies(at: '*');
         
         $middleware->api(prepend: [
             // Only add stateful middleware for web requests, not mobile API
