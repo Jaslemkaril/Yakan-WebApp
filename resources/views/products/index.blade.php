@@ -348,10 +348,11 @@
                                 @endif
                                 
                                 <!-- Product Badge -->
-                                @if($product->stock <= 5 && $product->stock > 0)
-                                    <span class="product-badge hot">Low Stock</span>
-                                @elseif($product->stock == 0)
+                                @php $availableStock = $product->available_stock; @endphp
+                                @if($availableStock == 0)
                                     <span class="product-badge">Sold Out</span>
+                                @elseif($availableStock <= 5)
+                                    <span class="product-badge hot">Low Stock</span>
                                 @elseif($product->created_at && \Carbon\Carbon::parse($product->created_at)->diffInDays(now()) <= 7)
                                     <span class="product-badge new">New</span>
                                 @endif

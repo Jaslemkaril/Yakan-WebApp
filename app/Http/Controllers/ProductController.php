@@ -96,17 +96,17 @@ class ProductController extends Controller
         // Find the category by slug
         $selectedCategory = null;
         if ($category === 'all') {
-            $products = Product::where('status', 'active')->with('category')->paginate(12);
+            $products = Product::where('status', 'active')->with(['category', 'inventory'])->paginate(12);
         } else {
             $selectedCategory = Category::where('slug', $category)->first();
             if ($selectedCategory) {
                 $products = Product::where('category_id', $selectedCategory->id)
                                     ->where('status', 'active')
-                                    ->with('category')
+                                    ->with(['category', 'inventory'])
                                     ->paginate(12);
             } else {
                 // Fallback to all if category not found
-                $products = Product::where('status', 'active')->with('category')->paginate(12);
+                $products = Product::where('status', 'active')->with(['category', 'inventory'])->paginate(12);
             }
         }
 
@@ -186,7 +186,7 @@ class ProductController extends Controller
                     $productsQuery->orderBy('created_at', 'desc');
             }
 
-            $products = $productsQuery->with('category')->paginate(12)->appends($request->all());
+            $products = $productsQuery->with(['category', 'inventory'])->paginate(12)->appends($request->all());
 
             $selectedCategory = null;
             if (!empty($category) && $category !== 'all') {

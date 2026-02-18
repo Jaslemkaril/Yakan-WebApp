@@ -112,6 +112,7 @@
                 @if($products->count() > 0)
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         @foreach($products as $product)
+                            @php $availableStock = $product->available_stock; @endphp
                             <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
                                 <a href="{{ route('products.show', $product) }}">
                                     <div class="relative h-64 bg-gray-200">
@@ -124,13 +125,13 @@
                                                 </svg>
                                             </div>
                                         @endif
-                                        @if($product->stock <= 5 && $product->stock > 0)
-                                            <span class="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full">
-                                                Only {{ $product->stock }} left
-                                            </span>
-                                        @elseif($product->stock == 0)
+                                        @if($availableStock == 0)
                                             <span class="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
                                                 Out of Stock
+                                            </span>
+                                        @elseif($availableStock <= 5)
+                                            <span class="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full">
+                                                Only {{ $availableStock }} left
                                             </span>
                                         @endif
                                     </div>
@@ -154,7 +155,7 @@
                                         </p>
                                         <div class="flex items-center justify-between">
                                             <span class="text-2xl font-bold" style="color: #800000;">₱{{ number_format($product->price, 2) }}</span>
-                                            @if($product->stock > 0)
+                                            @if($availableStock > 0)
                                                 <button class="px-4 py-2 rounded-lg text-white text-sm font-semibold hover:opacity-90 transition-opacity" style="background-color: #800000;">
                                                     View
                                                 </button>
