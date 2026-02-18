@@ -53,7 +53,8 @@ return [
             'database' => env('MYSQLDATABASE', env('DB_DATABASE', 'laravel')),
             'username' => env('MYSQLUSER', env('DB_USERNAME', 'root')),
             'password' => env('MYSQLPASSWORD', env('DB_PASSWORD', '')),
-            'unix_socket' => env('DB_SOCKET'),
+            // Force TCP/IP connection by setting empty socket (required for Railway)
+            'unix_socket' => env('DB_SOCKET', ''),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
             'prefix' => '',
