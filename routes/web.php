@@ -15,8 +15,27 @@ Route::get('/railway-health', function () {
     $info['app_key'] = env('APP_KEY') ? 'SET (' . strlen(env('APP_KEY')) . ' chars)' : 'NOT SET - CRITICAL!';
     $info['app_env'] = env('APP_ENV', 'not set');
     $info['session_driver'] = config('session.driver');
-    $info['db_host'] = env('DB_HOST') ?: env('MYSQLHOST') ?: 'NOT SET';
-    $info['db_database'] = env('DB_DATABASE') ?: env('MYSQLDATABASE') ?: 'NOT SET';
+    
+    // MySQL environment variables check
+    $info['mysql_env'] = [
+        'MYSQL_URL' => env('MYSQL_URL') ? 'SET' : 'NOT SET',
+        'DATABASE_URL' => env('DATABASE_URL') ? 'SET' : 'NOT SET',
+        'MYSQLHOST' => env('MYSQLHOST') ? 'SET (' . env('MYSQLHOST') . ')' : 'NOT SET',
+        'MYSQLPORT' => env('MYSQLPORT') ? 'SET (' . env('MYSQLPORT') . ')' : 'NOT SET',
+        'MYSQLDATABASE' => env('MYSQLDATABASE') ? 'SET' : 'NOT SET',
+        'MYSQLUSER' => env('MYSQLUSER') ? 'SET' : 'NOT SET',
+        'DB_HOST' => env('DB_HOST') ? 'SET (' . env('DB_HOST') . ')' : 'NOT SET',
+    ];
+    
+    // Actual resolved config
+    $info['resolved_config'] = [
+        'driver' => config('database.connections.mysql.driver'),
+        'host' => config('database.connections.mysql.host'),
+        'port' => config('database.connections.mysql.port'),
+        'database' => config('database.connections.mysql.database'),
+        'unix_socket' => config('database.connections.mysql.unix_socket') ?: '(empty - TCP/IP mode)',
+        'url' => config('database.connections.mysql.url') ? 'SET' : 'NOT SET',
+    ];
     
     // Test database connection
     try {
