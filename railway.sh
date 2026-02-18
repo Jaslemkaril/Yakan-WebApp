@@ -40,6 +40,11 @@ php artisan tinker --execute="try { DB::connection()->getPdo(); echo 'SUCCESS: C
 echo "📦 Running database migrations..."
 php artisan migrate --force --no-interaction || echo "⚠️ Migration failed, continuing..."
 
+# Ensure sessions table exists and storage permissions are correct
+echo "🔧 Setting up session storage..."
+mkdir -p storage/framework/sessions storage/framework/cache storage/framework/views
+chmod -R 775 storage bootstrap/cache 2>/dev/null || true
+
 # Seed Philippine address data
 echo "🗺️ Seeding Philippine address data..."
 php artisan db:seed --class=PhilippineAddressSeeder --force 2>/dev/null || echo "⚠️ Seeder already ran or failed, continuing..."
