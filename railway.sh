@@ -14,6 +14,11 @@ php artisan view:clear 2>/dev/null || true
 echo "📦 Running database migrations..."
 php artisan migrate --force --no-interaction || echo "⚠️ Migration failed, continuing..."
 
+# Ensure sessions table exists (critical for login!)
+echo "🔐 Ensuring sessions table exists..."
+php artisan session:table 2>/dev/null || true
+php artisan migrate --force --no-interaction 2>/dev/null || true
+
 # Seed Philippine address data
 echo "🗺️ Seeding Philippine address data..."
 php artisan db:seed --class=PhilippineAddressSeeder --force 2>/dev/null || echo "⚠️ Seeder already ran or failed, continuing..."
