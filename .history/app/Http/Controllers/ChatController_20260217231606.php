@@ -299,6 +299,9 @@ class ChatController extends Controller
             
             $totalAmount = $quotedPrice + $shippingFee;
             
+            // Generate unique order reference
+            $orderRef = 'CHAT-' . strtoupper(substr(md5(uniqid()), 0, 8));
+            
             // Get formatted address
             $formattedAddress = $userAddress ? $userAddress->formatted_address : 'Address not provided';
             
@@ -424,18 +427,18 @@ class ChatController extends Controller
                     $storedPath = $result['url'];
                     \Log::info('Payment receipt uploaded to Cloudinary', [
                         'url' => $storedPath,
-                        'custom_order_id' => $order->id,
+                        'order_ref' => $order->order_ref,
                     ]);
                 }
             }
             
             // Fallback to local storage if Cloudinary fails
             if (!$storedPath) {
-                $filename = 'receipt_custom_order_' . $order->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $filename = 'receipt_' . $order->order_ref . '_' . time() . '.' . $file->getClientOriginalExtension();
                 $storedPath = $file->storeAs('receipts', $filename, 'public');
                 \Log::warning('Payment receipt uploaded to local storage (will be lost on redeploy)', [
                     'path' => $storedPath,
-                    'custom_order_id' => $order->id,
+                    'order_ref' => $order->order_ref,
                 ]);
             }
             

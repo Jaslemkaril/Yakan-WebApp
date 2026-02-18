@@ -432,12 +432,12 @@
                                     @endif
                                     
                                     {{-- Payment Details Display (after method selected) --}}
-                                    @if($chatOrder && $chatOrder->status === 'approved' && $chatOrder->payment_status !== 'paid')
+                                    @if($chatOrder && $chatOrder->status === 'confirmed' && $chatOrder->payment_status !== 'paid')
                                         <div class="mt-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-5 shadow-md border-2 border-blue-200">
                                             {{-- Order Reference --}}
                                             <div class="mb-4 pb-3 border-b border-blue-200">
-                                                <p class="text-xs font-semibold text-gray-600 mb-1">Custom Order:</p>
-                                                <p class="text-lg font-bold text-gray-900">#{{ $chatOrder->id }}</p>
+                                                <p class="text-xs font-semibold text-gray-600 mb-1">Order Reference:</p>
+                                                <p class="text-lg font-bold text-gray-900">{{ $chatOrder->order_ref }}</p>
                                             </div>
                                             
                                             @if($chatOrder->payment_method === 'gcash')
@@ -459,7 +459,7 @@
                                                         </div>
                                                         <div class="flex justify-between items-center bg-green-100 p-3 rounded-lg border-2 border-green-300">
                                                             <span class="text-sm font-bold text-gray-800">Amount to Pay:</span>
-                                                            <span class="font-bold text-green-700 text-xl">₱{{ number_format($chatOrder->final_price, 2) }}</span>
+                                                            <span class="font-bold text-green-700 text-xl">₱{{ number_format($chatOrder->total_amount, 2) }}</span>
                                                         </div>
                                                     </div>
                                                     
@@ -498,7 +498,7 @@
                                                         </div>
                                                         <div class="flex justify-between items-center bg-green-100 p-3 rounded-lg border-2 border-green-300">
                                                             <span class="text-sm font-bold text-gray-800">Amount to Pay:</span>
-                                                            <span class="font-bold text-green-700 text-xl">₱{{ number_format($chatOrder->final_price, 2) }}</span>
+                                                            <span class="font-bold text-green-700 text-xl">₱{{ number_format($chatOrder->total_amount, 2) }}</span>
                                                         </div>
                                                     </div>
                                                     
@@ -552,7 +552,7 @@
                                     @endif
                                     
                                     {{-- Payment Submitted Message --}}
-                                    @if($chatOrder && $chatOrder->payment_receipt && $chatOrder->payment_status === 'paid')
+                                    @if($chatOrder && $chatOrder->payment_proof_path && $chatOrder->payment_status === 'paid')
                                         <div class="mt-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-5 shadow-md border-2 border-green-300">
                                             <div class="flex items-center gap-3 mb-3">
                                                 <div class="bg-green-500 rounded-full p-2">
@@ -567,8 +567,8 @@
                                             </div>
                                             
                                             <div class="bg-white/60 rounded-lg p-3">
-                                                <p class="text-xs font-semibold text-gray-600 mb-1">Custom Order:</p>
-                                                <p class="text-sm font-bold text-gray-900">#{{ $chatOrder->id }}</p>
+                                                <p class="text-xs font-semibold text-gray-600 mb-1">Order Reference:</p>
+                                                <p class="text-sm font-bold text-gray-900">{{ $chatOrder->order_ref }}</p>
                                             </div>
                                         </div>
                                     @endif
@@ -868,7 +868,7 @@
     // Payment Method Selection
     function selectPaymentMethod(orderId, method) {
         // Update order with selected payment method
-        fetch(`/custom-orders/${orderId}/set-payment-method`, {
+        fetch(`/orders/${orderId}/set-payment-method`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

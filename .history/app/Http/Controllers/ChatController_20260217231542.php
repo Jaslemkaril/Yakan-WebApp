@@ -299,6 +299,9 @@ class ChatController extends Controller
             
             $totalAmount = $quotedPrice + $shippingFee;
             
+            // Generate unique order reference
+            $orderRef = 'CHAT-' . strtoupper(substr(md5(uniqid()), 0, 8));
+            
             // Get formatted address
             $formattedAddress = $userAddress ? $userAddress->formatted_address : 'Address not provided';
             
@@ -373,7 +376,7 @@ class ChatController extends Controller
             'payment_method' => 'required|in:gcash,bank_transfer',
         ]);
         
-        $order = \App\Models\CustomOrder::findOrFail($orderId);
+        $order = \App\Models\Order::findOrFail($orderId);
         
         // Verify ownership
         if ($order->user_id !== auth()->id()) {
@@ -383,7 +386,7 @@ class ChatController extends Controller
         // Update payment method
         $order->update([
             'payment_method' => $validated['payment_method'],
-            'status' => 'approved' // Change status to show payment details instead of buttons
+            'status' => 'confirmed' // Change status to show payment details instead of buttons
         ]);
         
         return response()->json(['success' => true, 'message' => 'Payment method set successfully!']);
@@ -398,7 +401,7 @@ class ChatController extends Controller
             'payment_proof' => 'required|image|mimes:jpeg,jpg,png|max:5120', // 5MB max
         ]);
         
-        $order = \App\Models\CustomOrder::findOrFail($orderId);
+        $order = \App\Models\Order::findOrFail($orderId);
         
         // Verify ownership
         if ($order->user_id !== auth()->id()) {
@@ -424,38 +427,45 @@ class ChatController extends Controller
                     $storedPath = $result['url'];
                     \Log::info('Payment receipt uploaded to Cloudinary', [
                         'url' => $storedPath,
-                        'custom_order_id' => $order->id,
+                        'order_ref' => $order->order_ref,
                     ]);
                 }
             }
             
             // Fallback to local storage if Cloudinary fails
             if (!$storedPath) {
-                $filename = 'receipt_custom_order_' . $order->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $filename = 'receipt_' . $order->order_ref . '_' . time() . '.' . $file->getClientOriginalExtension();
                 $storedPath = $file->storeAs('receipts', $filename, 'public');
                 \Log::warning('Payment receipt uploaded to local storage (will be lost on redeploy)', [
                     'path' => $storedPath,
-                    'custom_order_id' => $order->id,
+                    'order_ref' => $order->order_ref,
                 ]);
             }
             
-            // Update custom order - store receipt
+            // Update order - store in the correct receipt field based on payment method
             $updateData = [
-                'payment_receipt' => $storedPath,
+                'payment_proof_path' => $storedPath,
                 'payment_status' => 'paid',
                 'status' => 'processing',
             ];
             
+            // Also save to the specific receipt field so admin view displays correctly
+            if ($order->payment_method === 'gcash') {
+                $updateData['gcash_receipt'] = $storedPath;
+            } elseif ($order->payment_method === 'bank_transfer') {
+                $updateData['bank_receipt'] = $storedPath;
+            }
+            
             $order->update($updateData);
             
             // Create admin notification message in chat
-            $chat = $order->chat_id ? \App\Models\Chat::find($order->chat_id) : null;
+            $chat = \App\Models\Chat::where('id', (int) str_replace('chat ID: ', '', $order->customer_notes))->first();
             if ($chat) {
                 \App\Models\ChatMessage::create([
                     'chat_id' => $chat->id,
                     'sender_id' => auth()->id(),
                     'sender_type' => 'user',
-                    'message' => '✅ Payment proof submitted for Custom Order #' . $order->id . '. Awaiting admin verification.'
+                    'message' => '✅ Payment proof submitted for Order ' . $order->order_ref . '. Awaiting admin verification.'
                 ]);
             }
             

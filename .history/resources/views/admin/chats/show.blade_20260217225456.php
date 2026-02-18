@@ -130,14 +130,16 @@
                 <i class="fas fa-dollar-sign"></i> Send Quote
             </button>
             @php
-                // Find custom order for this chat
-                $chatOrder = \App\Models\CustomOrder::where('chat_id', $chat->id)
+                // Find order for this chat
+                $chatOrder = \App\Models\Order::where('source', 'chat')
+                    ->where('user_id', $chat->user_id)
+                    ->where('notes', 'like', '%chat ID: ' . $chat->id . '%')
                     ->orderBy('created_at', 'desc')
                     ->first();
             @endphp
             @if($chatOrder)
-                <a href="{{ route('admin.custom_orders.show', $chatOrder->id) }}" class="btn-action btn-primary" style="margin-bottom: 10px; background: linear-gradient(135deg, #059669 0%, #047857 100%);">
-                    <i class="fas fa-box"></i> View Custom Order #{{ $chatOrder->id }}
+                <a href="{{ route('admin.orders.show', $chatOrder->id) }}" class="btn-action btn-primary" style="margin-bottom: 10px; background: linear-gradient(135deg, #059669 0%, #047857 100%);">
+                    <i class="fas fa-box"></i> View Custom Order #{{ $chatOrder->order_ref }}
                 </a>
             @endif
             @if($chat->user_id)

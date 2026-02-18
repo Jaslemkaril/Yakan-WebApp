@@ -868,7 +868,7 @@
     // Payment Method Selection
     function selectPaymentMethod(orderId, method) {
         // Update order with selected payment method
-        fetch(`/custom-orders/${orderId}/set-payment-method`, {
+        fetch(`/orders/${orderId}/set-payment-method`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
