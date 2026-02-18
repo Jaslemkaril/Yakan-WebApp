@@ -202,7 +202,7 @@ return [
     |
     */
 
-    'same_site' => env('SESSION_SAME_SITE', 'none'),
+    'same_site' => env('SESSION_SAME_SITE', 'lax'),
 
     // Railway production fallback - ensure sessions work behind proxy
     // Note: If database driver fails, fallback to cookie
