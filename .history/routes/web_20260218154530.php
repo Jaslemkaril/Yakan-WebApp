@@ -476,37 +476,6 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Chat
-    // TEMPORARY DEBUG ROUTE - shows actual error
-    Route::get('/chats-debug', function () {
-        try {
-            $chats = \App\Models\Chat::where('user_id', auth()->id())
-                ->with(['messages' => function($query) {
-                    $query->orderBy('created_at', 'desc')->limit(1);
-                }])
-                ->orderBy('updated_at', 'desc')
-                ->paginate(10);
-            return 'Query OK. Chat count: ' . $chats->count() . '. Now testing view...';
-        } catch (\Throwable $e) {
-            return response('QUERY ERROR: ' . $e->getMessage() . "\n\nFile: " . $e->getFile() . ':' . $e->getLine() . "\n\nTrace:\n" . $e->getTraceAsString(), 500)
-                ->header('Content-Type', 'text/plain');
-        }
-    })->name('chats.debug');
-
-    Route::get('/chats-debug-view', function () {
-        try {
-            $chats = \App\Models\Chat::where('user_id', auth()->id())
-                ->with(['messages' => function($query) {
-                    $query->orderBy('created_at', 'desc')->limit(1);
-                }])
-                ->orderBy('updated_at', 'desc')
-                ->paginate(10);
-            return view('chats.index', compact('chats'));
-        } catch (\Throwable $e) {
-            return response('VIEW ERROR: ' . $e->getMessage() . "\n\nFile: " . $e->getFile() . ':' . $e->getLine() . "\n\nTrace:\n" . $e->getTraceAsString(), 500)
-                ->header('Content-Type', 'text/plain');
-        }
-    })->name('chats.debug-view');
-
     Route::prefix('chats')->name('chats.')->group(function () {
         Route::get('/', [\App\Http\Controllers\ChatController::class, 'index'])->name('index');
         Route::get('/create', [\App\Http\Controllers\ChatController::class, 'create'])->name('create');
@@ -967,13 +936,12 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     // Chat Management
     Route::prefix('chats')->name('chats.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\ChatController::class, 'index'])->name('index');
-        // Static routes MUST come before wildcard {chat} routes
-        Route::get('/unread-count', [\App\Http\Controllers\Admin\ChatController::class, 'unreadCount'])->name('unread-count');
         Route::get('/{chat}', [\App\Http\Controllers\Admin\ChatController::class, 'show'])->name('show');
         Route::post('/{chat}/reply', [\App\Http\Controllers\Admin\ChatController::class, 'sendReply'])->name('reply');
         Route::post('/{chat}/request-details/{messageId}', [\App\Http\Controllers\Admin\ChatController::class, 'requestDetails'])->name('request-details');
         Route::patch('/{chat}/status', [\App\Http\Controllers\Admin\ChatController::class, 'updateStatus'])->name('update-status');
         Route::delete('/{chat}', [\App\Http\Controllers\Admin\ChatController::class, 'destroy'])->name('destroy');
+        Route::get('/unread-count', [\App\Http\Controllers\Admin\ChatController::class, 'unreadCount'])->name('unread-count');
         
         // Payment management routes
         Route::post('/{chat}/payment/send', [\App\Http\Controllers\ChatPaymentController::class, 'sendPaymentRequest'])->name('payment.send');

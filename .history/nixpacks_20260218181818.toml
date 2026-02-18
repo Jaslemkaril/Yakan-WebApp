@@ -1,0 +1,35 @@
+# Nixpacks configuration for Laravel PHP backend
+# This explicitly disables Node.js/npm to prevent Railway from treating this as a Node.js app
+
+[providers]
+# Disable Node.js provider - this is a pure PHP backend
+nodejs = false
+
+[phases.setup]
+# Only use Nix packages - avoid apt-get completely
+nixPkgs = [
+    "php82", 
+    "php82Packages.composer", 
+    "php82Extensions.mbstring", 
+    "php82Extensions.pdo", 
+    "php82Extensions.pdo_mysql",
+    "php82Extensions.curl",
+    "git"  # Git is available via Nix, no need for apt
+]
+
+[phases.install]
+cmds = [
+    "composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts"
+]
+
+[phases.build]
+# NOTE: Do NOT run config:cache or route:cache in build phase
+# - config:cache would cache empty env vars (DB credentials not available during build)
+# - route:cache fails because routes/web.php contains Closure-based routes
+# - view:cache is safe during build (only compiles Blade syntax, doesn't execute PHP)
+cmds = [
+    "php artisan view:cache || true"
+]
+
+[start]
+cmd = "bash railway.sh ; php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"
