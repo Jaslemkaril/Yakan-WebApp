@@ -42,8 +42,16 @@ php artisan migrate --force --no-interaction || echo "⚠️ Migration failed, c
 
 # Ensure sessions table exists and storage permissions are correct
 echo "🔧 Setting up session storage..."
-mkdir -p storage/framework/sessions storage/framework/cache storage/framework/views
+mkdir -p storage/framework/sessions storage/framework/cache storage/framework/views storage/logs
+chmod -R 777 storage/framework/sessions 2>/dev/null || true
 chmod -R 775 storage bootstrap/cache 2>/dev/null || true
+
+# Verify session directory is writable
+if [ -w "storage/framework/sessions" ]; then
+    echo "✓ Session storage directory is writable"
+else
+    echo "⚠️ Warning: Session storage directory may not be writable"
+fi
 
 # Seed Philippine address data
 echo "🗺️ Seeding Philippine address data..."

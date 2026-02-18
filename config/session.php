@@ -18,8 +18,9 @@ return [
     |
     */
 
-    // Use database sessions for Railway - more reliable than cookies behind proxy
-    'driver' => env('SESSION_DRIVER', 'database'),
+    // Use file sessions for Railway - more reliable than cookie or database
+    // File driver doesn't require database setup or have cookie size limits
+    'driver' => env('SESSION_DRIVER', 'file'),
 
     /*
     |--------------------------------------------------------------------------
@@ -170,7 +171,8 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE', true),
+    // Auto-detect based on environment: secure in production (HTTPS), insecure locally
+    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production'),
 
     /*
     |--------------------------------------------------------------------------

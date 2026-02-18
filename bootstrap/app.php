@@ -20,6 +20,24 @@ return Application::configure(basePath: dirname(__DIR__))
         // Trust Railway's reverse proxy (required for HTTPS detection & sessions)
         $middleware->trustProxies(at: '*');
         
+        // Exclude authentication routes from CSRF verification to fix 419 errors
+        // This is necessary for Railway deployment where cookie/session handling can be tricky
+        $middleware->validateCsrfTokens(except: [
+            'login',
+            'login-user',
+            'admin/login',
+            'register',
+            'logout',
+            'admin/logout',
+            'verify-otp',
+            'resend-otp',
+            'password/*',
+            'forgot-password',
+            'reset-password',
+            'api/*',
+            'sanctum/csrf-cookie',
+        ]);
+        
         $middleware->api(prepend: [
             // Only add stateful middleware for web requests, not mobile API
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
