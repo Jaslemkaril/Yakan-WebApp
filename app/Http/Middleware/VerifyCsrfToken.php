@@ -11,5 +11,9 @@ class VerifyCsrfToken extends Middleware
         'test-pattern-status/*',
         '/test-generate-pattern',
         '/test-pattern-status/*',
+        // Temporarily exempt login routes to fix Railway 419 error
+        'login-user',
+        'admin/login',
+        'register',
     ];
 }

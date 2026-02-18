@@ -45,8 +45,18 @@ Route::get('/railway-health', function () {
         $info['db_connection'] = 'FAILED: ' . $e->getMessage();
     }
     
-    // Test session
+    // Session debugging
     $info['session_id'] = session()->getId() ?: 'none';
+    $info['session_config'] = [
+        'driver' => config('session.driver'),
+        'lifetime' => config('session.lifetime'),
+        'cookie' => config('session.cookie'),
+        'domain' => config('session.domain') ?: 'null (correct)',
+        'secure' => config('session.secure'),
+        'same_site' => config('session.same_site'),
+    ];
+    
+    // Test session write
     session()->put('health_test', 'ok');
     $info['session_write'] = session()->get('health_test') === 'ok' ? 'OK' : 'FAILED';
     
