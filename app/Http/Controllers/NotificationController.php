@@ -18,6 +18,29 @@ class NotificationController extends Controller
         return view('notifications.index', compact('notifications'));
     }
 
+    public function markAsRead($id)
+    {
+        $notification = Auth::user()->notifications()->findOrFail($id);
+        if (!$notification->read_at) {
+            $notification->update(['read_at' => now()]);
+        }
+        return response()->json(['success' => true]);
+    }
+
+    public function markAllAsRead()
+    {
+        Auth::user()->notifications()
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+        return response()->json(['success' => true]);
+    }
+
+    public function getUnreadCount()
+    {
+        $count = Auth::user()->notifications()->whereNull('read_at')->count();
+        return response()->json(['count' => $count]);
+    }
+
     public function destroy($id)
     {
         $notification = Auth::user()->notifications()->findOrFail($id);

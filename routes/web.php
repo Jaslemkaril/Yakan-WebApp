@@ -469,10 +469,11 @@ Route::middleware(['auth'])->group(function () {
     // Notifications
     Route::prefix('notifications')->name('notifications.')->group(function () {
         Route::get('/', [NotificationController::class, 'index'])->name('index');
+        Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+        Route::get('/unread-count', [NotificationController::class, 'getUnreadCount'])->name('unread-count');
         Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('read');
         Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
         Route::post('/clear', [NotificationController::class, 'clear'])->name('clear');
-        Route::get('/unread-count', [NotificationController::class, 'getUnreadCount'])->name('unread-count');
     });
 
     // Chat

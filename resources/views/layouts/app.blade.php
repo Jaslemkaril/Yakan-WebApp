@@ -303,46 +303,158 @@
             background: linear-gradient(90deg, rgb(var(--primary)), rgb(var(--accent)));
         }
 
-        /* Navigation Enhancements */
+        /* ── Navigation Links ── */
         .nav-link {
             position: relative;
             padding: 6px 8px;
             border-radius: 8px;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
             font-weight: 500;
+            color: #374151;
+            white-space: nowrap;
         }
-        
-        @media (min-width: 1024px) {
-            .nav-link {
-                padding: 8px 12px;
-            }
-        }
-        
-        @media (min-width: 1280px) {
-            .nav-link {
-                padding: 8px 16px;
-            }
-        }
-
-        .nav-link:hover {
-            background: rgba(var(--primary), 0.1);
-            color: rgb(var(--primary));
-        }
-
+        @media (min-width: 1024px) { .nav-link { padding: 8px 12px; } }
+        @media (min-width: 1280px) { .nav-link { padding: 8px 16px; } }
+        .nav-link:hover { background: rgba(128,0,0,0.08); color: #800000; }
         .nav-link::after {
             content: '';
             position: absolute;
-            bottom: -2px;
+            bottom: 0px;
             left: 50%;
             width: 0;
             height: 2px;
-            background: linear-gradient(90deg, rgb(var(--primary)), rgb(var(--accent)));
-            transition: all 0.3s ease;
+            background: linear-gradient(90deg, #800000, #b30000);
+            transition: all 0.25s ease;
             transform: translateX(-50%);
+            border-radius: 2px;
+        }
+        .nav-link:hover::after { width: 70%; }
+
+        /* ── Mobile Nav Links ── */
+        .mobile-nav-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            transition: background 0.18s, color 0.18s;
+            text-decoration: none;
+        }
+        .mobile-nav-link:hover {
+            background: rgba(128,0,0,0.08);
+            color: #800000;
         }
 
-        .nav-link:hover::after {
-            width: 80%;
+        /* ── Search Bar ── */
+        .search-wrap { position: relative; width: 100%; }
+
+        .search-input {
+            width: 100%;
+            padding: 9px 42px 9px 42px;
+            border: 2px solid #e5e7eb;
+            border-radius: 999px;
+            font-size: 14px;
+            background: #f9fafb;
+            color: #111827;
+            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+        .search-input::placeholder { color: #9ca3af; }
+        .search-input:focus {
+            border-color: #800000;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(128,0,0,0.10);
+        }
+        .search-input:focus ~ .search-kbd { opacity: 0; pointer-events: none; }
+
+        .search-icon-btn {
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            border-radius: 50%;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: #9ca3af;
+            transition: color 0.2s, background 0.2s;
+        }
+        .search-input:focus + .search-icon-btn,
+        .search-wrap:focus-within .search-icon-btn { color: #800000; }
+
+        .search-clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            border: none;
+            cursor: pointer;
+            color: #6b7280;
+            font-size: 12px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .search-clear-btn:hover { background: #800000; color: #fff; }
+        .search-clear-btn.visible { display: flex; }
+
+        .search-kbd {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            pointer-events: none;
+            opacity: 1;
+            transition: opacity 0.2s;
+        }
+        .search-kbd kbd {
+            font-size: 10px;
+            font-family: inherit;
+            color: #9ca3af;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 1px 5px;
+            line-height: 16px;
+        }
+
+        /* Mobile search overlay */
+        .mobile-search-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+            z-index: 999;
+            display: none;
+            align-items: flex-start;
+            padding-top: 70px;
+        }
+        .mobile-search-overlay.active { display: flex; }
+        .mobile-search-box {
+            width: calc(100% - 32px);
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+            animation: searchSlideDown 0.2s ease;
+        }
+        @keyframes searchSlideDown {
+            from { opacity: 0; transform: translateY(-12px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
         /* Modern Form Elements */
@@ -704,25 +816,35 @@
                     </a>
                 </div>
 
-                <!-- Search Bar -->
-                <div class="hidden md:flex flex-1 max-w-xl lg:max-w-2xl mx-4 lg:mx-8">
+                <!-- ── Desktop Search Bar ── -->
+                <div class="hidden md:flex flex-1 max-w-md lg:max-w-xl mx-4 lg:mx-6">
                     <form action="{{ route('products.search') }}" method="GET" class="w-full" id="searchForm">
-                        <div class="relative">
-                            <input 
-                                type="text" 
-                                name="q" 
-                                id="searchInput"
-                                placeholder="Search products..." 
-                                value="{{ request('q') }}"
-                                class="w-full pl-10 lg:pl-12 pr-4 py-2 lg:py-2.5 text-sm lg:text-base border-2 border-gray-200 rounded-full focus:outline-none focus:border-maroon-600 transition-all"
-                                style="border-color: #e5e7eb;"
-                                autocomplete="off"
-                            >
-                            <button type="submit" class="absolute left-3 lg:left-4 top-1/2 transform -translate-y-1/2 hover:scale-110 transition-transform">
-                                <svg class="w-4 h-4 lg:w-5 lg:h-5 text-gray-400 hover:text-maroon-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #9ca3af;">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        <div class="search-wrap">
+                            {{-- Submit / search icon --}}
+                            <button type="submit" class="search-icon-btn" tabindex="-1" aria-label="Search">
+                                <svg id="searchSpinner" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                                 </svg>
                             </button>
+
+                            <input
+                                type="text"
+                                name="q"
+                                id="searchInput"
+                                placeholder="Search products, patterns…"
+                                value="{{ request('q') }}"
+                                class="search-input"
+                                autocomplete="off"
+                                spellcheck="false"
+                            >
+
+                            {{-- Clear button --}}
+                            <button type="button" class="search-clear-btn {{ request('q') ? 'visible' : '' }}" id="searchClear" aria-label="Clear search" tabindex="-1">✕</button>
+
+                            {{-- Keyboard shortcut hint (hidden when typing) --}}
+                            <div class="search-kbd" id="searchKbd">
+                                <kbd>/</kbd>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -835,67 +957,143 @@
                         <a href="{{ route('register') }}" class="px-3 py-1.5 lg:px-4 lg:py-2 text-xs sm:text-sm lg:text-base font-semibold rounded-lg text-white transition-all hover:opacity-90 whitespace-nowrap" style="background-color: #800000;">Sign Up</a>
                     @endauth
 
+                    <!-- Mobile Search Toggle -->
+                    <button id="mobileSearchToggle" class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors" aria-label="Search">
+                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </button>
+
                     <!-- Mobile Menu Button -->
-                    <button @click="mobileMenu = !mobileMenu" class="lg:hidden p-2 rounded-lg hover:bg-gray-100">
-                        <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button @click="mobileMenu = !mobileMenu" class="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors" aria-label="Menu">
+                        <svg x-show="!mobileMenu" class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                        <svg x-show="mobileMenu" class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display:none;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>
                 </div>
             </div>
 
-            <!-- Mobile Menu -->
-            <div x-show="mobileMenu" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="transform scale-95 opacity-0" x-transition:enter-end="transform scale-100 opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform scale-100 opacity-100" x-transition:leave-end="transform scale-95 opacity-0" class="md:hidden py-4 border-t border-gray-100">
-                <!-- Mobile Search -->
-                <div class="px-4 mb-4">
-                    <form action="{{ route('products.search') }}" method="GET" id="mobileSearchForm">
-                        <div class="relative">
-                            <input 
-                                type="text" 
-                                name="q" 
-                                id="mobileSearchInput"
-                                placeholder="Search products..." 
-                                value="{{ request('q') }}"
-                                class="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-full focus:outline-none focus:border-maroon-600"
-                                autocomplete="off"
-                            >
-                            <button type="submit" class="absolute left-3 top-1/2 transform -translate-y-1/2">
-                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-                
-                <div class="flex flex-col space-y-3 px-4">
-                    <a href="{{ route('welcome') }}" class="nav-link">Home</a>
-                    <a href="{{ route('products.index') }}" class="nav-link">Products</a>
-                    <a href="{{ route('custom_orders.index') }}" class="nav-link">Custom Orders</a>
-                    <a href="{{ route('cultural-heritage.index') }}" class="nav-link">Cultural Heritage</a>
-                    <a href="{{ route('track-order.index') }}" class="nav-link">Track Order</a>
+            <!-- ── Mobile Menu ── -->
+            <div x-show="mobileMenu"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 -translate-y-2"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100 translate-y-0"
+                 x-transition:leave-end="opacity-0 -translate-y-2"
+                 class="lg:hidden border-t border-gray-100 bg-white"
+                 style="display:none;">
+
+                {{-- Nav Links Grid --}}
+                <div class="px-4 py-3 grid grid-cols-2 gap-1">
+                    <a href="{{ route('welcome') }}" class="mobile-nav-link">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                        Home
+                    </a>
+                    <a href="{{ route('products.index') }}" class="mobile-nav-link">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                        Products
+                    </a>
+                    <a href="{{ route('custom_orders.index') }}" class="mobile-nav-link">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                        Custom Orders
+                    </a>
+                    <a href="{{ route('cultural-heritage.index') }}" class="mobile-nav-link">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                        Heritage
+                    </a>
+                    <a href="{{ route('track-order.index') }}" class="mobile-nav-link">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        Track Order
+                    </a>
                     @auth
-                        <a href="{{ route('wishlist.index') }}" class="nav-link">Wishlist</a>
-                        <a href="{{ route('chats.index') }}" class="nav-link flex items-center gap-2 relative">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                            </svg>
-                            Support Chat
+                        <a href="{{ route('chats.index') }}" class="mobile-nav-link relative">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                            Support
                             @if($unreadChatCount > 0)
-                                <span style="position: absolute; top: -8px; right: -8px; background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%); color: white; font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 10px; min-width: 18px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3); z-index: 10;">
-                                    {{ $unreadChatCount > 9 ? '9+' : $unreadChatCount }}
-                                </span>
+                                <span class="ml-auto text-xs font-bold text-white px-1.5 py-0.5 rounded-full" style="background:#800000;font-size:10px;">{{ $unreadChatCount > 9 ? '9+' : $unreadChatCount }}</span>
                             @endif
                         </a>
                     @endauth
-                    @guest
-                        <a href="{{ route('login') }}" class="nav-link">Login</a>
-                        <a href="{{ route('register') }}" class="nav-link">Sign Up</a>
-                    @endguest
                 </div>
+
+                @auth
+                {{-- Auth quick actions --}}
+                <div class="mx-4 mb-3 p-3 bg-gray-50 rounded-xl flex items-center gap-3">
+                    @if(auth()->user()->avatar)
+                        <img src="{{ auth()->user()->avatar }}" alt="" class="w-10 h-10 rounded-full object-cover border-2" style="border-color:#800000;">
+                    @else
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style="background:linear-gradient(135deg,#800000,#5a0000);">
+                            {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                        </div>
+                    @endif
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-900 truncate">{{ auth()->user()->name }}</p>
+                        <p class="text-xs text-gray-500 truncate">{{ auth()->user()->email }}</p>
+                    </div>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors" style="border-color:#800000;color:#800000;">
+                            Logout
+                        </button>
+                    </form>
+                </div>
+                @else
+                <div class="mx-4 mb-3 flex gap-2">
+                    <a href="{{ route('login') }}" class="flex-1 text-center py-2.5 text-sm font-semibold rounded-xl border-2 transition-all" style="border-color:#800000;color:#800000;">Login</a>
+                    <a href="{{ route('register') }}" class="flex-1 text-center py-2.5 text-sm font-semibold rounded-xl text-white transition-all" style="background:#800000;">Sign Up</a>
+                </div>
+                @endauth
             </div>
+
         </div>
     </nav>
+
+    {{-- ── Mobile Search Overlay (outside nav so fixed positioning works correctly) ── --}}
+    <div id="mobileSearchOverlay" class="mobile-search-overlay" onclick="if(event.target===this)closeMobileSearch()">
+        <div class="mobile-search-box">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-sm font-semibold text-gray-700">Search</p>
+                <button type="button" onclick="closeMobileSearch()" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors text-xs">✕</button>
+            </div>
+            <form action="{{ route('products.search') }}" method="GET" id="mobileSearchForm">
+                <div class="search-wrap">
+                    <button type="submit" class="search-icon-btn" aria-label="Search">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </button>
+                    <input
+                        type="text"
+                        name="q"
+                        id="mobileSearchInput"
+                        placeholder="Search products, patterns…"
+                        value="{{ request('q') }}"
+                        class="search-input"
+                        autocomplete="off"
+                        spellcheck="false"
+                    >
+                    <button type="button" class="search-clear-btn {{ request('q') ? 'visible' : '' }}" id="mobileSearchClear" aria-label="Clear" tabindex="-1">✕</button>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="text-xs text-gray-400 font-medium mr-1 self-center">Popular:</span>
+                    @foreach(['Malong', 'Patadyong', 'Headband', 'Tote Bag'] as $tag)
+                        <button type="button"
+                                onclick="document.getElementById('mobileSearchInput').value='{{ $tag }}'; document.getElementById('mobileSearchForm').submit();"
+                                class="text-xs px-3 py-1 rounded-full border transition-colors"
+                                style="border-color:#800000;color:#800000;"
+                                onmouseover="this.style.background='#800000';this.style.color='white'"
+                                onmouseout="this.style.background='';this.style.color='#800000'">
+                            {{ $tag }}
+                        </button>
+                    @endforeach
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Main Content -->
     <main class="relative z-10">
@@ -1093,49 +1291,68 @@
             }, 3000);
         }
 
-        // Search form validation and feedback
-        function initSearchForm(formId, inputId) {
-            const searchForm = document.getElementById(formId);
-            const searchInput = document.getElementById(inputId);
-            
-            if (searchForm && searchInput) {
-                searchForm.addEventListener('submit', function(e) {
-                    const query = searchInput.value.trim();
-                    
-                    // Allow empty search to show all products
-                    if (query === '') {
-                        // Redirect to all products
-                        e.preventDefault();
-                        window.location.href = '{{ route("products.index") }}';
-                        return;
-                    }
-                    
-                    // Show loading state
-                    const submitBtn = searchForm.querySelector('button[type="submit"]');
-                    if (submitBtn) {
-                        const svg = submitBtn.querySelector('svg');
-                        if (svg) {
-                            svg.classList.add('animate-spin');
-                        }
-                    }
-                    
-                    console.log('Searching for:', query);
-                    console.log('Form action:', searchForm.action);
-                });
-                
-                // Add Enter key support
-                searchInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        searchForm.submit();
-                    }
-                });
+        // ── Search Enhancement ──
+        function initSearch(formId, inputId, clearId, kbdId) {
+            const form  = document.getElementById(formId);
+            const input = document.getElementById(inputId);
+            const clear = document.getElementById(clearId);
+            const kbd   = document.getElementById(kbdId);
+            if (!form || !input) return;
+
+            // Show/hide clear button and kbd hint
+            function onInput() {
+                const hasVal = input.value.trim().length > 0;
+                if (clear) clear.classList.toggle('visible', hasVal);
+                if (kbd)   kbd.style.opacity = hasVal ? '0' : '1';
+            }
+            input.addEventListener('input', onInput);
+            onInput();
+
+            // Clear
+            if (clear) clear.addEventListener('click', () => {
+                input.value = ''; onInput(); input.focus();
+            });
+
+            // Empty → all products
+            form.addEventListener('submit', function(e) {
+                if (!input.value.trim()) {
+                    e.preventDefault();
+                    window.location.href = '{{ route("products.index") }}';
+                }
+            });
+        }
+
+        initSearch('searchForm',       'searchInput',       'searchClear',       'searchKbd');
+        initSearch('mobileSearchForm', 'mobileSearchInput', 'mobileSearchClear', null);
+
+        // Keyboard shortcut: press '/' to focus desktop search
+        document.addEventListener('keydown', function(e) {
+            if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                const si = document.getElementById('searchInput');
+                if (si) si.focus();
+            }
+            if (e.key === 'Escape') {
+                const si = document.getElementById('searchInput');
+                if (si && document.activeElement === si) si.blur();
+                closeMobileSearch();
+            }
+        });
+
+        // ── Mobile search overlay ──
+        function openMobileSearch() {
+            const overlay = document.getElementById('mobileSearchOverlay');
+            if (overlay) {
+                overlay.classList.add('active');
+                setTimeout(() => { const i = document.getElementById('mobileSearchInput'); if(i) i.focus(); }, 120);
             }
         }
-        
-        // Initialize both desktop and mobile search
-        initSearchForm('searchForm', 'searchInput');
-        initSearchForm('mobileSearchForm', 'mobileSearchInput');
+        function closeMobileSearch() {
+            const overlay = document.getElementById('mobileSearchOverlay');
+            if (overlay) overlay.classList.remove('active');
+        }
+        const mst = document.getElementById('mobileSearchToggle');
+        if (mst) mst.addEventListener('click', openMobileSearch);
     </script>
     <script>
         // Fallback for broken product images
