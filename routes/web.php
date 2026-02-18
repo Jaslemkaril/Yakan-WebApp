@@ -7,6 +7,37 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Artisan;
 
+// DIAGNOSTIC ROUTE - Check Railway environment (public, no auth/csrf needed)
+Route::get('/railway-health', function () {
+    $info = [];
+    
+    // Check critical environment variables
+    $info['app_key'] = env('APP_KEY') ? 'SET (' . strlen(env('APP_KEY')) . ' chars)' : 'NOT SET - CRITICAL!';
+    $info['app_env'] = env('APP_ENV', 'not set');
+    $info['session_driver'] = config('session.driver');
+    $info['db_host'] = env('DB_HOST') ?: env('MYSQLHOST') ?: 'NOT SET';
+    $info['db_database'] = env('DB_DATABASE') ?: env('MYSQLDATABASE') ?: 'NOT SET';
+    
+    // Test database connection
+    try {
+        DB::connection()->getPdo();
+        $info['db_connection'] = 'OK';
+    } catch (\Exception $e) {
+        $info['db_connection'] = 'FAILED: ' . $e->getMessage();
+    }
+    
+    // Test session
+    $info['session_id'] = session()->getId() ?: 'none';
+    session()->put('health_test', 'ok');
+    $info['session_write'] = session()->get('health_test') === 'ok' ? 'OK' : 'FAILED';
+    
+    // Check cached config
+    $info['config_cached'] = file_exists(base_path('bootstrap/cache/config.php')) ? 'YES - may cause issues!' : 'NO (good)';
+    $info['routes_cached'] = file_exists(base_path('bootstrap/cache/routes-v7.php')) ? 'YES' : 'NO';
+    
+    return response()->json($info, 200, [], JSON_PRETTY_PRINT);
+});
+
 // Fallback route for storage files when symlink doesn't exist
 Route::get('/storage/{path}', function ($path) {
     $filePath = storage_path('app/public/' . $path);

@@ -1,14 +1,31 @@
 #!/bin/bash
+# Railway deployment startup script
 # Do NOT use set -e — we want the server to start even if some steps fail
 
 echo "🚀 Starting Railway deployment..."
 
-# Clear ALL caches first to ensure fresh state
-echo "🧹 Clearing caches..."
+# CRITICAL: Force delete ALL cached files to ensure fresh state
+echo "🧹 Force clearing ALL cached files..."
+rm -f bootstrap/cache/*.php 2>/dev/null || true
+rm -f bootstrap/cache/config.php 2>/dev/null || true
+rm -f bootstrap/cache/routes-v7.php 2>/dev/null || true
+rm -f bootstrap/cache/services.php 2>/dev/null || true
+rm -f bootstrap/cache/packages.php 2>/dev/null || true
+rm -rf storage/framework/cache/data/* 2>/dev/null || true
+rm -rf storage/framework/views/* 2>/dev/null || true
+
+# Also clear via artisan (belt and suspenders)
 php artisan config:clear 2>/dev/null || true
 php artisan cache:clear 2>/dev/null || true
 php artisan route:clear 2>/dev/null || true
 php artisan view:clear 2>/dev/null || true
+
+# Debug: Show environment variable status (not values!)
+echo "🔍 Environment check:"
+echo "  APP_KEY: $([ -n \"$APP_KEY\" ] && echo 'SET' || echo 'NOT SET - CRITICAL!')"
+echo "  APP_ENV: ${APP_ENV:-not set}"
+echo "  DB_HOST: $([ -n \"$DB_HOST\" ] && echo 'SET' || echo 'NOT SET')"
+echo "  MYSQLHOST: $([ -n \"$MYSQLHOST\" ] && echo 'SET' || echo 'NOT SET')"
 
 # Run migrations
 echo "📦 Running database migrations..."
