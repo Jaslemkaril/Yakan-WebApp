@@ -14,11 +14,6 @@ php artisan view:clear 2>/dev/null || true
 echo "📦 Running database migrations..."
 php artisan migrate --force --no-interaction || echo "⚠️ Migration failed, continuing..."
 
-# Ensure sessions table exists (critical for login!)
-echo "🔐 Ensuring sessions table exists..."
-php artisan session:table 2>/dev/null || true
-php artisan migrate --force --no-interaction 2>/dev/null || true
-
 # Seed Philippine address data
 echo "🗺️ Seeding Philippine address data..."
 php artisan db:seed --class=PhilippineAddressSeeder --force 2>/dev/null || echo "⚠️ Seeder already ran or failed, continuing..."
@@ -32,12 +27,8 @@ php artisan storage:link --force 2>/dev/null || {
     ln -sf ../storage/app/public public/storage || true
 }
 
-# Cache for performance (config:cache must run at RUNTIME, not build time)
-echo "⚡ Caching configuration..."
-php artisan config:cache || echo "⚠️ config:cache failed, using uncached config"
-
+# NOTE: Do NOT use config:cache on Railway - it breaks environment variables
 # NOTE: route:cache CANNOT be used - routes/web.php contains Closure-based routes
-# php artisan route:cache
 
 # View cache (already done in build phase, but refresh just in case)
 php artisan view:cache 2>/dev/null || echo "⚠️ view:cache failed, views will compile on-the-fly"
