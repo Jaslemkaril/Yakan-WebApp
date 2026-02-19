@@ -171,9 +171,8 @@ return [
     |
     */
 
-    // For Railway: Let the proxy handle HTTPS, cookies should work with 'null' (auto-detect)
-    // Setting to 'null' lets Laravel auto-detect based on the request
-    'secure' => env('SESSION_SECURE_COOKIE', null),
+    // For Railway behind proxy: Force secure=false internally, proxy handles HTTPS
+    'secure' => env('SESSION_SECURE_COOKIE', false),
 
     /*
     |--------------------------------------------------------------------------
@@ -203,10 +202,8 @@ return [
     |
     */
 
+    // Use 'lax' for normal browsing, allows navigation to site
     'same_site' => env('SESSION_SAME_SITE', 'lax'),
-
-    // Railway production fallback - ensure sessions work behind proxy
-    // Note: If database driver fails, fallback to cookie
 
 
     /*
