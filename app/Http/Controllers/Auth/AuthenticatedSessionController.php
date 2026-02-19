@@ -43,26 +43,32 @@ class AuthenticatedSessionController extends Controller
             ])->withInput($request->only('email'));
         }
 
-        // Attempt authentication
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
-            \Log::info('Auth::attempt successful', ['user_id' => Auth::id()]);
-            
-            $request->session()->regenerate();
-            
-            \Log::info('Session regenerated', ['session_id' => session()->getId()]);
-            
-            // Clear any intended URL that might be from previous admin login attempts
-            $request->session()->forget('url.intended');
-            
-            // Force redirect to user dashboard
-            return redirect('/dashboard')->with('success', 'Welcome back!');
+        // Verify password
+        if (!\Hash::check($request->password, $user->password)) {
+            \Log::warning('Login failed: Invalid password', ['email' => $request->email]);
+            return back()->withErrors([
+                'email' => 'The password is incorrect.'
+            ])->withInput($request->only('email'));
         }
 
-        \Log::warning('Login failed: Invalid password', ['email' => $request->email]);
+        // Generate auth token (fallback for cookie issues)
+        $token = bin2hex(random_bytes(32));
+        \DB::table('auth_tokens')->insert([
+            'user_id' => $user->id,
+            'token' => $token,
+            'expires_at' => now()->addHours(24),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Also try session-based auth
+        Auth::attempt($credentials, $request->boolean('remember'));
+        $request->session()->regenerate();
         
-        return back()->withErrors([
-            'email' => 'The password is incorrect.'
-        ])->withInput($request->only('email'));
+        \Log::info('User login successful', ['user_id' => $user->id]);
+        
+        // Redirect with token as fallback
+        return redirect('/dashboard?auth_token=' . $token)->with('success', 'Welcome back!');
     }
 
     // Show admin login form

@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
+            \App\Http\Middleware\TokenAuth::class, // Token-based auth fallback
         ]);
         
         // Exclude authentication routes from CSRF verification to fix 419 errors

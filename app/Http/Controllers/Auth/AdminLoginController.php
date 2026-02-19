@@ -37,46 +37,40 @@ class AdminLoginController extends Controller
 
         \Log::info('Admin login attempt', ['email' => $credentials['email']]);
 
-        // Attempt login using the 'web' guard instead of 'admin'
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
-            
-            \Log::info('Auth attempt successful', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'role' => $user->role,
-            ]);
-
-            // Check if user has admin role
-            if ($user && $user->role === 'admin') {
-                $request->session()->regenerate();
-                
-                \Log::info('Admin login successful', [
-                    'user_id' => $user->id,
-                    'email' => $user->email,
-                    'session_id' => session()->getId(),
-                ]);
-                
-                return redirect('/admin/dashboard')->with('success', 'Welcome back, Admin!');
-            }
-            
-            // Logout if not admin
-            \Log::warning('Login attempt by non-admin user', [
-                'email' => $user->email,
-                'role' => $user->role,
-            ]);
-            
-            Auth::logout();
-            return back()->withErrors([
-                'email' => 'Access denied. Admin privileges required.',
-            ])->onlyInput('email');
+        // Check if user exists and has admin role
+        $user = \App\Models\User::where('email', $credentials['email'])->first();
+        
+        if (!$user) {
+            return back()->withErrors(['email' => 'Invalid credentials.'])->onlyInput('email');
+        }
+        
+        if ($user->role !== 'admin') {
+            \Log::warning('Login attempt by non-admin user', ['email' => $user->email, 'role' => $user->role]);
+            return back()->withErrors(['email' => 'Access denied. Admin privileges required.'])->onlyInput('email');
+        }
+        
+        // Verify password
+        if (!\Hash::check($request->password, $user->password)) {
+            return back()->withErrors(['email' => 'Invalid credentials.'])->onlyInput('email');
         }
 
-        \Log::warning('Admin login failed - invalid credentials', ['email' => $credentials['email']]);
+        // Generate auth token
+        $token = bin2hex(random_bytes(32));
+        \DB::table('auth_tokens')->insert([
+            'user_id' => $user->id,
+            'token' => $token,
+            'expires_at' => now()->addHours(24),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
-        return back()->withErrors([
-            'email' => 'Invalid credentials.',
-        ])->onlyInput('email');
+        // Try session auth too
+        Auth::login($user);
+        $request->session()->regenerate();
+        
+        \Log::info('Admin login successful', ['user_id' => $user->id]);
+        
+        return redirect('/admin/dashboard?auth_token=' . $token)->with('success', 'Welcome back, Admin!');
     }
 
     // Logout admin
