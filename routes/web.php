@@ -64,7 +64,54 @@ Route::get('/railway-health', function () {
     $info['config_cached'] = file_exists(base_path('bootstrap/cache/config.php')) ? 'YES - may cause issues!' : 'NO (good)';
     $info['routes_cached'] = file_exists(base_path('bootstrap/cache/routes-v7.php')) ? 'YES' : 'NO';
     
+    // Check session storage directory
+    $sessionPath = storage_path('framework/sessions');
+    $info['session_path'] = $sessionPath;
+    $info['session_path_exists'] = is_dir($sessionPath) ? 'YES' : 'NO';
+    $info['session_path_writable'] = is_writable($sessionPath) ? 'YES' : 'NO';
+    
     return response()->json($info, 200, [], JSON_PRETTY_PRINT);
+});
+
+// Debug login test route
+Route::get('/debug/test-login', function () {
+    $user = \App\Models\User::where('email', 'user@yakan.com')->first();
+    
+    if (!$user) {
+        return response()->json(['error' => 'User not found']);
+    }
+    
+    // Force login
+    \Auth::login($user, true);
+    
+    // Check if login worked
+    $loggedIn = \Auth::check();
+    $sessionId = session()->getId();
+    
+    // Store something in session
+    session()->put('test_value', 'hello');
+    session()->save();
+    
+    return response()->json([
+        'user_id' => $user->id,
+        'user_email' => $user->email,
+        'auth_check' => $loggedIn,
+        'session_id' => $sessionId,
+        'session_driver' => config('session.driver'),
+        'test_value' => session()->get('test_value'),
+        'message' => $loggedIn ? 'Login successful! Now visit /dashboard' : 'Login failed',
+    ]);
+});
+
+// Debug session persistence check
+Route::get('/debug/check-session', function () {
+    return response()->json([
+        'authenticated' => \Auth::check(),
+        'user' => \Auth::user() ? ['id' => \Auth::id(), 'email' => \Auth::user()->email] : null,
+        'session_id' => session()->getId(),
+        'test_value' => session()->get('test_value', 'NOT SET'),
+        'session_driver' => config('session.driver'),
+    ]);
 });
 
 // Fallback route for storage files when symlink doesn't exist

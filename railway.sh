@@ -40,6 +40,36 @@ php artisan tinker --execute="try { DB::connection()->getPdo(); echo 'SUCCESS: C
 echo "📦 Running database migrations..."
 php artisan migrate --force --no-interaction || echo "⚠️ Migration failed, continuing..."
 
+# Create sessions table for database sessions
+echo "🗃️ Ensuring sessions table exists..."
+php artisan session:table 2>/dev/null || true
+php artisan migrate --force --no-interaction 2>/dev/null || true
+
+# Direct SQL fallback for sessions table
+php -r "
+try {
+    require __DIR__.'/vendor/autoload.php';
+    \$app = require_once __DIR__.'/bootstrap/app.php';
+    \$kernel = \$app->make(Illuminate\Contracts\Console\Kernel::class);
+    \$kernel->bootstrap();
+    
+    \$pdo = DB::connection()->getPdo();
+    \$pdo->exec('CREATE TABLE IF NOT EXISTS sessions (
+        id VARCHAR(255) PRIMARY KEY,
+        user_id BIGINT UNSIGNED NULL,
+        ip_address VARCHAR(45) NULL,
+        user_agent TEXT NULL,
+        payload LONGTEXT NOT NULL,
+        last_activity INT NOT NULL,
+        INDEX sessions_user_id_index (user_id),
+        INDEX sessions_last_activity_index (last_activity)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+    echo \"Sessions table ready\n\";
+} catch (Exception \$e) {
+    echo \"Sessions table check: \" . \$e->getMessage() . \"\n\";
+}
+" 2>/dev/null || echo "⚠️ Sessions table check skipped"
+
 # Ensure sessions table exists and storage permissions are correct
 echo "🔧 Setting up session storage..."
 mkdir -p storage/framework/sessions storage/framework/cache storage/framework/views storage/logs

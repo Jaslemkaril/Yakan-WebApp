@@ -18,9 +18,9 @@ return [
     |
     */
 
-    // Use file sessions for Railway - more reliable than cookie or database
-    // File driver doesn't require database setup or have cookie size limits
-    'driver' => env('SESSION_DRIVER', 'file'),
+    // Use database sessions for Railway - more reliable than file on ephemeral filesystem
+    // Database sessions persist across deployments and container restarts
+    'driver' => env('SESSION_DRIVER', 'database'),
 
     /*
     |--------------------------------------------------------------------------
