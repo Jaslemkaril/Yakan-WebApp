@@ -12,8 +12,8 @@ class TokenAuth
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // Check for auth_token in query parameter or session
-        $token = $request->query('auth_token') ?? session('auth_token');
+        // Check for auth_token in query parameter, POST data, or session
+        $token = $request->input('auth_token') ?? $request->query('auth_token') ?? session('auth_token');
         
         if ($token && !Auth::check()) {
             \Log::info('TokenAuth: Processing token', ['token' => substr($token, 0, 8) . '...']);
