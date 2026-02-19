@@ -20,13 +20,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // Trust Railway's reverse proxy (required for HTTPS detection & sessions)
         $middleware->trustProxies(at: '*');
         
-        // Ensure web middleware group includes session handling
+        // Configure web middleware group explicitly
         $middleware->web(append: [
+            \App\Http\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            \Illuminate\Session\Middleware\StartSession::class,
         ]);
         
         // Exclude authentication routes from CSRF verification to fix 419 errors
-        // This is necessary for Railway deployment where cookie/session handling can be tricky
         $middleware->validateCsrfTokens(except: [
             'login',
             'login-user',
