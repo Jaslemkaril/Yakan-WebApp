@@ -1189,29 +1189,22 @@
             const token = authToken || sessionStorage.getItem('auth_token');
             
             if (token) {
-                // Add token to all user-related links (excluding external and admin links)
+                // Add token to ALL internal links (excluding external, admin, and logout links)
                 document.querySelectorAll('a').forEach(link => {
-                    // Skip admin links, external links, and already tokenized links
+                    // Skip admin links, external links, logout, and already tokenized links
                     if (link.href.includes('/admin') || 
+                        link.href.includes('/logout') ||
                         !link.href.startsWith(window.location.origin) ||
-                        link.href.includes('auth_token=')) {
+                        link.href.includes('auth_token=') ||
+                        link.getAttribute('href') === '#') {
                         return;
                     }
                     
                     try {
                         const url = new URL(link.href);
-                        // Only add token to authenticated routes
-                        if (url.pathname.startsWith('/dashboard') || 
-                            url.pathname.startsWith('/profile') ||
-                            url.pathname.startsWith('/orders') ||
-                            url.pathname.startsWith('/cart') ||
-                            url.pathname.startsWith('/wishlist') ||
-                            url.pathname.startsWith('/chats') ||
-                            url.pathname.startsWith('/notifications') ||
-                            url.pathname.startsWith('/custom-orders')) {
-                            url.searchParams.set('auth_token', token);
-                            link.href = url.toString();
-                        }
+                        // Add token to all internal links
+                        url.searchParams.set('auth_token', token);
+                        link.href = url.toString();
                     } catch (e) {
                         // Skip invalid URLs
                     }
