@@ -36,17 +36,22 @@ class AppServiceProvider extends ServiceProvider
 
         // Share unread chat count with app layout
         View::composer('layouts.app', function ($view) {
-            $unreadChatCount = 0;
-            if (auth()->check()) {
-                // Count chats that have unread messages from admin
-                $unreadChatCount = Chat::where('user_id', auth()->id())
-                    ->whereHas('messages', function ($query) {
-                        $query->where('is_read', false)
-                              ->where('sender_type', '!=', 'user');
-                    })
-                    ->count();
+            try {
+                $unreadChatCount = 0;
+                if (auth()->check() && auth()->id()) {
+                    // Count chats that have unread messages from admin
+                    $unreadChatCount = Chat::where('user_id', auth()->id())
+                        ->whereHas('messages', function ($query) {
+                            $query->where('is_read', false)
+                                  ->where('sender_type', '!=', 'user');
+                        })
+                        ->count();
+                }
+                $view->with('unreadChatCount', $unreadChatCount);
+            } catch (\Throwable $e) {
+                \Log::error('View composer error (unreadChatCount): ' . $e->getMessage());
+                $view->with('unreadChatCount', 0);
             }
-            $view->with('unreadChatCount', $unreadChatCount);
         });
     }
 }
