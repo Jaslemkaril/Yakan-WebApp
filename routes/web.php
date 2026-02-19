@@ -116,7 +116,7 @@ Route::get('/debug/check-session', function () {
 
 // Debug cookie information
 Route::get('/debug/cookies', function (\Illuminate\Http\Request $request) {
-    $response = response()->json([
+    $data = [
         'received_cookies' => $request->cookies->all(),
         'session_cookie_name' => config('session.cookie'),
         'session_id' => session()->getId(),
@@ -134,10 +134,15 @@ Route::get('/debug/cookies', function (\Illuminate\Http\Request $request) {
             'x-forwarded-for' => $request->header('X-Forwarded-For'),
         ],
         'is_secure' => $request->secure(),
-    ]);
+    ];
     
-    // Manually set a test cookie
-    $response->cookie('test_cookie', 'hello', 60, '/', null, false, false);
+    // Use raw setcookie to bypass any Laravel issues
+    setcookie('raw_test', 'value123', time() + 3600, '/', '', false, false);
+    
+    $response = response()->json($data);
+    
+    // Add cookie via Laravel
+    $response->withCookie(cookie('laravel_test', 'hello123', 60, '/', null, false, false, false, 'lax'));
     
     return $response;
 });
