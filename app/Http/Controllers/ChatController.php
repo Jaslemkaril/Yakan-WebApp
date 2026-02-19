@@ -16,18 +16,24 @@ class ChatController extends Controller
      */
     public function index()
     {
+        \Log::info('ChatController index: Starting', [
+            'auth_check' => auth()->check(),
+            'user_id' => auth()->id(),
+            'has_token' => request()->has('auth_token'),
+            'token' => request()->get('auth_token') ? substr(request()->get('auth_token'), 0, 10) . '...' : 'none'
+        ]);
+        
         try {
-            \Log::info('ChatController index: Starting', [
-                'auth_check' => auth()->check(),
-                'user_id' => auth()->id(),
-                'has_token' => request()->has('auth_token')
-            ]);
-            
             if (!auth()->check()) {
-                \Log::error('ChatController index: User not authenticated');
+                \Log::error('ChatController index: User not authenticated, redirecting to login');
                 return redirect()->route('login.user.form')
                     ->with('error', 'Please log in to view your chats.');
             }
+            
+            \Log::info('ChatController index: User authenticated, loading chats', [
+                'user_id' => auth()->id(),
+                'user_email' => auth()->user()->email
+            ]);
             
             $chats = Chat::where('user_id', auth()->id())
                 ->with(['messages' => function($query) {
@@ -36,30 +42,32 @@ class ChatController extends Controller
                 ->orderBy('updated_at', 'desc')
                 ->paginate(10);
 
-            \Log::info('ChatController index: Chats loaded', ['count' => $chats->count()]);
+            \Log::info('ChatController index: Chats loaded successfully', ['count' => $chats->count()]);
 
             return view('chats.index', compact('chats'));
         } catch (\Throwable $e) {
             \Log::error('Chat index error: ' . $e->getMessage(), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
+                'user_id' => auth()->id() ?? 'none',
                 'trace' => $e->getTraceAsString(),
             ]);
             
-            // Show detailed error in development/production with debug enabled
-            if (config('app.debug')) {
-                return response(
-                    "<h2 style='color:red'>Chat Page Error</h2>" .
-                    "<pre style='background:#f5f5f5;padding:15px;border-radius:8px;overflow:auto'>" .
-                    htmlspecialchars($e->getMessage()) . "\n\n" .
-                    "File: " . htmlspecialchars($e->getFile()) . ":" . $e->getLine() . "\n\n" .
-                    htmlspecialchars($e->getTraceAsString()) . "</pre>",
-                    500
-                );
-            }
-            
-            return redirect()->route('dashboard')
-                ->with('error', 'Unable to load chats. Please try again.');
+            // Always show detailed error for debugging
+            return response(
+                "<html><head><title>Chat Error</title></head><body>" .
+                "<h2 style='color:red'>Chat Page Error</h2>" .
+                "<div style='background:#f5f5f5;padding:20px;border-radius:8px;margin:20px;font-family:monospace'>" .
+                "<strong>Error:</strong> " . htmlspecialchars($e->getMessage()) . "<br><br>" .
+                "<strong>File:</strong> " . htmlspecialchars($e->getFile()) . ":" . $e->getLine() . "<br><br>" .
+                "<strong>Auth Status:</strong> " . (auth()->check() ? 'Authenticated (User ID: ' . auth()->id() . ')' : 'Not Authenticated') . "<br><br>" .
+                "<strong>Token Present:</strong> " . (request()->has('auth_token') ? 'Yes' : 'No') . "<br><br>" .
+                "<strong>Stack Trace:</strong><pre style='white-space:pre-wrap'>" . htmlspecialchars($e->getTraceAsString()) . "</pre>" .
+                "</div>" .
+                "<a href='/dashboard?auth_token=" . request()->get('auth_token', '') . "' style='margin:20px;display:inline-block;padding:10px 20px;background:#800000;color:white;text-decoration:none;border-radius:5px'>Back to Dashboard</a>" .
+                "</body></html>",
+                500
+            );
         }
     }
 
