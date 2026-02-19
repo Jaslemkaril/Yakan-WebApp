@@ -136,13 +136,11 @@ Route::get('/debug/cookies', function (\Illuminate\Http\Request $request) {
         'is_secure' => $request->secure(),
     ];
     
-    // Use raw setcookie to bypass any Laravel issues
-    setcookie('raw_test', 'value123', time() + 3600, '/', '', false, false);
-    
     $response = response()->json($data);
     
-    // Add cookie via Laravel
-    $response->withCookie(cookie('laravel_test', 'hello123', 60, '/', null, false, false, false, 'lax'));
+    // Add test cookies
+    $response->withCookie(cookie('test_cookie_1', 'value1', 60, '/', null, false, false));
+    $response->withCookie(cookie('test_cookie_2', 'value2', 60, '/', null, false, true));
     
     return $response;
 });
