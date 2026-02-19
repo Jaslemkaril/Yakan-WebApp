@@ -231,6 +231,47 @@ Route::get('/setup/reset-admin-password', function () {
     return "✓ Admin password reset to: admin123";
 });
 
+// Debug route to check user accounts (TEMPORARY)
+Route::get('/debug/check-users', function () {
+    $users = \App\Models\User::select('id', 'email', 'name', 'role', 'email_verified_at')->get();
+    return response()->json([
+        'total_users' => $users->count(),
+        'users' => $users->map(fn($u) => [
+            'id' => $u->id,
+            'email' => $u->email,
+            'name' => $u->name,
+            'role' => $u->role,
+            'verified' => $u->email_verified_at ? 'yes' : 'no',
+        ]),
+    ], 200, [], JSON_PRETTY_PRINT);
+});
+
+// Debug route to reset user password (TEMPORARY)
+Route::get('/setup/reset-user-password', function () {
+    $user = \App\Models\User::where('email', 'user@yakan.com')->first();
+    
+    if (!$user) {
+        // Create the user
+        $user = \App\Models\User::create([
+            'name' => 'Test User',
+            'first_name' => 'Test',
+            'last_name' => 'User',
+            'email' => 'user@yakan.com',
+            'password' => \Hash::make('user123'),
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+        return "✓ User created: user@yakan.com / user123";
+    }
+    
+    $user->password = \Hash::make('user123');
+    $user->role = 'user'; // Ensure role is correct
+    $user->email_verified_at = $user->email_verified_at ?? now();
+    $user->save();
+    
+    return "✓ User password reset: user@yakan.com / user123 (role: {$user->role})";
+});
+
 // Admin login routes
 Route::get('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'showLoginForm'])->name('admin.login.form');
 Route::post('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'login'])->name('admin.login.submit');

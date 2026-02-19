@@ -21,39 +21,48 @@ class AuthenticatedSessionController extends Controller
             'password' => ['required']
         ]);
 
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
+        \Log::info('User login attempt starting', ['email' => $request->email]);
+
+        // First check if user exists
+        $user = \App\Models\User::where('email', $request->email)->first();
+        
+        if (!$user) {
+            \Log::warning('Login failed: User not found', ['email' => $request->email]);
+            return back()->withErrors([
+                'email' => 'No account found with this email address.'
+            ])->withInput($request->only('email'));
+        }
+
+        \Log::info('User found', ['email' => $user->email, 'role' => $user->role]);
+
+        // Check role before attempting login
+        if ($user->role !== 'user') {
+            \Log::warning('Login denied: Wrong role for user login', ['email' => $user->email, 'role' => $user->role]);
+            return back()->withErrors([
+                'email' => 'This account is registered as admin. Please use the admin login page.'
+            ])->withInput($request->only('email'));
+        }
+
+        // Attempt authentication
+        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            \Log::info('Auth::attempt successful', ['user_id' => Auth::id()]);
             
-            \Log::info('User login attempt - Email: ' . $request->email . ', Role: ' . ($user ? $user->role : 'null'));
-            
-            // Check if user exists and has correct role
-            if (!$user) {
-                return back()->withErrors([
-                    'email' => 'Invalid credentials.'
-                ]);
-            }
-            
-            if ($user->role !== 'user') {
-                \Log::info('User role check failed - Role: ' . $user->role . ', Expected: user');
-                Auth::logout();
-                return back()->withErrors([
-                    'email' => 'This account is not authorized for user access.'
-                ]);
-            }
-            
-            \Log::info('User login successful - Redirecting to /dashboard');
             $request->session()->regenerate();
+            
+            \Log::info('Session regenerated', ['session_id' => session()->getId()]);
             
             // Clear any intended URL that might be from previous admin login attempts
             $request->session()->forget('url.intended');
             
             // Force redirect to user dashboard
-            return redirect('/dashboard');
+            return redirect('/dashboard')->with('success', 'Welcome back!');
         }
 
+        \Log::warning('Login failed: Invalid password', ['email' => $request->email]);
+        
         return back()->withErrors([
-            'email' => 'Invalid credentials.'
-        ]);
+            'email' => 'The password is incorrect.'
+        ])->withInput($request->only('email'));
     }
 
     // Show admin login form
