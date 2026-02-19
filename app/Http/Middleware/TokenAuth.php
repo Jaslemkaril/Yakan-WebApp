@@ -16,6 +16,8 @@ class TokenAuth
         $token = $request->query('auth_token') ?? session('auth_token');
         
         if ($token && !Auth::check()) {
+            \Log::info('TokenAuth: Processing token', ['token' => substr($token, 0, 8) . '...']);
+            
             // Validate token
             $authToken = DB::table('auth_tokens')
                 ->where('token', $token)
@@ -26,16 +28,19 @@ class TokenAuth
                 // Login the user
                 $user = \App\Models\User::find($authToken->user_id);
                 if ($user) {
-                    Auth::login($user);
+                    Auth::login($user, true); // Remember = true
                     
                     // Store token in session for subsequent requests
                     session(['auth_token' => $token]);
+                    session()->save(); // Force save
                     
-                    // If token was in URL, redirect to clean URL
-                    if ($request->query('auth_token')) {
-                        return redirect($request->url());
-                    }
+                    \Log::info('TokenAuth: User authenticated', [
+                        'user_id' => $user->id,
+                        'role' => $user->role
+                    ]);
                 }
+            } else {
+                \Log::warning('TokenAuth: Invalid or expired token');
             }
         }
         
