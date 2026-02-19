@@ -43,6 +43,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'reset-password',
             'api/*',
             'sanctum/csrf-cookie',
+            'chats/*/message',
+            'chats/*/close',
         ]);
         
         $middleware->api(prepend: [
