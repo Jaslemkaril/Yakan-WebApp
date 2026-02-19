@@ -1174,6 +1174,61 @@
 
     @stack('scripts')
     
+    <script>
+        // Append auth token to all user links if present
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const authToken = urlParams.get('auth_token');
+            
+            if (authToken) {
+                // Store token in sessionStorage for persistence
+                sessionStorage.setItem('auth_token', authToken);
+            }
+            
+            // Get token from URL or sessionStorage
+            const token = authToken || sessionStorage.getItem('auth_token');
+            
+            if (token) {
+                // Add token to all user-related links (excluding external and admin links)
+                document.querySelectorAll('a').forEach(link => {
+                    // Skip admin links, external links, and already tokenized links
+                    if (link.href.includes('/admin') || 
+                        !link.href.startsWith(window.location.origin) ||
+                        link.href.includes('auth_token=')) {
+                        return;
+                    }
+                    
+                    try {
+                        const url = new URL(link.href);
+                        // Only add token to authenticated routes
+                        if (url.pathname.startsWith('/dashboard') || 
+                            url.pathname.startsWith('/profile') ||
+                            url.pathname.startsWith('/orders') ||
+                            url.pathname.startsWith('/cart') ||
+                            url.pathname.startsWith('/wishlist') ||
+                            url.pathname.startsWith('/custom-orders')) {
+                            url.searchParams.set('auth_token', token);
+                            link.href = url.toString();
+                        }
+                    } catch (e) {
+                        // Skip invalid URLs
+                    }
+                });
+                
+                // Add token to all GET forms
+                document.querySelectorAll('form').forEach(form => {
+                    if (form.method.toLowerCase() === 'get' && !form.querySelector('input[name="auth_token"]')) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'auth_token';
+                        input.value = token;
+                        form.appendChild(input);
+                    }
+                });
+            }
+        });
+    </script>
+    
     <!-- Fix for double-click issues -->
     <script>
         // Prevent Alpine.js conflicts with our click handlers
