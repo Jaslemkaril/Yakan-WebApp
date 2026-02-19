@@ -114,6 +114,34 @@ Route::get('/debug/check-session', function () {
     ]);
 });
 
+// Debug cookie information
+Route::get('/debug/cookies', function (\Illuminate\Http\Request $request) {
+    $response = response()->json([
+        'received_cookies' => $request->cookies->all(),
+        'session_cookie_name' => config('session.cookie'),
+        'session_id' => session()->getId(),
+        'session_config' => [
+            'driver' => config('session.driver'),
+            'secure' => config('session.secure'),
+            'same_site' => config('session.same_site'),
+            'domain' => config('session.domain'),
+            'path' => config('session.path'),
+            'http_only' => config('session.http_only'),
+        ],
+        'headers' => [
+            'host' => $request->header('Host'),
+            'x-forwarded-proto' => $request->header('X-Forwarded-Proto'),
+            'x-forwarded-for' => $request->header('X-Forwarded-For'),
+        ],
+        'is_secure' => $request->secure(),
+    ]);
+    
+    // Manually set a test cookie
+    $response->cookie('test_cookie', 'hello', 60, '/', null, false, false);
+    
+    return $response;
+});
+
 // Fallback route for storage files when symlink doesn't exist
 Route::get('/storage/{path}', function ($path) {
     $filePath = storage_path('app/public/' . $path);
