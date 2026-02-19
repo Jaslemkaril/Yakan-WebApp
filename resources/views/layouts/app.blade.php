@@ -1206,6 +1206,8 @@
                             url.pathname.startsWith('/orders') ||
                             url.pathname.startsWith('/cart') ||
                             url.pathname.startsWith('/wishlist') ||
+                            url.pathname.startsWith('/chats') ||
+                            url.pathname.startsWith('/notifications') ||
                             url.pathname.startsWith('/custom-orders')) {
                             url.searchParams.set('auth_token', token);
                             link.href = url.toString();
