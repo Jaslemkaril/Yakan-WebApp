@@ -171,8 +171,9 @@ return [
     |
     */
 
-    // Auto-detect based on environment: secure in production (HTTPS), insecure locally
-    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production'),
+    // For Railway: Let the proxy handle HTTPS, cookies should work with 'null' (auto-detect)
+    // Setting to 'null' lets Laravel auto-detect based on the request
+    'secure' => env('SESSION_SECURE_COOKIE', null),
 
     /*
     |--------------------------------------------------------------------------
