@@ -615,3 +615,4 @@ class ChatController extends Controller
         
         return redirect()->route('chats.show', $chat)->with('success', 'Details submitted successfully! The admin will review and send you a price quote.');
     }
+}
