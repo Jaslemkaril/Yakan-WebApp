@@ -850,14 +850,18 @@
                 </div>
 
                 <!-- Desktop Navigation -->
+                @php
+                    $authToken = request()->get('auth_token') ?? session('auth_token');
+                    $tokenParam = $authToken ? '?auth_token=' . $authToken : '';
+                @endphp
                 <div class="hidden lg:flex items-center space-x-2 xl:space-x-4">
-                    <a href="{{ route('welcome') }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Home</a>
-                    <a href="{{ route('products.index') }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Products</a>
-                    <a href="{{ route('custom_orders.index') }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Custom Orders</a>
-                    <a href="{{ route('cultural-heritage.index') }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Cultural Heritage</a>
-                    <a href="{{ route('track-order.index') }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Track Order</a>
+                    <a href="{{ route('welcome') . $tokenParam }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Home</a>
+                    <a href="{{ route('products.index') . $tokenParam }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Products</a>
+                    <a href="{{ route('custom_orders.index') . $tokenParam }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Custom Orders</a>
+                    <a href="{{ route('cultural-heritage.index') . $tokenParam }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Cultural Heritage</a>
+                    <a href="{{ route('track-order.index') . $tokenParam }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Track Order</a>
                     @auth
-                        <a href="{{ route('chats.index') }}" class="nav-link whitespace-nowrap flex items-center gap-1.5 relative text-sm lg:text-base">
+                        <a href="{{ route('chats.index') . $tokenParam }}" class="nav-link whitespace-nowrap flex items-center gap-1.5 relative text-sm lg:text-base">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                             </svg>
@@ -875,7 +879,7 @@
                 <div class="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
                     <!-- Wishlist Icon -->
                     @auth
-                        <a href="{{ route('wishlist.index') }}" class="p-1.5 lg:p-2 rounded-lg hover:bg-gray-100 transition-colors relative" title="My Wishlist">
+                        <a href="{{ route('wishlist.index') . $tokenParam }}" class="p-1.5 lg:p-2 rounded-lg hover:bg-gray-100 transition-colors relative" title="My Wishlist">
                             <svg class="w-5 h-5 lg:w-6 lg:h-6 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #8b3a56;" onmouseover="this.style.color='#7a3350'" onmouseout="this.style.color='#8b3a56'">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                             </svg>
@@ -891,7 +895,7 @@
 
                     @auth
                         <!-- Cart -->
-                        <a href="{{ route('cart.index') }}" class="relative group">
+                        <a href="{{ route('cart.index') . $tokenParam }}" class="relative group">
                             <div class="p-1.5 lg:p-2 rounded-lg hover:bg-gray-100 transition-colors">
                                 <svg class="w-5 h-5 lg:w-6 lg:h-6 text-gray-700 group-hover:text-maroon-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="--tw-text-opacity: 1;">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
@@ -938,12 +942,12 @@
                                     <p class="text-sm font-semibold text-gray-900">{{ auth()->user()->name }}</p>
                                     <p class="text-xs text-gray-500">{{ auth()->user()->email }}</p>
                                 </div>
-                                <a href="{{ route('profile.edit') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
-                                <a href="{{ route('wishlist.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Wishlist</a>
-                                <a href="{{ route('addresses.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Saved Addresses</a>
-                                <a href="{{ route('orders.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Orders</a>
+                                <a href="{{ route('profile.edit') . $tokenParam }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                                <a href="{{ route('wishlist.index') . $tokenParam }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Wishlist</a>
+                                <a href="{{ route('addresses.index') . $tokenParam }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Saved Addresses</a>
+                                <a href="{{ route('orders.index') . $tokenParam }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Orders</a>
                                 @if(auth()->user()->role === 'admin')
-                                    <a href="{{ route('admin.dashboard') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Admin Dashboard</a>
+                                    <a href="{{ route('admin.dashboard') . ($authToken ? '?auth_token=' . $authToken : '') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Admin Dashboard</a>
                                 @endif
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf
@@ -989,28 +993,28 @@
 
                 {{-- Nav Links Grid --}}
                 <div class="px-4 py-3 grid grid-cols-2 gap-1">
-                    <a href="{{ route('welcome') }}" class="mobile-nav-link">
+                    <a href="{{ route('welcome') . $tokenParam }}" class="mobile-nav-link">
                         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                         Home
                     </a>
-                    <a href="{{ route('products.index') }}" class="mobile-nav-link">
+                    <a href="{{ route('products.index') . $tokenParam }}" class="mobile-nav-link">
                         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                         Products
                     </a>
-                    <a href="{{ route('custom_orders.index') }}" class="mobile-nav-link">
+                    <a href="{{ route('custom_orders.index') . $tokenParam }}" class="mobile-nav-link">
                         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                         Custom Orders
                     </a>
-                    <a href="{{ route('cultural-heritage.index') }}" class="mobile-nav-link">
+                    <a href="{{ route('cultural-heritage.index') . $tokenParam }}" class="mobile-nav-link">
                         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                         Heritage
                     </a>
-                    <a href="{{ route('track-order.index') }}" class="mobile-nav-link">
+                    <a href="{{ route('track-order.index') . $tokenParam }}" class="mobile-nav-link">
                         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                         Track Order
                     </a>
                     @auth
-                        <a href="{{ route('chats.index') }}" class="mobile-nav-link relative">
+                        <a href="{{ route('chats.index') . $tokenParam }}" class="mobile-nav-link relative">
                             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                             Support
                             @if($unreadChatCount > 0)
@@ -1137,9 +1141,9 @@
                 <div>
                     <h3 class="text-lg font-semibold mb-4">Quick Links</h3>
                     <ul class="space-y-2">
-                        <li><a href="{{ route('products.index') }}" class="text-gray-400 hover:text-white transition-colors">Products</a></li>
-                        <li><a href="{{ route('custom_orders.index') }}" class="text-gray-400 hover:text-white transition-colors">Custom Orders</a></li>
-                        <li><a href="{{ route('track-order.index') }}" class="text-gray-400 hover:text-white transition-colors">Track Order</a></li>
+                        <li><a href="{{ route('products.index') . $tokenParam }}" class="text-gray-400 hover:text-white transition-colors">Products</a></li>
+                        <li><a href="{{ route('custom_orders.index') . $tokenParam }}" class="text-gray-400 hover:text-white transition-colors">Custom Orders</a></li>
+                        <li><a href="{{ route('track-order.index') . $tokenParam }}" class="text-gray-400 hover:text-white transition-colors">Track Order</a></li>
                         <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Contact Us</a></li>
                     </ul>
                 </div>
