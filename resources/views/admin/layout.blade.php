@@ -156,5 +156,43 @@
     </div><!-- Close flex wrapper -->
 
     @stack('scripts')
+    
+    <script>
+        // Append auth token to all admin links if present
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const authToken = urlParams.get('auth_token');
+            
+            if (authToken) {
+                // Store token in sessionStorage for persistence
+                sessionStorage.setItem('auth_token', authToken);
+            }
+            
+            // Get token from URL or sessionStorage
+            const token = authToken || sessionStorage.getItem('auth_token');
+            
+            if (token) {
+                // Add token to all internal links
+                document.querySelectorAll('a[href^="/admin"], a[href^="{{ url('/admin') }}"]').forEach(link => {
+                    const url = new URL(link.href, window.location.origin);
+                    if (!url.searchParams.has('auth_token')) {
+                        url.searchParams.set('auth_token', token);
+                        link.href = url.toString();
+                    }
+                });
+                
+                // Add token to all forms
+                document.querySelectorAll('form').forEach(form => {
+                    if (form.method.toLowerCase() === 'get' && !form.querySelector('input[name="auth_token"]')) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'auth_token';
+                        input.value = token;
+                        form.appendChild(input);
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>

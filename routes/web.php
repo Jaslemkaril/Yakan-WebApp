@@ -7,6 +7,144 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Artisan;
 
+// DIAGNOSTIC ROUTE - Check Railway environment (public, no auth/csrf needed)
+Route::get('/railway-health', function () {
+    $info = [];
+    
+    // Check critical environment variables
+    $info['app_key'] = env('APP_KEY') ? 'SET (' . strlen(env('APP_KEY')) . ' chars)' : 'NOT SET - CRITICAL!';
+    $info['app_env'] = env('APP_ENV', 'not set');
+    $info['session_driver'] = config('session.driver');
+    
+    // MySQL environment variables check
+    $info['mysql_env'] = [
+        'MYSQL_URL' => env('MYSQL_URL') ? 'SET' : 'NOT SET',
+        'DATABASE_URL' => env('DATABASE_URL') ? 'SET' : 'NOT SET',
+        'MYSQLHOST' => env('MYSQLHOST') ? 'SET (' . env('MYSQLHOST') . ')' : 'NOT SET',
+        'MYSQLPORT' => env('MYSQLPORT') ? 'SET (' . env('MYSQLPORT') . ')' : 'NOT SET',
+        'MYSQLDATABASE' => env('MYSQLDATABASE') ? 'SET' : 'NOT SET',
+        'MYSQLUSER' => env('MYSQLUSER') ? 'SET' : 'NOT SET',
+        'DB_HOST' => env('DB_HOST') ? 'SET (' . env('DB_HOST') . ')' : 'NOT SET',
+    ];
+    
+    // Actual resolved config
+    $info['resolved_config'] = [
+        'driver' => config('database.connections.mysql.driver'),
+        'host' => config('database.connections.mysql.host'),
+        'port' => config('database.connections.mysql.port'),
+        'database' => config('database.connections.mysql.database'),
+        'unix_socket' => config('database.connections.mysql.unix_socket') ?: '(empty - TCP/IP mode)',
+        'url' => config('database.connections.mysql.url') ? 'SET' : 'NOT SET',
+    ];
+    
+    // Test database connection
+    try {
+        DB::connection()->getPdo();
+        $info['db_connection'] = 'OK';
+    } catch (\Exception $e) {
+        $info['db_connection'] = 'FAILED: ' . $e->getMessage();
+    }
+    
+    // Session debugging
+    $info['session_id'] = session()->getId() ?: 'none';
+    $info['session_config'] = [
+        'driver' => config('session.driver'),
+        'lifetime' => config('session.lifetime'),
+        'cookie' => config('session.cookie'),
+        'domain' => config('session.domain') ?: 'null (correct)',
+        'secure' => config('session.secure'),
+        'same_site' => config('session.same_site'),
+    ];
+    
+    // Test session write
+    session()->put('health_test', 'ok');
+    $info['session_write'] = session()->get('health_test') === 'ok' ? 'OK' : 'FAILED';
+    
+    // Check cached config
+    $info['config_cached'] = file_exists(base_path('bootstrap/cache/config.php')) ? 'YES - may cause issues!' : 'NO (good)';
+    $info['routes_cached'] = file_exists(base_path('bootstrap/cache/routes-v7.php')) ? 'YES' : 'NO';
+    
+    // Check session storage directory
+    $sessionPath = storage_path('framework/sessions');
+    $info['session_path'] = $sessionPath;
+    $info['session_path_exists'] = is_dir($sessionPath) ? 'YES' : 'NO';
+    $info['session_path_writable'] = is_writable($sessionPath) ? 'YES' : 'NO';
+    
+    return response()->json($info, 200, [], JSON_PRETTY_PRINT);
+});
+
+// Debug login test route
+Route::get('/debug/test-login', function () {
+    $user = \App\Models\User::where('email', 'user@yakan.com')->first();
+    
+    if (!$user) {
+        return response()->json(['error' => 'User not found']);
+    }
+    
+    // Force login
+    \Auth::login($user, true);
+    
+    // Check if login worked
+    $loggedIn = \Auth::check();
+    $sessionId = session()->getId();
+    
+    // Store something in session
+    session()->put('test_value', 'hello');
+    session()->save();
+    
+    return response()->json([
+        'user_id' => $user->id,
+        'user_email' => $user->email,
+        'auth_check' => $loggedIn,
+        'session_id' => $sessionId,
+        'session_driver' => config('session.driver'),
+        'test_value' => session()->get('test_value'),
+        'message' => $loggedIn ? 'Login successful! Now visit /dashboard' : 'Login failed',
+    ]);
+});
+
+// Debug session persistence check
+Route::get('/debug/check-session', function () {
+    return response()->json([
+        'authenticated' => \Auth::check(),
+        'user' => \Auth::user() ? ['id' => \Auth::id(), 'email' => \Auth::user()->email] : null,
+        'session_id' => session()->getId(),
+        'test_value' => session()->get('test_value', 'NOT SET'),
+        'session_driver' => config('session.driver'),
+    ]);
+});
+
+// Debug cookie information
+Route::get('/debug/cookies', function (\Illuminate\Http\Request $request) {
+    $data = [
+        'received_cookies' => $request->cookies->all(),
+        'session_cookie_name' => config('session.cookie'),
+        'session_id' => session()->getId(),
+        'session_config' => [
+            'driver' => config('session.driver'),
+            'secure' => config('session.secure'),
+            'same_site' => config('session.same_site'),
+            'domain' => config('session.domain'),
+            'path' => config('session.path'),
+            'http_only' => config('session.http_only'),
+        ],
+        'headers' => [
+            'host' => $request->header('Host'),
+            'x-forwarded-proto' => $request->header('X-Forwarded-Proto'),
+            'x-forwarded-for' => $request->header('X-Forwarded-For'),
+        ],
+        'is_secure' => $request->secure(),
+    ];
+    
+    $response = response()->json($data);
+    
+    // Add test cookies
+    $response->withCookie(cookie('test_cookie_1', 'value1', 60, '/', null, false, false));
+    $response->withCookie(cookie('test_cookie_2', 'value2', 60, '/', null, false, true));
+    
+    return $response;
+});
+
 // Fallback route for storage files when symlink doesn't exist
 Route::get('/storage/{path}', function ($path) {
     $filePath = storage_path('app/public/' . $path);
@@ -169,6 +307,47 @@ Route::get('/setup/reset-admin-password', function () {
     $admin->save();
     
     return "✓ Admin password reset to: admin123";
+});
+
+// Debug route to check user accounts (TEMPORARY)
+Route::get('/debug/check-users', function () {
+    $users = \App\Models\User::select('id', 'email', 'name', 'role', 'email_verified_at')->get();
+    return response()->json([
+        'total_users' => $users->count(),
+        'users' => $users->map(fn($u) => [
+            'id' => $u->id,
+            'email' => $u->email,
+            'name' => $u->name,
+            'role' => $u->role,
+            'verified' => $u->email_verified_at ? 'yes' : 'no',
+        ]),
+    ], 200, [], JSON_PRETTY_PRINT);
+});
+
+// Debug route to reset user password (TEMPORARY)
+Route::get('/setup/reset-user-password', function () {
+    $user = \App\Models\User::where('email', 'user@yakan.com')->first();
+    
+    if (!$user) {
+        // Create the user
+        $user = \App\Models\User::create([
+            'name' => 'Test User',
+            'first_name' => 'Test',
+            'last_name' => 'User',
+            'email' => 'user@yakan.com',
+            'password' => \Hash::make('user123'),
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+        return "✓ User created: user@yakan.com / user123";
+    }
+    
+    $user->password = \Hash::make('user123');
+    $user->role = 'user'; // Ensure role is correct
+    $user->email_verified_at = $user->email_verified_at ?? now();
+    $user->save();
+    
+    return "✓ User password reset: user@yakan.com / user123 (role: {$user->role})";
 });
 
 // Admin login routes

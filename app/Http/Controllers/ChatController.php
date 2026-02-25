@@ -16,7 +16,25 @@ class ChatController extends Controller
      */
     public function index()
     {
+        \Log::info('ChatController index: Starting', [
+            'auth_check' => auth()->check(),
+            'user_id' => auth()->id(),
+            'has_token' => request()->has('auth_token'),
+            'token' => request()->get('auth_token') ? substr(request()->get('auth_token'), 0, 10) . '...' : 'none'
+        ]);
+        
         try {
+            if (!auth()->check()) {
+                \Log::error('ChatController index: User not authenticated, redirecting to login');
+                return redirect()->route('login.user.form')
+                    ->with('error', 'Please log in to view your chats.');
+            }
+            
+            \Log::info('ChatController index: User authenticated, loading chats', [
+                'user_id' => auth()->id(),
+                'user_email' => auth()->user()->email
+            ]);
+            
             $chats = Chat::where('user_id', auth()->id())
                 ->with(['messages' => function($query) {
                     $query->latest('created_at')->limit(1);
@@ -24,21 +42,30 @@ class ChatController extends Controller
                 ->orderBy('updated_at', 'desc')
                 ->paginate(10);
 
-            // Explicitly render to catch view errors inside try-catch
-            $html = view('chats.index', compact('chats'))->render();
-            return response($html);
+            \Log::info('ChatController index: Chats loaded successfully', ['count' => $chats->count()]);
+
+            return view('chats.index', compact('chats'));
         } catch (\Throwable $e) {
             \Log::error('Chat index error: ' . $e->getMessage(), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
+                'user_id' => auth()->id() ?? 'none',
                 'trace' => $e->getTraceAsString(),
             ]);
+            
+            // Always show detailed error for debugging
             return response(
+                "<html><head><title>Chat Error</title></head><body>" .
                 "<h2 style='color:red'>Chat Page Error</h2>" .
-                "<pre style='background:#f5f5f5;padding:15px;border-radius:8px;overflow:auto'>" .
-                htmlspecialchars($e->getMessage()) . "\n\n" .
-                "File: " . htmlspecialchars($e->getFile()) . ":" . $e->getLine() . "\n\n" .
-                htmlspecialchars($e->getTraceAsString()) . "</pre>",
+                "<div style='background:#f5f5f5;padding:20px;border-radius:8px;margin:20px;font-family:monospace'>" .
+                "<strong>Error:</strong> " . htmlspecialchars($e->getMessage()) . "<br><br>" .
+                "<strong>File:</strong> " . htmlspecialchars($e->getFile()) . ":" . $e->getLine() . "<br><br>" .
+                "<strong>Auth Status:</strong> " . (auth()->check() ? 'Authenticated (User ID: ' . auth()->id() . ')' : 'Not Authenticated') . "<br><br>" .
+                "<strong>Token Present:</strong> " . (request()->has('auth_token') ? 'Yes' : 'No') . "<br><br>" .
+                "<strong>Stack Trace:</strong><pre style='white-space:pre-wrap'>" . htmlspecialchars($e->getTraceAsString()) . "</pre>" .
+                "</div>" .
+                "<a href='/dashboard?auth_token=" . request()->get('auth_token', '') . "' style='margin:20px;display:inline-block;padding:10px 20px;background:#800000;color:white;text-decoration:none;border-radius:5px'>Back to Dashboard</a>" .
+                "</body></html>",
                 500
             );
         }
@@ -50,8 +77,20 @@ class ChatController extends Controller
     public function show(Chat $chat)
     {
         try {
+            \Log::info('ChatController show: Starting', [
+                'chat_id' => $chat->id,
+                'auth_check' => auth()->check(),
+                'user_id' => auth()->id(),
+                'chat_user_id' => $chat->user_id
+            ]);
+            
             // Check if user owns this chat
             if ($chat->user_id !== auth()->id()) {
+                \Log::warning('ChatController show: Unauthorized access attempt', [
+                    'chat_id' => $chat->id,
+                    'auth_user_id' => auth()->id(),
+                    'chat_user_id' => $chat->user_id
+                ]);
                 abort(403);
             }
 
@@ -63,9 +102,9 @@ class ChatController extends Controller
 
             $messages = $chat->messages()->get();
 
-            // Explicitly render to catch view errors inside try-catch
-            $html = view('chats.show', compact('chat', 'messages'))->render();
-            return response($html);
+            \Log::info('ChatController show: Messages loaded', ['count' => $messages->count()]);
+
+            return view('chats.show', compact('chat', 'messages'));
         } catch (\Throwable $e) {
             \Log::error('Chat show error: ' . $e->getMessage(), [
                 'file' => $e->getFile(),
@@ -73,14 +112,20 @@ class ChatController extends Controller
                 'chat_id' => $chat->id ?? 'unknown',
                 'trace' => $e->getTraceAsString(),
             ]);
-            return response(
-                "<h2 style='color:red'>Chat View Error</h2>" .
-                "<pre style='background:#f5f5f5;padding:15px;border-radius:8px;overflow:auto'>" .
-                htmlspecialchars($e->getMessage()) . "\n\n" .
-                "File: " . htmlspecialchars($e->getFile()) . ":" . $e->getLine() . "\n\n" .
-                htmlspecialchars($e->getTraceAsString()) . "</pre>",
-                500
-            );
+            
+            if (config('app.debug')) {
+                return response(
+                    "<h2 style='color:red'>Chat View Error</h2>" .
+                    "<pre style='background:#f5f5f5;padding:15px;border-radius:8px;overflow:auto'>" .
+                    htmlspecialchars($e->getMessage()) . "\n\n" .
+                    "File: " . htmlspecialchars($e->getFile()) . ":" . $e->getLine() . "\n\n" .
+                    htmlspecialchars($e->getTraceAsString()) . "</pre>",
+                    500
+                );
+            }
+            
+            return redirect()->route('chats.index')
+                ->with('error', 'Unable to load chat. Please try again.');
         }
     }
 
@@ -570,3 +615,4 @@ class ChatController extends Controller
         
         return redirect()->route('chats.show', $chat)->with('success', 'Details submitted successfully! The admin will review and send you a price quote.');
     }
+}

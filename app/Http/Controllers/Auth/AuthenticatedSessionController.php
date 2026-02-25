@@ -21,39 +21,54 @@ class AuthenticatedSessionController extends Controller
             'password' => ['required']
         ]);
 
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
-            
-            \Log::info('User login attempt - Email: ' . $request->email . ', Role: ' . ($user ? $user->role : 'null'));
-            
-            // Check if user exists and has correct role
-            if (!$user) {
-                return back()->withErrors([
-                    'email' => 'Invalid credentials.'
-                ]);
-            }
-            
-            if ($user->role !== 'user') {
-                \Log::info('User role check failed - Role: ' . $user->role . ', Expected: user');
-                Auth::logout();
-                return back()->withErrors([
-                    'email' => 'This account is not authorized for user access.'
-                ]);
-            }
-            
-            \Log::info('User login successful - Redirecting to /dashboard');
-            $request->session()->regenerate();
-            
-            // Clear any intended URL that might be from previous admin login attempts
-            $request->session()->forget('url.intended');
-            
-            // Force redirect to user dashboard
-            return redirect('/dashboard');
+        \Log::info('User login attempt starting', ['email' => $request->email]);
+
+        // First check if user exists
+        $user = \App\Models\User::where('email', $request->email)->first();
+        
+        if (!$user) {
+            \Log::warning('Login failed: User not found', ['email' => $request->email]);
+            return back()->withErrors([
+                'email' => 'No account found with this email address.'
+            ])->withInput($request->only('email'));
         }
 
-        return back()->withErrors([
-            'email' => 'Invalid credentials.'
+        \Log::info('User found', ['email' => $user->email, 'role' => $user->role]);
+
+        // Check role before attempting login
+        if ($user->role !== 'user') {
+            \Log::warning('Login denied: Wrong role for user login', ['email' => $user->email, 'role' => $user->role]);
+            return back()->withErrors([
+                'email' => 'This account is registered as admin. Please use the admin login page.'
+            ])->withInput($request->only('email'));
+        }
+
+        // Verify password
+        if (!\Hash::check($request->password, $user->password)) {
+            \Log::warning('Login failed: Invalid password', ['email' => $request->email]);
+            return back()->withErrors([
+                'email' => 'The password is incorrect.'
+            ])->withInput($request->only('email'));
+        }
+
+        // Generate auth token (fallback for cookie issues)
+        $token = bin2hex(random_bytes(32));
+        \DB::table('auth_tokens')->insert([
+            'user_id' => $user->id,
+            'token' => $token,
+            'expires_at' => now()->addHours(24),
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
+
+        // Also try session-based auth
+        Auth::attempt($credentials, $request->boolean('remember'));
+        $request->session()->regenerate();
+        
+        \Log::info('User login successful', ['user_id' => $user->id]);
+        
+        // Redirect with token as fallback
+        return redirect('/dashboard?auth_token=' . $token)->with('success', 'Welcome back!');
     }
 
     // Show admin login form

@@ -18,10 +18,9 @@ return [
     |
     */
 
-    // IMPORTANT: HARDCODED to 'cookie' to fix 419 error on Railway
-    // Cookie sessions don't need database and always work
-    // Once confirmed working, you can change SESSION_DRIVER in Railway dashboard
-    'driver' => 'cookie',
+    // Use database sessions for Railway - more reliable than file on ephemeral filesystem
+    // Database sessions persist across deployments and container restarts
+    'driver' => env('SESSION_DRIVER', 'database'),
 
     /*
     |--------------------------------------------------------------------------
@@ -37,7 +36,7 @@ return [
 
     'lifetime' => (int) env('SESSION_LIFETIME', 120),
 
-    'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
+    'expire_on_close' => false,
 
     /*
     |--------------------------------------------------------------------------
@@ -50,7 +49,7 @@ return [
     |
     */
 
-    'encrypt' => env('SESSION_ENCRYPT', false),
+    'encrypt' => false,
 
     /*
     |--------------------------------------------------------------------------
@@ -132,7 +131,7 @@ return [
 
     'cookie' => env(
         'SESSION_COOKIE',
-        Str::slug((string) env('APP_NAME', 'laravel')).'-session'
+        'yakan_session'
     ),
 
     /*
@@ -159,7 +158,7 @@ return [
     |
     */
 
-    'domain' => env('SESSION_DOMAIN', null),
+    'domain' => env('SESSION_DOMAIN') ?: null,
 
     /*
     |--------------------------------------------------------------------------
@@ -172,7 +171,8 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production'),
+    // For Railway behind proxy: Force secure=false internally, proxy handles HTTPS
+    'secure' => env('SESSION_SECURE_COOKIE', false),
 
     /*
     |--------------------------------------------------------------------------
@@ -202,10 +202,8 @@ return [
     |
     */
 
+    // Use 'lax' for normal browsing, allows navigation to site
     'same_site' => env('SESSION_SAME_SITE', 'lax'),
-
-    // Railway production fallback - ensure sessions work behind proxy
-    // Note: If database driver fails, fallback to cookie
 
 
     /*

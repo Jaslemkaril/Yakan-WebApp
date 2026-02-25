@@ -590,15 +590,21 @@
                 </div>
                 <div class="space-y-3 sm:space-y-4">
                     @foreach($paymentMethods as $method)
+                        @php
+                            // Map payment method to display properties
+                            $isGcash = $method->payment_method === 'gcash';
+                            $displayName = $isGcash ? 'GCash' : 'Bank Transfer';
+                            $iconColor = $isGcash ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600';
+                            $icon = $isGcash ? 'fa-mobile-alt' : 'fa-university';
+                        @endphp
                         <div class="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                             <div class="flex items-center space-x-2 sm:space-x-3">
-                                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center
-                                    {{ $method->payment_method === 'online' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600' }}">
-                                    <i class="fas {{ $method->payment_method === 'online' ? 'fa-mobile-alt' : 'fa-university' }} text-sm sm:text-base"></i>
+                                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center {{ $iconColor }}">
+                                    <i class="fas {{ $icon }} text-sm sm:text-base"></i>
                                 </div>
                                 <div>
                                     <div class="font-semibold text-gray-900 text-sm sm:text-base">
-                                        {{ $method->payment_method === 'online' ? 'GCash' : 'Bank Transfer' }}
+                                        {{ $displayName }}
                                     </div>
                                     <div class="text-xs text-gray-500">{{ $method->count }} orders</div>
                                 </div>

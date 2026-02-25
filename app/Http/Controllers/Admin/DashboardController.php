@@ -62,10 +62,27 @@ class DashboardController extends Controller
             $shippedOrders = (clone $dateQuery)->where('status', 'shipped')->count();
             $deliveredOrders = (clone $dateQuery)->where('status', 'delivered')->count();
             
-            // Payment method breakdown
-            $paymentMethods = (clone $dateQuery)->selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
+            // Payment method breakdown - normalize payment methods
+            $rawPaymentMethods = (clone $dateQuery)->selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
                 ->groupBy('payment_method')
                 ->get();
+            
+            // Merge GCash variants (online, online_banking, gcash) and bank_transfer
+            $paymentMethods = collect([
+                (object)[
+                    'payment_method' => 'gcash',
+                    'count' => $rawPaymentMethods->whereIn('payment_method', ['online', 'online_banking', 'gcash'])->sum('count'),
+                    'total' => $rawPaymentMethods->whereIn('payment_method', ['online', 'online_banking', 'gcash'])->sum('total'),
+                ],
+                (object)[
+                    'payment_method' => 'bank_transfer',
+                    'count' => $rawPaymentMethods->where('payment_method', 'bank_transfer')->sum('count'),
+                    'total' => $rawPaymentMethods->where('payment_method', 'bank_transfer')->sum('total'),
+                ],
+            ])->filter(function($method) {
+                return $method->count > 0; // Only show payment methods that have orders
+            });
+
 
             // Delivery type breakdown
             $deliveryTypes = (clone $dateQuery)->selectRaw('delivery_type, COUNT(*) as count')

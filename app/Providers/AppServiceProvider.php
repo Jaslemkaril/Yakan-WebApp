@@ -30,23 +30,36 @@ class AppServiceProvider extends ServiceProvider
 
         // Share pending orders count with admin layout
         View::composer('layouts.admin', function ($view) {
-            $pendingOrdersCount = Order::whereRaw('LOWER(status) = ?', ['pending'])->count();
-            $view->with('pendingOrdersCount', $pendingOrdersCount);
+            try {
+                $pendingOrdersCount = Order::whereRaw('LOWER(status) = ?', ['pending'])->count();
+                $view->with('pendingOrdersCount', $pendingOrdersCount);
+            } catch (\Throwable $e) {
+                \Log::error('View composer error (pendingOrdersCount): ' . $e->getMessage());
+                $view->with('pendingOrdersCount', 0);
+            }
         });
 
-        // Share unread chat count with app layout
+        // Share unread chat count with app layout - DISABLED for debugging
         View::composer('layouts.app', function ($view) {
-            $unreadChatCount = 0;
-            if (auth()->check()) {
-                // Count chats that have unread messages from admin
-                $unreadChatCount = Chat::where('user_id', auth()->id())
-                    ->whereHas('messages', function ($query) {
-                        $query->where('is_read', false)
-                              ->where('sender_type', '!=', 'user');
-                    })
-                    ->count();
+            $view->with('unreadChatCount', 0);
+            /*
+            try {
+                $unreadChatCount = 0;
+                if (auth()->check() && auth()->id()) {
+                    // Count chats that have unread messages from admin
+                    $unreadChatCount = Chat::where('user_id', auth()->id())
+                        ->whereHas('messages', function ($query) {
+                            $query->where('is_read', false)
+                                  ->where('sender_type', '!=', 'user');
+                        })
+                        ->count();
+                }
+                $view->with('unreadChatCount', $unreadChatCount);
+            } catch (\Throwable $e) {
+                \Log::error('View composer error (unreadChatCount): ' . $e->getMessage());
+                $view->with('unreadChatCount', 0);
             }
-            $view->with('unreadChatCount', $unreadChatCount);
+            */
         });
     }
 }

@@ -1,18 +1,87 @@
 #!/bin/bash
+# Railway deployment startup script
 # Do NOT use set -e — we want the server to start even if some steps fail
 
 echo "🚀 Starting Railway deployment..."
 
-# Clear ALL caches first to ensure fresh state
-echo "🧹 Clearing caches..."
+# CRITICAL: Force delete ALL cached files to ensure fresh state
+echo "🧹 Force clearing ALL cached files..."
+rm -f bootstrap/cache/*.php 2>/dev/null || true
+rm -f bootstrap/cache/config.php 2>/dev/null || true
+rm -f bootstrap/cache/routes-v7.php 2>/dev/null || true
+rm -f bootstrap/cache/services.php 2>/dev/null || true
+rm -f bootstrap/cache/packages.php 2>/dev/null || true
+rm -rf storage/framework/cache/data/* 2>/dev/null || true
+rm -rf storage/framework/views/* 2>/dev/null || true
+
+# Also clear via artisan (belt and suspenders)
 php artisan config:clear 2>/dev/null || true
 php artisan cache:clear 2>/dev/null || true
 php artisan route:clear 2>/dev/null || true
 php artisan view:clear 2>/dev/null || true
 
+# Debug: Show environment variable status (not values!)
+echo "🔍 Environment check:"
+echo "  APP_KEY: $([ -n \"$APP_KEY\" ] && echo 'SET' || echo 'NOT SET - CRITICAL!')"
+echo "  APP_ENV: ${APP_ENV:-not set}"
+echo "  DB_HOST: $([ -n \"$DB_HOST\" ] && echo 'SET' || echo 'NOT SET')"
+echo "  MYSQLHOST: $([ -n \"$MYSQLHOST\" ] && echo 'SET' || echo 'NOT SET')"
+echo "  MYSQL_URL: $([ -n \"$MYSQL_URL\" ] && echo 'SET' || echo 'NOT SET')"
+echo "  DATABASE_URL: $([ -n \"$DATABASE_URL\" ] && echo 'SET' || echo 'NOT SET')"
+echo "  MYSQLPORT: $([ -n \"$MYSQLPORT\" ] && echo 'SET' || echo 'NOT SET')"
+echo "  MYSQLDATABASE: $([ -n \"$MYSQLDATABASE\" ] && echo 'SET' || echo 'NOT SET')"
+echo "  MYSQLUSER: $([ -n \"$MYSQLUSER\" ] && echo 'SET' || echo 'NOT SET')"
+
+# Test MySQL connection
+echo "🔌 Testing MySQL connection..."
+php artisan tinker --execute="try { DB::connection()->getPdo(); echo 'SUCCESS: Connected to MySQL'; } catch (Exception \$e) { echo 'FAILED: ' . \$e->getMessage(); }" 2>/dev/null || echo "Connection test skipped"
+
 # Run migrations
 echo "📦 Running database migrations..."
 php artisan migrate --force --no-interaction || echo "⚠️ Migration failed, continuing..."
+
+# Create sessions table for database sessions
+echo "🗃️ Ensuring sessions table exists..."
+php artisan session:table 2>/dev/null || true
+php artisan migrate --force --no-interaction 2>/dev/null || true
+
+# Direct SQL fallback for sessions table
+php -r "
+try {
+    require __DIR__.'/vendor/autoload.php';
+    \$app = require_once __DIR__.'/bootstrap/app.php';
+    \$kernel = \$app->make(Illuminate\Contracts\Console\Kernel::class);
+    \$kernel->bootstrap();
+    
+    \$pdo = DB::connection()->getPdo();
+    \$pdo->exec('CREATE TABLE IF NOT EXISTS sessions (
+        id VARCHAR(255) PRIMARY KEY,
+        user_id BIGINT UNSIGNED NULL,
+        ip_address VARCHAR(45) NULL,
+        user_agent TEXT NULL,
+        payload LONGTEXT NOT NULL,
+        last_activity INT NOT NULL,
+        INDEX sessions_user_id_index (user_id),
+        INDEX sessions_last_activity_index (last_activity)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+    echo \"Sessions table ready\n\";
+} catch (Exception \$e) {
+    echo \"Sessions table check: \" . \$e->getMessage() . \"\n\";
+}
+" 2>/dev/null || echo "⚠️ Sessions table check skipped"
+
+# Ensure sessions table exists and storage permissions are correct
+echo "🔧 Setting up session storage..."
+mkdir -p storage/framework/sessions storage/framework/cache storage/framework/views storage/logs
+chmod -R 777 storage/framework/sessions 2>/dev/null || true
+chmod -R 775 storage bootstrap/cache 2>/dev/null || true
+
+# Verify session directory is writable
+if [ -w "storage/framework/sessions" ]; then
+    echo "✓ Session storage directory is writable"
+else
+    echo "⚠️ Warning: Session storage directory may not be writable"
+fi
 
 # Seed Philippine address data
 echo "🗺️ Seeding Philippine address data..."
