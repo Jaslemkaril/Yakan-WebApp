@@ -20,9 +20,14 @@ class CartController extends Controller
      */
     public function add(Request $request, Product $product)
     {
+        $isAjax = $request->ajax() || $request->wantsJson();
+
         try {
             // Check if user is authenticated
             if (!Auth::check()) {
+                if ($isAjax) {
+                    return response()->json(['success' => false, 'message' => 'Please login to add items to your cart.'], 401);
+                }
                 return redirect()->route('login')->with('info', 'Please login to continue shopping.');
             }
             
@@ -43,7 +48,6 @@ class CartController extends Controller
                 if (\Illuminate\Support\Facades\Schema::hasTable('inventory')) {
                     $inventory = \App\Models\Inventory::where('product_id', $product->id)->first();
                     if (!$inventory) {
-                        // Auto-create inventory record from product stock
                         $inventory = \App\Models\Inventory::create([
                             'product_id'      => $product->id,
                             'quantity'        => $product->stock ?? 0,
@@ -58,43 +62,46 @@ class CartController extends Controller
                 }
             } catch (\Exception $invEx) {
                 \Log::warning('Inventory check skipped, using product.stock', ['error' => $invEx->getMessage()]);
-                $inventory = null;
             }
 
             // Check stock availability
             if ($availableStock < $qty) {
                 \Log::warning('Insufficient stock', ['product_id' => $product->id, 'requested' => $qty, 'available' => $availableStock]);
-                return redirect()->back()->with('error', "Insufficient stock. Only {$availableStock} item(s) available.");
+                $msg = "Insufficient stock. Only {$availableStock} item(s) available.";
+                if ($isAjax) {
+                    return response()->json(['success' => false, 'message' => $msg]);
+                }
+                return redirect()->back()->with('error', $msg);
             }
 
             // If "Buy Now" was clicked, add to cart and redirect to cart page
             if ($request->input('buy_now')) {
                 \Log::info('Buy Now triggered', ['user_id' => $userId, 'product_id' => $product->id, 'quantity' => $qty]);
                 
-                // Add to cart instead of session
                 $cartItem = Cart::where('user_id', $userId)
                                 ->where('product_id', $product->id)
                                 ->first();
 
                 if ($cartItem) {
-                    // Check if new total exceeds available stock
                     $newTotal = $cartItem->quantity + $qty;
                     if ($newTotal > $availableStock) {
-                        return redirect()->back()->with('error', "Cannot add more. Only {$availableStock} item(s) available in total.");
+                        $msg = "Cannot add more. Only {$availableStock} item(s) available in total.";
+                        if ($isAjax) {
+                            return response()->json(['success' => false, 'message' => $msg]);
+                        }
+                        return redirect()->back()->with('error', $msg);
                     }
                     $cartItem->quantity += $qty;
                     $cartItem->save();
                     \Log::info('Cart item updated via Buy Now', ['cart_item_id' => $cartItem->id, 'new_quantity' => $cartItem->quantity]);
                 } else {
-                    $newItem = Cart::create([
+                    Cart::create([
                         'user_id'    => $userId,
                         'product_id' => $product->id,
                         'quantity'   => $qty,
                     ]);
-                    \Log::info('Cart item created via Buy Now', ['cart_item_id' => $newItem->id]);
                 }
                 
-                \Log::info('Redirecting to cart for review');
                 return redirect()->route('cart.index')->with('success', 'Product added to cart. Review and proceed to checkout.');
             }
 
@@ -104,42 +111,43 @@ class CartController extends Controller
                             ->first();
 
             if ($cartItem) {
-                // Check if new total exceeds available stock
                 $newTotal = $cartItem->quantity + $qty;
                 if ($newTotal > $availableStock) {
-                    return redirect()->back()->with('error', "Cannot add more. Only {$availableStock} item(s) available in total.");
+                    $msg = "Cannot add more. Only {$availableStock} item(s) available in total.";
+                    if ($isAjax) {
+                        return response()->json(['success' => false, 'message' => $msg]);
+                    }
+                    return redirect()->back()->with('error', $msg);
                 }
                 $cartItem->quantity += $qty;
                 $cartItem->save();
                 \Log::info('Cart item updated', ['cart_item_id' => $cartItem->id, 'new_quantity' => $cartItem->quantity]);
-        } else {
-            $newItem = Cart::create([
-                'user_id'    => $userId,
-                'product_id' => $product->id,
-                'quantity'   => $qty,
-            ]);
-            \Log::info('Cart item created', ['cart_item_id' => $newItem->id, 'user_id' => $userId, 'product_id' => $product->id]);
-        }
+            } else {
+                Cart::create([
+                    'user_id'    => $userId,
+                    'product_id' => $product->id,
+                    'quantity'   => $qty,
+                ]);
+                \Log::info('Cart item created', ['user_id' => $userId, 'product_id' => $product->id]);
+            }
 
-        // Clear cart count cache
-        \Cache::forget('cart_count_' . $userId);
+            // Clear cart count cache
+            \Cache::forget('cart_count_' . $userId);
 
-        // Get updated cart count
-        $cartCount = Cart::where('user_id', $userId)->sum('quantity');
-        
-        \Log::info('Cart updated', ['user_id' => $userId, 'cart_count' => $cartCount]);
+            // Get updated cart count
+            $cartCount = Cart::where('user_id', $userId)->sum('quantity');
+            \Log::info('Cart updated', ['user_id' => $userId, 'cart_count' => $cartCount]);
 
-        // Return JSON for AJAX requests
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Product added to cart!',
-                'cart_count' => $cartCount,
-                'product_name' => $product->name
-            ]);
-        }
+            if ($isAjax) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Product added to cart!',
+                    'cart_count' => $cartCount,
+                    'product_name' => $product->name
+                ]);
+            }
 
-        return redirect()->back()->with('success', 'Product added to cart!');
+            return redirect()->back()->with('success', 'Product added to cart!');
         } catch (\Exception $e) {
             \Log::error('Error adding to cart', [
                 'error' => $e->getMessage(),
@@ -148,6 +156,9 @@ class CartController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             
+            if ($isAjax) {
+                return response()->json(['success' => false, 'message' => 'Error adding product to cart. Please try again.'], 500);
+            }
             return redirect()->back()->with('error', 'Error adding product to cart. Please try again.');
         }
     }
