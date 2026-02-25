@@ -25,11 +25,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Trust Railway's reverse proxy (required for HTTPS detection & sessions)
         $middleware->trustProxies(at: '*');
         
-        // Configure web middleware group explicitly
+        // Append token-based auth fallback to web middleware group
+        // NOTE: EncryptCookies, AddQueuedCookiesToResponse, and StartSession are already
+        // included in Laravel's default web group — do NOT add them again or sessions
+        // will be re-loaded mid-request, breaking OAuth state validation.
         $middleware->web(append: [
-            \App\Http\Middleware\EncryptCookies::class,
-            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-            \Illuminate\Session\Middleware\StartSession::class,
             \App\Http\Middleware\TokenAuth::class, // Token-based auth fallback
         ]);
         
