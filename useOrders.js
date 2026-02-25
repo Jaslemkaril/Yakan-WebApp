@@ -10,69 +10,97 @@ export const useOrders = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const normalizeStatus = (status) => {
+    const map = {
+      pending: 'pending',
+      pending_payment: 'pending',
+      payment_verified: 'pending',
+      pending_confirmation: 'pending',
+      confirmed: 'processing',
+      processing: 'processing',
+      shipped: 'shipped',
+      delivered: 'delivered',
+      completed: 'completed',
+      cancelled: 'cancelled',
+    };
+    return map[status] || 'pending';
+  };
+
   const loadOrders = useCallback(async () => {
     setLoading(true);
     try {
+      // Load local orders from AsyncStorage
       const savedOrders = await AsyncStorage.getItem(ORDERS_KEY);
       const localOrders = savedOrders ? JSON.parse(savedOrders) : [];
 
-      // Refresh statuses from backend when we have an order id
-      const normalizeStatus = (apiOrder, fallbackStatus) => {
-        // Map backend statuses to simplified mobile timeline (4 stages)
-        // Keep 'completed' as-is so it doesn't revert to 'delivered'
-        const map = {
-          pending: 'pending',
-          pending_payment: 'pending',
-          payment_verified: 'pending',
-          pending_confirmation: 'pending',
-          confirmed: 'processing',
-          processing: 'processing',
-          shipped: 'shipped',
-          delivered: 'delivered',
-          completed: 'completed',
-          cancelled: 'cancelled',
-        };
-        return map[apiOrder.status] || fallbackStatus || 'pending';
-      };
+      // Also fetch orders from the API (server is source of truth)
+      let apiOrders = [];
+      try {
+        const res = await ApiService.getOrders();
+        if (res?.success && Array.isArray(res.data)) {
+          apiOrders = res.data;
+        }
+      } catch (err) {
+        console.warn('[useOrders] Failed to fetch from API:', err?.message || err);
+      }
 
-      const refreshedOrders = await Promise.all(
-        localOrders.map(async (order) => {
-          if (!order.backendOrderId) return order;
+      // Build a map of local orders keyed by backendOrderId
+      const localByBackendId = {};
+      localOrders.forEach((o) => {
+        if (o.backendOrderId) localByBackendId[o.backendOrderId] = o;
+      });
 
-          try {
-            const res = await ApiService.getOrder(order.backendOrderId);
-            if (res?.success && res.data) {
-              const apiOrder = res.data;
-              const normalizedStatus = normalizeStatus(apiOrder, order.status);
+      // Merge: update local orders with API data, and add any API-only orders
+      const seenBackendIds = new Set();
 
-              return {
-                ...order,
-                status: normalizedStatus,
-                paymentStatus: apiOrder.payment_status || order.paymentStatus,
-                total: apiOrder.total_amount ?? apiOrder.total ?? order.total,
-                subtotal: apiOrder.subtotal ?? order.subtotal,
-                shippingFee: apiOrder.shipping_fee ?? order.shippingFee,
-              };
-            } else if (res?.error?.includes('Order not found')) {
-              // Order was deleted from backend - silently ignore
-              return order;
-            }
-          } catch (err) {
-            // Silently ignore 404 errors (deleted orders) - just use cached data
-            if (!err?.message?.includes('Order not found')) {
-              console.warn('Failed to refresh order from API', err?.message || err);
-            }
-          }
-          return order;
-        })
-      );
+      // First pass – refresh local orders that have a backend id
+      const refreshedLocal = localOrders.map((order) => {
+        if (!order.backendOrderId) return order;
+        seenBackendIds.add(order.backendOrderId);
+        const apiOrder = apiOrders.find((a) => String(a.id) === String(order.backendOrderId));
+        if (apiOrder) {
+          return {
+            ...order,
+            status: normalizeStatus(apiOrder.status),
+            paymentStatus: apiOrder.payment_status || order.paymentStatus,
+            total: apiOrder.total_amount ?? apiOrder.total ?? order.total,
+            subtotal: apiOrder.subtotal ?? order.subtotal,
+            shippingFee: apiOrder.shipping_fee ?? order.shippingFee,
+          };
+        }
+        return order;
+      });
 
-      // Persist refreshed data
-      await AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(refreshedOrders));
+      // Second pass – add API orders not yet in local storage
+      const newFromApi = apiOrders
+        .filter((a) => !seenBackendIds.has(String(a.id)))
+        .map((apiOrder) => ({
+          orderRef: `ORD-${apiOrder.id}`,
+          backendOrderId: apiOrder.id,
+          status: normalizeStatus(apiOrder.status),
+          paymentMethod: apiOrder.payment_method || 'unknown',
+          paymentStatus: apiOrder.payment_status || 'pending',
+          total: apiOrder.total_amount ?? apiOrder.total ?? 0,
+          subtotal: apiOrder.subtotal ?? 0,
+          shippingFee: apiOrder.shipping_fee ?? 0,
+          items: (apiOrder.items || []).map((item) => ({
+            id: item.product_id || item.id,
+            name: item.product?.name || item.name || 'Product',
+            price: item.price,
+            quantity: item.quantity,
+            image: item.product?.image || null,
+          })),
+          date: apiOrder.created_at || new Date().toISOString(),
+        }));
 
-      setOrders(refreshedOrders.sort((a, b) => new Date(b.date) - new Date(a.date)));
+      const mergedOrders = [...refreshedLocal, ...newFromApi];
+
+      // Persist merged data back
+      await AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(mergedOrders));
+
+      setOrders(mergedOrders.sort((a, b) => new Date(b.date) - new Date(a.date)));
     } catch (error) {
-      console.error('Failed to load orders from local storage:', error);
+      console.error('Failed to load orders:', error);
       setOrders([]);
     } finally {
       setLoading(false);

@@ -536,6 +536,14 @@ class ApiService {
     return this.request('DELETE', endpoint);
   }
 
+  /**
+   * Set address as default
+   */
+  async setAddressDefault(addressId) {
+    console.log('[API] Setting address as default:', addressId);
+    return this.request('POST', `/addresses/${addressId}/set-default`);
+  }
+
   // ==================== CUSTOM ORDERS ENDPOINTS ====================
 
   /**

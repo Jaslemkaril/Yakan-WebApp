@@ -156,7 +156,7 @@
 
     <!-- Filters -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-        <form method="GET" action="{{ route('custom_orders.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <form method="GET" action="{{ route('admin.custom_orders.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Name, email, order ID..." 
@@ -190,7 +190,7 @@
                 <button type="submit" class="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors" style="background-color: #800000;">
                     Filter Orders
                 </button>
-                <a href="{{ route('custom_orders.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                <a href="{{ route('admin.custom_orders.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
                     Clear
                 </a>
             </div>

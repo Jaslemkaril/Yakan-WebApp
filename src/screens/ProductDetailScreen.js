@@ -24,6 +24,18 @@ export default function ProductDetailScreen({ route, navigation }) {
   const styles = getStyles(theme);
   const { product } = route.params || {};
   
+  // All hooks MUST be called before any conditional return (React Rules of Hooks)
+  const [quantity, setQuantity] = useState(1);
+  const { addToCart, isLoggedIn, addToWishlist, removeFromWishlist, isInWishlist } = useCart();
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  // Update isFavorite when product changes
+  React.useEffect(() => {
+    if (product?.id) {
+      setIsFavorite(isInWishlist(product.id));
+    }
+  }, [product?.id, isInWishlist]);
+  
   if (!product) {
     return (
       <View style={styles.container}>
@@ -31,10 +43,6 @@ export default function ProductDetailScreen({ route, navigation }) {
       </View>
     );
   }
-  
-  const [quantity, setQuantity] = useState(1);
-  const { addToCart, isLoggedIn, addToWishlist, removeFromWishlist, isInWishlist } = useCart();
-  const [isFavorite, setIsFavorite] = useState(() => isInWishlist(product.id));
 
   const increaseQuantity = () => {
     setQuantity(quantity + 1);
@@ -46,42 +54,61 @@ export default function ProductDetailScreen({ route, navigation }) {
     }
   };
 
-  const handleFavoriteToggle = () => {
-    if (isFavorite) {
-      removeFromWishlist(product.id);
-    } else {
-      addToWishlist(product);
+  const handleFavoriteToggle = async () => {
+    if (!isLoggedIn) {
+      Alert.alert('Login Required', 'Please login to manage your wishlist', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => navigation.navigate('Auth', { screen: 'Login' }) },
+      ]);
+      return;
     }
-    setIsFavorite(!isFavorite);
+    try {
+      if (isFavorite) {
+        await removeFromWishlist(product.id);
+      } else {
+        await addToWishlist(product);
+      }
+      setIsFavorite(!isFavorite);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update wishlist. Please try again.');
+    }
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!isLoggedIn) {
       Alert.alert('Login Required', 'Please login to add items to cart', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => navigation.navigate('Login') },
+        { text: 'Login', onPress: () => navigation.navigate('Auth', { screen: 'Login' }) },
       ]);
       return;
     }
     
-    addToCart(product, quantity);
-    Alert.alert('Success', `${product.name} added to cart!`, [
-      { text: 'Continue Shopping', onPress: () => navigation.goBack() },
-      { text: 'View Cart', onPress: () => navigation.navigate('Cart') },
-    ]);
+    try {
+      await addToCart(product, quantity);
+      Alert.alert('Success', `${product.name} added to cart!`, [
+        { text: 'Continue Shopping', onPress: () => navigation.goBack() },
+        { text: 'View Cart', onPress: () => navigation.navigate('Cart') },
+      ]);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add item to cart. Please try again.');
+    }
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     if (!isLoggedIn) {
       Alert.alert('Login Required', 'Please login to proceed', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => navigation.navigate('Login') },
+        { text: 'Login', onPress: () => navigation.navigate('Auth', { screen: 'Login' }) },
       ]);
       return;
     }
     
-    addToCart(product, quantity);
-    navigation.navigate('Cart');
+    try {
+      await addToCart(product, quantity);
+      navigation.navigate('Cart');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add item to cart. Please try again.');
+    }
   };
 
   return (
@@ -135,7 +162,7 @@ export default function ProductDetailScreen({ route, navigation }) {
         {/* Product Info */}
         <View style={styles.infoContainer}>
           <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.productPrice}>₱{product.price.toFixed(2)}</Text>
+          <Text style={styles.productPrice}>₱{parseFloat(product.price || 0).toFixed(2)}</Text>
           
           {/* Rating */}
           <View style={styles.ratingContainer}>
@@ -224,7 +251,7 @@ export default function ProductDetailScreen({ route, navigation }) {
           <View style={styles.totalContainer}>
             <Text style={styles.totalLabel}>Total Price:</Text>
             <Text style={styles.totalPrice}>
-              ₱{(product.price * quantity).toFixed(2)}
+              ₱{(parseFloat(product.price || 0) * quantity).toFixed(2)}
             </Text>
           </View>
         </View>

@@ -13,16 +13,13 @@ export const NotificationProvider = ({ children }) => {
       message,
       type, // 'success', 'error', 'info', 'warning'
       timestamp: new Date(),
+      isRead: false,
     };
 
     setNotifications(prev => [notification, ...prev]);
 
-    // Auto-remove after duration
-    if (duration > 0) {
-      setTimeout(() => {
-        removeNotification(id);
-      }, duration);
-    }
+    // Auto-remove after duration (only from toast bar, not from notification list)
+    // Removed auto-remove so notifications persist in the list
 
     return id;
   }, []);
@@ -36,6 +33,23 @@ export const NotificationProvider = ({ children }) => {
   const clearNotifications = useCallback(() => {
     setNotifications([]);
   }, []);
+
+  // Mark a single notification as read
+  const markAsRead = useCallback((id) => {
+    setNotifications(prev =>
+      prev.map(notif => notif.id === id ? { ...notif, isRead: true } : notif)
+    );
+  }, []);
+
+  // Mark all notifications as read
+  const markAllAsRead = useCallback(() => {
+    setNotifications(prev =>
+      prev.map(notif => ({ ...notif, isRead: true }))
+    );
+  }, []);
+
+  // Get count of unread notifications
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   // Order-specific notifications
   const notifyOrderCreated = useCallback((orderRef) => {
@@ -103,6 +117,9 @@ export const NotificationProvider = ({ children }) => {
     addNotification,
     removeNotification,
     clearNotifications,
+    markAsRead,
+    markAllAsRead,
+    unreadCount,
     notifyOrderCreated,
     notifyOrderConfirmed,
     notifyOrderProcessing,

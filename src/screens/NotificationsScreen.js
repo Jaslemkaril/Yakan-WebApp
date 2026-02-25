@@ -16,7 +16,7 @@ import { useTheme } from '../context/ThemeContext';
 const NotificationsScreen = ({ navigation }) => {
   const { theme } = useTheme();
   const styles = getStyles(theme);
-  const { notifications, clearNotifications, removeNotification } = useNotification();
+  const { notifications, clearNotifications, removeNotification, markAsRead, markAllAsRead, unreadCount } = useNotification();
   const [refreshing, setRefreshing] = useState(false);
   const [allNotifications, setAllNotifications] = useState([]);
 
@@ -51,9 +51,21 @@ const NotificationsScreen = ({ navigation }) => {
     );
   };
 
+  const handleMarkAllAsRead = () => {
+    markAllAsRead();
+    setAllNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  };
+
   const handleRemoveNotification = (id) => {
     removeNotification(id);
     setAllNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  const handleNotificationPress = (item) => {
+    if (!item.isRead) {
+      markAsRead(item.id);
+      setAllNotifications(prev => prev.map(n => n.id === item.id ? { ...n, isRead: true } : n));
+    }
   };
 
   const getNotificationIcon = (type) => {
@@ -100,7 +112,11 @@ const NotificationsScreen = ({ navigation }) => {
   };
 
   const renderNotificationItem = ({ item }) => (
-    <View style={styles.notificationItem}>
+    <TouchableOpacity 
+      style={[styles.notificationItem, !item.isRead && styles.notificationUnread]}
+      onPress={() => handleNotificationPress(item)}
+      activeOpacity={0.7}
+    >
       <View
         style={[
           styles.iconContainer,
@@ -111,7 +127,7 @@ const NotificationsScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.notificationContent}>
-        <Text style={styles.notificationMessage} numberOfLines={2}>
+        <Text style={[styles.notificationMessage, !item.isRead && styles.notificationMessageUnread]} numberOfLines={2}>
           {item.message}
         </Text>
         <Text style={styles.notificationTime}>
@@ -125,7 +141,7 @@ const NotificationsScreen = ({ navigation }) => {
       >
         <Text style={styles.removeIcon}>✕</Text>
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -137,6 +153,16 @@ const NotificationsScreen = ({ navigation }) => {
         rightIcon={allNotifications.length > 0 ? <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>Clear All</Text> : null}
         onRightIconPress={allNotifications.length > 0 ? handleClearAll : null}
       />
+
+      {/* Mark All as Read button */}
+      {allNotifications.length > 0 && allNotifications.some(n => !n.isRead) && (
+        <TouchableOpacity 
+          style={styles.markAllReadButton}
+          onPress={handleMarkAllAsRead}
+        >
+          <Text style={styles.markAllReadText}>Mark All as Read ({allNotifications.filter(n => !n.isRead).length})</Text>
+        </TouchableOpacity>
+      )}
 
       {allNotifications.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -206,6 +232,29 @@ const getStyles = (theme) => StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  notificationUnread: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
+    backgroundColor: theme.cardBackground,
+  },
+  notificationMessageUnread: {
+    fontWeight: '700',
+  },
+  markAllReadButton: {
+    backgroundColor: '#2196F3',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  markAllReadText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
   },
   iconContainer: {
     width: 50,

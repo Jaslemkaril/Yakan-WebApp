@@ -20,7 +20,7 @@ class ProductController extends Controller
             $products = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 3600), function () use ($request) {
                 $query = Product::select([
                     'id', 'name', 'description', 'price', 'stock', 'category_id', 'image', 'status', 'sku', 'created_at'
-                ])->with('category:id,name,slug')->active();
+                ])->with('category:id,name,slug')->active()->where('stock', '>', 0);
                 
                 if ($request->has('category')) {
                     $query->where('category_id', $request->category);
@@ -85,6 +85,7 @@ class ProductController extends Controller
                 ])
                 ->with('category:id,name,slug')
                 ->active()
+                ->where('stock', '>', 0)
                 ->where('featured', true)
                 ->limit($request->get('limit', 6))
                 ->get();
@@ -129,6 +130,7 @@ class ProductController extends Controller
                     $query->where('slug', $category);
                 })
                 ->active()
+                ->where('stock', '>', 0)
                 ->paginate(12);
         });
 

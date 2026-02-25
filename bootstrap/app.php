@@ -14,6 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
         then: function () {
             Route::middleware('web')
                 ->group(base_path('routes/setup.php'));
+
+            // Admin API routes (notifications, etc.)
+            Route::middleware('web')
+                ->prefix('api')
+                ->group(base_path('routes/admin_api.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware) {

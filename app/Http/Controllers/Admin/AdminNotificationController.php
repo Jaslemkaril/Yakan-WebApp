@@ -14,7 +14,7 @@ class AdminNotificationController extends Controller
     public function index(Request $request)
     {
         try {
-            $notifications = AdminNotification::where('admin_id', auth()->guard('admin')->id())
+            $notifications = AdminNotification::where('admin_id', auth()->id())
                 ->orWhereNull('admin_id') // Global notifications
                 ->orderBy('created_at', 'desc')
                 ->limit(50)
@@ -35,7 +35,7 @@ class AdminNotificationController extends Controller
                 });
 
             $unreadCount = AdminNotification::where(function($query) {
-                    $query->where('admin_id', auth()->guard('admin')->id())
+                    $query->where('admin_id', auth()->id())
                           ->orWhereNull('admin_id');
                 })
                 ->where('is_read', false)
@@ -61,7 +61,7 @@ class AdminNotificationController extends Controller
     {
         try {
             $notification = AdminNotification::where(function($query) use ($id) {
-                    $query->where('admin_id', auth()->guard('admin')->id())
+                    $query->where('admin_id', auth()->id())
                           ->orWhereNull('admin_id');
                 })
                 ->where('id', $id)
@@ -88,7 +88,7 @@ class AdminNotificationController extends Controller
     {
         try {
             AdminNotification::where(function($query) {
-                    $query->where('admin_id', auth()->guard('admin')->id())
+                    $query->where('admin_id', auth()->id())
                           ->orWhereNull('admin_id');
                 })
                 ->where('is_read', false)
@@ -116,7 +116,7 @@ class AdminNotificationController extends Controller
     {
         try {
             $count = AdminNotification::where(function($query) {
-                    $query->where('admin_id', auth()->guard('admin')->id())
+                    $query->where('admin_id', auth()->id())
                           ->orWhereNull('admin_id');
                 })
                 ->where('is_read', false)

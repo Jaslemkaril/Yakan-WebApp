@@ -9,11 +9,6 @@ use Illuminate\Support\Facades\Auth;
 
 class CouponController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth:admin');
-    }
-
     public function index()
     {
         $coupons = Coupon::orderByDesc('created_at')->paginate(15);

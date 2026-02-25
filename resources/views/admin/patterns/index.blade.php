@@ -42,10 +42,8 @@
                     <select name="difficulty" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500" onchange="document.getElementById('filterForm').submit()">
                         <option value="">All Levels</option>
                         <option value="simple" {{ request('difficulty') == 'simple' ? 'selected' : '' }}>Simple</option>
-                        <option value="intermediate" {{ request('difficulty') == 'intermediate' ? 'selected' : '' }}>Intermediate</option>
-                        <option value="advanced" {{ request('difficulty') == 'advanced' ? 'selected' : '' }}>Advanced</option>
-                        <option value="expert" {{ request('difficulty') == 'expert' ? 'selected' : '' }}>Expert</option>
-                        <option value="master" {{ request('difficulty') == 'master' ? 'selected' : '' }}>Master</option>
+                        <option value="medium" {{ request('difficulty') == 'medium' ? 'selected' : '' }}>Medium</option>
+                        <option value="complex" {{ request('difficulty') == 'complex' ? 'selected' : '' }}>Complex</option>
                     </select>
                 </div>
                 <div>

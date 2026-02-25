@@ -14,7 +14,7 @@ use App\Http\Controllers\Admin\CustomOrderController as AdminCustomOrderControll
 |
 */
 
-Route::middleware(['auth:admin', 'throttle:api'])->prefix('v1/admin')->group(function () {
+Route::middleware(['admin', 'throttle:120,1'])->prefix('v1/admin')->group(function () {
     
     // Custom Orders Management
     Route::prefix('/custom-orders')->group(function () {

@@ -136,51 +136,60 @@ export const CartProvider = ({ children }) => {
   };
 
   const addToCart = async (product, quantity = 1) => {
-    // Optimistic update
-    const existingItem = cartItems.find(item => item.id === product.id);
-    
-    if (existingItem) {
-      setCartItems(cartItems.map(item =>
-        item.id === product.id
-          ? { ...item, quantity: item.quantity + quantity }
-          : item
-      ));
-    } else {
-      setCartItems([...cartItems, { ...product, quantity }]);
-    }
+    // Save snapshot for rollback
+    let snapshot;
+    setCartItems(prev => {
+      snapshot = prev;
+      const existingItem = prev.find(item => item.id === product.id);
+      if (existingItem) {
+        return prev.map(item =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        );
+      } else {
+        return [...prev, { ...product, quantity }];
+      }
+    });
 
     // Sync with backend if logged in
     if (isLoggedIn) {
       try {
         await ApiService.addToCart(product.id, quantity);
-        // Refresh cart to get accurate data
+        // Refresh cart to get accurate data (including cart_id)
         await fetchCart();
       } catch (error) {
         console.error('[Cart] Add to cart error:', error);
         // Revert optimistic update on error
-        if (existingItem) {
-          setCartItems(cartItems);
-        } else {
-          setCartItems(cartItems.filter(item => item.id !== product.id));
+        if (snapshot) {
+          setCartItems(snapshot);
         }
+        throw error;
       }
     }
   };
 
   const removeFromCart = async (productId) => {
-    const item = cartItems.find(i => i.id === productId);
-    
-    // Optimistic update
-    setCartItems(cartItems.filter(item => item.id !== productId));
+    let snapshot;
+    let removedItem;
+    setCartItems(prev => {
+      snapshot = prev;
+      removedItem = prev.find(i => i.id === productId);
+      return prev.filter(item => item.id !== productId);
+    });
 
     // Sync with backend if logged in
-    if (isLoggedIn && item?.cart_id) {
+    if (isLoggedIn && removedItem?.cart_id) {
       try {
-        await ApiService.removeFromCart(item.cart_id);
+        await ApiService.removeFromCart(removedItem.cart_id);
+        // Refresh cart to ensure consistency
+        await fetchCart();
       } catch (error) {
         console.error('[Cart] Remove error:', error);
         // Revert on error
-        setCartItems([...cartItems, item]);
+        if (snapshot) {
+          setCartItems(snapshot);
+        }
       }
     }
   };
@@ -191,25 +200,27 @@ export const CartProvider = ({ children }) => {
       return;
     }
 
-    const item = cartItems.find(i => i.id === productId);
-    const oldQuantity = item?.quantity;
-    
-    // Optimistic update
-    setCartItems(cartItems.map(item =>
-      item.id === productId ? { ...item, quantity } : item
-    ));
+    let snapshot;
+    let targetItem;
+    setCartItems(prev => {
+      snapshot = prev;
+      targetItem = prev.find(i => i.id === productId);
+      return prev.map(item =>
+        item.id === productId ? { ...item, quantity } : item
+      );
+    });
 
     // Sync with backend if logged in
-    if (isLoggedIn && item?.cart_id) {
+    if (isLoggedIn && targetItem?.cart_id) {
       try {
-        await ApiService.updateCartItem(item.cart_id, quantity);
+        await ApiService.updateCartItem(targetItem.cart_id, quantity);
+        // Refresh cart to ensure consistency
+        await fetchCart();
       } catch (error) {
         console.error('[Cart] Update error:', error);
         // Revert on error
-        if (oldQuantity) {
-          setCartItems(cartItems.map(item =>
-            item.id === productId ? { ...item, quantity: oldQuantity } : item
-          ));
+        if (snapshot) {
+          setCartItems(snapshot);
         }
       }
     }
@@ -357,14 +368,19 @@ export const CartProvider = ({ children }) => {
       return;
     }
     
-    const exists = wishlistItems.find(item => item.id === product.id);
-    if (exists) {
+    let alreadyExists = false;
+    setWishlistItems(prev => {
+      if (prev.find(item => item.id === product.id)) {
+        alreadyExists = true;
+        return prev;
+      }
+      return [...prev, product];
+    });
+    
+    if (alreadyExists) {
       console.log('[Wishlist] Product already in wishlist');
       return;
     }
-    
-    // Optimistic update - add to local state immediately
-    setWishlistItems([...wishlistItems, product]);
     
     // Sync with backend if logged in
     if (isLoggedIn) {
@@ -374,12 +390,12 @@ export const CartProvider = ({ children }) => {
         if (!response.success) {
           console.warn('[Wishlist] Failed to add to backend:', response.error);
           // Rollback on error
-          setWishlistItems(wishlistItems.filter(item => item.id !== product.id));
+          setWishlistItems(prev => prev.filter(item => item.id !== product.id));
         }
       } catch (error) {
         console.error('[Wishlist] Failed to add to backend:', error);
         // Rollback on error
-        setWishlistItems(wishlistItems.filter(item => item.id !== product.id));
+        setWishlistItems(prev => prev.filter(item => item.id !== product.id));
       }
     }
   };
@@ -391,8 +407,11 @@ export const CartProvider = ({ children }) => {
     }
     
     // Optimistic update - remove from local state immediately
-    const previousWishlist = [...wishlistItems];
-    setWishlistItems(wishlistItems.filter(item => item.id !== productId));
+    let snapshot;
+    setWishlistItems(prev => {
+      snapshot = prev;
+      return prev.filter(item => item.id !== productId);
+    });
     
     // Sync with backend if logged in
     if (isLoggedIn) {
@@ -404,16 +423,15 @@ export const CartProvider = ({ children }) => {
           console.log('[Wishlist] Successfully removed from backend');
         } else if (response.error === 'Item not in wishlist.') {
           console.log('[Wishlist] Item was not in backend wishlist (already removed or never added)');
-          // This is fine - the item is removed from local state which is what we want
         } else {
           // Real error - rollback
           console.error('[Wishlist] Failed to remove from backend:', response.error);
-          setWishlistItems(previousWishlist);
+          if (snapshot) setWishlistItems(snapshot);
         }
       } catch (error) {
         console.error('[Wishlist] Failed to remove from backend:', error);
         // Rollback on network/connection error
-        setWishlistItems(previousWishlist);
+        if (snapshot) setWishlistItems(snapshot);
       }
     }
   };

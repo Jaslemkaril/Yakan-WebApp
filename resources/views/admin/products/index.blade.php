@@ -89,10 +89,10 @@ use Illuminate\Support\Facades\Storage;
                 <select name="category" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000]">
                     <option value="">All Categories</option>
                     @php
-                        $categories = ['Yakan Bags', 'Yakan Fabrics', 'Accessories', 'Home Decor'];
+                        $categories = \App\Models\Category::orderBy('name')->get();
                     @endphp
                     @foreach($categories as $category)
-                    <option value="{{ $category }}" {{ request('category') == $category ? 'selected' : '' }}>{{ $category }}</option>
+                    <option value="{{ $category->name }}" {{ request('category') == $category->name ? 'selected' : '' }}>{{ $category->name }}</option>
                     @endforeach
                 </select>
                 <select name="status" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000]">

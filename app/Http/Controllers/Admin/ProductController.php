@@ -16,14 +16,38 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::query();
+        $query = Product::with('category');
 
         if ($request->filled('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
 
-        $status = $request->filled('status') ? $request->status : 'active';
-        $query->where('status', $status);
+        // Status filter — only apply if explicitly set
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Category filter
+        if ($request->filled('category')) {
+            $query->whereHas('category', function ($q) use ($request) {
+                $q->where('name', $request->category);
+            });
+        }
+
+        // Stock level filter
+        if ($request->filled('stock')) {
+            switch ($request->stock) {
+                case 'in_stock':
+                    $query->where('stock', '>', 10);
+                    break;
+                case 'low_stock':
+                    $query->where('stock', '>', 0)->where('stock', '<=', 10);
+                    break;
+                case 'out_of_stock':
+                    $query->where('stock', '<=', 0);
+                    break;
+            }
+        }
 
         $products = $query->latest()->paginate(10);
 

@@ -176,6 +176,23 @@ export default function SavedAddressesScreen({ navigation }) {
     );
   };
 
+  const handleSetDefault = async (id) => {
+    try {
+      console.log('[SavedAddresses] Setting default address:', id);
+      const response = await ApiService.setAddressDefault(id);
+      
+      if (response.success) {
+        Alert.alert('Success', 'Default address updated');
+        await fetchAddresses();
+      } else {
+        Alert.alert('Error', response.error || 'Failed to set default address');
+      }
+    } catch (error) {
+      console.error('[SavedAddresses] Set default error:', error);
+      Alert.alert('Error', 'Failed to set default address');
+    }
+  };
+
   const openEditModal = (address) => {
     setEditingId(address.id);
     setFormData({
@@ -258,6 +275,16 @@ export default function SavedAddressesScreen({ navigation }) {
             <MaterialCommunityIcons name="pencil-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
             <Text style={styles.actionText}>Edit</Text>
           </TouchableOpacity>
+          {!isDefault && (
+            <TouchableOpacity 
+              style={styles.setDefaultBtn}
+              onPress={() => handleSetDefault(item.id)}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="check-circle-outline" size={18} color={colors.primary} style={{ marginRight: 6 }} />
+              <Text style={styles.setDefaultText}>Set Default</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity 
             style={styles.deleteBtn}
             onPress={() => handleDeleteAddress(item.id)}
@@ -589,6 +616,7 @@ const getStyles = (theme) => StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     marginTop: 12,
+    flexWrap: 'wrap',
   },
   editBtn: {
     flex: 1,
@@ -603,6 +631,22 @@ const getStyles = (theme) => StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
+  },
+  setDefaultBtn: {
+    flex: 1,
+    backgroundColor: theme.cardBackground,
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    borderWidth: 1.5,
+    borderColor: theme.primary,
+  },
+  setDefaultText: {
+    color: theme.primary,
+    fontWeight: '700',
+    fontSize: 13,
   },
   deleteBtn: {
     flex: 1,

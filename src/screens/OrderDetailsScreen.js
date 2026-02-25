@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import colors from '../constants/colors';
 import { trackingStages } from '../constants/tracking';
 import ApiService from '../services/api';
+import { API_CONFIG } from '../config/config';
 import { useOrderNotifications } from '../hooks/useOrderNotifications';
 import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
@@ -370,7 +371,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
             order.items.map((item, index) => {
               // Construct image URL from product image path
               const imageUrl = item.product?.image 
-                ? `http://192.168.1.203:8000/uploads/products/${item.product.image}`
+                ? `${API_CONFIG.STORAGE_BASE_URL.replace('/storage', '')}/uploads/products/${item.product.image}`
                 : 'https://via.placeholder.com/60?text=No+Image';
               
               return (

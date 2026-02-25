@@ -1,23 +1,38 @@
-@extends('admin.layouts.app')
+@extends('layouts.admin')
 
 @section('title', 'Production Dashboard - Custom Orders')
 
 @push('styles')
 <style>
     .stat-card {
-        @apply bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl transform hover:scale-105;
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        transition: all 0.3s;
+    }
+    .stat-card:hover {
+        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        transform: scale(1.05);
     }
     
     .stat-card .icon {
-        @apply w-12 h-12 rounded-full flex items-center justify-center text-white mb-4;
+        width: 3rem;
+        height: 3rem;
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        margin-bottom: 1rem;
     }
     
-    .stat-card.blue .icon { @apply bg-gradient-to-br from-[#800000] to-[#600000]; }
-    .stat-card.green .icon { @apply bg-gradient-to-br from-green-400 to-green-600; }
-    .stat-card.orange .icon { @apply bg-gradient-to-br from-orange-400 to-orange-600; }
-    .stat-card.purple .icon { @apply bg-gradient-to-br from-[#800000] to-[#600000]; }
-    .stat-card.red .icon { @apply bg-gradient-to-br from-red-400 to-red-600; }
-    .stat-card.indigo .icon { @apply bg-gradient-to-br from-indigo-400 to-indigo-600; }
+    .stat-card.blue .icon { background: linear-gradient(to bottom right, #800000, #600000); }
+    .stat-card.green .icon { background: linear-gradient(to bottom right, #4ade80, #16a34a); }
+    .stat-card.orange .icon { background: linear-gradient(to bottom right, #fb923c, #ea580c); }
+    .stat-card.purple .icon { background: linear-gradient(to bottom right, #800000, #600000); }
+    .stat-card.red .icon { background: linear-gradient(to bottom right, #f87171, #dc2626); }
+    .stat-card.indigo .icon { background: linear-gradient(to bottom right, #818cf8, #4f46e5); }
     
     .progress-ring {
         transform: rotate(-90deg);
@@ -29,49 +44,56 @@
     }
     
     .chart-container {
-        @apply bg-white rounded-xl shadow-lg p-6;
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        padding: 1.5rem;
     }
     
     .quick-action-btn {
-        @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        display: inline-block;
     }
+    .quick-action-btn:hover { transform: scale(1.05); }
     
-    .quick-action-btn.primary {
-        @apply bg-[#800000] text-white hover:bg-[#600000];
-    }
+    .quick-action-btn.primary { background: #800000; color: white; }
+    .quick-action-btn.primary:hover { background: #600000; }
     
-    .quick-action-btn.success {
-        @apply bg-green-600 text-white hover:bg-green-700;
-    }
+    .quick-action-btn.success { background: #16a34a; color: white; }
+    .quick-action-btn.success:hover { background: #15803d; }
     
-    .quick-action-btn.warning {
-        @apply bg-yellow-600 text-white hover:bg-yellow-700;
-    }
+    .quick-action-btn.warning { background: #ca8a04; color: white; }
+    .quick-action-btn.warning:hover { background: #a16207; }
     
-    .quick-action-btn.danger {
-        @apply bg-red-600 text-white hover:bg-red-700;
-    }
+    .quick-action-btn.danger { background: #dc2626; color: white; }
+    .quick-action-btn.danger:hover { background: #b91c1c; }
     
     .timeline-item {
-        @apply relative pl-8 pb-4 border-l-2 border-gray-200;
+        position: relative;
+        padding-left: 2rem;
+        padding-bottom: 1rem;
+        border-left: 2px solid #e5e7eb;
     }
     
     .timeline-item::before {
         content: '';
-        @apply absolute left-0 top-0 w-3 h-3 bg-white border-2 border-gray-300 rounded-full transform -translate-x-1/2;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 0.75rem;
+        height: 0.75rem;
+        background: white;
+        border: 2px solid #d1d5db;
+        border-radius: 9999px;
+        transform: translateX(-50%);
     }
     
-    .timeline-item.completed::before {
-        @apply bg-green-500 border-green-500;
-    }
-    
-    .timeline-item.processing::before {
-        @apply bg-[#800000] border-[#800000];
-    }
-    
-    .timeline-item.pending::before {
-        @apply bg-yellow-500 border-yellow-500;
-    }
+    .timeline-item.completed::before { background: #22c55e; border-color: #22c55e; }
+    .timeline-item.processing::before { background: #800000; border-color: #800000; }
+    .timeline-item.pending::before { background: #eab308; border-color: #eab308; }
 </style>
 @endpush
 
@@ -86,10 +108,10 @@
     <!-- Quick Actions Bar -->
     <div class="bg-white rounded-lg shadow-lg p-4 mb-8 flex items-center justify-between">
         <div class="flex items-center space-x-4">
-            <a href="{{ route('admin_custom_orders.create') }}" class="quick-action-btn primary">
+            <a href="{{ route('admin.custom_orders.create') }}" class="quick-action-btn primary">
                 <i class="fas fa-plus mr-2"></i>New Order
             </a>
-            <a href="{{ route('admin_custom_orders.index.enhanced') }}" class="quick-action-btn success">
+            <a href="{{ route('admin.custom_orders.index') }}" class="quick-action-btn success">
                 <i class="fas fa-list mr-2"></i>All Orders
             </a>
             <button onclick="refreshDashboard()" class="quick-action-btn warning">

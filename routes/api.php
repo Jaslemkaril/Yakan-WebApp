@@ -78,6 +78,15 @@ Route::prefix('v1')->group(function () {
         Route::post('/chats/{id}/respond-quote', [ChatController::class, 'respondToQuote']);
         Route::patch('/chats/{id}/status', [ChatController::class, 'updateStatus']);
 
+        // Custom Orders (for mobile app)
+        Route::prefix('custom-orders')->name('custom-orders.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\CustomOrderController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Api\CustomOrderController::class, 'store'])->name('store');
+            Route::get('/{customOrder}', [\App\Http\Controllers\Api\CustomOrderController::class, 'show'])->name('show');
+            Route::put('/{customOrder}', [\App\Http\Controllers\Api\CustomOrderController::class, 'update'])->name('update');
+            Route::post('/{customOrder}/cancel', [\App\Http\Controllers\Api\CustomOrderController::class, 'cancel'])->name('cancel');
+        });
+
         // Admin Orders
         Route::patch('/orders/{id}/status', [OrderController::class, 'updateStatus']);
         Route::get('/admin/orders', [OrderController::class, 'adminIndex']);

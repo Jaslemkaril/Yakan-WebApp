@@ -8,16 +8,18 @@ use Illuminate\Http\Request;
 
 class SettingsController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth:admin');
-    }
-
     public function index()
     {
-        $settings = [
-            'quality_check_days' => SystemSetting::get('quality_check_days', 1),
-        ];
+        try {
+            $settings = [
+                'quality_check_days' => SystemSetting::get('quality_check_days', 1),
+            ];
+        } catch (\Exception $e) {
+            // If system_settings table doesn't exist yet, use defaults
+            $settings = [
+                'quality_check_days' => 1,
+            ];
+        }
 
         return view('admin.settings.index', compact('settings'));
     }
@@ -28,8 +30,13 @@ class SettingsController extends Controller
             'quality_check_days' => 'required|integer|min:1|max:30',
         ]);
 
-        foreach ($validated as $key => $value) {
-            SystemSetting::set($key, $value);
+        try {
+            foreach ($validated as $key => $value) {
+                SystemSetting::set($key, $value);
+            }
+        } catch (\Exception $e) {
+            return redirect()->route('admin.settings.index')
+                ->with('error', 'Failed to save settings. The system_settings table may need to be created.');
         }
 
         return redirect()->route('admin.settings.index')
