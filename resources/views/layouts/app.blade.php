@@ -1099,6 +1099,41 @@
         </div>
     </div>
 
+    <!-- Flash Messages -->
+    @if(session('success') || session('error') || session('info') || session('warning'))
+    <div id="flashMessageBar" style="position:fixed;top:80px;right:20px;z-index:9999;max-width:380px;">
+        @if(session('success'))
+        <div class="flex items-center gap-3 rounded-xl shadow-lg px-5 py-4 mb-2" style="background:#f0fdf4;border:1px solid #86efac;color:#166534;">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <span class="text-sm font-medium">{{ session('success') }}</span>
+            <button onclick="this.parentElement.remove()" class="ml-auto text-green-400 hover:text-green-600">&times;</button>
+        </div>
+        @endif
+        @if(session('error'))
+        <div class="flex items-center gap-3 rounded-xl shadow-lg px-5 py-4 mb-2" style="background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="text-sm font-medium">{{ session('error') }}</span>
+            <button onclick="this.parentElement.remove()" class="ml-auto text-red-400 hover:text-red-600">&times;</button>
+        </div>
+        @endif
+        @if(session('info'))
+        <div class="flex items-center gap-3 rounded-xl shadow-lg px-5 py-4 mb-2" style="background:#eff6ff;border:1px solid #93c5fd;color:#1e40af;">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="text-sm font-medium">{{ session('info') }}</span>
+            <button onclick="this.parentElement.remove()" class="ml-auto text-blue-400 hover:text-blue-600">&times;</button>
+        </div>
+        @endif
+        @if(session('warning'))
+        <div class="flex items-center gap-3 rounded-xl shadow-lg px-5 py-4 mb-2" style="background:#fffbeb;border:1px solid #fcd34d;color:#92400e;">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+            <span class="text-sm font-medium">{{ session('warning') }}</span>
+            <button onclick="this.parentElement.remove()" class="ml-auto text-yellow-500 hover:text-yellow-700">&times;</button>
+        </div>
+        @endif
+    </div>
+    <script>setTimeout(function(){var el=document.getElementById('flashMessageBar');if(el){el.style.transition='opacity 0.5s';el.style.opacity='0';setTimeout(function(){el&&el.remove();},500);}},4000);</script>
+    @endif
+
     <!-- Main Content -->
     <main class="relative z-10">
         @yield('content')

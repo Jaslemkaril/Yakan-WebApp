@@ -37,27 +37,34 @@ class CartController extends Controller
                 'buy_now' => $request->input('buy_now') ? 'yes' : 'no'
             ]);
 
-            // Check or create inventory record
-            $inventory = \App\Models\Inventory::where('product_id', $product->id)->first();
-            
-            if (!$inventory) {
-                // Auto-create inventory from product stock
-                $inventory = \App\Models\Inventory::create([
-                    'product_id' => $product->id,
-                    'quantity' => $product->stock,
-                    'min_stock_level' => 5,
-                    'max_stock_level' => 100,
-                    'cost_price' => $product->price * 0.6,
-                    'selling_price' => $product->price,
-                ]);
-                \Log::info('Auto-created inventory', ['product_id' => $product->id, 'quantity' => $product->stock]);
+            // Check stock — use inventory table if available, fall back to product.stock
+            $availableStock = $product->stock ?? 0;
+            try {
+                if (\Illuminate\Support\Facades\Schema::hasTable('inventory')) {
+                    $inventory = \App\Models\Inventory::where('product_id', $product->id)->first();
+                    if (!$inventory) {
+                        // Auto-create inventory record from product stock
+                        $inventory = \App\Models\Inventory::create([
+                            'product_id'      => $product->id,
+                            'quantity'        => $product->stock ?? 0,
+                            'min_stock_level' => 5,
+                            'max_stock_level' => 100,
+                            'cost_price'      => ($product->price ?? 0) * 0.6,
+                            'selling_price'   => $product->price ?? 0,
+                        ]);
+                        \Log::info('Auto-created inventory', ['product_id' => $product->id]);
+                    }
+                    $availableStock = $inventory->quantity;
+                }
+            } catch (\Exception $invEx) {
+                \Log::warning('Inventory check skipped, using product.stock', ['error' => $invEx->getMessage()]);
+                $inventory = null;
             }
-            
-            // Check inventory stock
-            if (!$inventory->hasSufficientStock($qty)) {
-                $availableQty = $inventory->quantity;
-                \Log::warning('Insufficient stock', ['product_id' => $product->id, 'requested' => $qty, 'available' => $availableQty]);
-                return redirect()->back()->with('error', "Insufficient stock. Only {$availableQty} item(s) available.");
+
+            // Check stock availability
+            if ($availableStock < $qty) {
+                \Log::warning('Insufficient stock', ['product_id' => $product->id, 'requested' => $qty, 'available' => $availableStock]);
+                return redirect()->back()->with('error', "Insufficient stock. Only {$availableStock} item(s) available.");
             }
 
             // If "Buy Now" was clicked, add to cart and redirect to cart page
@@ -72,10 +79,8 @@ class CartController extends Controller
                 if ($cartItem) {
                     // Check if new total exceeds available stock
                     $newTotal = $cartItem->quantity + $qty;
-                    
-                    if (!$inventory->hasSufficientStock($newTotal)) {
-                        $availableQty = $inventory->quantity;
-                        return redirect()->back()->with('error', "Cannot add more. Only {$availableQty} item(s) available in total.");
+                    if ($newTotal > $availableStock) {
+                        return redirect()->back()->with('error', "Cannot add more. Only {$availableStock} item(s) available in total.");
                     }
                     $cartItem->quantity += $qty;
                     $cartItem->save();
@@ -101,14 +106,12 @@ class CartController extends Controller
             if ($cartItem) {
                 // Check if new total exceeds available stock
                 $newTotal = $cartItem->quantity + $qty;
-                
-                if (!$inventory->hasSufficientStock($newTotal)) {
-                    $availableQty = $inventory->quantity;
-                    return redirect()->back()->with('error', "Cannot add more. Only {$availableQty} item(s) available in total.");
+                if ($newTotal > $availableStock) {
+                    return redirect()->back()->with('error', "Cannot add more. Only {$availableStock} item(s) available in total.");
                 }
                 $cartItem->quantity += $qty;
-            $cartItem->save();
-            \Log::info('Cart item updated', ['cart_item_id' => $cartItem->id, 'new_quantity' => $cartItem->quantity]);
+                $cartItem->save();
+                \Log::info('Cart item updated', ['cart_item_id' => $cartItem->id, 'new_quantity' => $cartItem->quantity]);
         } else {
             $newItem = Cart::create([
                 'user_id'    => $userId,
