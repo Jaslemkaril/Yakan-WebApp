@@ -156,14 +156,14 @@ class SocialAuthController extends Controller
                 }
             }
 
-            // Login the user
+            // Login the user with remember=true for persistent cookie
             Auth::login($user, true);
 
-            // Explicitly regenerate and save session to ensure persistence
+            // Regenerate session ID to prevent session fixation
+            // Do NOT call session()->save() — let StartSession middleware handle persistence
             session()->regenerate();
-            session()->save();
 
-            // Generate auth token (fallback for session/cookie issues on Railway)
+            // Generate auth token as fallback for Railway cookie issues
             $token = bin2hex(random_bytes(32));
             \DB::table('auth_tokens')->updateOrInsert(
                 ['user_id' => $user->id],
@@ -175,7 +175,7 @@ class SocialAuthController extends Controller
                 ]
             );
 
-            // Store token in session as additional fallback
+            // Store token in session for TokenAuth middleware fallback
             session(['auth_token' => $token]);
 
             \Log::info('User logged in successfully', [
@@ -185,9 +185,10 @@ class SocialAuthController extends Controller
                 'session_id' => session()->getId(),
             ]);
 
-            // Redirect with auth_token fallback (same pattern as regular login)
-            $redirectUrl = route('welcome') . '?auth_token=' . $token;
-            return redirect($redirectUrl)
+            // Use cookie-based token instead of URL query param (more secure)
+            // TokenAuth middleware will read the cookie on subsequent requests
+            return redirect()->intended(route('welcome'))
+                ->withCookie(cookie('auth_token', $token, 60 * 24, '/', null, null, true, false, 'Lax'))
                 ->with('success', 'Successfully logged in with ' . ucfirst($provider) . '!');
 
         } catch (\Exception $e) {

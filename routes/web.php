@@ -267,6 +267,33 @@ Route::get('/debug/session', function () {
     ]);
 });
 
+// Deep debug: session, cookies, auth state
+Route::get('/debug/session-check', function (\Illuminate\Http\Request $request) {
+    return response()->json([
+        'authenticated' => \Auth::check(),
+        'user_id' => \Auth::id(),
+        'session_driver' => config('session.driver'),
+        'session_id' => session()->getId(),
+        'session_cookie_name' => config('session.cookie'),
+        'session_secure' => config('session.secure'),
+        'session_same_site' => config('session.same_site'),
+        'session_domain' => config('session.domain'),
+        'app_env' => config('app.env'),
+        'app_url' => config('app.url'),
+        'request_secure' => $request->secure(),
+        'request_scheme' => $request->getScheme(),
+        'x_forwarded_proto' => $request->header('X-Forwarded-Proto'),
+        'cookies_received' => array_keys($_COOKIE),
+        'has_session_cookie' => isset($_COOKIE[config('session.cookie')]),
+        'has_auth_token_cookie' => isset($_COOKIE['auth_token']),
+        'auth_token_cookie_value' => isset($_COOKIE['auth_token']) ? substr($_COOKIE['auth_token'], 0, 12) . '...' : null,
+        'session_auth_token' => session('auth_token') ? substr(session('auth_token'), 0, 12) . '...' : null,
+        'remember_token' => \Auth::user()?->remember_token ? 'SET' : 'NOT SET',
+        'php_sapi' => php_sapi_name(),
+        'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'unknown',
+    ]);
+});
+
 // Debug OAuth redirect URIs
 Route::get('/debug/oauth-config', function () {
     return response()->json([

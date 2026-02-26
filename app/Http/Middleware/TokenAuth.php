@@ -21,7 +21,7 @@ class TokenAuth
         if ($token && !Auth::check()) {
             \Log::info('TokenAuth: Processing token', ['token' => substr($token, 0, 8) . '...']);
             
-            // Validate token
+            // Validate token against database
             $authToken = DB::table('auth_tokens')
                 ->where('token', $token)
                 ->where('expires_at', '>', now())
@@ -34,8 +34,8 @@ class TokenAuth
                     Auth::login($user, true); // Remember = true
                     
                     // Store token in session for subsequent requests
+                    // Do NOT call session()->save() — let StartSession middleware handle it
                     session(['auth_token' => $token]);
-                    session()->save(); // Force save
                     
                     \Log::info('TokenAuth: User authenticated', [
                         'user_id' => $user->id,
@@ -52,9 +52,10 @@ class TokenAuth
         $response = $next($request);
         
         // If user just authenticated via query param, set a persistent cookie
+        // Use secure=null to auto-match the request protocol (avoids hardcoded mismatch)
         if ($request->query('auth_token') && Auth::check()) {
             $response->headers->setCookie(
-                cookie('auth_token', $request->query('auth_token'), 60 * 24, '/', null, true, true, false, 'Lax')
+                cookie('auth_token', $request->query('auth_token'), 60 * 24, '/', null, null, true, false, 'Lax')
             );
         }
         

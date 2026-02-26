@@ -171,8 +171,13 @@ return [
     |
     */
 
-    // Auto-detect: secure = true when request is HTTPS (Railway proxy sets X-Forwarded-Proto)
-    'secure' => env('SESSION_SECURE_COOKIE', null),
+    // HTTPS-only cookies: true in production (Railway), null for auto-detect in dev
+    // CRITICAL: null alone doesn't work because Response::prepare() runs before
+    // StartSession adds the cookie, so secureDefault is never set on the session cookie.
+    // Explicitly set to true for production, false for local.
+    'secure' => env('SESSION_SECURE_COOKIE',
+        env('APP_ENV') === 'production' ? true : false
+    ),
 
     /*
     |--------------------------------------------------------------------------
@@ -202,7 +207,8 @@ return [
     |
     */
 
-    // Use 'lax' for normal browsing, allows navigation to site
+    // Use 'lax' for normal browsing — allows OAuth cross-site callback navigation
+    // MUST match the SameSite value on auth_token and other app cookies
     'same_site' => env('SESSION_SAME_SITE', 'lax'),
 
 
