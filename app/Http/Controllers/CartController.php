@@ -805,13 +805,17 @@ class CartController extends Controller
             );
         }
 
+        // Get auth_token to pass through redirects (cookies are stripped by Railway edge proxy)
+        $authToken = request()->input('auth_token') ?? session('auth_token');
+        $tokenParam = $authToken ? '?auth_token=' . $authToken : '';
+
         // Redirect based on payment method
         if ($request->payment_method === 'online') {
-            return redirect()->route('payment.online', $order->id)
+            return redirect(route('payment.online', $order->id) . $tokenParam)
                              ->with('success', 'Order placed! Complete payment online.');
         }
 
-        return redirect()->route('payment.bank', $order->id)
+        return redirect(route('payment.bank', $order->id) . $tokenParam)
                          ->with('success', 'Order placed! Complete bank payment.');
     }
 
