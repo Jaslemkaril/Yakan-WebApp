@@ -171,8 +171,8 @@ return [
     |
     */
 
-    // For Railway behind proxy: Force secure=false internally, proxy handles HTTPS
-    'secure' => env('SESSION_SECURE_COOKIE', false),
+    // Railway uses HTTPS - cookies must be Secure so the browser sends them back
+    'secure' => env('SESSION_SECURE_COOKIE', true),
 
     /*
     |--------------------------------------------------------------------------

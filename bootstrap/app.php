@@ -70,56 +70,59 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        // Always show detailed errors for debugging
+        // Let AuthenticationException use Laravel's default handling (redirect to login)
+        // Do NOT catch it here or users see an error page instead of the login form
+        
         $exceptions->renderable(function (\Throwable $e, $request) {
+            // Skip exceptions that Laravel handles well on its own
+            if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+                return null; // Let Laravel handle → redirect to login
+            }
+            if ($e instanceof \Illuminate\Session\TokenMismatchException) {
+                return redirect()->back()->with('error', 'Session expired. Please try again.');
+            }
+            if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                if ($request->expectsJson()) {
+                    return response()->json(['success' => false, 'message' => 'The requested item was not found.'], 404);
+                }
+                return null; // Let Laravel show 404 page
+            }
+
             \Log::error('Global exception caught: ' . $e->getMessage(), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'url' => $request->fullUrl(),
                 'method' => $request->method(),
-                'trace' => $e->getTraceAsString(),
             ]);
 
-            // Determine appropriate status code
-            $statusCode = 500;
-            $friendlyMessage = $e->getMessage();
-
-            if ($e instanceof \Illuminate\Auth\AuthenticationException) {
-                $statusCode = 401;
-                $friendlyMessage = 'Please login to continue.';
-            } elseif ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
-                $statusCode = 404;
-                $friendlyMessage = 'The requested item was not found.';
-            } elseif ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpException) {
-                $statusCode = $e->getStatusCode();
-            }
-            
-            // Show detailed error page
-            if (!$request->expectsJson()) {
-                return response(
-                    "<!DOCTYPE html>" .
-                    "<html><head><title>Application Error</title>" .
-                    "<style>body{font-family:Arial,sans-serif;padding:20px;background:#f5f5f5}h1{color:#c00}pre{background:#fff;padding:15px;border-radius:5px;overflow:auto}.info{background:#fff;padding:15px;margin:10px 0;border-left:4px solid #800000}</style>" .
-                    "</head><body>" .
-                    "<h1>⚠️ Application Error</h1>" .
-                    "<div class='info'><strong>Error:</strong> " . htmlspecialchars($e->getMessage()) . "</div>" .
-                    "<div class='info'><strong>File:</strong> " . htmlspecialchars($e->getFile()) . ":" . $e->getLine() . "</div>" .
-                    "<div class='info'><strong>URL:</strong> " . htmlspecialchars($request->fullUrl()) . "</div>" .
-                    "<div class='info'><strong>Auth:</strong> " . (auth()->check() ? 'Authenticated (User ID: ' . auth()->id() . ')' : 'Not Authenticated') . "</div>" .
-                    "<div class='info'><strong>Has Token:</strong> " . ($request->has('auth_token') ? 'Yes' : 'No') . "</div>" .
-                    "<h2>Stack Trace:</h2>" .
-                    "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>" .
-                    "<a href='/' style='display:inline-block;margin-top:20px;padding:10px 20px;background:#800000;color:white;text-decoration:none;border-radius:5px'>Go to Home</a>" .
-                    "</body></html>",
-                    $statusCode
-                );
-            }
+            $statusCode = $e instanceof \Symfony\Component\HttpKernel\Exception\HttpException
+                ? $e->getStatusCode()
+                : 500;
             
             // JSON response for API/AJAX requests
-            return response()->json([
-                'success' => false,
-                'message' => $friendlyMessage,
-                'error' => $e->getMessage(),
-            ], $statusCode);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'error' => $e->getMessage(),
+                ], $statusCode);
+            }
+
+            // Show detailed error page for non-JSON
+            return response(
+                "<!DOCTYPE html>" .
+                "<html><head><title>Application Error</title>" .
+                "<style>body{font-family:Arial,sans-serif;padding:20px;background:#f5f5f5}h1{color:#c00}pre{background:#fff;padding:15px;border-radius:5px;overflow:auto}.info{background:#fff;padding:15px;margin:10px 0;border-left:4px solid #800000}</style>" .
+                "</head><body>" .
+                "<h1>⚠️ Application Error</h1>" .
+                "<div class='info'><strong>Error:</strong> " . htmlspecialchars($e->getMessage()) . "</div>" .
+                "<div class='info'><strong>File:</strong> " . htmlspecialchars($e->getFile()) . ":" . $e->getLine() . "</div>" .
+                "<div class='info'><strong>URL:</strong> " . htmlspecialchars($request->fullUrl()) . "</div>" .
+                "<h2>Stack Trace:</h2>" .
+                "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>" .
+                "<a href='/' style='display:inline-block;margin-top:20px;padding:10px 20px;background:#800000;color:white;text-decoration:none;border-radius:5px'>Go to Home</a>" .
+                "</body></html>",
+                $statusCode
+            );
         });
     })->create();
