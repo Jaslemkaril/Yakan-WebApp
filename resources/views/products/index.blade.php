@@ -539,26 +539,51 @@ function quickAddToCart(productId) {
     const originalText = button.innerHTML;
     button.innerHTML = '<svg class="w-4 h-4 inline animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Adding...';
     button.disabled = true;
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    if (!csrfToken) {
+        button.innerHTML = originalText;
+        button.disabled = false;
+        showNotification('Session error. Please refresh the page.', 'error');
+        return;
+    }
     
     fetch(`/cart/add/${productId}`, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            'X-CSRF-TOKEN': csrfToken.content,
+            'X-Requested-With': 'XMLHttpRequest'
         },
         body: JSON.stringify({ quantity: 1 })
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
+    .then(response => {
+        const contentType = response.headers.get('content-type') || '';
+        
+        // If redirected to login page (HTML response), user needs to log in
+        if (response.redirected || !contentType.includes('application/json')) {
+            throw new Error('LOGIN_REQUIRED');
+        }
+        
+        return response.json().then(data => ({ data, status: response.status, ok: response.ok }));
+    })
+    .then(({ data, status, ok }) => {
+        if (ok && data.success) {
             button.innerHTML = '✓ Added';
             button.classList.add('bg-green-600');
             updateCartBadge(data.cart_count);
             showNotification(data.message || 'Product added to cart!', 'success');
         } else {
             button.innerHTML = '✗ Failed';
-            showNotification(data.message || 'Could not add to cart', 'error');
+            let errorMsg = data.message || data.error || 'Could not add to cart';
+            if (status === 401) {
+                errorMsg = 'Please login to add items to your cart.';
+            } else if (status === 419) {
+                errorMsg = 'Session expired. Please refresh the page and try again.';
+            }
+            showNotification(errorMsg, 'error');
         }
         setTimeout(() => {
             button.innerHTML = originalText;
@@ -570,7 +595,12 @@ function quickAddToCart(productId) {
         console.error('Add to cart error:', error);
         button.innerHTML = originalText;
         button.disabled = false;
-        showNotification('Error adding to cart. Please make sure you are logged in.', 'error');
+        if (error.message === 'LOGIN_REQUIRED') {
+            showNotification('Please login to add items to your cart.', 'error');
+            setTimeout(() => { window.location.href = '/login'; }, 1500);
+        } else {
+            showNotification('Error adding to cart. Please refresh and try again.', 'error');
+        }
     });
 }
 

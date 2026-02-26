@@ -79,6 +79,20 @@ return Application::configure(basePath: dirname(__DIR__))
                 'method' => $request->method(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
+            // Determine appropriate status code
+            $statusCode = 500;
+            $friendlyMessage = $e->getMessage();
+
+            if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+                $statusCode = 401;
+                $friendlyMessage = 'Please login to continue.';
+            } elseif ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                $statusCode = 404;
+                $friendlyMessage = 'The requested item was not found.';
+            } elseif ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpException) {
+                $statusCode = $e->getStatusCode();
+            }
             
             // Show detailed error page
             if (!$request->expectsJson()) {
@@ -97,15 +111,15 @@ return Application::configure(basePath: dirname(__DIR__))
                     "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>" .
                     "<a href='/' style='display:inline-block;margin-top:20px;padding:10px 20px;background:#800000;color:white;text-decoration:none;border-radius:5px'>Go to Home</a>" .
                     "</body></html>",
-                    500
+                    $statusCode
                 );
             }
             
-            // JSON response for API requests
+            // JSON response for API/AJAX requests
             return response()->json([
+                'success' => false,
+                'message' => $friendlyMessage,
                 'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ], 500);
+            ], $statusCode);
         });
     })->create();
