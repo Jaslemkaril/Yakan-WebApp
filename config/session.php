@@ -18,9 +18,8 @@ return [
     |
     */
 
-    // Use database sessions for Railway - more reliable than file on ephemeral filesystem
-    // Database sessions persist across deployments and container restarts
-    'driver' => env('SESSION_DRIVER', 'database'),
+    // Use file sessions - more reliable than database when DB has connectivity issues
+    'driver' => env('SESSION_DRIVER', 'file'),
 
     /*
     |--------------------------------------------------------------------------
