@@ -171,8 +171,8 @@ return [
     |
     */
 
-    // Railway uses HTTPS - cookies must be Secure so the browser sends them back
-    'secure' => env('SESSION_SECURE_COOKIE', true),
+    // Auto-detect: secure = true when request is HTTPS (Railway proxy sets X-Forwarded-Proto)
+    'secure' => env('SESSION_SECURE_COOKIE', null),
 
     /*
     |--------------------------------------------------------------------------

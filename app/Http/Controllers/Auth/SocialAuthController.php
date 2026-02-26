@@ -159,13 +159,35 @@ class SocialAuthController extends Controller
             // Login the user
             Auth::login($user, true);
 
+            // Explicitly regenerate and save session to ensure persistence
+            session()->regenerate();
+            session()->save();
+
+            // Generate auth token (fallback for session/cookie issues on Railway)
+            $token = bin2hex(random_bytes(32));
+            \DB::table('auth_tokens')->updateOrInsert(
+                ['user_id' => $user->id],
+                [
+                    'token' => $token,
+                    'expires_at' => now()->addHours(24),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
+
+            // Store token in session as additional fallback
+            session(['auth_token' => $token]);
+
             \Log::info('User logged in successfully', [
                 'user_id' => $user->id,
                 'provider' => $provider,
                 'authenticated' => Auth::check(),
+                'session_id' => session()->getId(),
             ]);
 
-            return redirect()->intended(route('welcome'))
+            // Redirect with auth_token fallback (same pattern as regular login)
+            $redirectUrl = route('welcome') . '?auth_token=' . $token;
+            return redirect($redirectUrl)
                 ->with('success', 'Successfully logged in with ' . ucfirst($provider) . '!');
 
         } catch (\Exception $e) {
