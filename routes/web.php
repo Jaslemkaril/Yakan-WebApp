@@ -267,6 +267,34 @@ Route::get('/debug/session', function () {
     ]);
 });
 
+// Run database migrations (emergency use)
+Route::get('/debug/run-migrations', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        $output = \Illuminate\Support\Facades\Artisan::output();
+        return response()->json(['status' => 'success', 'output' => $output]);
+    } catch (\Exception $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
+    }
+});
+
+// Check which DB tables exist
+Route::get('/debug/db-tables', function () {
+    try {
+        $tables = \Illuminate\Support\Facades\DB::select('SHOW TABLES');
+        $tableNames = array_map(fn($t) => array_values((array)$t)[0], $tables);
+        $hasSessionsTable = in_array('sessions', $tableNames);
+        return response()->json([
+            'tables' => $tableNames,
+            'has_sessions_table' => $hasSessionsTable,
+            'has_users_table' => in_array('users', $tableNames),
+            'has_carts_table' => in_array('carts', $tableNames) || in_array('cart_items', $tableNames),
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()]);
+    }
+});
+
 // Deep debug: session, cookies, auth state
 Route::get('/debug/session-check', function (\Illuminate\Http\Request $request) {
     return response()->json([
