@@ -604,6 +604,18 @@
 </div>
 
 <script>
+// Helper: inject auth_token into any form before programmatic submit
+// (form.submit() doesn't fire the submit event, so the layout JS can't intercept it)
+function injectAuthAndSubmit(form) {
+    const authToken = localStorage.getItem('yakan_auth_token');
+    if (authToken && !form.querySelector('input[name="auth_token"]')) {
+        const t = document.createElement('input');
+        t.type = 'hidden'; t.name = 'auth_token'; t.value = authToken;
+        form.appendChild(t);
+    }
+    form.submit();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const clamp = (val, min, max) => {
         let v = parseInt(val || 0, 10);
@@ -834,7 +846,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Submit the form
                 if (checkoutForm) {
-                    checkoutForm.submit();
+                    injectAuthAndSubmit(checkoutForm);
                 }
             }
         });
@@ -986,7 +998,7 @@ function submitEditAddress() {
     // Set form action and submit
     form.action = `/addresses/${addressId}`;
     form.method = 'POST';
-    form.submit();
+    injectAuthAndSubmit(form);
 }
 
 function submitNewAddress() {
@@ -1009,7 +1021,7 @@ function submitNewAddress() {
     // Set form action and submit
     form.action = '{{ route("addresses.store") }}';
     form.method = 'POST';
-    form.submit();
+    injectAuthAndSubmit(form);
 }
 </script>
 

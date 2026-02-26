@@ -569,6 +569,16 @@
             csrfInput.name = '_token';
             csrfInput.value = csrfToken;
             form.appendChild(csrfInput);
+
+            // Add auth_token for Railway (cookies are stripped by edge proxy)
+            const authToken = localStorage.getItem('yakan_auth_token');
+            if (authToken) {
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = 'auth_token';
+                tokenInput.value = authToken;
+                form.appendChild(tokenInput);
+            }
             
             // Add selected item IDs
             selectedIds.forEach(id => {

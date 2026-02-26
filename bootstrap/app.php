@@ -57,6 +57,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'chats/*/close',
             'cart/*',
             'wishlist/*',
+            'addresses/*',
+            'addresses',
         ]);
         
         $middleware->api(prepend: [
