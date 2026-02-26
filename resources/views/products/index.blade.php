@@ -532,7 +532,6 @@ function showNotification(message, type = 'success') {
 }
 
 function quickAddToCart(productId) {
-    // Quick add to cart functionality
     console.log('Quick add to cart:', productId);
     
     // Add loading state
@@ -541,21 +540,38 @@ function quickAddToCart(productId) {
     button.innerHTML = '<svg class="w-4 h-4 inline animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Adding...';
     button.disabled = true;
     
-    // Simulate API call
-    setTimeout(() => {
-        button.innerHTML = '✓ Added';
-        button.classList.add('bg-green-600');
-        
-        // Update cart badge
-        updateCartBadge();
-        
-        // Reset after 2 seconds
+    fetch(`/cart/add/${productId}`, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ quantity: 1 })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            button.innerHTML = '✓ Added';
+            button.classList.add('bg-green-600');
+            updateCartBadge(data.cart_count);
+            showNotification(data.message || 'Product added to cart!', 'success');
+        } else {
+            button.innerHTML = '✗ Failed';
+            showNotification(data.message || 'Could not add to cart', 'error');
+        }
         setTimeout(() => {
             button.innerHTML = originalText;
             button.disabled = false;
             button.classList.remove('bg-green-600');
         }, 2000);
-    }, 1000);
+    })
+    .catch(error => {
+        console.error('Add to cart error:', error);
+        button.innerHTML = originalText;
+        button.disabled = false;
+        showNotification('Error adding to cart. Please make sure you are logged in.', 'error');
+    });
 }
 
 function quickView(productId) {
@@ -566,13 +582,18 @@ function quickView(productId) {
     window.location.href = '/products/' + productId;
 }
 
-function updateCartBadge() {
+function updateCartBadge(count) {
     // Update cart badge count
     const cartBadge = document.querySelector('.cart-badge');
     if (cartBadge) {
-        const currentCount = parseInt(cartBadge.textContent) || 0;
-        cartBadge.textContent = currentCount + 1;
+        if (count !== undefined) {
+            cartBadge.textContent = count;
+        } else {
+            const currentCount = parseInt(cartBadge.textContent) || 0;
+            cartBadge.textContent = currentCount + 1;
+        }
         cartBadge.style.display = 'flex';
+        cartBadge.classList.remove('hidden');
         
         // Add pulse animation
         cartBadge.classList.add('animate-pulse');
