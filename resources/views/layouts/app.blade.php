@@ -1339,9 +1339,10 @@
                 .then(({ data, ok, status }) => {
                     if (ok && data.success) {
                         if (isBuyNow) {
-                            // Navigate to cart with auth_token so the page stays authenticated
-                            const cartUrl = '/cart' + (authToken ? '?auth_token=' + encodeURIComponent(authToken) : '');
-                            window.location.href = cartUrl;
+                            // Navigate to checkout with auth_token so the page stays authenticated
+                            const authToken = localStorage.getItem('yakan_auth_token');
+                            const checkoutUrl = '/cart/checkout' + (authToken ? '?auth_token=' + encodeURIComponent(authToken) : '');
+                            window.location.href = checkoutUrl;
                         } else {
                             updateCartCount(data.cart_count);
                             showToast(data.message || 'Product added to cart!', 'success');
