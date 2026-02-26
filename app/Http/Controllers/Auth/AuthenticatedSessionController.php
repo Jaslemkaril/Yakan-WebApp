@@ -111,6 +111,10 @@ class AuthenticatedSessionController extends Controller
     // Logout
     public function destroy(Request $request)
     {
+        // Delete auth_token from DB so it can't be replayed from localStorage after logout
+        if (Auth::check()) {
+            \DB::table('auth_tokens')->where('user_id', Auth::id())->delete();
+        }
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
