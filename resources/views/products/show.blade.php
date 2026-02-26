@@ -105,10 +105,13 @@
                 
                 <!-- Stock Status -->
                 <div class="mt-4 flex items-center gap-2">
-                    @if($product->stock > 0)
+                    @php
+                        $availableStock = $product->inventory ? $product->inventory->quantity : $product->stock;
+                    @endphp
+                    @if($availableStock > 0)
                         <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                         <span class="text-sm font-medium text-green-700">
-                            {{ $product->stock }} units in stock - Ready to ship
+                            {{ $availableStock }} units in stock - Ready to ship
                         </span>
                     @else
                         <div class="w-2 h-2 bg-red-500 rounded-full"></div>
@@ -140,7 +143,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
                         </svg>
                     </button>
-                    <input id="qty" name="quantity" type="number" min="1" max="{{ $product->stock ?? 999 }}" value="1" 
+                    <input id="qty" name="quantity" type="number" min="1" max="{{ $availableStock ?? 999 }}" value="1" 
                            class="w-16 text-center border-0 focus:ring-0" readonly>
                     <button type="button" onclick="incrementQty()" class="px-3 py-2 hover:bg-gray-100 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,7 +151,7 @@
                         </svg>
                     </button>
                 </div>
-                <span class="text-sm text-gray-500">({{ $product->stock ?? 0 }} available)</span>
+                <span class="text-sm text-gray-500">({{ $availableStock ?? 0 }} available)</span>
             </div>
 
             <!-- Purchase Options -->
@@ -164,13 +167,12 @@
                                 style="background: linear-gradient(135deg, #800000 0%, #600000 100%);"
                                 onmouseover="this.style.background='linear-gradient(135deg, #600000 0%, #400000 100%)'"
                                 onmouseout="this.style.background='linear-gradient(135deg, #800000 0%, #600000 100%)'"
-                                @if($product->stock == 0) disabled @endif
-                        >
+                                @if($availableStock == 0) disabled @endif>
                             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
                             </svg>
                             <span>
-                                @if($product->stock > 0)
+                                @if($availableStock > 0)
                                     Add to Cart
                                 @else
                                     Out of Stock
@@ -202,13 +204,13 @@
                             style="border-color: #800000; color: #800000;"
                             onmouseover="this.style.backgroundColor='#fff5f5'"
                             onmouseout="this.style.backgroundColor='transparent'"
-                            @if($product->stock == 0) disabled @endif
+                            @if($availableStock == 0) disabled @endif
                     >
                         <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                         </svg>
                         <span id="buyNowBtnText">
-                            @if($product->stock > 0)
+                            @if($availableStock > 0)
                                 Buy Now
                             @else
                                 Out of Stock

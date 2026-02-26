@@ -57,6 +57,9 @@ class ProductController extends Controller
     public function show(Product $product)
     {
         try {
+            // Eager load inventory so show.blade.php can use $product->inventory->quantity
+            $product->load('inventory');
+
             // Track recent view
             if (auth()->check()) {
                 \App\Models\RecentView::track($product, auth()->id());

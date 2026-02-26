@@ -615,11 +615,11 @@ function quickAddToCart(productId) {
 }
 
 function quickView(productId) {
-    // Quick view modal functionality
-    console.log('Quick view product:', productId);
-    
-    // Navigate to product page
-    window.location.href = '/products/' + productId;
+    // Navigate to product page with auth token
+    const authToken = localStorage.getItem('yakan_auth_token');
+    let url = '/products/' + productId;
+    if (authToken) url += '?auth_token=' + encodeURIComponent(authToken);
+    window.location.href = url;
 }
 
 function updateCartBadge(count) {
