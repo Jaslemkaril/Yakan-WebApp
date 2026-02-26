@@ -74,46 +74,28 @@ class CartController extends Controller
                 return redirect()->back()->with('error', $msg);
             }
 
-            // If "Buy Now" was clicked, add to cart and redirect to cart page
+            // If "Buy Now" was clicked, skip cart DB and return product info for direct checkout
             if ($request->input('buy_now')) {
                 \Log::info('Buy Now triggered', ['user_id' => $userId, 'product_id' => $product->id, 'quantity' => $qty]);
-                
-                $cartItem = Cart::where('user_id', $userId)
-                                ->where('product_id', $product->id)
-                                ->first();
-
-                if ($cartItem) {
-                    $newTotal = $cartItem->quantity + $qty;
-                    if ($newTotal > $availableStock) {
-                        $msg = "Cannot add more. Only {$availableStock} item(s) available in total.";
-                        if ($isAjax) {
-                            return response()->json(['success' => false, 'message' => $msg]);
-                        }
-                        return redirect()->back()->with('error', $msg);
-                    }
-                    $cartItem->quantity += $qty;
-                    $cartItem->save();
-                    \Log::info('Cart item updated via Buy Now', ['cart_item_id' => $cartItem->id, 'new_quantity' => $cartItem->quantity]);
-                } else {
-                    Cart::create([
-                        'user_id'    => $userId,
-                        'product_id' => $product->id,
-                        'quantity'   => $qty,
-                    ]);
-                }
 
                 $cartCount = Cart::where('user_id', $userId)->sum('quantity');
 
                 if ($isAjax) {
                     return response()->json([
-                        'success' => true,
-                        'message' => 'Product added to cart!',
+                        'success'    => true,
+                        'message'    => 'Proceeding to checkout...',
                         'cart_count' => $cartCount,
-                        'buy_now' => true,
+                        'buy_now'    => true,
+                        'product_id' => $product->id,
+                        'quantity'   => $qty,
                     ]);
                 }
 
-                return redirect()->route('cart.index')->with('success', 'Product added to cart. Review and proceed to checkout.');
+                // Non-AJAX fallback: redirect directly to checkout with URL params
+                $authToken = $request->input('auth_token') ?? session('auth_token');
+                $paramStr = 'buy_now=1&product_id=' . $product->id . '&quantity=' . $qty;
+                if ($authToken) $paramStr .= '&auth_token=' . $authToken;
+                return redirect('/cart/checkout?' . $paramStr);
             }
 
             // Regular "Add to Cart" flow
@@ -461,8 +443,35 @@ class CartController extends Controller
         if ($request->has('selected_items')) {
             session(['selected_cart_items' => $request->input('selected_items')]);
         }
-        
-        // Check if "Buy Now" item exists in session
+
+        // Check for buy_now via URL params first (Railway: sessions don't persist across redirects)
+        if ($request->boolean('buy_now') && $request->filled('product_id')) {
+            $product = Product::find($request->input('product_id'));
+            $qty = max(1, (int) $request->input('quantity', 1));
+            if ($product) {
+                $cartItems = collect([
+                    (object)[
+                        'id'         => 'buy_now',
+                        'product_id' => $product->id,
+                        'quantity'   => $qty,
+                        'product'    => $product,
+                    ]
+                ]);
+                $subtotal = $product->price * $qty;
+                $discount = 0;
+                $appliedCoupon = null;
+                $total = $subtotal;
+                $addresses = \App\Models\UserAddress::forUser(Auth::id())
+                    ->orderBy('is_default', 'desc')->get();
+                $defaultAddress = $addresses->firstWhere('is_default', true);
+                return view('cart.checkout', compact('cartItems', 'total', 'addresses', 'defaultAddress'))
+                    ->with('subtotal', $subtotal)
+                    ->with('discount', $discount)
+                    ->with('appliedCoupon', $appliedCoupon);
+            }
+        }
+
+        // Check if "Buy Now" item exists in session (fallback for non-Railway environments)
         if (session()->has('buy_now_item')) {
             $buyNowItem = session('buy_now_item');
             $product = Product::find($buyNowItem['product_id']);
@@ -558,10 +567,16 @@ class CartController extends Controller
         $userId = Auth::id();
         
         // Check if this is a "Buy Now" checkout
-        if (session()->has('buy_now_item')) {
-            $buyNowItem = session('buy_now_item');
-            $product = Product::find($buyNowItem['product_id']);
-            
+        // First check request params (Railway: sessions don't persist), then fall back to session
+        if (($request->boolean('buy_now') && $request->filled('product_id')) || session()->has('buy_now_item')) {
+            if ($request->boolean('buy_now') && $request->filled('product_id')) {
+                $product = Product::find($request->input('product_id'));
+                $qty = max(1, (int) $request->input('quantity', 1));
+            } else {
+                $buyNowItem = session('buy_now_item');
+                $product = Product::find($buyNowItem['product_id']);
+                $qty = $buyNowItem['quantity'];
+            }
             if (!$product) {
                 session()->forget('buy_now_item');
                 return redirect()->route('products.index')->with('error', 'Product not found.');
@@ -571,7 +586,7 @@ class CartController extends Controller
             $cartItems = collect([
                 (object)[
                     'product_id' => $product->id,
-                    'quantity' => $buyNowItem['quantity'],
+                    'quantity' => $qty,
                     'product' => $product,
                 ]
             ]);
@@ -752,8 +767,9 @@ class CartController extends Controller
         }
 
         // Clear cart or buy_now_item session
-        if (session()->has('buy_now_item')) {
-            session()->forget('buy_now_item');
+        $isBuyNow = ($request->boolean('buy_now') && $request->filled('product_id')) || session()->has('buy_now_item');
+        if ($isBuyNow) {
+            session()->forget('buy_now_item'); // safe to call even if not set
         } else {
             // If specific items were selected, only delete those
             if (session()->has('selected_cart_items')) {
@@ -943,7 +959,9 @@ class CartController extends Controller
                     );
                 }
 
-                return redirect()->route('orders.show', $orderId)
+                $authToken = $request->input('auth_token') ?? session('auth_token');
+                $tokenParam = $authToken ? '?auth_token=' . $authToken : '';
+                return redirect(route('orders.show', $orderId) . $tokenParam)
                                  ->with('success', 'Bank receipt uploaded! We will verify and update your order shortly.');
             } catch (\Exception $e) {
                 \Log::error('Error processing bank payment', [
@@ -951,8 +969,9 @@ class CartController extends Controller
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
                 ]);
-                
-                return redirect()->route('orders.show', $orderId)
+                $authToken = $request->input('auth_token') ?? session('auth_token');
+                $tokenParam = $authToken ? '?auth_token=' . $authToken : '';
+                return redirect(route('orders.show', $orderId) . $tokenParam)
                                  ->with('error', 'Error processing payment: ' . $e->getMessage());
             }
         }
@@ -1112,7 +1131,9 @@ class CartController extends Controller
                 );
             }
 
-            return redirect()->route('orders.show', $orderId)
+            $authToken = request()->input('auth_token') ?? session('auth_token');
+            $tokenParam = $authToken ? '?auth_token=' . $authToken : '';
+            return redirect(route('orders.show', $orderId) . $tokenParam)
                              ->with('success', 'GCash payment verified! Your order is now being processed.');
         } catch (\Exception $e) {
             \Log::error('Error processing payment', [
@@ -1120,8 +1141,9 @@ class CartController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            
-            return redirect()->route('orders.show', $orderId)
+            $authToken = request()->input('auth_token') ?? session('auth_token');
+            $tokenParam = $authToken ? '?auth_token=' . $authToken : '';
+            return redirect(route('orders.show', $orderId) . $tokenParam)
                              ->with('error', 'Error processing payment: ' . $e->getMessage());
         }
     }

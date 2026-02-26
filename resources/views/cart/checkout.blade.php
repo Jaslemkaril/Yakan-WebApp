@@ -604,7 +604,7 @@
 </div>
 
 <script>
-// Helper: inject auth_token into any form before programmatic submit
+// Helper: inject auth_token (and buy_now params if applicable) into any form before programmatic submit
 // (form.submit() doesn't fire the submit event, so the layout JS can't intercept it)
 function injectAuthAndSubmit(form) {
     const authToken = localStorage.getItem('yakan_auth_token');
@@ -612,6 +612,17 @@ function injectAuthAndSubmit(form) {
         const t = document.createElement('input');
         t.type = 'hidden'; t.name = 'auth_token'; t.value = authToken;
         form.appendChild(t);
+    }
+    // Carry buy_now params through the form POST (so processCheckout knows it's Buy Now)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('buy_now') === '1') {
+        ['buy_now', 'product_id', 'quantity'].forEach(function(key) {
+            if (urlParams.has(key) && !form.querySelector('input[name="' + key + '"]')) {
+                const inp = document.createElement('input');
+                inp.type = 'hidden'; inp.name = key; inp.value = urlParams.get(key);
+                form.appendChild(inp);
+            }
+        });
     }
     form.submit();
 }
