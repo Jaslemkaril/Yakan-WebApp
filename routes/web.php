@@ -308,6 +308,9 @@ Route::get('/debug/cookie-test', function (\Illuminate\Http\Request $request) {
             'debug_test', 'hello_' . time(), time() + 3600, '/', null, false, false, false, 'lax'
         )
     );
+    // Explicitly prevent caching so Railway edge doesn't strip Set-Cookie
+    $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    $response->headers->set('Pragma', 'no-cache');
     return $response;
 });
 

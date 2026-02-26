@@ -36,7 +36,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\TokenAuth::class, // Token-based auth fallback
         ]);
         
-        // Exclude authentication routes from CSRF verification to fix 419 errors
+        // Exclude routes from CSRF verification
+        // Session cookies are unreliable on Railway's edge proxy with PHP built-in server,
+        // so CSRF tokens won't match. Auth is handled by TokenAuth middleware instead.
         $middleware->validateCsrfTokens(except: [
             'login',
             'login-user',
@@ -53,6 +55,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'sanctum/csrf-cookie',
             'chats/*/message',
             'chats/*/close',
+            'cart/*',
+            'wishlist/*',
         ]);
         
         $middleware->api(prepend: [

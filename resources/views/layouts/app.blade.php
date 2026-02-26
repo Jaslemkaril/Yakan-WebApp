@@ -1452,5 +1452,99 @@
             }
         }, true);
     </script>
+
+    {{-- Auth Token Persistence: Railway edge strips Set-Cookie headers from PHP built-in server,
+         so session cookies never reach the browser. This script saves the auth_token from URL
+         query params to localStorage and attaches it to all internal links and fetch requests. --}}
+    <script>
+    (function() {
+        const STORAGE_KEY = 'yakan_auth_token';
+
+        // 1. Capture token from URL (login redirects include ?auth_token=xxx)
+        const params = new URLSearchParams(window.location.search);
+        const urlToken = params.get('auth_token');
+        if (urlToken) {
+            localStorage.setItem(STORAGE_KEY, urlToken);
+            // Clean URL without reloading (remove auth_token from address bar)
+            params.delete('auth_token');
+            const clean = params.toString();
+            const newUrl = window.location.pathname + (clean ? '?' + clean : '') + window.location.hash;
+            window.history.replaceState({}, '', newUrl);
+        }
+
+        const token = localStorage.getItem(STORAGE_KEY);
+        if (!token) return; // No token, nothing to do
+
+        // 2. Append auth_token to all internal <a> links on the page
+        function appendTokenToLinks() {
+            document.querySelectorAll('a[href]').forEach(function(a) {
+                const href = a.getAttribute('href');
+                // Only internal links (same origin or relative)
+                if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:')) return;
+                try {
+                    const url = new URL(href, window.location.origin);
+                    if (url.origin !== window.location.origin) return; // Skip external links
+                    if (url.searchParams.has('auth_token')) return; // Already has it
+                    url.searchParams.set('auth_token', token);
+                    a.setAttribute('href', url.pathname + url.search + url.hash);
+                } catch(e) { /* skip invalid URLs */ }
+            });
+        }
+        // Run once DOM is ready, and again after any dynamic content changes
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', appendTokenToLinks);
+        } else {
+            appendTokenToLinks();
+        }
+        // Observe DOM changes for dynamically added links
+        const observer = new MutationObserver(appendTokenToLinks);
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        // 3. Intercept fetch() to include auth_token in requests
+        const originalFetch = window.fetch;
+        window.fetch = function(input, init) {
+            try {
+                let url;
+                if (typeof input === 'string') {
+                    url = new URL(input, window.location.origin);
+                } else if (input instanceof Request) {
+                    url = new URL(input.url);
+                } else {
+                    url = input;
+                }
+                // Only add to same-origin requests
+                if (url.origin === window.location.origin && !url.searchParams.has('auth_token')) {
+                    url.searchParams.set('auth_token', token);
+                    if (typeof input === 'string') {
+                        input = url.toString();
+                    } else if (input instanceof Request) {
+                        input = new Request(url.toString(), input);
+                    }
+                }
+            } catch(e) { /* pass through */ }
+            return originalFetch.call(this, input, init);
+        };
+
+        // 4. Intercept form submissions to include auth_token
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            if (!form || form.method === 'get') return;
+            // Add hidden field if not present
+            if (!form.querySelector('input[name="auth_token"]')) {
+                const hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = 'auth_token';
+                hidden.value = token;
+                form.appendChild(hidden);
+            }
+        }, true);
+
+        // 5. Clear token on logout
+        document.querySelectorAll('a[href*="logout"], form[action*="logout"]').forEach(function(el) {
+            el.addEventListener('click', function() { localStorage.removeItem(STORAGE_KEY); });
+            el.addEventListener('submit', function() { localStorage.removeItem(STORAGE_KEY); });
+        });
+    })();
+    </script>
 </body>
 </html>

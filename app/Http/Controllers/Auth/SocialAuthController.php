@@ -186,10 +186,11 @@ class SocialAuthController extends Controller
                 'session_id' => session()->getId(),
             ]);
 
-            // Use cookie-based token instead of URL query param (more secure)
-            // TokenAuth middleware will read the cookie on subsequent requests
-            return redirect()->intended(route('welcome'))
-                ->withCookie(cookie('auth_token', $token, 60 * 24, '/', null, null, true, false, 'Lax'))
+            // Redirect with auth_token in URL — the JavaScript in the layout will
+            // save it to localStorage and use it for all subsequent requests.
+            // Cookies don't work on Railway (edge proxy strips Set-Cookie headers).
+            $redirectUrl = route('welcome') . '?auth_token=' . $token;
+            return redirect()->to($redirectUrl)
                 ->with('success', 'Successfully logged in with ' . ucfirst($provider) . '!');
 
         } catch (\Exception $e) {
