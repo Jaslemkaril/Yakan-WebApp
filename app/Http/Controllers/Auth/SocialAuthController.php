@@ -45,10 +45,10 @@ class SocialAuthController extends Controller
 
             \Log::info('Attempting Socialite redirect', ['provider' => $provider]);
             
-            // Get the redirect URL from Socialite and do an explicit redirect
-            // This avoids Socialite's redirect response being rendered as text
-            $driver = Socialite::driver($provider);
-            $redirectUrl = $driver->redirect()->getTargetUrl();
+            // Use stateless() to avoid storing OAuth state in session.
+            // Railway's reverse proxy prevents session cookies from reaching the browser,
+            // so stateful OAuth always fails with InvalidStateException.
+            $redirectUrl = Socialite::driver($provider)->stateless()->redirect()->getTargetUrl();
             
             \Log::info('OAuth redirect URL generated', ['url' => substr($redirectUrl, 0, 100) . '...']);
             
@@ -79,7 +79,8 @@ class SocialAuthController extends Controller
 
             \Log::info('Starting OAuth callback', ['provider' => $provider]);
 
-            $socialUser = Socialite::driver($provider)->user();
+            // Use stateless() to match the redirect — skips state validation
+            $socialUser = Socialite::driver($provider)->stateless()->user();
 
             \Log::info('Social user retrieved', [
                 'provider' => $provider,
@@ -208,7 +209,7 @@ class SocialAuthController extends Controller
      */
     public function redirectToGoogle()
     {
-        $url = Socialite::driver('google')->redirect()->getTargetUrl();
+        $url = Socialite::driver('google')->stateless()->redirect()->getTargetUrl();
         return redirect()->away($url);
     }
 
@@ -218,7 +219,7 @@ class SocialAuthController extends Controller
     public function handleGoogleCallback()
     {
         try {
-            $googleUser = Socialite::driver('google')->user();
+            $googleUser = Socialite::driver('google')->stateless()->user();
             
             $user = $this->findOrCreateUser($googleUser, 'google');
             
@@ -238,7 +239,7 @@ class SocialAuthController extends Controller
      */
     public function redirectToFacebook()
     {
-        $url = Socialite::driver('facebook')->redirect()->getTargetUrl();
+        $url = Socialite::driver('facebook')->stateless()->redirect()->getTargetUrl();
         return redirect()->away($url);
     }
 
@@ -248,7 +249,7 @@ class SocialAuthController extends Controller
     public function handleFacebookCallback()
     {
         try {
-            $facebookUser = Socialite::driver('facebook')->user();
+            $facebookUser = Socialite::driver('facebook')->stateless()->user();
             
             $user = $this->findOrCreateUser($facebookUser, 'facebook');
             

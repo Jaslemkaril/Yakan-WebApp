@@ -295,6 +295,22 @@ Route::get('/debug/db-tables', function () {
     }
 });
 
+// Raw cookie test — tests if Set-Cookie header survives the Railway proxy
+Route::get('/debug/cookie-test', function (\Illuminate\Http\Request $request) {
+    $response = response()->json([
+        'message' => 'cookie test',
+        'cookies_in_request' => array_keys($_COOKIE),
+        'has_test_cookie' => isset($_COOKIE['debug_test']),
+        'test_cookie_value' => $_COOKIE['debug_test'] ?? null,
+    ]);
+    $response->headers->setCookie(
+        \Symfony\Component\HttpFoundation\Cookie::create(
+            'debug_test', 'hello_' . time(), time() + 3600, '/', null, false, false, false, 'lax'
+        )
+    );
+    return $response;
+});
+
 // Deep debug: session, cookies, auth state
 Route::get('/debug/session-check', function (\Illuminate\Http\Request $request) {
     return response()->json([
