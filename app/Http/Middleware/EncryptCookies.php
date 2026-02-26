@@ -14,5 +14,6 @@ class EncryptCookies extends Middleware
     protected $except = [
         'yakan_session',
         'XSRF-TOKEN',
+        'auth_token',
     ];
 }

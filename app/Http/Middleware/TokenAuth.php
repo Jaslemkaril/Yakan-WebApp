@@ -12,8 +12,11 @@ class TokenAuth
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // Check for auth_token in query parameter, POST data, or session
-        $token = $request->input('auth_token') ?? $request->query('auth_token') ?? session('auth_token');
+        // Check for auth_token in: query param, POST data, cookie, or session
+        $token = $request->input('auth_token') 
+            ?? $request->query('auth_token') 
+            ?? $request->cookie('auth_token')
+            ?? session('auth_token');
         
         if ($token && !Auth::check()) {
             \Log::info('TokenAuth: Processing token', ['token' => substr($token, 0, 8) . '...']);
@@ -41,9 +44,20 @@ class TokenAuth
                 }
             } else {
                 \Log::warning('TokenAuth: Invalid or expired token');
+                // Clear invalid cookie
+                cookie()->queue(cookie()->forget('auth_token'));
             }
         }
         
-        return $next($request);
+        $response = $next($request);
+        
+        // If user just authenticated via query param, set a persistent cookie
+        if ($request->query('auth_token') && Auth::check()) {
+            $response->headers->setCookie(
+                cookie('auth_token', $request->query('auth_token'), 60 * 24, '/', null, true, true, false, 'Lax')
+            );
+        }
+        
+        return $response;
     }
 }

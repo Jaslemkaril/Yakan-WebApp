@@ -32,4 +32,4 @@ cmds = [
 ]
 
 [start]
-cmd = "bash railway.sh ; php -S 0.0.0.0:${PORT:-8080} -t public"
+cmd = "bash railway.sh ; php -S 0.0.0.0:${PORT:-8080} server.php"
