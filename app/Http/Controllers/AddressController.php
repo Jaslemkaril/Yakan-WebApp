@@ -92,7 +92,9 @@ class AddressController extends Controller
                 ->with('success', 'Address added successfully!');
         }
 
-        return redirect()->route('addresses.index')
+        $token = $request->input('auth_token') ?? $request->query('auth_token');
+        $params = $token ? ['auth_token' => $token] : [];
+        return redirect()->route('addresses.index', $params)
             ->with('success', 'Address added successfully!');
     }
 
@@ -157,7 +159,9 @@ class AddressController extends Controller
                 ->with('success', 'Address updated successfully!');
         }
 
-        return redirect()->route('addresses.index')
+        $token = $request->input('auth_token') ?? $request->query('auth_token');
+        $params = $token ? ['auth_token' => $token] : [];
+        return redirect()->route('addresses.index', $params)
             ->with('success', 'Address updated successfully!');
     }
 
@@ -179,7 +183,9 @@ class AddressController extends Controller
             }
         }
 
-        return redirect()->route('addresses.index')
+        $token = request()->input('auth_token') ?? request()->query('auth_token');
+        $params = $token ? ['auth_token' => $token] : [];
+        return redirect()->route('addresses.index', $params)
             ->with('success', 'Address deleted successfully!');
     }
 
@@ -197,7 +203,9 @@ class AddressController extends Controller
             return redirect($referer)->with('success', 'Delivery address updated!');
         }
 
-        return redirect()->route('addresses.index')
+        $token = request()->input('auth_token') ?? request()->query('auth_token');
+        $params = $token ? ['auth_token' => $token] : [];
+        return redirect()->route('addresses.index', $params)
             ->with('success', 'Default address updated!');
     }
 

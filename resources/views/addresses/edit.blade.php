@@ -82,6 +82,12 @@
     const citySelect = document.getElementById('edit_city_id');
     const barangaySelect = document.getElementById('edit_barangay_id');
     
+    const urlParams = new URLSearchParams(window.location.search);
+    const authToken = urlParams.get('auth_token') || sessionStorage.getItem('auth_token') || '';
+    function apiUrl(path) {
+        return authToken ? `${path}?auth_token=${encodeURIComponent(authToken)}` : path;
+    }
+    
     // Store current address data
     const currentAddress = {
         province: "{{ $address->province }}",
@@ -127,7 +133,7 @@
     
     // Load regions
     function loadEditRegions() {
-        fetch('/addresses/api/regions')
+        fetch(apiUrl('/addresses/api/regions'))
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -149,7 +155,7 @@
     // Find and select province
     function findAndSelectProvince() {
         // Try each region to find the province
-        fetch('/addresses/api/regions')
+        fetch(apiUrl('/addresses/api/regions'))
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -158,7 +164,7 @@
                         if (index >= data.data.length || found) return;
                         
                         const region = data.data[index];
-                        fetch(`/addresses/api/provinces/${region.id}`)
+                        fetch(apiUrl(`/addresses/api/provinces/${region.id}`))
                             .then(response => response.json())
                             .then(provinceData => {
                                 const matchingProvince = provinceData.data.find(p => p.name === currentAddress.province);
@@ -178,7 +184,7 @@
     
     // Load provinces
     function loadEditProvinces(regionId, selectProvinceId = null) {
-        fetch(`/addresses/api/provinces/${regionId}`)
+        fetch(apiUrl(`/addresses/api/provinces/${regionId}`))
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -206,7 +212,7 @@
     
     // Load cities
     function loadEditCities(provinceId) {
-        fetch(`/addresses/api/cities/${provinceId}`)
+        fetch(apiUrl(`/addresses/api/cities/${provinceId}`))
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -228,7 +234,7 @@
     
     // Load barangays
     function loadEditBarangays(cityId) {
-        fetch(`/addresses/api/barangays/${cityId}`)
+        fetch(apiUrl(`/addresses/api/barangays/${cityId}`))
             .then(response => response.json())
             .then(data => {
                 if (data.success) {

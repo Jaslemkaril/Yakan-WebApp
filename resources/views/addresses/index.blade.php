@@ -227,17 +227,50 @@
 
 <script>
 function editAddress(addressId) {
-    // Fetch address data and populate edit modal
-    fetch(`/addresses/${addressId}/edit`)
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('auth_token') || sessionStorage.getItem('auth_token') || '';
+    const fetchUrl = token ? `/addresses/${addressId}/edit?auth_token=${encodeURIComponent(token)}` : `/addresses/${addressId}/edit`;
+
+    fetch(fetchUrl)
         .then(response => response.text())
         .then(html => {
             document.getElementById('editFormContainer').innerHTML = html;
+
+            // Inject auth_token into the dynamically loaded form's action URL and as hidden input
+            if (token) {
+                const form = document.querySelector('#editFormContainer form');
+                if (form) {
+                    try {
+                        const actionUrl = new URL(form.action, window.location.origin);
+                        if (!actionUrl.searchParams.has('auth_token')) {
+                            actionUrl.searchParams.set('auth_token', token);
+                            form.action = actionUrl.toString();
+                        }
+                    } catch(e) {}
+                    if (!form.querySelector('input[name="auth_token"]')) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'auth_token';
+                        input.value = token;
+                        form.appendChild(input);
+                    }
+                }
+            }
+
             document.getElementById('editAddressModal').classList.remove('hidden');
-        });
+        })
+        .catch(err => console.error('Error loading edit form:', err));
 }
 
 // Cascading dropdown logic
 document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const authToken = urlParams.get('auth_token') || sessionStorage.getItem('auth_token') || '';
+
+    function apiUrl(path) {
+        return authToken ? `${path}?auth_token=${encodeURIComponent(authToken)}` : path;
+    }
+
     const regionSelect = document.getElementById('region_id');
     const provinceSelect = document.getElementById('province_id');
     const citySelect = document.getElementById('city_id');
@@ -287,7 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Load regions
     function loadRegions() {
-        fetch('/addresses/api/regions')
+        fetch(apiUrl('/addresses/api/regions'))
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -308,7 +341,7 @@ document.addEventListener('DOMContentLoaded', function() {
         provinceSelect.disabled = true;
         provinceSelect.classList.add('bg-gray-100');
         
-        fetch(`/addresses/api/provinces/${regionId}`)
+        fetch(apiUrl(`/addresses/api/provinces/${regionId}`))
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -331,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
         citySelect.disabled = true;
         citySelect.classList.add('bg-gray-100');
         
-        fetch(`/addresses/api/cities/${provinceId}`)
+        fetch(apiUrl(`/addresses/api/cities/${provinceId}`))
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -354,7 +387,7 @@ document.addEventListener('DOMContentLoaded', function() {
         barangaySelect.disabled = true;
         barangaySelect.classList.add('bg-gray-100');
         
-        fetch(`/addresses/api/barangays/${cityId}`)
+        fetch(apiUrl(`/addresses/api/barangays/${cityId}`))
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
