@@ -793,6 +793,14 @@ class CustomOrderController extends Controller
 
             // Get fabric type from session if available
             $fabricType = $wizardData['fabric']['type'] ?? null;
+            $fabricQuantity = $wizardData['fabric']['quantity_meters'] ?? null;
+
+            // Look up fabric type name for Live Preview display
+            $fabricTypeName = null;
+            if ($fabricType) {
+                $fabricTypeModel = \App\Models\FabricType::find($fabricType);
+                $fabricTypeName = $fabricTypeModel ? $fabricTypeModel->name : ('Fabric #' . $fabricType);
+            }
 
             return view('custom_orders.wizard.pattern_selection', [
                 'product' => $product,
@@ -800,6 +808,8 @@ class CustomOrderController extends Controller
                 'selectedPattern' => $selectedPattern,
                 'patterns' => $patterns,
                 'fabricType' => $fabricType,
+                'fabricTypeName' => $fabricTypeName,
+                'fabricQuantity' => $fabricQuantity,
             ]);
             
         } catch (\Exception $e) {

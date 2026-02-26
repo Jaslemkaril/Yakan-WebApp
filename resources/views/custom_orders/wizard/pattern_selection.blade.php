@@ -353,20 +353,22 @@ input[type='range']::-moz-range-thumb {
                 <div class="mb-4">
                     <div class="flex items-center justify-between mb-2">
                         <h4 class="font-medium text-gray-700 text-sm">Fabric</h4>
-                        @if(session('wizard.fabric.type'))
+                        @if($fabricTypeName)
                             <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Selected</span>
                         @endif
                     </div>
                     <div class="h-20 rounded-lg border-2 border-gray-200 flex items-center justify-center transition-all duration-300 hover:border-purple-300 hover:shadow-md" id="fabricPreview">
-                        @if(session('wizard.fabric.type'))
+                        @if($fabricTypeName)
                             <div class="text-center transform hover:scale-105 transition-transform">
                                 <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-1">
                                     <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
                                     </svg>
                                 </div>
-                                <p class="text-xs font-medium text-gray-900">{{ session('wizard.fabric.type') }}</p>
-                                <p class="text-xs text-gray-600">{{ session('wizard.fabric.quantity_meters') }}m</p>
+                                <p class="text-xs font-medium text-gray-900">{{ $fabricTypeName }}</p>
+                                @if($fabricQuantity)
+                                    <p class="text-xs text-gray-600">{{ $fabricQuantity }}m</p>
+                                @endif
                             </div>
                         @else
                             <div class="text-center">
@@ -689,7 +691,8 @@ input[type='range']::-moz-range-thumb {
 
             <!-- Navigation -->
             <div class="flex justify-between items-center">
-                <a href="{{ route('custom_orders.create.step1') }}" class="inline-flex items-center px-6 py-3 bg-white border-2 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors" style="border-color:#c08080;">
+                @php $step1TokenParam = request()->query('auth_token') ? '?auth_token='.urlencode(request()->query('auth_token')) : ''; @endphp
+                <a href="{{ route('custom_orders.create.step1') . $step1TokenParam }}" class="inline-flex items-center px-6 py-3 bg-white border-2 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors" style="border-color:#c08080;">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
@@ -830,7 +833,7 @@ function showLoadingState(element) {
 }
 
 function updateEnhancedPreview(element, patternImage, svgData, patternName, patternDescription) {
-    const fabricType = '{{ session("wizard.fabric.type", "Cotton") }}';
+    const fabricType = '{{ $fabricTypeName ?? "Cotton" }}';
     const gridOverlay = showGrid ? '<div class="absolute inset-0 pointer-events-none" style="background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.05) 0px, transparent 1px, transparent 19px, rgba(0,0,0,0.05) 20px), repeating-linear-gradient(90deg, rgba(0,0,0,0.05) 0px, transparent 1px, transparent 19px, rgba(0,0,0,0.05) 20px); background-size: 20px 20px;"></div>' : '';
     
     if (previewMode === 'fabric-only') {
@@ -1668,6 +1671,16 @@ function submitPatternSelection() {
     settings.value = JSON.stringify(customizationSettings);
     form.appendChild(settings);
 
+    // auth_token for Railway session-less auth
+    const authTokenVal = localStorage.getItem('yakan_auth_token');
+    if (authTokenVal) {
+        const authInput = document.createElement('input');
+        authInput.type = 'hidden';
+        authInput.name = 'auth_token';
+        authInput.value = authTokenVal;
+        form.appendChild(authInput);
+    }
+
     document.body.appendChild(form);
     form.submit();
 }
@@ -1687,7 +1700,7 @@ function selectPattern(patternId) {
 }
 
 function updateCombinedPreview(element, svgData, patternName, sizeClass) {
-    const fabricType = '{{ session("wizard.fabric.type", "Cotton") }}';
+    const fabricType = '{{ $fabricTypeName ?? "Cotton" }}';
     
     if (svgData) {
         element.innerHTML = `
