@@ -1277,9 +1277,9 @@
                     }
                 });
                 
-                // Add token to all GET forms
+                // Add token to all forms (GET and POST)
                 document.querySelectorAll('form').forEach(form => {
-                    if (form.method.toLowerCase() === 'get' && !form.querySelector('input[name="auth_token"]')) {
+                    if (!form.querySelector('input[name="auth_token"]')) {
                         const input = document.createElement('input');
                         input.type = 'hidden';
                         input.name = 'auth_token';
