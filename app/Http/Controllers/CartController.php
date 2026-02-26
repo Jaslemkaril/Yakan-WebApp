@@ -101,7 +101,18 @@ class CartController extends Controller
                         'quantity'   => $qty,
                     ]);
                 }
-                
+
+                $cartCount = Cart::where('user_id', $userId)->sum('quantity');
+
+                if ($isAjax) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Product added to cart!',
+                        'cart_count' => $cartCount,
+                        'buy_now' => true,
+                    ]);
+                }
+
                 return redirect()->route('cart.index')->with('success', 'Product added to cart. Review and proceed to checkout.');
             }
 
