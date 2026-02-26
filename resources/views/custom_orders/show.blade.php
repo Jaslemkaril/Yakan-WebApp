@@ -1119,7 +1119,7 @@
                 </div>
             
             {{-- Approved Status - Waiting for Payment --}}
-            @elseif($order->status === 'approved' && !in_array($order->payment_status, ['paid', 'pending', 'pending_verification']))
+            @elseif($order->status === 'approved' && !in_array($order->payment_status, ['paid', 'pending_verification']))
                 <div class="w-full rounded-2xl p-8 shadow-2xl border-2" style="background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%); border-color:#800000;">
                     <div class="w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg animate-pulse" style="background: linear-gradient(135deg, #800000 0%, #600000 100%);">
                         <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1189,7 +1189,7 @@
                 </div>
             
             {{-- Approved Status - Payment Pending Verification --}}
-            @elseif($order->status === 'approved' && in_array($order->payment_status, ['pending', 'pending_verification']))
+            @elseif($order->status === 'approved' && $order->payment_status === 'pending_verification')
                 <div class="w-full rounded-2xl p-8 text-center shadow-2xl border-2" style="background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%); border-color:#f59e0b;">
                     <div class="w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
                         <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
