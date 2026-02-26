@@ -12,7 +12,7 @@
                     <h1 class="text-xl font-semibold text-gray-900">Create Custom Order</h1>
                     <span class="ml-3 px-2 py-1 text-xs font-medium bg-red-50 text-[#800000] rounded-full">Step 1: Select Fabric</span>
                 </div>
-                <a href="{{ route('admin_custom_orders.create.choice') }}" class="text-gray-500 hover:text-gray-700">
+                <a href="{{ route('admin.custom_orders.create.choice') }}" class="text-gray-500 hover:text-gray-700">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                     </svg>
@@ -56,7 +56,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         <!-- Fabric Selection Form -->
-        <form action="{{ route('admin_custom_orders.store.fabric') }}" method="POST" class="space-y-8">
+        <form action="{{ route('admin.custom_orders.store.fabric') }}" method="POST" class="space-y-8">
             @csrf
             
             <!-- Customer Selection -->
@@ -167,7 +167,7 @@
 
             <!-- Form Actions -->
             <div class="flex justify-between items-center">
-                <a href="{{ route('admin_custom_orders.create.choice') }}" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium">
+                <a href="{{ route('admin.custom_orders.create.choice') }}" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium">
                     ← Back to Choices
                 </a>
                 

@@ -12,7 +12,7 @@
                     <h1 class="text-xl font-semibold text-gray-900">Create Custom Order</h1>
                     <span class="ml-3 px-2 py-1 text-xs font-medium bg-red-50 text-[#800000] rounded-full">Step 1: Select Product</span>
                 </div>
-                <a href="{{ route('admin_custom_orders.create.choice') }}" class="text-gray-500 hover:text-gray-700">
+                <a href="{{ route('admin.custom_orders.create.choice') }}" class="text-gray-500 hover:text-gray-700">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                     </svg>
@@ -58,7 +58,7 @@
         <!-- Customer Selection -->
         <div class="bg-white rounded-lg shadow p-6 mb-8">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Select Customer</h3>
-            <form action="{{ route('admin_custom_orders.create.product') }}" method="POST" id="customerForm">
+            <form action="{{ route('admin.custom_orders.create.product') }}" method="POST" id="customerForm">
                 @csrf
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -152,7 +152,7 @@
                     </svg>
                     <h3 class="text-lg font-medium text-gray-900 mb-2">No Products Available</h3>
                     <p class="text-gray-500 mb-4">There are no products available for customization at the moment.</p>
-                    <a href="{{ route('admin_custom_orders.create.choice') }}" class="inline-flex items-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors">
+                    <a href="{{ route('admin.custom_orders.create.choice') }}" class="inline-flex items-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                         </svg>
@@ -182,7 +182,7 @@
     </div>
 </div>
 
-<form id="productSelectionForm" action="{{ route('admin_custom_orders.store.product') }}" method="POST" style="display: none;">
+<form id="productSelectionForm" action="{{ route('admin.custom_orders.store.product') }}" method="POST" style="display: none;">
     @csrf
     <input type="hidden" name="user_id" id="selectedUserId">
     <input type="hidden" name="product_id" id="selectedProductId">

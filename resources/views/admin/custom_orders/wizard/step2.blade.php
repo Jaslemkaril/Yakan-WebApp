@@ -11,7 +11,7 @@
                     <h1 class="text-xl font-semibold text-gray-900">{{ isset($product) ? 'Customize Product' : 'Pattern Selection' }}</h1>
                     <span class="ml-3 px-2 py-1 text-xs font-medium bg-red-50 text-[#800000] rounded-full">Step 2: Design</span>
                 </div>
-                <a href="{{ route('admin_custom_orders.create.choice') }}" class="text-gray-500 hover:text-gray-700">
+                <a href="{{ route('admin.custom_orders.create.choice') }}" class="text-gray-500 hover:text-gray-700">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                     </svg>
@@ -24,8 +24,8 @@
         @php
             $isFabric = isset($isFabricFlow) && $isFabricFlow;
             $formAction = $isFabric
-                ? route('admin_custom_orders.store.pattern')
-                : route('admin_custom_orders.store.product.customization');
+                ? route('admin.custom_orders.store.pattern')
+                : route('admin.custom_orders.store.product.customization');
         @endphp
 
         <form action="{{ $formAction }}" method="POST" class="space-y-8">
@@ -128,7 +128,7 @@
             </div>
 
             <div class="flex justify-between items-center">
-                <a href="{{ route('admin_custom_orders.create.choice') }}" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium">← Back</a>
+                <a href="{{ route('admin.custom_orders.create.choice') }}" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium">← Back</a>
                 <button type="submit" class="px-6 py-3 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-medium">Continue</button>
             </div>
         </form>

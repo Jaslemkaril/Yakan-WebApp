@@ -699,7 +699,7 @@ class AdminCustomOrderController extends Controller
             
         } catch (\Exception $e) {
             \Log::error('Admin choice selection error: ' . $e->getMessage());
-            return redirect()->route('admin_custom_orders.index')
+            return redirect()->route('admin.custom_orders.index')
                 ->with('error', 'Unable to load custom order options. Please try again.');
         }
     }
@@ -727,7 +727,7 @@ class AdminCustomOrderController extends Controller
             
         } catch (\Exception $e) {
             \Log::error('Admin product selection error: ' . $e->getMessage());
-            return redirect()->route('admin_custom_orders.create.choice')
+            return redirect()->route('admin.custom_orders.create.choice')
                 ->with('error', 'Unable to load products. Please try again.');
         }
     }
@@ -762,11 +762,11 @@ class AdminCustomOrderController extends Controller
             $request->session()->put('admin_wizard', $wizardData);
             \Log::info('Admin product stored in wizard session', ['product' => $validated['product_name']]);
 
-            return redirect()->route('admin_custom_orders.create.product.customize');
+            return redirect()->route('admin.custom_orders.create.product.customize');
             
         } catch (\Exception $e) {
             \Log::error('Admin store product selection error: ' . $e->getMessage());
-            return redirect()->route('admin_custom_orders.create.product')
+            return redirect()->route('admin.custom_orders.create.product')
                 ->with('error', 'Unable to select product. Please try again.');
         }
     }
@@ -780,7 +780,7 @@ class AdminCustomOrderController extends Controller
             $wizardData = $request->session()->get('admin_wizard');
             
             if (!$wizardData || !isset($wizardData['product'])) {
-                return redirect()->route('admin_custom_orders.create.product')
+                return redirect()->route('admin.custom_orders.create.product')
                     ->with('error', 'Please select a product first.');
             }
 
@@ -796,7 +796,7 @@ class AdminCustomOrderController extends Controller
             
         } catch (\Exception $e) {
             \Log::error('Admin product customization error: ' . $e->getMessage());
-            return redirect()->route('admin_custom_orders.create.product')
+            return redirect()->route('admin.custom_orders.create.product')
                 ->with('error', 'Unable to load customization options. Please try again.');
         }
     }
@@ -833,11 +833,11 @@ class AdminCustomOrderController extends Controller
                 'pattern' => $validated['pattern']
             ]);
 
-            return redirect()->route('admin_custom_orders.create.review');
+            return redirect()->route('admin.custom_orders.create.review');
             
         } catch (\Exception $e) {
             \Log::error('Admin store product customization error: ' . $e->getMessage());
-            return redirect()->route('admin_custom_orders.create.product.customize')
+            return redirect()->route('admin.custom_orders.create.product.customize')
                 ->with('error', 'Unable to save customization. Please try again.');
         }
     }
@@ -860,7 +860,7 @@ class AdminCustomOrderController extends Controller
             
         } catch (\Exception $e) {
             \Log::error('Admin fabric selection error: ' . $e->getMessage());
-            return redirect()->route('admin_custom_orders.create.choice')
+            return redirect()->route('admin.custom_orders.create.choice')
                 ->with('error', 'Unable to load fabric selection. Please try again.');
         }
     }
@@ -891,11 +891,11 @@ class AdminCustomOrderController extends Controller
 
             $request->session()->put('admin_wizard', $wizardData);
 
-            return redirect()->route('admin_custom_orders.create.pattern');
+            return redirect()->route('admin.custom_orders.create.pattern');
             
         } catch (\Exception $e) {
             \Log::error('Admin store fabric selection error: ' . $e->getMessage());
-            return redirect()->route('admin_custom_orders.create.fabric')
+            return redirect()->route('admin.custom_orders.create.fabric')
                 ->with('error', 'Unable to save fabric selection. Please try again.');
         }
     }
@@ -909,7 +909,7 @@ class AdminCustomOrderController extends Controller
             $wizardData = $request->session()->get('admin_wizard');
             
             if (!$wizardData || !isset($wizardData['fabric'])) {
-                return redirect()->route('admin_custom_orders.create.fabric')
+                return redirect()->route('admin.custom_orders.create.fabric')
                     ->with('error', 'Please select fabric first.');
             }
 
@@ -931,7 +931,7 @@ class AdminCustomOrderController extends Controller
             
         } catch (\Exception $e) {
             \Log::error('Admin pattern selection error: ' . $e->getMessage());
-            return redirect()->route('admin_custom_orders.create.fabric')
+            return redirect()->route('admin.custom_orders.create.fabric')
                 ->with('error', 'Unable to load pattern selection. Please try again.');
         }
     }
@@ -961,11 +961,11 @@ class AdminCustomOrderController extends Controller
             
             $request->session()->put('admin_wizard', $wizardData);
 
-            return redirect()->route('admin_custom_orders.create.review');
+            return redirect()->route('admin.custom_orders.create.review');
             
         } catch (\Exception $e) {
             \Log::error('Admin store pattern selection error: ' . $e->getMessage());
-            return redirect()->route('admin_custom_orders.create.pattern')
+            return redirect()->route('admin.custom_orders.create.pattern')
                 ->with('error', 'Unable to save pattern selection. Please try again.');
         }
     }
@@ -979,7 +979,7 @@ class AdminCustomOrderController extends Controller
             $wizardData = $request->session()->get('admin_wizard');
             
             if (!$wizardData) {
-                return redirect()->route('admin_custom_orders.create.choice')
+                return redirect()->route('admin.custom_orders.create.choice')
                     ->with('error', 'No order data found. Please start over.');
             }
 
@@ -998,7 +998,7 @@ class AdminCustomOrderController extends Controller
             
         } catch (\Exception $e) {
             \Log::error('Admin review error: ' . $e->getMessage());
-            return redirect()->route('admin_custom_orders.create.choice')
+            return redirect()->route('admin.custom_orders.create.choice')
                 ->with('error', 'Unable to load review page. Please try again.');
         }
     }
@@ -1012,7 +1012,7 @@ class AdminCustomOrderController extends Controller
             $wizardData = $request->session()->get('admin_wizard');
             
             if (!$wizardData) {
-                return redirect()->route('admin_custom_orders.create.choice')
+                return redirect()->route('admin.custom_orders.create.choice')
                     ->with('error', 'No order data found. Please start over.');
             }
 
@@ -1039,12 +1039,12 @@ class AdminCustomOrderController extends Controller
 
             \Log::info('Admin custom order created', ['order_id' => $customOrder->id]);
 
-            return redirect()->route('admin_custom_orders.show', $customOrder)
+            return redirect()->route('admin.custom_orders.show', $customOrder)
                 ->with('success', 'Custom order created successfully!');
 
         } catch (\Exception $e) {
             \Log::error('Admin store custom order error: ' . $e->getMessage());
-            return redirect()->route('admin_custom_orders.create.review')
+            return redirect()->route('admin.custom_orders.create.review')
                 ->with('error', 'Unable to create custom order. Please try again.');
         }
     }

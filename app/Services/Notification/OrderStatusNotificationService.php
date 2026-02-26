@@ -171,7 +171,7 @@ class OrderStatusNotificationService
             'custom_order',
             $title,
             $message,
-            route('admin_custom_orders.show', $order->id),
+            route('admin.custom_orders.show', $order->id),
             [
                 'order_id' => $order->id,
                 'user_id' => $order->user_id,
@@ -229,7 +229,7 @@ class OrderStatusNotificationService
                 'custom_order',
                 $title,
                 $message,
-                route('admin_custom_orders.show', $order->id),
+                route('admin.custom_orders.show', $order->id),
                 [
                     'order_id' => $order->id,
                     'user_id' => $order->user_id,
