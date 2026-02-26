@@ -102,6 +102,7 @@ class CulturalHeritageController extends Controller
                 \Log::error('Cultural heritage image upload failed', [
                     'error' => $e->getMessage()
                 ]);
+                $token = $request->input('auth_token') ?? $request->query('auth_token');
                 return redirect()->back()
                     ->withInput()
                     ->with('error', 'Failed to upload image: ' . $e->getMessage());
@@ -114,7 +115,9 @@ class CulturalHeritageController extends Controller
 
         CulturalHeritage::create($validated);
 
-        return redirect()->route('admin.cultural-heritage.index')
+        $token = $request->input('auth_token') ?? $request->query('auth_token');
+        $redirectParams = $token ? ['auth_token' => $token] : [];
+        return redirect()->route('admin.cultural-heritage.index', $redirectParams)
                         ->with('success', 'Cultural heritage content created successfully!');
     }
 
@@ -204,6 +207,7 @@ class CulturalHeritageController extends Controller
                     'heritage_id' => $heritage->id,
                     'error' => $e->getMessage()
                 ]);
+                $token = $request->input('auth_token') ?? $request->query('auth_token');
                 return redirect()->back()
                     ->withInput()
                     ->with('error', 'Failed to upload image: ' . $e->getMessage());
@@ -215,7 +219,9 @@ class CulturalHeritageController extends Controller
 
         $heritage->update($validated);
 
-        return redirect()->route('admin.cultural-heritage.index')
+        $token = $request->input('auth_token') ?? $request->query('auth_token');
+        $redirectParams = $token ? ['auth_token' => $token] : [];
+        return redirect()->route('admin.cultural-heritage.index', $redirectParams)
                         ->with('success', 'Cultural heritage content updated successfully!');
     }
 
@@ -242,7 +248,9 @@ class CulturalHeritageController extends Controller
                 ]);
             }
 
-            return redirect()->route('admin.cultural-heritage.index')
+            $token = request()->input('auth_token') ?? request()->query('auth_token');
+            $redirectParams = $token ? ['auth_token' => $token] : [];
+            return redirect()->route('admin.cultural-heritage.index', $redirectParams)
                            ->with('success', "'{$title}' deleted successfully.");
                            
         } catch (\Exception $e) {
@@ -255,7 +263,9 @@ class CulturalHeritageController extends Controller
                 ], 500);
             }
 
-            return redirect()->route('admin.cultural-heritage.index')
+            $token = request()->input('auth_token') ?? request()->query('auth_token');
+            $redirectParams = $token ? ['auth_token' => $token] : [];
+            return redirect()->route('admin.cultural-heritage.index', $redirectParams)
                            ->with('error', 'Failed to delete content.');
         }
     }
