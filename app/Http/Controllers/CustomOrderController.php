@@ -33,11 +33,60 @@ class CustomOrderController extends Controller
     }
 
     /**
+     * Get wizard data from database (persists across requests on Railway where sessions are broken).
+     */
+    private function getWizardData(): array
+    {
+        if (!auth()->check()) {
+            return [];
+        }
+        $draft = \DB::table('custom_order_drafts')->where('user_id', auth()->id())->first();
+        if ($draft && $draft->wizard_data) {
+            return json_decode($draft->wizard_data, true) ?? [];
+        }
+        // Fallback: try session (for local development)
+        return request()->session()->get('wizard', []);
+    }
+
+    /**
+     * Save wizard data to database so it persists across requests on Railway.
+     */
+    private function saveWizardData(array $data): void
+    {
+        if (!auth()->check()) {
+            return;
+        }
+        \DB::table('custom_order_drafts')->upsert(
+            [
+                'user_id'     => auth()->id(),
+                'wizard_data' => json_encode($data),
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ],
+            ['user_id'],
+            ['wizard_data', 'updated_at']
+        );
+        // Also keep session in sync for local dev
+        request()->session()->put('wizard', $data);
+    }
+
+    /**
+     * Delete the wizard draft from the database (called after order is placed).
+     */
+    private function clearWizardData(): void
+    {
+        if (auth()->check()) {
+            \DB::table('custom_order_drafts')->where('user_id', auth()->id())->delete();
+        }
+        request()->session()->forget('wizard');
+    }
+
+    /**
      * Validate wizard session data with comprehensive logging
      */
     private function validateWizardSession(Request $request, string $step = 'unknown')
     {
-        $sessionData = $request->session()->get('wizard', []);
+        $sessionData = $this->getWizardData();
         
         \Log::info("Wizard session validation for step: {$step}", [
             'session_keys' => array_keys($sessionData),
@@ -59,7 +108,7 @@ class CustomOrderController extends Controller
         $context = [
             'step' => $step,
             'user_id' => auth()->id(),
-            'session_data' => $request->session()->get('wizard'),
+            'session_data' => $this->getWizardData(),
             'request_method' => $request->method(),
             'request_url' => $request->fullUrl(),
         ];
@@ -79,10 +128,10 @@ class CustomOrderController extends Controller
     public function createStep3(Request $request)
     {
         try {
-            $wizardData = $request->session()->get('wizard', []);
+            $wizardData = $this->getWizardData();
 
             if (!$wizardData) {
-                return redirect()->route('custom_orders.create.choice')
+                return $this->redirectToRouteWithToken('custom_orders.create.step1')
                     ->with('error', 'Please start your custom order.');
             }
 
@@ -121,7 +170,7 @@ class CustomOrderController extends Controller
             ]);
         } catch (\Exception $e) {
             \Log::error('createStep3 error', ['error' => $e->getMessage()]);
-            return redirect()->route('custom_orders.create.choice')
+            return $this->redirectToRouteWithToken('custom_orders.create.step1')
                 ->with('error', 'Unable to load details page. Please try again.');
         }
     }
@@ -144,7 +193,7 @@ class CustomOrderController extends Controller
                 'addons.*' => 'string',
             ]);
 
-            $wizardData = $request->session()->get('wizard', []);
+            $wizardData = $this->getWizardData();
 
             // Get the selected address if delivery type is delivery
             $deliveryAddress = null;
@@ -169,18 +218,13 @@ class CustomOrderController extends Controller
             ];
 
             $wizardData['step'] = 'details_complete';
-            $request->session()->put('wizard', $wizardData);
-            $request->session()->save();
+            $this->saveWizardData($wizardData);
             
-            \Log::info('storeStep3 - session saved', [
+            \Log::info('storeStep3 - saved', [
                 'wizard_keys' => array_keys($wizardData),
                 'has_pattern' => isset($wizardData['pattern']),
                 'has_details' => isset($wizardData['details']),
-                'session_id' => $request->session()->getId(),
             ]);
-
-            // Also flash the wizard data as a backup in case session is lost
-            $request->session()->flash('wizard_backup', $wizardData);
 
             return $this->redirectToRouteWithToken('custom_orders.create.step4');
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -251,7 +295,7 @@ class CustomOrderController extends Controller
      */
     private function validateWizardSessionIntegrity(Request $request, string $step): array
     {
-        $wizardData = $request->session()->get('wizard', []);
+        $wizardData = $this->getWizardData();
         $issues = [];
         $warnings = [];
 
@@ -335,7 +379,7 @@ class CustomOrderController extends Controller
      */
     private function ensureSessionData(Request $request, array $requiredKeys, array $defaults = [])
     {
-        $wizardData = $request->session()->get('wizard', []);
+        $wizardData = $this->getWizardData();
         
         foreach ($requiredKeys as $key) {
             if (!isset($wizardData[$key])) {
@@ -348,102 +392,25 @@ class CustomOrderController extends Controller
             }
         }
 
-        // Update session with defaults
-        $request->session()->put('wizard', $wizardData);
+        $this->saveWizardData($wizardData);
         return $wizardData;
     }
 
     /**
-     * Backup wizard session data
+     * Backup wizard session data (no-op: DB storage is always persistent)
      */
     private function backupWizardSession(Request $request, string $step)
     {
-        $wizardData = $request->session()->get('wizard', []);
-        
-        if (!empty($wizardData)) {
-            $backupKey = 'wizard_backup_' . auth()->id() . '_' . time();
-            $request->session()->put($backupKey, [
-                'data' => $wizardData,
-                'step' => $step,
-                'timestamp' => now(),
-                'user_id' => auth()->id()
-            ]);
-            
-            // Keep only last 3 backups per user
-            $backups = $request->session()->all();
-            $userBackups = [];
-            
-            foreach ($backups as $key => $value) {
-                if (str_starts_with($key, 'wizard_backup_' . auth()->id())) {
-                    $userBackups[$key] = $value['timestamp'] ?? 0;
-                }
-            }
-            
-            // Sort by timestamp and keep only 3 most recent
-            asort($userBackups);
-            $toRemove = array_slice(array_keys($userBackups), 0, -3);
-            
-            foreach ($toRemove as $removeKey) {
-                $request->session()->forget($removeKey);
-            }
-            
-            \Log::info("Wizard session backed up", [
-                'backup_key' => $backupKey,
-                'step' => $step,
-                'data_keys' => array_keys($wizardData)
-            ]);
-        }
+        // DB-backed storage is inherently persistent — no backup needed
     }
 
     /**
-     * Restore wizard session from backup
+     * Restore wizard session from backup (reads from DB directly)
      */
     private function restoreWizardSession(Request $request, string $preferredStep = null)
     {
-        $backups = $request->session()->all();
-        $userBackups = [];
-        
-        foreach ($backups as $key => $value) {
-            if (str_starts_with($key, 'wizard_backup_' . auth()->id())) {
-                $userBackups[$key] = $value;
-            }
-        }
-        
-        if (empty($userBackups)) {
-            return false;
-        }
-        
-        // Find best backup (prefer preferred step, then most recent)
-        $bestBackup = null;
-        $bestTimestamp = 0;
-        
-        foreach ($userBackups as $key => $backup) {
-            $timestamp = $backup['timestamp'] ?? 0;
-            
-            if ($preferredStep && ($backup['step'] ?? '') === $preferredStep) {
-                $bestBackup = $backup;
-                break;
-            }
-            
-            if ($timestamp > $bestTimestamp) {
-                $bestBackup = $backup;
-                $bestTimestamp = $timestamp;
-            }
-        }
-        
-        if ($bestBackup && isset($bestBackup['data'])) {
-            $request->session()->put('wizard', $bestBackup['data']);
-            
-            \Log::info("Wizard session restored from backup", [
-                'restored_step' => $bestBackup['step'] ?? 'unknown',
-                'restored_timestamp' => $bestBackup['timestamp'] ?? 'unknown',
-                'data_keys' => array_keys($bestBackup['data'])
-            ]);
-            
-            return $bestBackup['step'] ?? 'step1';
-        }
-        
-        return false;
+        $data = $this->getWizardData();
+        return !empty($data) ? ($data['step'] ?? 'step1') : false;
     }
 
     /**
@@ -451,17 +418,8 @@ class CustomOrderController extends Controller
      */
     private function clearWizardSession(Request $request)
     {
-        $request->session()->forget('wizard');
-        
-        // Clear user backups
-        $backups = $request->session()->all();
-        foreach ($backups as $key => $value) {
-            if (str_starts_with($key, 'wizard_backup_' . auth()->id())) {
-                $request->session()->forget($key);
-            }
-        }
-        
-        \Log::info("Wizard session cleared for user", ['user_id' => auth()->id()]);
+        $this->clearWizardData();
+        \Log::info("Wizard data cleared for user", ['user_id' => auth()->id()]);
     }
     /**
      * List custom orders for the logged-in user
@@ -575,27 +533,23 @@ class CustomOrderController extends Controller
             // Get fabric type details (for now using string, can be updated to use FabricType model later)
             $fabricType = $request->fabric_type;
             
-            // Backup current session before updating
-            $this->backupWizardSession($request, 'step1');
-            
-            // Store fabric selection in session
-            $request->session()->put('wizard.fabric', [
+            // Store fabric selection in DB (persists across Railway requests)
+            $wizardData = $this->getWizardData();
+            $wizardData['fabric'] = [
                 'type' => $fabricType,
                 'quantity_meters' => $request->fabric_quantity_meters,
                 'intended_use' => $request->intended_use,
                 'fabric_specifications' => $request->fabric_specifications,
                 'special_requirements' => $request->special_requirements,
-            ]);
-
-            // Force session save and verify
-            $request->session()->save();
+            ];
+            $this->saveWizardData($wizardData);
             
             \Log::info("Step1 completed successfully", [
                 'fabric_type' => $fabricType,
                 'quantity_meters' => $request->fabric_quantity_meters,
                 'intended_use' => $request->intended_use,
-                'session_saved' => $request->session()->has('wizard.fabric'),
-                'session_data_after_save' => $request->session()->get('wizard', []),
+                'session_saved' => true,
+                'session_data_after_save' => $wizardData,
             ]);
 
             // Check if it's an AJAX request (improved detection)
@@ -673,7 +627,8 @@ class CustomOrderController extends Controller
     public function createImageUpload(Request $request)
     {
         // Validate fabric selection exists
-        if (!$request->session()->has('wizard.fabric')) {
+        $wizardData = $this->getWizardData();
+        if (!isset($wizardData['fabric'])) {
             return redirect()->route('custom_orders.create.step1')
                 ->with('error', 'Please select a fabric first.');
         }
@@ -720,13 +675,13 @@ class CustomOrderController extends Controller
                 }
             }
 
-            // Store in session
-            $request->session()->put('wizard.reference', [
+            // Store in DB
+            $wizardData = $this->getWizardData();
+            $wizardData['reference'] = [
                 'image_path' => $imagePath,
                 'description' => $request->description,
-            ]);
-
-            $request->session()->save();
+            ];
+            $this->saveWizardData($wizardData);
 
             // Redirect to pattern selection
             return $this->redirectToRouteWithToken('custom_orders.create.pattern')
@@ -760,14 +715,14 @@ class CustomOrderController extends Controller
             // }
 
             // Wizard data and flow detection
-            $wizardData = $request->session()->get('wizard', []);
+            $wizardData = $this->getWizardData();
             $isProductFlow = isset($wizardData['product']);
 
-            // Capture preselected pattern from query and store in session
+            // Capture preselected pattern from query and store in DB
             $patternId = $request->query('pattern_id');
             if ($patternId) {
                 $wizardData['pattern_id'] = (int) $patternId;
-                $request->session()->put('wizard', $wizardData);
+                $this->saveWizardData($wizardData);
             }
 
             // Resolve product if in product flow
@@ -829,7 +784,7 @@ class CustomOrderController extends Controller
     public function storePattern(Request $request)
     {
         try {
-            $wizardData = $request->session()->get('wizard', []);
+            $wizardData = $this->getWizardData();
             
             // Validate pattern selection data - more lenient
             $validated = $request->validate([
@@ -875,14 +830,12 @@ class CustomOrderController extends Controller
                 'created_at' => now()->toISOString(),
             ];
             
-            $request->session()->put('wizard', $wizardData);
-            $request->session()->save();
+            $this->saveWizardData($wizardData);
             
-            \Log::info('Pattern storage - saved to session:', [
+            \Log::info('Pattern storage - saved:', [
                 'pattern' => $wizardData['pattern'],
                 'fabric' => $wizardData['fabric'] ?? null,
-                'session_has_pattern' => $request->session()->has('wizard.pattern'),
-                'session_id' => $request->session()->getId(),
+                'session_has_pattern' => isset($wizardData['pattern']),
             ]);
             
             // Return JSON response with review URL
@@ -931,7 +884,7 @@ class CustomOrderController extends Controller
     public function createStep2(Request $request)
     {
         try {
-            $wizardData = $request->session()->get('wizard');
+            $wizardData = $this->getWizardData();
             
             if (!$wizardData || !isset($wizardData['fabric'])) {
                 return redirect()->route('custom_orders.create.step1')
@@ -959,7 +912,7 @@ class CustomOrderController extends Controller
     public function storeStep2(Request $request)
     {
         try {
-            $wizardData = $request->session()->get('wizard', []);
+            $wizardData = $this->getWizardData();
             
             // Validate design data
             $validated = $request->validate([
@@ -974,7 +927,7 @@ class CustomOrderController extends Controller
                 'created_at' => now()->toISOString(),
             ];
             
-            $request->session()->put('wizard', $wizardData);
+            $this->saveWizardData($wizardData);
             
             return $this->redirectToRouteWithToken('custom_orders.create.step3');
             
@@ -995,7 +948,7 @@ class CustomOrderController extends Controller
     public function createStep4(Request $request)
     {
         try {
-            $wizardData = $request->session()->get('wizard');
+            $wizardData = $this->getWizardData();
             
             // Load system settings for pricing
             $pricePerMeter = \App\Models\SystemSetting::get('price_per_meter', 500);
@@ -1003,29 +956,18 @@ class CustomOrderController extends Controller
             $patternFeeMedium = \App\Models\SystemSetting::get('pattern_fee_medium', 0);
             $patternFeeComplex = \App\Models\SystemSetting::get('pattern_fee_complex', 0);
             
-            // If main session is lost, try to restore from backup
-            if (!$wizardData && $request->session()->has('wizard_backup')) {
-                $wizardData = $request->session()->get('wizard_backup');
-                $request->session()->put('wizard', $wizardData);
-                \Log::info('createStep4 - restored wizard from backup');
-            }
-            
             \Log::info('createStep4 - wizard data check', [
                 'has_wizard' => !empty($wizardData),
                 'wizard_keys' => $wizardData ? array_keys($wizardData) : [],
                 'has_pattern' => isset($wizardData['pattern']),
                 'has_design' => isset($wizardData['design']),
                 'has_product' => isset($wizardData['product']),
-                'session_id' => $request->session()->getId(),
-                'all_session_data' => $request->session()->all(),
             ]);
             
             if (!$wizardData) {
-                return redirect()->route('custom_orders.create.choice')
+                return $this->redirectToRouteWithToken('custom_orders.create.step1')
                     ->with('error', 'Please start your custom order.');
             }
-
-            // Get user's saved addresses - force fresh query from database
             $userAddresses = \App\Models\UserAddress::where('user_id', auth()->id())
                 ->orderBy('is_default', 'desc')
                 ->orderBy('created_at', 'desc')
@@ -1126,9 +1068,9 @@ class CustomOrderController extends Controller
         \Log::info('completeWizard method called', [
             'request_method' => $request->method(),
             'request_data' => $request->all(),
-            'session_has_wizard' => $request->session()->has('wizard'),
-            'session_data_keys' => array_keys($request->session()->get('wizard', [])),
-            'full_session_data' => $request->session()->get('wizard')
+            'session_has_wizard' => !empty($this->getWizardData()),
+            'session_data_keys' => array_keys($this->getWizardData()),
+            'full_session_data' => $this->getWizardData()
         ]);
         
         try {
@@ -1142,10 +1084,10 @@ class CustomOrderController extends Controller
                 'delivery_landmark' => 'nullable|string|max:255',
             ]);
             
-            $wizardData = $request->session()->get('wizard');
+            $wizardData = $this->getWizardData();
 
             if (!$wizardData) {
-                \Log::error('No wizard data in session');
+                \Log::error('No wizard data found');
                 return redirect()->route('custom_orders.create.step1')
                     ->with('error', 'Session expired. Please start your custom order again.');
             }
