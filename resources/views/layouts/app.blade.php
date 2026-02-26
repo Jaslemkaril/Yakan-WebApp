@@ -1295,20 +1295,15 @@
             }
         }
 
-        // Handle all Add to Cart forms
+        // Handle all Add to Cart forms (including Buy Now)
         document.addEventListener('submit', function(e) {
             const form = e.target;
             
             // Check if this is an add to cart form
             if (form.action && form.action.includes('/cart/add/')) {
-                // Don't intercept if it's a "Buy Now" action
-                const buyNowInput = form.querySelector('input[name="buy_now"]');
-                if (buyNowInput && buyNowInput.value === '1') {
-                    return; // Let it submit normally for checkout redirect
-                }
-
                 e.preventDefault();
-                
+
+                const isBuyNow = form.querySelector('input[name="buy_now"]')?.value === '1';
                 const button = form.querySelector('button[type="submit"]');
                 const originalText = button ? button.innerHTML : '';
                 
@@ -1317,7 +1312,14 @@
                     button.innerHTML = '<svg class="animate-spin h-5 w-5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
                 }
 
-                fetch(form.action, {
+                // Build URL with auth_token
+                const authToken = localStorage.getItem('yakan_auth_token');
+                let fetchUrl = form.action;
+                if (authToken && !fetchUrl.includes('auth_token')) {
+                    fetchUrl += (fetchUrl.includes('?') ? '&' : '?') + 'auth_token=' + encodeURIComponent(authToken);
+                }
+
+                fetch(fetchUrl, {
                     method: 'POST',
                     body: new FormData(form),
                     headers: {
@@ -1327,41 +1329,32 @@
                     credentials: 'same-origin'
                 })
                 .then(async response => {
-                    const contentType = response.headers.get('content-type') || '';
-                    if (!response.ok) {
-                        // If redirected to login or got HTML, surface a helpful message
-                        if (response.status === 401 || response.status === 419 || contentType.includes('text/html')) {
-                            throw new Error('Please login to add items to your cart.');
-                        }
+                    const text = await response.text();
+                    try { return { data: JSON.parse(text), ok: response.ok, status: response.status }; }
+                    catch(e) {
+                        if (response.status === 401 || text.includes('/login')) throw new Error('Please login to add items to your cart.');
                         throw new Error('Failed to add to cart.');
                     }
-                    if (!contentType.includes('application/json')) {
-                        throw new Error('Unexpected response from server.');
-                    }
-                    return response.json();
                 })
-                .then(data => {
-                    if (data.success) {
-                        // Update cart count
-                        updateCartCount(data.cart_count);
-                        
-                        // Show success message
-                        showToast(data.message, 'success');
-                        
-                        // Reset button
-                        if (button) {
-                            button.disabled = false;
-                            button.innerHTML = originalText;
+                .then(({ data, ok, status }) => {
+                    if (ok && data.success) {
+                        if (isBuyNow) {
+                            // Navigate to cart with auth_token so the page stays authenticated
+                            const cartUrl = '/cart' + (authToken ? '?auth_token=' + encodeURIComponent(authToken) : '');
+                            window.location.href = cartUrl;
+                        } else {
+                            updateCartCount(data.cart_count);
+                            showToast(data.message || 'Product added to cart!', 'success');
+                            if (button) { button.disabled = false; button.innerHTML = originalText; }
                         }
+                    } else {
+                        throw new Error(data.message || (status === 401 ? 'Please login first.' : 'Could not add to cart.'));
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     showToast(error.message || 'Failed to add to cart. Please try again.', 'error');
-                    if (button) {
-                        button.disabled = false;
-                        button.innerHTML = originalText;
-                    }
+                    if (button) { button.disabled = false; button.innerHTML = originalText; }
                 });
             }
         });
