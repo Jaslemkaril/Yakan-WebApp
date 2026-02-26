@@ -1931,7 +1931,7 @@ class CustomOrderController extends Controller
 
         $request->validate([
             'transaction_id' => 'required|string|max:255',
-            'receipt' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'receipt' => 'nullable|file|mimes:jpg,jpeg,png,pdf,webp,gif,bmp,heic,heif|max:10240',
             'payment_notes' => 'nullable|string|max:1000',
             'transfer_date' => 'nullable|date',
         ]);

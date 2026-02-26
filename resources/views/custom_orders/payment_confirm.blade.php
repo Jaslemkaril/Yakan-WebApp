@@ -107,9 +107,9 @@
                 <!-- Receipt Upload -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Upload Receipt (optional)</label>
-                    <input type="file" name="receipt" accept="image/*,.pdf"
+                    <input type="file" name="receipt" accept="image/*,.pdf,image/heic,image/heif"
                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
-                    <p class="mt-1 text-xs text-gray-500">Upload screenshot or PDF receipt (max 5MB)</p>
+                    <p class="mt-1 text-xs text-gray-500">Upload screenshot or photo of receipt (JPG, PNG, PDF, WebP — max 10MB)</p>
                     @error('receipt')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
