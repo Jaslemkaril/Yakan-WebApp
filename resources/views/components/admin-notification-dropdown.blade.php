@@ -121,6 +121,16 @@ function adminNotificationDropdown() {
         unreadCount: 0,
         loading: false,
         
+        getAuthToken() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('auth_token') || sessionStorage.getItem('auth_token') || null;
+        },
+
+        apiUrl(path) {
+            const token = this.getAuthToken();
+            return token ? `${path}?auth_token=${encodeURIComponent(token)}` : path;
+        },
+
         init() {
             // Load unread count on page load
             this.loadUnreadCount();
@@ -134,11 +144,8 @@ function adminNotificationDropdown() {
         async loadNotifications() {
             this.loading = true;
             try {
-                const response = await fetch('/api/v1/admin/notifications', {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
+                const response = await fetch(this.apiUrl('/api/v1/admin/notifications'), {
+                    headers: { 'Accept': 'application/json' },
                     credentials: 'same-origin'
                 });
                 
@@ -158,11 +165,8 @@ function adminNotificationDropdown() {
         
         async loadUnreadCount() {
             try {
-                const response = await fetch('/api/v1/admin/notifications/unread-count', {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
+                const response = await fetch(this.apiUrl('/api/v1/admin/notifications/unread-count'), {
+                    headers: { 'Accept': 'application/json' },
                     credentials: 'same-origin'
                 });
                 
@@ -177,13 +181,9 @@ function adminNotificationDropdown() {
         
         async markAsRead(id) {
             try {
-                const response = await fetch(`/api/v1/admin/notifications/${id}/read`, {
+                const response = await fetch(this.apiUrl(`/api/v1/admin/notifications/${id}/read`), {
                     method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
+                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
                     credentials: 'same-origin'
                 });
                 
@@ -202,13 +202,9 @@ function adminNotificationDropdown() {
         
         async markAllAsRead() {
             try {
-                const response = await fetch('/api/v1/admin/notifications/mark-all-read', {
+                const response = await fetch(this.apiUrl('/api/v1/admin/notifications/mark-all-read'), {
                     method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
+                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
                     credentials: 'same-origin'
                 });
                 
