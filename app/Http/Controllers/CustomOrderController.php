@@ -482,7 +482,7 @@ class CustomOrderController extends Controller
      */
     public function create()
     {
-        return redirect()->route('custom_orders.create.step1');
+        return $this->redirectToRouteWithToken('custom_orders.create.step1');
     }
 
 

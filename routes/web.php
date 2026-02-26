@@ -778,8 +778,13 @@ Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->gr
     Route::get('/', [\App\Http\Controllers\CustomOrderController::class, 'userIndex'])->name('index');
     
     // Redirect /create to fabric selection (step 1)
-    Route::get('/create', function() {
-        return redirect()->route('custom_orders.create.step1');
+    Route::get('/create', function(\Illuminate\Http\Request $request) {
+        $token = $request->query('auth_token');
+        $url = route('custom_orders.create.step1');
+        if ($token) {
+            $url .= '?auth_token=' . urlencode($token);
+        }
+        return redirect($url);
     })->name('create');
     
     // Test route for debugging auth
