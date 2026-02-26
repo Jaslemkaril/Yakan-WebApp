@@ -44,7 +44,15 @@ class SocialAuthController extends Controller
             }
 
             \Log::info('Attempting Socialite redirect', ['provider' => $provider]);
-            return Socialite::driver($provider)->redirect();
+            
+            // Get the redirect URL from Socialite and do an explicit redirect
+            // This avoids Socialite's redirect response being rendered as text
+            $driver = Socialite::driver($provider);
+            $redirectUrl = $driver->redirect()->getTargetUrl();
+            
+            \Log::info('OAuth redirect URL generated', ['url' => substr($redirectUrl, 0, 100) . '...']);
+            
+            return redirect()->away($redirectUrl);
         } catch (\Exception $e) {
             \Log::error('OAuth redirect exception', [
                 'provider' => $provider,
@@ -177,7 +185,8 @@ class SocialAuthController extends Controller
      */
     public function redirectToGoogle()
     {
-        return Socialite::driver('google')->redirect();
+        $url = Socialite::driver('google')->redirect()->getTargetUrl();
+        return redirect()->away($url);
     }
 
     /**
@@ -206,7 +215,8 @@ class SocialAuthController extends Controller
      */
     public function redirectToFacebook()
     {
-        return Socialite::driver('facebook')->redirect();
+        $url = Socialite::driver('facebook')->redirect()->getTargetUrl();
+        return redirect()->away($url);
     }
 
     /**

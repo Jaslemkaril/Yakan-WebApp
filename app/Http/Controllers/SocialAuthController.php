@@ -20,7 +20,7 @@ class SocialAuthController extends Controller
             return redirect()->route('login')->with('error', 'Unsupported authentication provider.');
         }
 
-        return Socialite::driver($provider)->redirect();
+        return redirect()->away(Socialite::driver($provider)->redirect()->getTargetUrl());
     }
 
     /**
