@@ -15,6 +15,24 @@ use Illuminate\Support\Str;
 class CustomOrderController extends Controller
 {
     /**
+     * Redirect to a named route with auth_token appended as a query parameter.
+     * This ensures the user stays authenticated across steps on Railway,
+     * where session cookies are not reliably persisted.
+     */
+    private function redirectToRouteWithToken(string $routeName, $routeParams = [], array $queryParams = []): \Illuminate\Http\RedirectResponse
+    {
+        $token = request()->input('auth_token') ?? request()->query('auth_token') ?? session('auth_token');
+        if ($token) {
+            $queryParams['auth_token'] = $token;
+        }
+        $url = route($routeName, $routeParams);
+        if (!empty($queryParams)) {
+            $url .= '?' . http_build_query($queryParams);
+        }
+        return redirect($url);
+    }
+
+    /**
      * Validate wizard session data with comprehensive logging
      */
     private function validateWizardSession(Request $request, string $step = 'unknown')
@@ -164,7 +182,7 @@ class CustomOrderController extends Controller
             // Also flash the wizard data as a backup in case session is lost
             $request->session()->flash('wizard_backup', $wizardData);
 
-            return redirect()->route('custom_orders.create.step4');
+            return $this->redirectToRouteWithToken('custom_orders.create.step4');
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()
                 ->withErrors($e->errors())
@@ -599,7 +617,7 @@ class CustomOrderController extends Controller
             }
 
             // Redirect directly to pattern selection (skip image upload)
-            return redirect()->route('custom_orders.create.pattern');
+            return $this->redirectToRouteWithToken('custom_orders.create.pattern');
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Validation error in storeStep1', [
@@ -711,7 +729,7 @@ class CustomOrderController extends Controller
             $request->session()->save();
 
             // Redirect to pattern selection
-            return redirect()->route('custom_orders.create.pattern')
+            return $this->redirectToRouteWithToken('custom_orders.create.pattern')
                 ->with('success', 'Reference uploaded successfully!');
 
         } catch (\Exception $e) {
@@ -858,17 +876,19 @@ class CustomOrderController extends Controller
             ]);
             
             // Return JSON response with review URL
+            $token = request()->input('auth_token') ?? request()->query('auth_token') ?? session('auth_token');
+            $step3Url = route('custom_orders.create.step3') . ($token ? '?auth_token=' . $token : '');
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Patterns saved successfully!',
-                    'review_url' => route('custom_orders.create.step3'),
-                    'next_url' => route('custom_orders.create.step3'),
+                    'review_url' => $step3Url,
+                    'next_url' => $step3Url,
                 ]);
             }
             
             // Skip Details step and go directly to Review (step 4)
-            return redirect()->route('custom_orders.create.step3');
+            return $this->redirectToRouteWithToken('custom_orders.create.step3');
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Pattern validation error:', $e->errors());
@@ -946,7 +966,7 @@ class CustomOrderController extends Controller
             
             $request->session()->put('wizard', $wizardData);
             
-            return redirect()->route('custom_orders.create.step3');
+            return $this->redirectToRouteWithToken('custom_orders.create.step3');
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()
@@ -1534,7 +1554,7 @@ class CustomOrderController extends Controller
             }
 
             // Redirect to success page
-            return redirect()->route('custom_orders.success', ['order' => $customOrder->id]);
+            return $this->redirectToRouteWithToken('custom_orders.success', ['order' => $customOrder->id]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::warning('Validation failed in completeWizard:', [
@@ -1798,7 +1818,7 @@ class CustomOrderController extends Controller
             $order->payment_status = 'unpaid';
             $order->save();
             $message = 'You have accepted the price quote. Please complete your payment.';
-            return redirect()->route('custom_orders.payment', $order)->with('success', $message);
+            return $this->redirectToRouteWithToken('custom_orders.payment', $order)->with('success', $message);
         } else {
             $order->status = 'cancelled';
             $order->rejection_reason = $request->reason;
@@ -1903,16 +1923,16 @@ class CustomOrderController extends Controller
                     // Generate a simple transaction ID for now
                     $order->transaction_id = 'GCASH_' . strtoupper(uniqid());
                     $order->save();
-                    return redirect()->route('custom_orders.payment.instructions', $order);
+                    return $this->redirectToRouteWithToken('custom_orders.payment.instructions', $order);
                 
                 case 'online_banking':
                     // Generate a simple transaction ID for now
                     $order->transaction_id = 'BANK_' . strtoupper(uniqid());
                     $order->save();
-                    return redirect()->route('custom_orders.payment.instructions', $order);
+                    return $this->redirectToRouteWithToken('custom_orders.payment.instructions', $order);
                 
                 case 'bank_transfer':
-                    return redirect()->route('custom_orders.payment.instructions', $order);
+                    return $this->redirectToRouteWithToken('custom_orders.payment.instructions', $order);
             }
 
             return back()->with('error', 'Payment initialization failed');
@@ -1932,16 +1952,16 @@ class CustomOrderController extends Controller
         }
 
         if ($order->payment_status === 'paid') {
-            return redirect()->route('custom_orders.show', $order)->with('info', 'This order is already paid.');
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)->with('info', 'This order is already paid.');
         }
 
         if (!$order->payment_method) {
-            return redirect()->route('custom_orders.payment', $order);
+            return $this->redirectToRouteWithToken('custom_orders.payment', $order);
         }
 
         // For bank transfer, redirect to instructions page
         if ($order->payment_method === 'bank_transfer') {
-            return redirect()->route('custom_orders.payment.instructions', $order);
+            return $this->redirectToRouteWithToken('custom_orders.payment.instructions', $order);
         }
 
         $order->load('product');
@@ -2011,7 +2031,7 @@ class CustomOrderController extends Controller
         
         $order->save();
 
-        return redirect()->route('custom_orders.show', $order)->with('success', 'Payment confirmation submitted! We will verify your payment shortly.');
+        return $this->redirectToRouteWithToken('custom_orders.show', $order)->with('success', 'Payment confirmation submitted! We will verify your payment shortly.');
     }
 
     /**
@@ -2024,7 +2044,7 @@ class CustomOrderController extends Controller
         }
 
         if (!$order->payment_method) {
-            return redirect()->route('custom_orders.payment', $order);
+            return $this->redirectToRouteWithToken('custom_orders.payment', $order);
         }
 
         // Create simple payment instructions based on payment method
@@ -2726,7 +2746,7 @@ class CustomOrderController extends Controller
                     'price' => $order->final_price
                 ]);
                 
-                return redirect()->route('custom_orders.payment', $order)
+            return $this->redirectToRouteWithToken('custom_orders.payment', $order)
                     ->with('success', 'Quote accepted! Please complete your payment to start production.');
             }
             

@@ -61,6 +61,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'addresses',
             'payment/*',
             'orders/*',
+            'custom-orders/*',
         ]);
         
         $middleware->api(prepend: [
