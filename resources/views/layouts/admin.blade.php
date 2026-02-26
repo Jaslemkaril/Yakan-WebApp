@@ -1286,6 +1286,14 @@
                         input.value = token;
                         form.appendChild(input);
                     }
+                    // Also append token to form action URL (covers multipart/form-data)
+                    try {
+                        const actionUrl = new URL(form.action, window.location.origin);
+                        if (!actionUrl.searchParams.has('auth_token')) {
+                            actionUrl.searchParams.set('auth_token', token);
+                            form.action = actionUrl.toString();
+                        }
+                    } catch(e) {}
                 });
             }
         });
