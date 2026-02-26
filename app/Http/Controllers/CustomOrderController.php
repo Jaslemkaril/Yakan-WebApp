@@ -137,17 +137,17 @@ class CustomOrderController extends Controller
 
             // For Fabric Flow (fabric + pattern), skip Order Details and go directly to Review
             if (isset($wizardData['fabric']) && isset($wizardData['pattern']) && !isset($wizardData['product'])) {
-                return redirect()->route('custom_orders.create.step4');
+                return $this->redirectToRouteWithToken('custom_orders.create.step4');
             }
 
             if (isset($wizardData['product'])) {
                 $product = \App\Models\Product::find($wizardData['product']['id'] ?? null);
                 if (!$product) {
-                    return redirect()->route('custom_orders.create.product')
+                    return $this->redirectToRouteWithToken('custom_orders.create.product')
                         ->with('error', 'Please select a product first.');
                 }
                 if (!isset($wizardData['pattern']) && !isset($wizardData['design'])) {
-                    return redirect()->route('custom_orders.create.product.customize')
+                    return $this->redirectToRouteWithToken('custom_orders.create.product.customize')
                         ->with('error', 'Please customize your design first.');
                 }
                 return view('custom_orders.wizard.step3', [
@@ -157,11 +157,11 @@ class CustomOrderController extends Controller
             }
 
             if (!isset($wizardData['fabric'])) {
-                return redirect()->route('custom_orders.create.step1')
+                return $this->redirectToRouteWithToken('custom_orders.create.step1')
                     ->with('error', 'Please select a fabric first.');
             }
             if (!isset($wizardData['pattern']) && !isset($wizardData['design'])) {
-                return redirect()->route('custom_orders.create.pattern')
+                return $this->redirectToRouteWithToken('custom_orders.create.pattern')
                     ->with('error', 'Please select a pattern or create a design first.');
             }
 
@@ -496,10 +496,10 @@ class CustomOrderController extends Controller
             $restoredStep = $this->restoreWizardSession($request);
             
             if ($restoredStep) {
-                return redirect()->route("custom_orders.create.{$restoredStep}")
+                return $this->redirectToRouteWithToken("custom_orders.create.{$restoredStep}")
                     ->with('success', 'Your previous progress has been restored.');
             } else {
-                return redirect()->route('custom_orders.create.step1')
+                return $this->redirectToRouteWithToken('custom_orders.create.step1')
                     ->with('info', 'No previous progress found to restore.');
             }
         } catch (\Exception $e) {
@@ -629,7 +629,7 @@ class CustomOrderController extends Controller
         // Validate fabric selection exists
         $wizardData = $this->getWizardData();
         if (!isset($wizardData['fabric'])) {
-            return redirect()->route('custom_orders.create.step1')
+            return $this->redirectToRouteWithToken('custom_orders.create.step1')
                 ->with('error', 'Please select a fabric first.');
         }
 
@@ -710,7 +710,7 @@ class CustomOrderController extends Controller
             // Temporarily bypass fabric validation for testing
             // if (!$request->session()->has('wizard.fabric')) {
             //     \Log::error('No fabric in session', ['session' => $request->session()->get('wizard')]);
-            //     return redirect()->route('custom_orders.create.step1')
+            //     return $this->redirectToRouteWithToken('custom_orders.create.step1')
             //         ->with('error', 'Please select a fabric first.');
             // }
 
@@ -773,7 +773,7 @@ class CustomOrderController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             
-            return redirect()->route('custom_orders.create.step1')
+            return $this->redirectToRouteWithToken('custom_orders.create.step1')
                 ->with('error', 'Unable to load design interface: ' . $e->getMessage());
         }
     }
@@ -887,7 +887,7 @@ class CustomOrderController extends Controller
             $wizardData = $this->getWizardData();
             
             if (!$wizardData || !isset($wizardData['fabric'])) {
-                return redirect()->route('custom_orders.create.step1')
+                return $this->redirectToRouteWithToken('custom_orders.create.step1')
                     ->with('error', 'Please select a fabric first.');
             }
             
@@ -901,7 +901,7 @@ class CustomOrderController extends Controller
             
         } catch (\Exception $e) {
             \Log::error('Step 2 creation error: ' . $e->getMessage());
-            return redirect()->route('custom_orders.create.step1')
+            return $this->redirectToRouteWithToken('custom_orders.create.step1')
                 ->with('error', 'Unable to load design interface. Please try again.');
         }
     }
@@ -979,11 +979,11 @@ class CustomOrderController extends Controller
             if (isset($wizardData['product'])) {
                 $product = \App\Models\Product::find($wizardData['product']['id'] ?? null);
                 if (!$product) {
-                    return redirect()->route('custom_orders.create.product')
+                    return $this->redirectToRouteWithToken('custom_orders.create.product')
                         ->with('error', 'Please select a product first.');
                 }
                 if (!isset($wizardData['pattern']) && !isset($wizardData['design'])) {
-                    return redirect()->route('custom_orders.create.product.customize')
+                    return $this->redirectToRouteWithToken('custom_orders.create.product.customize')
                         ->with('error', 'Please customize your design first.');
                 }
                 // Resolve preview image and selected patterns if available
@@ -1014,11 +1014,11 @@ class CustomOrderController extends Controller
                 ]);
                 // If we have details but no pattern, go back to pattern selection
                 if (isset($wizardData['details'])) {
-                    return redirect()->route('custom_orders.create.pattern')
+                    return $this->redirectToRouteWithToken('custom_orders.create.pattern')
                         ->with('error', 'Please select a pattern first.');
                 }
                 // If we don't have details either, start from the beginning
-                return redirect()->route('custom_orders.create.step1')
+                return $this->redirectToRouteWithToken('custom_orders.create.step1')
                     ->with('error', 'Session expired. Please start your custom order again.');
             }
 
@@ -1050,11 +1050,11 @@ class CustomOrderController extends Controller
             
             // If we have wizard data but just missing pattern, redirect to pattern selection
             if (!empty($wizardData) && !isset($wizardData['pattern']) && !isset($wizardData['design'])) {
-                return redirect()->route('custom_orders.create.pattern')
+                return $this->redirectToRouteWithToken('custom_orders.create.pattern')
                     ->with('error', 'Please select a pattern first.');
             }
             
-            return redirect()->route('custom_orders.create.step1')
+            return $this->redirectToRouteWithToken('custom_orders.create.step1')
                 ->with('error', 'Unable to load review page. Please try again.');
         }
     }
@@ -1088,7 +1088,7 @@ class CustomOrderController extends Controller
 
             if (!$wizardData) {
                 \Log::error('No wizard data found');
-                return redirect()->route('custom_orders.create.step1')
+                return $this->redirectToRouteWithToken('custom_orders.create.step1')
                     ->with('error', 'Session expired. Please start your custom order again.');
             }
 
@@ -1098,7 +1098,7 @@ class CustomOrderController extends Controller
 
             if (!$isProductFlow && !$isFabricFlow) {
                 \Log::error('Neither product nor fabric flow detected', ['wizard_data' => $wizardData]);
-                return redirect()->route('custom_orders.create.step1')
+                return $this->redirectToRouteWithToken('custom_orders.create.step1')
                     ->with('error', 'Please select a fabric first.');
             }
 
@@ -1106,8 +1106,8 @@ class CustomOrderController extends Controller
             if (!isset($wizardData['pattern']) && !isset($wizardData['design'])) {
                 \Log::error('No pattern or design in wizard data', ['wizard_data' => $wizardData]);
                 return $isProductFlow
-                    ? redirect()->route('custom_orders.create.product.customize')->with('error', 'Please customize your design first.')
-                    : redirect()->route('custom_orders.create.pattern')->with('error', 'Please select a pattern first.');
+                    ? $this->redirectToRouteWithToken('custom_orders.create.product.customize')->with('error', 'Please customize your design first.')
+                    : $this->redirectToRouteWithToken('custom_orders.create.pattern')->with('error', 'Please select a pattern first.');
             }
 
             // Ensure user is authenticated
@@ -1550,7 +1550,7 @@ class CustomOrderController extends Controller
         } catch (\Exception $e) {
             \Log::error('Success page error: ' . $e->getMessage());
             
-            return redirect()->route('custom_orders.index')
+            return $this->redirectToRouteWithToken('custom_orders.index')
                 ->with('error', 'Order not found. Please check your order history.');
         }
     }
@@ -1688,7 +1688,7 @@ class CustomOrderController extends Controller
                 ? 'Custom order created successfully!' 
                 : count($createdOrders) . ' custom orders created successfully!';
 
-            return redirect()->route('custom_orders.index')->with('success', $message);
+            return $this->redirectToRouteWithToken('custom_orders.index')->with('success', $message);
 
         } catch (\Exception $e) {
             \Log::error('Custom order creation failed: ' . $e->getMessage());
@@ -1776,7 +1776,7 @@ class CustomOrderController extends Controller
             $order->rejection_reason = $request->reason;
             $order->save();
             $message = 'You have cancelled the price quote.';
-            return redirect()->route('custom_orders.show', $order)->with('success', $message);
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)->with('success', $message);
         }
     }
 
@@ -1808,7 +1808,7 @@ class CustomOrderController extends Controller
                     'order_id' => $order->id,
                     'payment_status' => $order->payment_status
                 ]);
-                return redirect()->route('custom_orders.show', $order)->with('info', 'This order is already paid.');
+                return $this->redirectToRouteWithToken('custom_orders.show', $order)->with('info', 'This order is already paid.');
             }
 
             // Check if order is approved by admin
@@ -1817,7 +1817,7 @@ class CustomOrderController extends Controller
                     'order_id' => $order->id,
                     'status' => $order->status
                 ]);
-                return redirect()->route('custom_orders.show', $order)->with('info', 'Payment is only available after admin approval. Your order is currently ' . $order->status . '.');
+                return $this->redirectToRouteWithToken('custom_orders.show', $order)->with('info', 'Payment is only available after admin approval. Your order is currently ' . $order->status . '.');
             }
 
             \Log::info('showPayment - Loading relationships', [
@@ -2315,7 +2315,7 @@ class CustomOrderController extends Controller
                 'order_name' => $request->order_name,
             ]);
 
-            return redirect()->route('custom_orders.payment', $customOrder->id)
+            return $this->redirectToRouteWithToken('custom_orders.payment', $customOrder->id)
                 ->with('success', 'Visual design submitted successfully! Please complete payment to proceed.');
 
         } catch (\Exception $e) {
@@ -2600,7 +2600,7 @@ class CustomOrderController extends Controller
                 'order_id' => $id,
                 'error' => $e->getMessage()
             ]);
-            return redirect()->route('custom_orders.index')
+            return $this->redirectToRouteWithToken('custom_orders.index')
                 ->with('error', 'Order not found.');
         } catch (\Exception $e) {
             \Log::error('Payment page error', [
@@ -2667,7 +2667,7 @@ class CustomOrderController extends Controller
         $order->rejection_reason = $request->reason;
         $order->save();
 
-        return redirect()->route('custom_orders.show', $order)
+        return $this->redirectToRouteWithToken('custom_orders.show', $order)
             ->with('success', 'Order cancelled successfully.');
     }
 
@@ -2683,7 +2683,7 @@ class CustomOrderController extends Controller
         
         // Check if order is in the right status
         if (!$order->isAwaitingUserDecision()) {
-            return redirect()->route('custom_orders.show', $order)
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
                 ->with('error', 'This order is not awaiting your decision.');
         }
         
@@ -2702,7 +2702,7 @@ class CustomOrderController extends Controller
                     ->with('success', 'Quote accepted! Please complete your payment to start production.');
             }
             
-            return redirect()->route('custom_orders.show', $order)
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
                 ->with('error', 'Unable to accept quote. Please try again.');
                 
         } catch (\Exception $e) {
@@ -2712,7 +2712,7 @@ class CustomOrderController extends Controller
                 'error' => $e->getMessage()
             ]);
             
-            return redirect()->route('custom_orders.show', $order)
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
                 ->with('error', 'An error occurred. Please try again.');
         }
     }
@@ -2729,7 +2729,7 @@ class CustomOrderController extends Controller
         
         // Check if order is in the right status
         if (!$order->isAwaitingUserDecision()) {
-            return redirect()->route('custom_orders.show', $order)
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
                 ->with('error', 'This order is not awaiting your decision.');
         }
         
@@ -2750,11 +2750,11 @@ class CustomOrderController extends Controller
                     'reason' => $request->reason
                 ]);
                 
-                return redirect()->route('custom_orders.index')
+                return $this->redirectToRouteWithToken('custom_orders.index')
                     ->with('info', 'Quote rejected. The order has been cancelled.');
             }
             
-            return redirect()->route('custom_orders.show', $order)
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
                 ->with('error', 'Unable to reject quote. Please try again.');
                 
         } catch (\Exception $e) {
@@ -2764,7 +2764,7 @@ class CustomOrderController extends Controller
                 'error' => $e->getMessage()
             ]);
             
-            return redirect()->route('custom_orders.show', $order)
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
                 ->with('error', 'An error occurred. Please try again.');
         }
     }
@@ -2781,7 +2781,7 @@ class CustomOrderController extends Controller
         
         // Check if order is delivered
         if ($order->status !== 'delivered') {
-            return redirect()->route('custom_orders.show', $order)
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
                 ->with('error', 'This order is not marked as delivered yet.');
         }
         
@@ -2798,7 +2798,7 @@ class CustomOrderController extends Controller
                 'delivered_at' => $order->delivered_at
             ]);
             
-            return redirect()->route('custom_orders.show', $order)
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
                 ->with('success', 'Thank you for confirming! Your order is now complete.');
                 
         } catch (\Exception $e) {
@@ -2808,7 +2808,7 @@ class CustomOrderController extends Controller
                 'error' => $e->getMessage()
             ]);
             
-            return redirect()->route('custom_orders.show', $order)
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
                 ->with('error', 'An error occurred. Please try again.');
         }
     }
