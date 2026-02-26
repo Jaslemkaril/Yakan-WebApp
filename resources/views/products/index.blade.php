@@ -560,14 +560,24 @@ function quickAddToCart(productId) {
         body: JSON.stringify({ quantity: 1 })
     })
     .then(response => {
-        const contentType = response.headers.get('content-type') || '';
-        
-        // If redirected to login page (HTML response), user needs to log in
-        if (response.redirected || !contentType.includes('application/json')) {
+        // Try to parse as JSON regardless of content-type header
+        // (Railway's PHP dev server may return text/html for JSON responses)
+        if (response.redirected && response.url.includes('/login')) {
             throw new Error('LOGIN_REQUIRED');
         }
         
-        return response.json().then(data => ({ data, status: response.status, ok: response.ok }));
+        return response.text().then(text => {
+            try {
+                const data = JSON.parse(text);
+                return { data, status: response.status, ok: response.ok };
+            } catch (e) {
+                // Truly not JSON — probably an HTML login page
+                if (response.status === 401 || text.includes('login')) {
+                    throw new Error('LOGIN_REQUIRED');
+                }
+                throw new Error('INVALID_RESPONSE');
+            }
+        });
     })
     .then(({ data, status, ok }) => {
         if (ok && data.success) {

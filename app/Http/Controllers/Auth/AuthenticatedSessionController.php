@@ -53,13 +53,15 @@ class AuthenticatedSessionController extends Controller
 
         // Generate auth token (fallback for cookie issues)
         $token = bin2hex(random_bytes(32));
-        \DB::table('auth_tokens')->insert([
-            'user_id' => $user->id,
-            'token' => $token,
-            'expires_at' => now()->addHours(24),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        \DB::table('auth_tokens')->updateOrInsert(
+            ['user_id' => $user->id],
+            [
+                'token' => $token,
+                'expires_at' => now()->addHours(24),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        );
 
         // Also try session-based auth
         Auth::attempt($credentials, $request->boolean('remember'));
