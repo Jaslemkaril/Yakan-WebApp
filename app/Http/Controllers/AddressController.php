@@ -104,9 +104,18 @@ class AddressController extends Controller
     public function edit(UserAddress $address)
     {
         $this->authorize('update', $address);
-        
-        // Return just the form partial for the modal
-        return view('addresses.edit', compact('address'));
+
+        // Resolve IDs from stored name strings so the edit form can pre-select dropdowns
+        $province = PhilippineProvince::where('name', $address->province)->first();
+        $city     = $province
+            ? PhilippineCity::where('name', $address->city)->where('province_id', $province->id)->first()
+            : null;
+        $barangay = $city
+            ? PhilippineBarangay::where('name', $address->barangay)->where('city_id', $city->id)->first()
+            : null;
+        $region = $province ? PhilippineRegion::find($province->region_id) : null;
+
+        return view('addresses.edit', compact('address', 'region', 'province', 'city', 'barangay'));
     }
 
     /**

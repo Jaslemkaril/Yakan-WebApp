@@ -77,185 +77,117 @@
 
 <script>
 (function() {
-    const regionSelect = document.getElementById('edit_region_id');
+    const regionSelect   = document.getElementById('edit_region_id');
     const provinceSelect = document.getElementById('edit_province_id');
-    const citySelect = document.getElementById('edit_city_id');
+    const citySelect     = document.getElementById('edit_city_id');
     const barangaySelect = document.getElementById('edit_barangay_id');
-    
+
     const urlParams = new URLSearchParams(window.location.search);
     const authToken = urlParams.get('auth_token') || sessionStorage.getItem('auth_token') || '';
     function apiUrl(path) {
         return authToken ? `${path}?auth_token=${encodeURIComponent(authToken)}` : path;
     }
-    
-    // Store current address data
-    const currentAddress = {
-        province: "{{ $address->province }}",
-        city: "{{ $address->city }}",
-        barangay: "{{ $address->barangay }}"
+
+    // IDs resolved server-side
+    const preselect = {
+        region_id:   {{ $region->id   ?? 'null' }},
+        province_id: {{ $province->id ?? 'null' }},
+        city_id:     {{ $city->id     ?? 'null' }},
+        barangay_id: {{ $barangay->id ?? 'null' }},
     };
-    
-    // Load regions on form load
-    loadEditRegions();
-    
-    // Region change event
-    regionSelect.addEventListener('change', function() {
-        const regionId = this.value;
-        resetDropdown(provinceSelect, 'Select Province');
-        resetDropdown(citySelect, 'Select City/Municipality');
-        resetDropdown(barangaySelect, 'Select Barangay');
-        
-        if (regionId) {
-            loadEditProvinces(regionId);
-        }
-    });
-    
-    // Province change event
-    provinceSelect.addEventListener('change', function() {
-        const provinceId = this.value;
-        resetDropdown(citySelect, 'Select City/Municipality');
-        resetDropdown(barangaySelect, 'Select Barangay');
-        
-        if (provinceId) {
-            loadEditCities(provinceId);
-        }
-    });
-    
-    // City change event
-    citySelect.addEventListener('change', function() {
-        const cityId = this.value;
-        resetDropdown(barangaySelect, 'Select Barangay');
-        
-        if (cityId) {
-            loadEditBarangays(cityId);
-        }
-    });
-    
-    // Load regions
-    function loadEditRegions() {
+
+    function setLoading(select, loading) {
+        select.disabled = loading;
+        select.classList.toggle('bg-gray-100', loading);
+    }
+
+    // Step 1 – load all regions, select current
+    function loadRegions() {
         fetch(apiUrl('/addresses/api/regions'))
-            .then(response => response.json())
+            .then(r => r.json())
             .then(data => {
-                if (data.success) {
-                    regionSelect.innerHTML = '<option value="">-- Select Region --</option>';
-                    data.data.forEach(region => {
-                        const option = document.createElement('option');
-                        option.value = region.id;
-                        option.textContent = region.name;
-                        regionSelect.appendChild(option);
-                    });
-                    
-                    // Auto-load provinces to find the current one
-                    findAndSelectProvince();
-                }
+                if (!data.success) return;
+                regionSelect.innerHTML = '<option value="">-- Select Region --</option>';
+                data.data.forEach(region => {
+                    const opt = new Option(region.name, region.id, false, region.id == preselect.region_id);
+                    regionSelect.add(opt);
+                });
+                if (preselect.province_id) loadProvinces(preselect.region_id);
             })
-            .catch(error => console.error('Error loading regions:', error));
+            .catch(e => console.error('Error loading regions:', e));
     }
-    
-    // Find and select province
-    function findAndSelectProvince() {
-        // Try each region to find the province
-        fetch(apiUrl('/addresses/api/regions'))
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    let found = false;
-                    const checkRegion = (index) => {
-                        if (index >= data.data.length || found) return;
-                        
-                        const region = data.data[index];
-                        fetch(apiUrl(`/addresses/api/provinces/${region.id}`))
-                            .then(response => response.json())
-                            .then(provinceData => {
-                                const matchingProvince = provinceData.data.find(p => p.name === currentAddress.province);
-                                if (matchingProvince) {
-                                    found = true;
-                                    regionSelect.value = region.id;
-                                    loadEditProvinces(region.id, matchingProvince.id);
-                                } else {
-                                    checkRegion(index + 1);
-                                }
-                            });
-                    };
-                    checkRegion(0);
-                }
-            });
-    }
-    
-    // Load provinces
-    function loadEditProvinces(regionId, selectProvinceId = null) {
+
+    // Step 2 – load provinces for selected region, select current
+    function loadProvinces(regionId) {
+        setLoading(provinceSelect, true);
         fetch(apiUrl(`/addresses/api/provinces/${regionId}`))
-            .then(response => response.json())
+            .then(r => r.json())
             .then(data => {
-                if (data.success) {
-                    provinceSelect.innerHTML = '<option value="">-- Select Province --</option>';
-                    data.data.forEach(province => {
-                        const option = document.createElement('option');
-                        option.value = province.id;
-                        option.textContent = province.name;
-                        if (selectProvinceId && province.id === selectProvinceId) {
-                            option.selected = true;
-                        } else if (!selectProvinceId && province.name === currentAddress.province) {
-                            option.selected = true;
-                            loadEditCities(province.id);
-                        }
-                        provinceSelect.appendChild(option);
-                    });
-                    
-                    if (selectProvinceId) {
-                        loadEditCities(selectProvinceId);
-                    }
-                }
+                if (!data.success) return;
+                provinceSelect.innerHTML = '<option value="">-- Select Province --</option>';
+                data.data.forEach(p => {
+                    const opt = new Option(p.name, p.id, false, p.id == preselect.province_id);
+                    provinceSelect.add(opt);
+                });
+                setLoading(provinceSelect, false);
+                if (preselect.city_id) loadCities(preselect.province_id);
             })
-            .catch(error => console.error('Error loading provinces:', error));
+            .catch(e => { console.error('Error loading provinces:', e); setLoading(provinceSelect, false); });
     }
-    
-    // Load cities
-    function loadEditCities(provinceId) {
+
+    // Step 3 – load cities for selected province, select current
+    function loadCities(provinceId) {
+        setLoading(citySelect, true);
         fetch(apiUrl(`/addresses/api/cities/${provinceId}`))
-            .then(response => response.json())
+            .then(r => r.json())
             .then(data => {
-                if (data.success) {
-                    citySelect.innerHTML = '<option value="">-- Select City/Municipality --</option>';
-                    data.data.forEach(city => {
-                        const option = document.createElement('option');
-                        option.value = city.id;
-                        option.textContent = city.name;
-                        if (city.name === currentAddress.city) {
-                            option.selected = true;
-                            loadEditBarangays(city.id);
-                        }
-                        citySelect.appendChild(option);
-                    });
-                }
+                if (!data.success) return;
+                citySelect.innerHTML = '<option value="">-- Select City/Municipality --</option>';
+                data.data.forEach(c => {
+                    const opt = new Option(c.name, c.id, false, c.id == preselect.city_id);
+                    citySelect.add(opt);
+                });
+                setLoading(citySelect, false);
+                if (preselect.barangay_id) loadBarangays(preselect.city_id);
             })
-            .catch(error => console.error('Error loading cities:', error));
+            .catch(e => { console.error('Error loading cities:', e); setLoading(citySelect, false); });
     }
-    
-    // Load barangays
-    function loadEditBarangays(cityId) {
+
+    // Step 4 – load barangays for selected city, select current
+    function loadBarangays(cityId) {
+        setLoading(barangaySelect, true);
         fetch(apiUrl(`/addresses/api/barangays/${cityId}`))
-            .then(response => response.json())
+            .then(r => r.json())
             .then(data => {
-                if (data.success) {
-                    barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
-                    data.data.forEach(barangay => {
-                        const option = document.createElement('option');
-                        option.value = barangay.id;
-                        option.textContent = barangay.name;
-                        if (barangay.name === currentAddress.barangay) {
-                            option.selected = true;
-                        }
-                        barangaySelect.appendChild(option);
-                    });
-                }
+                if (!data.success) return;
+                barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
+                data.data.forEach(b => {
+                    const opt = new Option(b.name, b.id, false, b.id == preselect.barangay_id);
+                    barangaySelect.add(opt);
+                });
+                setLoading(barangaySelect, false);
             })
-            .catch(error => console.error('Error loading barangays:', error));
+            .catch(e => { console.error('Error loading barangays:', e); setLoading(barangaySelect, false); });
     }
-    
-    // Reset dropdown helper
-    function resetDropdown(selectElement, placeholder) {
-        selectElement.innerHTML = `<option value="">-- ${placeholder} --</option>`;
-    }
+
+    // Chain on manual change
+    regionSelect.addEventListener('change', function() {
+        provinceSelect.innerHTML = '<option value="">-- Select Province --</option>';
+        citySelect.innerHTML = '<option value="">-- Select City/Municipality --</option>';
+        barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
+        if (this.value) loadProvinces(this.value);
+    });
+    provinceSelect.addEventListener('change', function() {
+        citySelect.innerHTML = '<option value="">-- Select City/Municipality --</option>';
+        barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
+        if (this.value) loadCities(this.value);
+    });
+    citySelect.addEventListener('change', function() {
+        barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
+        if (this.value) loadBarangays(this.value);
+    });
+
+    // Kick off
+    loadRegions();
 })();
 </script>
