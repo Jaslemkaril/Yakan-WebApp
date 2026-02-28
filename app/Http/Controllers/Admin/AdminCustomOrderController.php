@@ -11,9 +11,6 @@ class AdminCustomOrderController extends Controller
     public function index(Request $request)
     {
         try {
-            // Debug: Log the total count of custom orders
-            \Log::info('AdminCustomOrderController@index - Total custom orders: ' . CustomOrder::count());
-            
             $query = CustomOrder::with(['user', 'product'])
                 ->orderBy('created_at', 'desc');
 
@@ -47,12 +44,20 @@ class AdminCustomOrderController extends Controller
                 });
             }
 
-            $orders = $query->paginate($request->get('per_page', 20));
+            $orders = $query->paginate($request->get('per_page', 20))->withQueryString();
+
+            // Stats — always from all orders (unfiltered)
+            $totalOrders  = CustomOrder::count();
+            $todayOrders  = CustomOrder::whereDate('created_at', today())->count();
+            $pendingCount = CustomOrder::where('status', 'pending')->count();
+            $approvedCount = CustomOrder::where('status', 'approved')->count();
+            $inProductionCount = CustomOrder::where('status', 'in_production')->count();
+            $totalRevenue = CustomOrder::where('payment_status', 'paid')->sum('final_price');
             
-            // Debug: Log the results
-            \Log::info('AdminCustomOrderController: Orders retrieved - Total: ' . $orders->total() . ' Fetched: ' . $orders->count());
-            
-            return view('admin.custom_orders.index_enhanced', compact('orders'));
+            return view('admin.custom_orders.index_enhanced', compact(
+                'orders', 'totalOrders', 'todayOrders', 'pendingCount',
+                'approvedCount', 'inProductionCount', 'totalRevenue'
+            ));
         } catch (\Exception $e) {
             \Log::error('Custom Orders Index Error: ' . $e->getMessage());
             return 'Custom Orders Error: ' . $e->getMessage();
