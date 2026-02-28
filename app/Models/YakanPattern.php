@@ -101,7 +101,23 @@ class YakanPattern extends Model
      */
     public function hasSvg(): bool
     {
-        return !empty($this->svg_path) || (!empty($this->pattern_data) && is_string($this->pattern_data) && str_contains($this->pattern_data, '<svg'));
+        if (!empty($this->svg_path)) {
+            return true;
+        }
+
+        $data = $this->pattern_data;
+
+        // pattern_data is cast to array — check for nested 'svg' key
+        if (is_array($data) && !empty($data['svg']) && is_string($data['svg']) && str_contains($data['svg'], '<svg')) {
+            return true;
+        }
+
+        // Fallback: raw string containing SVG (shouldn't happen with cast, but just in case)
+        if (!empty($data) && is_string($data) && str_contains($data, '<svg')) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -118,7 +134,11 @@ class YakanPattern extends Model
                 return null;
             }
         }
-        // If pattern_data contains SVG string
+        // If pattern_data array has an 'svg' key
+        elseif (is_array($this->pattern_data) && !empty($this->pattern_data['svg']) && is_string($this->pattern_data['svg']) && str_contains($this->pattern_data['svg'], '<svg')) {
+            $svgContent = $this->pattern_data['svg'];
+        }
+        // Fallback: pattern_data is a raw SVG string
         elseif (!empty($this->pattern_data) && is_string($this->pattern_data) && str_contains($this->pattern_data, '<svg')) {
             $svgContent = $this->pattern_data;
         } else {
