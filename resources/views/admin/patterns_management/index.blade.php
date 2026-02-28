@@ -256,10 +256,43 @@
     </div>
 </div>
 
+<!-- Toast Notification -->
+<div id="pmToastContainer" class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
+
 <script>
+// ============ AUTH HELPERS ============
+function getAuthToken() {
+    const p = new URLSearchParams(window.location.search);
+    return p.get('auth_token') || sessionStorage.getItem('auth_token') || '';
+}
+function adminUrl(path) {
+    const t = getAuthToken();
+    if (!t) return path;
+    return path + (path.includes('?') ? '&' : '?') + 'auth_token=' + encodeURIComponent(t);
+}
+
+// ============ TOAST HELPER ============
+function showToast(message, type = 'success') {
+    const container = document.getElementById('pmToastContainer');
+    const toast = document.createElement('div');
+    const bg = type === 'success' ? 'bg-green-600' : 'bg-red-600';
+    const icon = type === 'success'
+        ? '<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>'
+        : '<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';
+    toast.className = `pointer-events-auto flex items-center gap-3 px-5 py-3 rounded-xl shadow-xl text-white text-sm font-medium ${bg} translate-x-16 opacity-0 transition-all duration-300`;
+    toast.innerHTML = icon + `<span>${message}</span>`;
+    container.appendChild(toast);
+    requestAnimationFrame(() => {
+        toast.classList.remove('translate-x-16', 'opacity-0');
+    });
+    setTimeout(() => {
+        toast.classList.add('translate-x-16', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+}
+
 // ============ FABRIC TYPES SCRIPTS ============
 
-// Fabric Type Modal Functions
 function openAddFabricTypeModal() {
     document.getElementById('addFabricTypeForm').reset();
     document.getElementById('addFabricTypeModal').classList.remove('hidden');
@@ -274,7 +307,7 @@ function closeAddFabricTypeModal() {
 function openEditFabricTypeModal(id, name, description) {
     document.getElementById('editFabricTypeId').value = id;
     document.getElementById('editFabricTypeName').value = name;
-    document.getElementById('editFabricTypeDescription').value = description;
+    document.getElementById('editFabricTypeDescription').value = description || '';
     document.getElementById('editFabricTypeModal').classList.remove('hidden');
     document.getElementById('editFabricTypeName').focus();
 }
@@ -286,135 +319,151 @@ function closeEditFabricTypeModal() {
 
 function submitAddFabricTypeForm(event) {
     event.preventDefault();
-    
+
     const name = document.getElementById('addFabricTypeName').value.trim();
     const description = document.getElementById('addFabricTypeDescription').value.trim();
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-    
+    const submitBtn = event.submitter || event.target.querySelector('[type="submit"]');
+
     if (!name) {
-        alert('Please enter a name');
+        showToast('Please enter a fabric type name.', 'error');
         return;
     }
-    
-    fetch('/admin/fabric-types', {
+
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Adding…'; }
+
+    fetch(adminUrl('/admin/fabric-types'), {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': csrfToken,
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         },
-        body: JSON.stringify({
-            name: name,
-            description: description,
-            base_price_per_meter: 0,
-            is_active: true
-        })
+        body: JSON.stringify({ name, description, base_price_per_meter: 0, is_active: true })
     })
-    .then(response => response.json())
+    .then(async response => {
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Server error ${response.status}: ${text.slice(0, 200)}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success || data.id) {
             closeAddFabricTypeModal();
-            alert('Fabric type added successfully!');
-            location.reload();
+            showToast('Fabric type added successfully!');
+            setTimeout(() => location.reload(), 800);
         } else {
-            alert('Failed to add: ' + (data.message || 'Unknown error'));
+            showToast('Failed to add: ' + (data.message || 'Unknown error'), 'error');
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Add'; }
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Failed to add fabric type. Please try again.');
+        showToast('Failed to add fabric type. Please try again.', 'error');
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Add'; }
     });
 }
 
 function submitEditFabricTypeForm(event) {
     event.preventDefault();
-    
+
     const id = document.getElementById('editFabricTypeId').value;
     const name = document.getElementById('editFabricTypeName').value.trim();
     const description = document.getElementById('editFabricTypeDescription').value.trim();
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-    
+    const submitBtn = event.submitter || event.target.querySelector('[type="submit"]');
+
     if (!name) {
-        alert('Please enter a name');
+        showToast('Please enter a fabric type name.', 'error');
         return;
     }
-    
-    fetch(`/admin/fabric-types/${id}`, {
+
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving…'; }
+
+    fetch(adminUrl(`/admin/fabric-types/${id}`), {
         method: 'PATCH',
         headers: {
             'X-CSRF-TOKEN': csrfToken,
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         },
-        body: JSON.stringify({
-            name: name,
-            description: description
-        })
+        body: JSON.stringify({ name, description })
     })
-    .then(response => response.json())
+    .then(async response => {
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Server error ${response.status}: ${text.slice(0, 200)}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             closeEditFabricTypeModal();
-            alert('Fabric type updated successfully!');
-            location.reload();
+            showToast('Fabric type updated successfully!');
+            setTimeout(() => location.reload(), 800);
         } else {
-            alert('Failed to update: ' + (data.message || 'Unknown error'));
+            showToast('Failed to update: ' + (data.message || 'Unknown error'), 'error');
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save'; }
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Failed to update fabric type. Please try again.');
+        showToast('Failed to update fabric type. Please try again.', 'error');
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save'; }
     });
 }
 
-// Close modals when clicking outside
+// Close modals on backdrop click
 document.getElementById('addFabricTypeModal')?.addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeAddFabricTypeModal();
-    }
+    if (e.target === this) closeAddFabricTypeModal();
 });
-
 document.getElementById('editFabricTypeModal')?.addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeEditFabricTypeModal();
-    }
+    if (e.target === this) closeEditFabricTypeModal();
 });
 
+// Toggle active — fabric types
 document.querySelectorAll('.toggle-active').forEach(checkbox => {
     checkbox.addEventListener('change', async function() {
-        const route = this.dataset.route;
+        const route = adminUrl(this.dataset.route);
+        const originalChecked = !this.checked;
         try {
             const response = await fetch(route, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 }
             });
+            if (!response.ok) throw new Error('Server error ' + response.status);
             const data = await response.json();
             if (data.success) {
                 const statusSpan = this.parentElement.querySelector('span');
                 statusSpan.textContent = data.is_active ? 'Active' : 'Inactive';
                 statusSpan.style.color = data.is_active ? '#800000' : '#999999';
+                showToast(data.message || (data.is_active ? 'Activated.' : 'Deactivated.'));
+            } else {
+                this.checked = originalChecked;
+                showToast(data.message || 'Failed to toggle status.', 'error');
             }
         } catch (error) {
             console.error('Error:', error);
-            this.checked = !this.checked;
+            this.checked = originalChecked;
+            showToast('Failed to toggle status. Please try again.', 'error');
         }
     });
 });
 
+// Delete — fabric types
 document.querySelectorAll('.delete-btn-fabric').forEach(button => {
     button.addEventListener('click', async function(e) {
         e.preventDefault();
-        
-        if (!confirm('Are you sure you want to delete this fabric type?')) {
-            return;
-        }
-        
-        const route = this.dataset.route;
+        if (!confirm('Are you sure you want to delete this fabric type?')) return;
+
+        const route = adminUrl(this.dataset.route);
         const row = this.closest('tr');
-        
+
         try {
             const response = await fetch(route, {
                 method: 'DELETE',
@@ -424,41 +473,25 @@ document.querySelectorAll('.delete-btn-fabric').forEach(button => {
                     'Accept': 'application/json'
                 }
             });
-            
+            if (!response.ok) throw new Error('Server error ' + response.status);
             const data = await response.json();
-            
+
             if (data.success) {
-                row.style.animation = 'fadeOut 0.3s ease-out';
-                setTimeout(() => {
-                    row.remove();
-                }, 300);
-                
-                const successDiv = document.createElement('div');
-                successDiv.className = 'mb-6 p-4 rounded-lg bg-green-100 border border-green-400 text-green-700';
-                successDiv.textContent = data.message || 'Fabric type deleted successfully.';
-                
-                const container = document.querySelector('.max-w-6xl');
-                const firstElement = container.querySelector('.mb-8');
-                firstElement.insertAdjacentElement('afterend', successDiv);
-                
-                setTimeout(() => {
-                    successDiv.style.animation = 'fadeOut 0.3s ease-out';
-                    setTimeout(() => {
-                        successDiv.remove();
-                    }, 300);
-                }, 3000);
+                row.style.transition = 'opacity 0.3s';
+                row.style.opacity = '0';
+                setTimeout(() => row.remove(), 300);
+                showToast(data.message || 'Fabric type deleted.');
             } else {
-                alert('Failed to delete fabric type: ' + (data.message || 'Unknown error'));
+                showToast('Failed to delete: ' + (data.message || 'Unknown error'), 'error');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Failed to delete fabric type. Please try again.');
+            showToast('Failed to delete fabric type. Please try again.', 'error');
         }
     });
 });
 
 // ============ INTENDED USES SCRIPTS ============
-// Modal functions
 function openEditModal(id, name) {
     document.getElementById('editId').value = id;
     document.getElementById('editName').value = name;
@@ -473,78 +506,89 @@ function closeEditModal() {
 
 function submitEditForm(event) {
     event.preventDefault();
-    
+
     const id = document.getElementById('editId').value;
     const name = document.getElementById('editName').value.trim();
-    
+    const submitBtn = event.submitter || event.target.querySelector('[type="submit"]');
+
     if (!name) {
-        alert('Please enter a name');
+        showToast('Please enter a name.', 'error');
         return;
     }
-    
-    fetch(`/admin/intended-uses/${id}`, {
+
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving…'; }
+
+    fetch(adminUrl(`/admin/intended-uses/${id}`), {
         method: 'PATCH',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         },
-        body: JSON.stringify({
-            name: name
-        })
+        body: JSON.stringify({ name })
     })
-    .then(response => response.json())
+    .then(async response => {
+        if (!response.ok) throw new Error('Server error ' + response.status);
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             closeEditModal();
-            alert('Intended use updated successfully!');
-            location.reload();
+            showToast('Intended use updated successfully!');
+            setTimeout(() => location.reload(), 800);
         } else {
-            alert('Failed to update: ' + (data.message || 'Unknown error'));
+            showToast('Failed to update: ' + (data.message || 'Unknown error'), 'error');
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save'; }
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Failed to update intended use. Please try again.');
+        showToast('Failed to update intended use. Please try again.', 'error');
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save'; }
     });
 }
 
 document.getElementById('editModal')?.addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeEditModal();
-    }
+    if (e.target === this) closeEditModal();
 });
 
+// Toggle active — intended uses
 document.querySelectorAll('.toggle-active-intended').forEach(checkbox => {
     checkbox.addEventListener('change', async function() {
-        const route = this.dataset.route;
+        const route = adminUrl(this.dataset.route);
+        const originalChecked = !this.checked;
         try {
             const response = await fetch(route, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 }
             });
+            if (!response.ok) throw new Error('Server error ' + response.status);
             const data = await response.json();
             if (data.success) {
                 const statusSpan = this.parentElement.querySelector('span');
                 statusSpan.textContent = data.is_active ? 'Active' : 'Inactive';
                 statusSpan.style.color = data.is_active ? '#800000' : '#999999';
+                showToast(data.message || (data.is_active ? 'Activated.' : 'Deactivated.'));
+            } else {
+                this.checked = originalChecked;
+                showToast(data.message || 'Failed to toggle status.', 'error');
             }
         } catch (error) {
             console.error('Error:', error);
-            this.checked = !this.checked;
+            this.checked = originalChecked;
+            showToast('Failed to toggle status. Please try again.', 'error');
         }
     });
 });
 
 function deleteIntendedUse(id, route, name) {
-    if (!confirm(`Are you sure you want to delete "${name}"?`)) {
-        return;
-    }
-    
-    fetch(route, {
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+
+    fetch(adminUrl(route), {
         method: 'DELETE',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -552,17 +596,21 @@ function deleteIntendedUse(id, route, name) {
             'Accept': 'application/json'
         }
     })
-    .then(response => response.json())
+    .then(async response => {
+        if (!response.ok) throw new Error('Server error ' + response.status);
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
-            location.reload();
+            showToast(data.message || 'Intended use deleted.');
+            setTimeout(() => location.reload(), 800);
         } else {
-            alert('Failed to delete: ' + (data.message || 'Unknown error'));
+            showToast('Failed to delete: ' + (data.message || 'Unknown error'), 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Failed to delete intended use. Please try again.');
+        showToast('Failed to delete intended use. Please try again.', 'error');
     });
 }
 </script>
