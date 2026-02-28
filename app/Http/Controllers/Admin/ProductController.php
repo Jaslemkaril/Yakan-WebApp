@@ -53,7 +53,13 @@ class ProductController extends Controller
 
         $categories = \App\Models\Category::orderBy('name')->get();
 
-        return view('admin.products.index', compact('products', 'categories'));
+        // Counts always come from all products (unfiltered) so stat cards are always accurate
+        $allProductsCount  = Product::count();
+        $activeCount       = Product::where('status', 'active')->count();
+        $lowStockCount     = Product::where('stock', '>', 0)->where('stock', '<=', 10)->count();
+        $outOfStockCount   = Product::where('stock', '<=', 0)->count();
+
+        return view('admin.products.index', compact('products', 'categories', 'allProductsCount', 'activeCount', 'lowStockCount', 'outOfStockCount'));
     }
 
     /**

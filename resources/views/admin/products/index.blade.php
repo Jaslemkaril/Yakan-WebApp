@@ -30,51 +30,56 @@ use Illuminate\Support\Facades\Storage;
     </div>
 
     <!-- Stats Overview -->
+    @php
+        $authToken = request('auth_token');
+        $baseUrl = route('admin.products.index') . ($authToken ? '?auth_token=' . urlencode($authToken) : '');
+        $sep = $authToken ? '&' : '?';
+    @endphp
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-[#800000] hover:shadow-lg transition-shadow">
+        <a href="{{ $baseUrl }}" class="bg-white rounded-lg shadow p-4 border-l-4 border-[#800000] hover:shadow-lg transition-shadow cursor-pointer block">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-500">Total Products</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ $products->total() }}</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ $allProductsCount }}</p>
                 </div>
                 <div class="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m0 0l8 4m-8-4v10l8 4m0-10l8 4m-8-4v10l8-4m0 0l-8-4-8 4m8 4v10l-8-4m0-10l8 4"/></svg>
                 </div>
             </div>
-        </div>
-        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500 hover:shadow-lg transition-shadow">
+        </a>
+        <a href="{{ $baseUrl . $sep }}status=active" class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500 hover:shadow-lg transition-shadow cursor-pointer block">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-500">Active</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ $products->where('status', 'active')->count() }}</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ $activeCount }}</p>
                 </div>
                 <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
             </div>
-        </div>
-        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500 hover:shadow-lg transition-shadow">
+        </a>
+        <a href="{{ $baseUrl . $sep }}stock=low_stock" class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500 hover:shadow-lg transition-shadow cursor-pointer block">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-500">Low Stock</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ $products->where('stock', '<=', 10)->count() }}</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ $lowStockCount }}</p>
                 </div>
                 <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6 text-yellow-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 0v2m0-6v-2m0 0v-2m0 0h2m-2 0h-2m7.5 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
             </div>
-        </div>
-        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-red-500 hover:shadow-lg transition-shadow">
+        </a>
+        <a href="{{ $baseUrl . $sep }}stock=out_of_stock" class="bg-white rounded-lg shadow p-4 border-l-4 border-red-500 hover:shadow-lg transition-shadow cursor-pointer block">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-500">Out of Stock</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ $products->where('stock', 0)->count() }}</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ $outOfStockCount }}</p>
                 </div>
                 <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-2-2V6a2 2 0 012-2h3.672a2 2 0 012 2v2m0 0h5.094a2 2 0 012 2v2a2 2 0 01-2 2h-5.094m0 0a2 2 0 01-2-2V6a2 2 0 012-2h3.672a2 2 0 012 2v2m0 0h.001"/></svg>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Search & Filter -->
