@@ -49,9 +49,11 @@ class ProductController extends Controller
             }
         }
 
-        $products = $query->latest()->paginate(10);
+        $products = $query->latest()->paginate(10)->withQueryString();
 
-        return view('admin.products.index', compact('products'));
+        $categories = \App\Models\Category::orderBy('name')->get();
+
+        return view('admin.products.index', compact('products', 'categories'));
     }
 
     /**
