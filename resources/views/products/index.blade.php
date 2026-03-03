@@ -319,18 +319,90 @@
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
-        <div class="flex flex-col lg:flex-row gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            
+            <!-- Filters Sidebar -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-2xl shadow-lg p-6 sticky top-24">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-gray-900">Filters</h2>
+                        @if(request('category') || request('min_price') || request('max_price') || request('sort') != 'newest')
+                            <span class="bg-maroon-100 text-maroon-800 text-xs px-2 py-1 rounded-full" style="background-color: rgba(128, 0, 0, 0.1); color: #800000;">
+                                Active
+                            </span>
+                        @endif
+                    </div>
+                    
+                    <form action="{{ route('products.index') }}" method="GET" id="filterForm">
+                        <!-- Category Filter -->
+                        <div class="mb-6">
+                            <h3 class="font-semibold text-gray-900 mb-3">Category</h3>
+                            <div class="space-y-2">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="category" value="" {{ empty(request('category')) ? 'checked' : '' }} onchange="this.form.submit()" class="mr-2 text-maroon-600">
+                                    <span class="text-sm text-gray-700">All Categories</span>
+                                </label>
+                                @if(isset($categories))
+                                    @foreach($categories as $cat)
+                                        <label class="flex items-center cursor-pointer">
+                                            <input type="radio" name="category" value="{{ $cat->id }}" {{ request('category') == $cat->id ? 'checked' : '' }} onchange="this.form.submit()" class="mr-2 text-maroon-600">
+                                            <span class="text-sm text-gray-700">{{ $cat->name }} ({{ $cat->products_count }})</span>
+                                        </label>
+                                    @endforeach
+                                @endif
+                            </div>
+                        </div>
+
+                        <!-- Price Range -->
+                        <div class="mb-6">
+                            <h3 class="font-semibold text-gray-900 mb-3">Price Range</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="text-xs text-gray-600">Min Price</label>
+                                    <input type="number" name="min_price" value="{{ request('min_price') }}" placeholder="₱0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-gray-600">Max Price</label>
+                                    <input type="number" name="max_price" value="{{ request('max_price') }}" placeholder="₱10000" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                </div>
+                                <button type="submit" class="w-full py-2 bg-maroon-600 text-white rounded-lg hover:bg-maroon-700 transition-colors text-sm" style="background-color: #800000;">
+                                    Apply
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Sort -->
+                        <div class="mb-6">
+                            <h3 class="font-semibold text-gray-900 mb-3">Sort By</h3>
+                            <select name="sort" onchange="this.form.submit()" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                <option value="newest" {{ request('sort') == 'newest' ? 'selected' : '' }}>Newest First</option>
+                                <option value="price_low" {{ request('sort') == 'price_low' ? 'selected' : '' }}>Price: Low to High</option>
+                                <option value="price_high" {{ request('sort') == 'price_high' ? 'selected' : '' }}>Price: High to Low</option>
+                                <option value="name_asc" {{ request('sort') == 'name_asc' ? 'selected' : '' }}>Name: A to Z</option>
+                                <option value="name_desc" {{ request('sort') == 'name_desc' ? 'selected' : '' }}>Name: Z to A</option>
+                            </select>
+                        </div>
+
+                        <!-- Clear Filters -->
+                        <a href="{{ route('products.index') }}" class="block w-full text-center py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                            Clear Filters
+                        </a>
+                    </form>
+                </div>
+            </div>
             
             <!-- Products Grid -->
-            <main class="w-full">
+            <main class="lg:col-span-3">
                 <!-- Active Filters -->
                 <div class="flex flex-wrap gap-2 mb-6">
-                    <span class="category-pill active">All Products</span>
-                    <span class="text-gray-500 text-sm self-center">({{ $products->count() }} products)</span>
+                    <span class="category-pill active">
+                        {{ $selectedCategory->name ?? 'All Products' }}
+                    </span>
+                    <span class="text-gray-500 text-sm self-center">({{ $products->total() }} products)</span>
                 </div>
 
                 <!-- Products Grid -->
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
                     @foreach($products as $index => $product)
                         <div class="product-card animate-fade-in-up" style="animation-delay: {{ $index * 0.1 }}s">
                             <div class="product-image">

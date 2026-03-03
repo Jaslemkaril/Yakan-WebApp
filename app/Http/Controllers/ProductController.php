@@ -26,15 +26,42 @@ class ProductController extends Controller
             
             // Filter by category if specified
             $selectedCategory = null;
-            if ($request->has('category') && $request->category !== 'all') {
-                $selectedCategory = Category::where('slug', $request->category)->first();
-                if ($selectedCategory) {
-                    $query->where('category_id', $selectedCategory->id);
-                }
+            if ($request->has('category') && !empty($request->category)) {
+                $query->where('category_id', $request->category);
+                $selectedCategory = Category::find($request->category);
+            }
+            
+            // Filter by price range
+            if ($request->has('min_price') && !empty($request->min_price)) {
+                $query->where('price', '>=', $request->min_price);
+            }
+            if ($request->has('max_price') && !empty($request->max_price)) {
+                $query->where('price', '<=', $request->max_price);
+            }
+            
+            // Sorting
+            $sort = $request->input('sort', 'newest');
+            switch ($sort) {
+                case 'price_low':
+                    $query->orderBy('price', 'asc');
+                    break;
+                case 'price_high':
+                    $query->orderBy('price', 'desc');
+                    break;
+                case 'name_asc':
+                    $query->orderBy('name', 'asc');
+                    break;
+                case 'name_desc':
+                    $query->orderBy('name', 'desc');
+                    break;
+                case 'newest':
+                default:
+                    $query->orderBy('created_at', 'desc');
+                    break;
             }
             
             // Fetch products with pagination and category relationship
-            $products = $query->with(['category', 'inventory'])->paginate(12);
+            $products = $query->with(['category', 'inventory'])->paginate(12)->appends($request->all());
 
             // Return the products view with products, categories, and selected category
             return view('products.index', compact('products', 'categories', 'selectedCategory'));
@@ -44,7 +71,8 @@ class ProductController extends Controller
             
             // Fallback to simple products query
             $products = Product::paginate(12);
-            return view('products.index', compact('products'));
+            $categories = Category::withCount('products')->orderBy('name')->get();
+            return view('products.index', compact('products', 'categories'));
         }
     }
 
