@@ -276,12 +276,20 @@
 
 <script>
 function markNotificationAsRead(notificationId, el) {
-    fetch(`/notifications/${notificationId}/read`, {
+    const authToken = localStorage.getItem('yakan_auth_token');
+    const url = authToken ? `/notifications/${notificationId}/read?auth_token=${authToken}` : `/notifications/${notificationId}/read`;
+    
+    fetch(url, {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Content-Type': 'application/json'
-        }
+            'Content-Type': 'application/json',
+            'Authorization': authToken ? `Bearer ${authToken}` : '',
+            'X-Auth-Token': authToken || ''
+        },
+        body: JSON.stringify({
+            auth_token: authToken
+        })
     })
     .then(r => r.json())
     .then(data => {
@@ -315,12 +323,21 @@ function markNotificationAsRead(notificationId, el) {
 
 function markAllNotificationsRead(e) {
     e.stopPropagation();
-    fetch('/notifications/mark-all-read', {
+    
+    const authToken = localStorage.getItem('yakan_auth_token');
+    const url = authToken ? `/notifications/mark-all-read?auth_token=${authToken}` : '/notifications/mark-all-read';
+    
+    fetch(url, {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Content-Type': 'application/json'
-        }
+            'Content-Type': 'application/json',
+            'Authorization': authToken ? `Bearer ${authToken}` : '',
+            'X-Auth-Token': authToken || ''
+        },
+        body: JSON.stringify({
+            auth_token: authToken
+        })
     })
     .then(r => r.json())
     .then(data => {
@@ -341,8 +358,10 @@ function markAllNotificationsRead(e) {
             // Hide the pulse ring
             document.querySelectorAll('.notif-pulse-ring').forEach(r => r.remove());
 
-            // Remove the "mark all read" button
+            // Remove the "mark all read" button and unread count
             e.target.remove();
+            const unreadPill = document.querySelector('.text-\\[11px\\].font-bold.text-\\[\\#800000\\]');
+            if (unreadPill) unreadPill.remove();
         }
     })
     .catch(err => console.error('Mark all error:', err));
