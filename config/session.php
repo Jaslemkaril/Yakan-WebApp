@@ -170,13 +170,11 @@ return [
     |
     */
 
-    // HTTPS-only cookies: true in production (Railway), null for auto-detect in dev
-    // CRITICAL: null alone doesn't work because Response::prepare() runs before
-    // StartSession adds the cookie, so secureDefault is never set on the session cookie.
-    // Explicitly set to true for production, false for local.
-    'secure' => env('SESSION_SECURE_COOKIE',
-        env('APP_ENV') === 'production' ? true : false
-    ),
+    // HTTPS-only cookies: Auto-detect from request when SESSION_SECURE_COOKIE is not set
+    // Railway's trust proxies will properly detect HTTPS from X-Forwarded-Proto header
+    'secure' => env('SESSION_SECURE_COOKIE') !== null 
+        ? filter_var(env('SESSION_SECURE_COOKIE'), FILTER_VALIDATE_BOOLEAN)
+        : (env('APP_ENV') === 'production' ? true : null),
 
     /*
     |--------------------------------------------------------------------------
