@@ -601,16 +601,6 @@
                 || sessionStorage.getItem('yakan_auth_token')
                 || sessionStorage.getItem('auth_token');
             
-            // DEBUGGING: Show auth status
-            console.log('=== CART UPDATE DEBUG ===');
-            console.log('Item ID:', itemId);
-            console.log('New Quantity:', newQuantity);
-            console.log('Has Auth Token:', !!authToken);
-            console.log('Auth Token (first 20 chars):', authToken ? authToken.substring(0, 20) + '...' : 'NONE');
-            console.log('Session ID:', sessionStorage.getItem('auth_token') ? 'Found in sessionStorage' : 'Not in sessionStorage');
-            console.log('Local Storage:', localStorage.getItem('yakan_auth_token') ? 'Found in localStorage' : 'Not in localStorage');
-            console.log('========================');
-            
             // Build request body with auth_token for Railway
             const requestBody = { 
                 quantity: newQuantity,
@@ -637,69 +627,48 @@
                 console.log('====================');
                 
                 if (r.status === 401) {
-                    // Unauthorized - PAUSE before redirect
-                    const errorMsg = `❌ AUTHENTICATION FAILED (401)\n\n` +
-                        `Auth Token: ${authToken ? 'EXISTS (length: ' + authToken.length + ')' : 'MISSING'}\n` +
-                        `Session ID exists: ${!!sessionStorage.getItem('auth_token')}\n\n` +
-                        `Click OK to see more details in console, then you'll be redirected to login.`;
-                    
-                    alert(errorMsg);
-                    console.error('🔴 401 Unauthorized - Authentication failed');
-                    console.error('Auth token was:', authToken);
-                    
-                    // Wait 2 seconds before redirect so user can screenshot console
-                    setTimeout(() => {
-                        window.location.href = '/login-user';
-                    }, 2000);
-                    
+                    // Unauthorized - redirect to login
+                    console.error('🔴 401 Unauthorized - redirecting to login');
+                    window.location.href = '/login-user';
                     throw new Error('Unauthorized');
                 }
                 if (!r.ok) {
-                    const errorMsg = `❌ REQUEST FAILED\nStatus: ${r.status} ${r.statusText}\n\nCheck console for details.`;
-                    alert(errorMsg);
+                    console.error('❌ Request failed:', r.status, r.statusText);
                     throw new Error('Update failed with status: ' + r.status);
                 }
                 return r.json();
             })
             .then(data => {
-                console.log('=== SUCCESS RESPONSE ===');
-                console.log('Data:', data);
-                console.log('======================');
-                
                 if (data.success) {
                     // DON'T reload - update the page dynamically to preserve session
-                    console.log('✅ Cart updated successfully - updating display...');
                     
-                    // Update the quantity input FIRST (most visible change)
-                    const quantityInput = document.querySelector(`input[data-item-id="${itemId}"]`);
-                    if (quantityInput && data.new_quantity !== undefined) {
-                        quantityInput.value = data.new_quantity;
-                        console.log('✅ Quantity updated to:', data.new_quantity);
-                    }
+                    // Find the cart item element
+                    const itemElement = document.querySelector(`.cart-item[data-item-id="${itemId}"]`);
                     
-                    // Update the item subtotal display
-                    const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
-                    if (itemElement && data.item_subtotal !== undefined) {
-                        const subtotalElement = itemElement.querySelector('.item-subtotal');
-                        if (subtotalElement) {
-                            subtotalElement.textContent = '₱' + data.item_subtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                    if (itemElement && data.new_quantity !== undefined) {
+                        // 1. Update the quantity input
+                        const quantityInput = itemElement.querySelector('.quantity-input[data-item-id="' + itemId + '"]');
+                        if (quantityInput) {
+                            quantityInput.value = data.new_quantity;
+                        }
+                        
+                        // 2. Update the item subtotal display
+                        if (data.item_subtotal !== undefined) {
+                            const subtotalElement = itemElement.querySelector('.item-subtotal');
+                            if (subtotalElement) {
+                                subtotalElement.textContent = '₱' + data.item_subtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                            }
+                        }
+                        
+                        // 3. Update the checkbox data-price (CRITICAL - used by updateSelection())
+                        const checkbox = itemElement.querySelector('.item-checkbox[data-item-id="' + itemId + '"]');
+                        if (checkbox && data.item_subtotal !== undefined) {
+                            checkbox.setAttribute('data-price', data.item_subtotal);
                         }
                     }
                     
-                    // Update cart summary
-                    if (data.cart_total !== undefined) {
-                        const subtotalDisplay = document.getElementById('subtotalDisplay');
-                        if (subtotalDisplay) {
-                            subtotalDisplay.textContent = '₱' + data.cart_total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                        }
-                    }
-                    
-                    if (data.total_amount !== undefined) {
-                        const totalDisplay = document.getElementById('totalDisplay');
-                        if (totalDisplay) {
-                            totalDisplay.textContent = '₱' + data.total_amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                        }
-                    }
+                    // 4. Recalculate Order Summary based on CHECKED items only
+                    updateSelection();
                     
                     // Show success message briefly
                     const msg = document.createElement('div');
@@ -707,8 +676,6 @@
                     msg.textContent = '✓ Cart updated';
                     document.body.appendChild(msg);
                     setTimeout(() => msg.remove(), 2000);
-                    
-                    console.log('✅ Display updated - no page reload needed');
                 } else if (data.redirect) {
                     alert('⚠️ Redirecting: ' + data.message);
                     window.location.href = data.redirect;
@@ -764,21 +731,6 @@
                         itemElement.remove();
                     }
                     
-                    // Update cart summary
-                    if (data.cart_total !== undefined) {
-                        const subtotalDisplay = document.getElementById('subtotalDisplay');
-                        if (subtotalDisplay) {
-                            subtotalDisplay.textContent = '₱' + data.cart_total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                        }
-                    }
-                    
-                    if (data.total_amount !== undefined) {
-                        const totalDisplay = document.getElementById('totalDisplay');
-                        if (totalDisplay) {
-                            totalDisplay.textContent = '₱' + data.total_amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                        }
-                    }
-                    
                     // If cart is now empty, show empty cart message
                     const cartItems = document.querySelectorAll('.cart-item');
                     if (cartItems.length === 0) {
@@ -791,7 +743,7 @@
                         document.body.appendChild(msg);
                         setTimeout(() => msg.remove(), 2000);
                         
-                        // Update selection to recalculate totals
+                        // Update selection to recalculate totals based on remaining checked items
                         updateSelection();
                     }
                 } else {
