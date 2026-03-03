@@ -19,7 +19,8 @@ class TokenAuth
             ?? $request->query('auth_token') 
             ?? $request->cookie('auth_token')
             ?? session('auth_token')
-            ?? $request->header('X-Auth-Token'); // Also check headers
+            ?? $request->header('X-Auth-Token') // Also check headers
+            ?? $request->bearerToken(); // Check Authorization: Bearer header
         
         // Log the request for debugging
         if (!Auth::check()) {
@@ -27,8 +28,9 @@ class TokenAuth
                 'path' => $request->path(),
                 'method' => $request->method(),
                 'has_token' => !empty($token),
-                'token_source' => $token ? ($request->json('auth_token') ? 'json' : ($request->query('auth_token') ? 'query' : ($request->cookie('auth_token') ? 'cookie' : 'session'))) : 'none',
-                'session_id' => session()->getId()
+                'token_source' => $token ? ($request->json('auth_token') ? 'json' : ($request->query('auth_token') ? 'query' : ($request->bearerToken() ? 'bearer' : ($request->cookie('auth_token') ? 'cookie' : 'session')))) : 'none',
+                'session_id' => session()->getId(),
+                'is_guest' => Auth::guest()
             ]);
         }
         

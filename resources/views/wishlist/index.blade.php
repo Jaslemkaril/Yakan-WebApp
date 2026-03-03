@@ -407,17 +407,23 @@ function removeFromWishlist(type, id) {
     
     // Get auth token for Railway session persistence
     const authToken = localStorage.getItem('yakan_auth_token') || sessionStorage.getItem('auth_token');
-    const url = new URL('{{ route("wishlist.remove") }}', window.location.origin);
+    
+    console.log('Attempting to remove item:', { type, id, hasToken: !!authToken });
+    
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+        'Accept': 'application/json'
+    };
+    
     if (authToken) {
-        url.searchParams.append('auth_token', authToken);
+        headers['Authorization'] = `Bearer ${authToken}`;
+        headers['X-Auth-Token'] = authToken;
     }
     
-    fetch(url.toString(), {
+    fetch('{{ route("wishlist.remove") }}?auth_token=' + (authToken || ''), {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
+        headers: headers,
         body: JSON.stringify({
             type: type,
             id: id,
@@ -426,9 +432,22 @@ function removeFromWishlist(type, id) {
     })
     .then(response => {
         console.log('Response status:', response.status);
+        console.log('Response headers:', {
+            contentType: response.headers.get('content-type'),
+            location: response.headers.get('location')
+        });
+        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
+        // Check if response is HTML instead of JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('text/html')) {
+            console.error('Received HTML instead of JSON - probably redirected to login');
+            throw new Error('Session expired. Please refresh the page and login again.');
+        }
+        
         return response.json();
     })
     .then(data => {
@@ -473,7 +492,13 @@ function removeFromWishlist(type, id) {
     })
     .catch(error => {
         console.error('Error removing from wishlist:', error);
-        showNotification('Error removing from wishlist', 'error');
+        console.error('Error details:', {
+            name: error.name,
+            message: error.message,
+            hasToken: !!authToken,
+            tokenLength: authToken ? authToken.length : 0
+        });
+        showNotification('Error removing from wishlist. Please refresh and try again.', 'error');
         if (button) button.disabled = false;
     });
 }
