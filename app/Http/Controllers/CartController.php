@@ -385,6 +385,7 @@ class CartController extends Controller
                 
                 return response()->json([
                     'success' => true,
+                    'new_quantity' => $newQty,
                     'item_subtotal' => $itemSubtotal,
                     'cart_total' => $cartTotal,
                     'discount' => $discount,
@@ -448,6 +449,7 @@ class CartController extends Controller
             
             return response()->json([
                 'success' => true,
+                'new_quantity' => $cartItem->quantity,
                 'item_subtotal' => $itemSubtotal,
                 'cart_total' => $cartTotal,
                 'discount' => $discount,

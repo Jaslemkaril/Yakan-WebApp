@@ -670,9 +670,16 @@
                     // DON'T reload - update the page dynamically to preserve session
                     console.log('✅ Cart updated successfully - updating display...');
                     
+                    // Update the quantity input FIRST (most visible change)
+                    const quantityInput = document.querySelector(`input[data-item-id="${itemId}"]`);
+                    if (quantityInput && data.new_quantity !== undefined) {
+                        quantityInput.value = data.new_quantity;
+                        console.log('✅ Quantity updated to:', data.new_quantity);
+                    }
+                    
                     // Update the item subtotal display
                     const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
-                    if (itemElement && data.item_subtotal) {
+                    if (itemElement && data.item_subtotal !== undefined) {
                         const subtotalElement = itemElement.querySelector('.item-subtotal');
                         if (subtotalElement) {
                             subtotalElement.textContent = '₱' + data.item_subtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -680,24 +687,18 @@
                     }
                     
                     // Update cart summary
-                    if (data.cart_total) {
+                    if (data.cart_total !== undefined) {
                         const subtotalDisplay = document.getElementById('subtotalDisplay');
                         if (subtotalDisplay) {
                             subtotalDisplay.textContent = '₱' + data.cart_total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
                         }
                     }
                     
-                    if (data.total_amount) {
+                    if (data.total_amount !== undefined) {
                         const totalDisplay = document.getElementById('totalDisplay');
                         if (totalDisplay) {
                             totalDisplay.textContent = '₱' + data.total_amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
                         }
-                    }
-                    
-                    // Update the quantity input
-                    const quantityInput = document.querySelector(`input[data-item-id="${itemId}"]`);
-                    if (quantityInput) {
-                        quantityInput.value = newQuantity;
                     }
                     
                     // Show success message briefly
