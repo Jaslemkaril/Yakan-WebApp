@@ -31,13 +31,10 @@
                     </div>
                 </div>
                 @if($notifications->count() > 0)
-                    <form action="{{ route('notifications.clear') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition duration-300 shadow-md hover:shadow-lg font-medium flex items-center gap-2">
-                            <i class="fas fa-trash"></i>
-                            Clear All
-                        </button>
-                    </form>
+                    <button onclick="clearAllNotifications()" class="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition duration-300 shadow-md hover:shadow-lg font-medium flex items-center gap-2">
+                        <i class="fas fa-trash"></i>
+                        Clear All
+                    </button>
                 @endif
             </div>
         </div>
@@ -133,13 +130,11 @@
                             </div>
                             
                             <!-- Delete Button -->
-                            <form action="{{ route('notifications.destroy', $notification->id) }}" method="POST" class="ml-4 flex-shrink-0">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-gray-300 hover:text-red-600 transition duration-200 p-2 hover:bg-red-50 rounded-lg" title="Delete notification">
-                                    <i class="fas fa-times text-lg"></i>
-                                </button>
-                            </form>
+                            <button onclick="deleteNotification({{ $notification->id }}, this)" 
+                                    class="ml-4 flex-shrink-0 text-gray-300 hover:text-red-600 transition duration-200 p-2 hover:bg-red-50 rounded-lg" 
+                                    title="Delete notification">
+                                <i class="fas fa-times text-lg"></i>
+                            </button>
                         </div>
                     </div>
                 @endforeach
@@ -166,4 +161,86 @@
         @endif
     </div>
 </div>
+
+<script>
+function deleteNotification(notificationId, button) {
+    if (!confirm('Are you sure you want to delete this notification?')) {
+        return;
+    }
+    
+    const authToken = localStorage.getItem('yakan_auth_token');
+    const url = authToken ? `/notifications/${notificationId}?auth_token=${authToken}` : `/notifications/${notificationId}`;
+    
+    fetch(url, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json',
+            'Authorization': authToken ? `Bearer ${authToken}` : '',
+            'X-Auth-Token': authToken || ''
+        },
+        body: JSON.stringify({
+            auth_token: authToken
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Fade out the notification card
+            const card = button.closest('.bg-white.rounded-xl');
+            card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                card.remove();
+                // Check if there are no more notifications
+                const container = document.querySelector('.space-y-3');
+                if (container && container.children.length === 0) {
+                    location.reload(); // Reload to show empty state
+                }
+            }, 300);
+        } else {
+            alert(data.message || 'Failed to delete notification');
+        }
+    })
+    .catch(error => {
+        console.error('Delete error:', error);
+        alert('An error occurred. Please try again.');
+    });
+}
+
+function clearAllNotifications() {
+    if (!confirm('Are you sure you want to delete all notifications?')) {
+        return;
+    }
+    
+    const authToken = localStorage.getItem('yakan_auth_token');
+    const url = authToken ? `/notifications/clear?auth_token=${authToken}` : '/notifications/clear';
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json',
+            'Authorization': authToken ? `Bearer ${authToken}` : '',
+            'X-Auth-Token': authToken || ''
+        },
+        body: JSON.stringify({
+            auth_token: authToken
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload(); // Reload to show empty state
+        } else {
+            alert(data.message || 'Failed to clear notifications');
+        }
+    })
+    .catch(error => {
+        console.error('Clear all error:', error);
+        alert('An error occurred. Please try again.');
+    });
+}
+</script>
 @endsection

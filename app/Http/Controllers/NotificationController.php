@@ -74,11 +74,18 @@ class NotificationController extends Controller
     {
         $user = Auth::user();
         if (!$user) {
+            if (request()->expectsJson() || request()->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Not authenticated'], 401);
+            }
             return redirect()->route('login');
         }
         
         $notification = $user->notifications()->findOrFail($id);
         $notification->delete();
+        
+        if (request()->expectsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Notification deleted']);
+        }
         return back()->with('success', 'Notification deleted');
     }
 
@@ -86,10 +93,17 @@ class NotificationController extends Controller
     {
         $user = Auth::user();
         if (!$user) {
+            if (request()->expectsJson() || request()->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Not authenticated'], 401);
+            }
             return redirect()->route('login');
         }
         
         $user->notifications()->delete();
+        
+        if (request()->expectsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => 'All notifications cleared']);
+        }
         return back()->with('success', 'All notifications cleared');
     }
 }
