@@ -366,13 +366,13 @@
 
                                             <div class="flex items-center justify-between flex-wrap gap-4">
                                                 <div>
-                                                    <div class="text-2xl font-bold text-maroon-600">₱{{ number_format($product->price * $item->quantity, 2) }}</div>
+                                                    <div class="text-2xl font-bold text-maroon-600 item-subtotal">₱{{ number_format($product->price * $item->quantity, 2) }}</div>
                                                     <div class="text-sm text-gray-500">₱{{ number_format($product->price, 2) }} each</div>
                                                 </div>
 
                                                 <div class="quantity-control">
                                                     <button type="button" class="quantity-btn" onclick="updateQuantity({{ $item->id }}, {{ $item->quantity - 1 }})">−</button>
-                                                    <input type="number" value="{{ $item->quantity }}" min="1" class="quantity-input" readonly>
+                                                    <input type="number" value="{{ $item->quantity }}" min="1" class="quantity-input" data-item-id="{{ $item->id }}" readonly>
                                                     <button type="button" class="quantity-btn" onclick="updateQuantity({{ $item->id }}, {{ $item->quantity + 1 }})">+</button>
                                                 </div>
                                             </div>
@@ -667,7 +667,47 @@
                 console.log('======================');
                 
                 if (data.success) {
-                    location.reload();
+                    // DON'T reload - update the page dynamically to preserve session
+                    console.log('✅ Cart updated successfully - updating display...');
+                    
+                    // Update the item subtotal display
+                    const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
+                    if (itemElement && data.item_subtotal) {
+                        const subtotalElement = itemElement.querySelector('.item-subtotal');
+                        if (subtotalElement) {
+                            subtotalElement.textContent = '₱' + data.item_subtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                        }
+                    }
+                    
+                    // Update cart summary
+                    if (data.cart_total) {
+                        const subtotalDisplay = document.getElementById('subtotalDisplay');
+                        if (subtotalDisplay) {
+                            subtotalDisplay.textContent = '₱' + data.cart_total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                        }
+                    }
+                    
+                    if (data.total_amount) {
+                        const totalDisplay = document.getElementById('totalDisplay');
+                        if (totalDisplay) {
+                            totalDisplay.textContent = '₱' + data.total_amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                        }
+                    }
+                    
+                    // Update the quantity input
+                    const quantityInput = document.querySelector(`input[data-item-id="${itemId}"]`);
+                    if (quantityInput) {
+                        quantityInput.value = newQuantity;
+                    }
+                    
+                    // Show success message briefly
+                    const msg = document.createElement('div');
+                    msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+                    msg.textContent = '✓ Cart updated';
+                    document.body.appendChild(msg);
+                    setTimeout(() => msg.remove(), 2000);
+                    
+                    console.log('✅ Display updated - no page reload needed');
                 } else if (data.redirect) {
                     alert('⚠️ Redirecting: ' + data.message);
                     window.location.href = data.redirect;
@@ -717,7 +757,42 @@
             })
             .then(data => {
                 if (data.success) {
-                    location.reload();
+                    // DON'T reload - remove the item from DOM to preserve session
+                    const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
+                    if (itemElement) {
+                        itemElement.remove();
+                    }
+                    
+                    // Update cart summary
+                    if (data.cart_total !== undefined) {
+                        const subtotalDisplay = document.getElementById('subtotalDisplay');
+                        if (subtotalDisplay) {
+                            subtotalDisplay.textContent = '₱' + data.cart_total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                        }
+                    }
+                    
+                    if (data.total_amount !== undefined) {
+                        const totalDisplay = document.getElementById('totalDisplay');
+                        if (totalDisplay) {
+                            totalDisplay.textContent = '₱' + data.total_amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                        }
+                    }
+                    
+                    // If cart is now empty, show empty cart message
+                    const cartItems = document.querySelectorAll('.cart-item');
+                    if (cartItems.length === 0) {
+                        location.reload(); // Only reload if cart is completely empty
+                    } else {
+                        // Show success message
+                        const msg = document.createElement('div');
+                        msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+                        msg.textContent = '✓ Item removed';
+                        document.body.appendChild(msg);
+                        setTimeout(() => msg.remove(), 2000);
+                        
+                        // Update selection to recalculate totals
+                        updateSelection();
+                    }
                 } else {
                     console.error('Remove failed:', data.message);
                     alert('Failed to remove item. Please try again.');
