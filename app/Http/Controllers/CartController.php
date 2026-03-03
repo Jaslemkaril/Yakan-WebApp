@@ -626,9 +626,11 @@ class CartController extends Controller
                 return redirect()->back()->with('error', 'Your cart is empty.');
             }
             
-            // Filter by selected items if they exist in session
-            if (session()->has('selected_cart_items')) {
-                $selectedIds = session('selected_cart_items');
+            // Filter by selected items - check request first (form data), then session fallback
+            // Railway: Sessions don't persist, so form data is more reliable
+            $selectedIds = $request->input('selected_items') ?? session('selected_cart_items');
+            
+            if ($selectedIds) {
                 $cartItems = $cartItems->filter(function($item) use ($selectedIds) {
                     return in_array($item->id, $selectedIds);
                 });
@@ -800,8 +802,10 @@ class CartController extends Controller
             session()->forget('buy_now_item'); // safe to call even if not set
         } else {
             // If specific items were selected, only delete those
-            if (session()->has('selected_cart_items')) {
-                $selectedIds = session('selected_cart_items');
+            // Check request first (form data), then session fallback
+            $selectedIds = $request->input('selected_items') ?? session('selected_cart_items');
+            
+            if ($selectedIds) {
                 Cart::where('user_id', $userId)
                     ->whereIn('id', $selectedIds)
                     ->delete();

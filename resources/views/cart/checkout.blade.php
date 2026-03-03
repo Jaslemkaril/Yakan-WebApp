@@ -75,6 +75,13 @@
     @csrf
     <!-- radios above are bound here via form="checkout-form" -->
     <input type="hidden" name="confirm" value="1" />
+    
+    {{-- Pass selected cart items through form to survive session loss on Railway --}}
+    @if(session()->has('selected_cart_items'))
+        @foreach(session('selected_cart_items') as $itemId)
+            <input type="hidden" name="selected_items[]" value="{{ $itemId }}" />
+        @endforeach
+    @endif
 </form>
 
 </div>
