@@ -25,19 +25,10 @@ class WishlistController extends Controller
 
     public function add(Request $request)
     {
-        // Force JSON response for validation errors
-        $validator = \Validator::make($request->all(), [
+        $request->validate([
             'type' => 'required|in:product,pattern',
             'id' => 'required|integer',
         ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
 
         $user = Auth::user();
         
@@ -64,19 +55,10 @@ class WishlistController extends Controller
 
     public function remove(Request $request)
     {
-        // Force JSON response for validation errors
-        $validator = \Validator::make($request->all(), [
+        $request->validate([
             'type' => 'required|in:product,pattern',
             'id' => 'required|integer',
         ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
 
         // Log request details for debugging
         \Log::info('Wishlist remove request', [
@@ -141,19 +123,10 @@ class WishlistController extends Controller
 
     public function check(Request $request)
     {
-        // Force JSON response for validation errors
-        $validator = \Validator::make($request->all(), [
+        $request->validate([
             'type' => 'required|in:product,pattern',
             'id' => 'required|integer',
         ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
 
         $user = Auth::user();
         
