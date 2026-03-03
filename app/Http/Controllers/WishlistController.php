@@ -57,14 +57,30 @@ class WishlistController extends Controller
             'id' => 'required|integer',
         ]);
 
+        // Log request details for debugging
+        \Log::info('Wishlist remove request', [
+            'type' => $request->type,
+            'id' => $request->id,
+            'wantsJson' => $request->wantsJson(),
+            'ajax' => $request->ajax(),
+            'accept_header' => $request->header('Accept'),
+            'content_type' => $request->header('Content-Type'),
+            'is_json' => $request->isJson(),
+            'expects_json' => $request->expectsJson()
+        ]);
+
         $user = Auth::user();
+        
+        if (!$user) {
+            \Log::warning('Wishlist remove: No authenticated user');
+            return response()->json(['success' => false, 'message' => 'Not authenticated'], 401);
+        }
+        
         $wishlist = $user->wishlists()->default()->first();
 
         if (!$wishlist) {
-            if ($request->wantsJson() || $request->ajax()) {
-                return response()->json(['success' => false, 'message' => 'Wishlist not found.']);
-            }
-            return redirect()->route('wishlist.index')->with('error', 'Wishlist not found.');
+            \Log::warning('Wishlist remove: Wishlist not found for user', ['user_id' => $user->id]);
+            return response()->json(['success' => false, 'message' => 'Wishlist not found.'], 404);
         }
 
         $item = null;
@@ -77,16 +93,27 @@ class WishlistController extends Controller
         if ($item && $wishlist->hasItem($item)) {
             $wishlist->removeItem($item);
             
-            if ($request->wantsJson() || $request->ajax()) {
-                return response()->json(['success' => true, 'message' => 'Removed from wishlist!']);
-            }
-            return redirect()->route('wishlist.index')->with('success', 'Removed from wishlist!');
+            \Log::info('Wishlist remove: Item removed successfully', [
+                'type' => $request->type,
+                'id' => $request->id,
+                'returning_json' => true
+            ]);
+            
+            return response()->json([
+                'success' => true, 
+                'message' => 'Removed from wishlist!'
+            ])->header('Content-Type', 'application/json');
         }
 
-        if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(['success' => false, 'message' => 'Item not in wishlist']);
-        }
-        return redirect()->route('wishlist.index')->with('error', 'Item not in wishlist');
+        \Log::warning('Wishlist remove: Item not in wishlist', [
+            'type' => $request->type,
+            'id' => $request->id
+        ]);
+        
+        return response()->json([
+            'success' => false, 
+            'message' => 'Item not in wishlist'
+        ], 404)->header('Content-Type', 'application/json');
     }
 
     public function check(Request $request)
