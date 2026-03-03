@@ -532,12 +532,6 @@
                                 <input type="hidden" name="shipping_fee" id="shippingFeeInput" value="{{ $shippingFee }}" form="checkout-form">
                             </div>
 
-                            <!-- Tax Row -->
-                            <div class="flex justify-between items-center py-3 border-b border-gray-100">
-                                <span class="text-gray-600 font-medium">Tax</span>
-                                <span class="font-bold text-gray-900">₱0.00</span>
-                            </div>
-
                             <!-- Discount Row (if applicable) -->
                             @if(($discount ?? 0) > 0)
                             <div class="flex justify-between items-center py-3 border-b border-gray-100 bg-green-50 px-3 rounded-lg">
@@ -555,7 +549,7 @@
                                     @endphp
                                     <span class="text-3xl font-bold order-total" style="color: #800000;" id="finalTotalDisplay">₱{{ number_format($finalTotal, 2) }}</span>
                                 </div>
-                                <p class="text-xs text-gray-600 text-right">Inclusive of all taxes and shipping</p>
+                                <p class="text-xs text-gray-600 text-right">Inclusive of shipping</p>
                             </div>
                         </div>
 
