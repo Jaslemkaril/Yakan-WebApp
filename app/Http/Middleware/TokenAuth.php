@@ -12,11 +12,25 @@ class TokenAuth
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // Check for auth_token in: query param, POST data, cookie, or session
+        // Check for auth_token in multiple places
+        // For JSON requests, check the JSON body as well
         $token = $request->input('auth_token') 
+            ?? $request->json('auth_token')  // Add JSON body support
             ?? $request->query('auth_token') 
             ?? $request->cookie('auth_token')
-            ?? session('auth_token');
+            ?? session('auth_token')
+            ?? $request->header('X-Auth-Token'); // Also check headers
+        
+        // Log the request for debugging
+        if (!Auth::check()) {
+            \Log::info('TokenAuth: Auth check', [
+                'path' => $request->path(),
+                'method' => $request->method(),
+                'has_token' => !empty($token),
+                'token_source' => $token ? ($request->json('auth_token') ? 'json' : ($request->query('auth_token') ? 'query' : ($request->cookie('auth_token') ? 'cookie' : 'session'))) : 'none',
+                'session_id' => session()->getId()
+            ]);
+        }
         
         if ($token && !Auth::check()) {
             \Log::info('TokenAuth: Processing token', ['token' => substr($token, 0, 8) . '...']);
@@ -34,7 +48,6 @@ class TokenAuth
                     Auth::login($user, true); // Remember = true
                     
                     // Store token in session for subsequent requests
-                    // Do NOT call session()->save() — let StartSession middleware handle it
                     session(['auth_token' => $token]);
                     
                     \Log::info('TokenAuth: User authenticated', [
@@ -43,7 +56,7 @@ class TokenAuth
                     ]);
                 }
             } else {
-                \Log::warning('TokenAuth: Invalid or expired token');
+                \Log::warning('TokenAuth: Invalid or expired token', ['token' => substr($token, 0, 8) . '...']);
                 // Clear invalid cookie
                 cookie()->queue(cookie()->forget('auth_token'));
             }

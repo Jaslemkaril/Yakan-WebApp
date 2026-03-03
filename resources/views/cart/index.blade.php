@@ -597,43 +597,59 @@
             if (newQuantity < 1) return;
             
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            const authToken = localStorage.getItem('yakan_auth_token') || sessionStorage.getItem('yakan_auth_token');
+            const authToken = localStorage.getItem('yakan_auth_token') 
+                || sessionStorage.getItem('yakan_auth_token')
+                || sessionStorage.getItem('auth_token');
+            
+            console.log('Updating quantity:', { itemId, newQuantity, hasAuthToken: !!authToken, authTokenLength: authToken?.length });
             
             // Build request body with auth_token for Railway
             const requestBody = { 
-                quantity: newQuantity
+                quantity: newQuantity,
+                auth_token: authToken // Always include in body
             };
-            if (authToken) {
-                requestBody.auth_token = authToken;
-            }
             
-            fetch(`/cart/update/${itemId}`, {
+            fetch(`/cart/update/${itemId}${authToken ? '?auth_token=' + encodeURIComponent(authToken) : ''}`, {
                 method: 'PATCH',
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Auth-Token': authToken || '', // Also send in header
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 credentials: 'include', // Include cookies for authentication
                 body: JSON.stringify(requestBody)
             })
             .then(r => {
+                console.log('Update response status:', r.status);
+                if (r.status === 401) {
+                    // Unauthorized - redirect to login
+                    alert('Your session has expired. Please login again.');
+                    window.location.href = '/login-user';
+                    throw new Error('Unauthorized');
+                }
                 if (!r.ok) {
-                    throw new Error('Update failed');
+                    throw new Error('Update failed with status: ' + r.status);
                 }
                 return r.json();
             })
             .then(data => {
+                console.log('Update response:', data);
                 if (data.success) {
                     location.reload();
+                } else if (data.redirect) {
+                    window.location.href = data.redirect;
                 } else {
                     console.error('Update failed:', data.message);
-                    alert('Failed to update cart. Please try again.');
+                    alert(data.message || 'Failed to update cart. Please try again.');
                 }
             })
             .catch(error => {
                 console.error('Error updating cart:', error);
-                alert('An error occurred. Please refresh the page and try again.');
+                if (error.message !== 'Unauthorized') {
+                    alert('An error occurred. Please refresh the page and try again.');
+                }
             });
         }
 

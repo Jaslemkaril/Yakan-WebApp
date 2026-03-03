@@ -309,7 +309,33 @@ class CartController extends Controller
      */
     public function update(Request $request, $id)
     {
-        \Log::info('CartController@update called', ['id' => $id, 'is_json' => $request->wantsJson(), 'is_ajax' => $request->isXmlHttpRequest()]);
+        \Log::info('CartController@update called', [
+            'id' => $id, 
+            'is_json' => $request->wantsJson(), 
+            'is_ajax' => $request->isXmlHttpRequest(),
+            'auth_check' => Auth::check(),
+            'user_id' => Auth::id(),
+            'has_auth_token' => $request->has('auth_token') || $request->json('auth_token'),
+            'session_id' => session()->getId()
+        ]);
+        
+        // Check authentication
+        if (!Auth::check()) {
+            \Log::warning('CartController@update: User not authenticated', [
+                'session_id' => session()->getId(),
+                'has_auth_token_query' => $request->has('auth_token'),
+                'has_auth_token_json' => !!$request->json('auth_token')
+            ]);
+            
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authentication required. Please login again.',
+                    'redirect' => route('login.user')
+                ], 401);
+            }
+            return redirect()->route('login.user')->with('error', 'Please login to continue');
+        }
         
         $request->validate([
             'quantity' => 'required|integer|min:1',
