@@ -391,10 +391,6 @@
 @push('scripts')
 <script>
 function removeFromWishlist(type, id) {
-    if (!confirm('Remove this item from your wishlist?')) {
-        return;
-    }
-    
     const itemElement = document.getElementById(`wishlist-item-${type}-${id}`);
     if (!itemElement) {
         console.error('Item element not found:', `wishlist-item-${type}-${id}`);
