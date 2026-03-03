@@ -759,10 +759,10 @@ Route::get('/patterns', [\App\Http\Controllers\PatternController::class, 'index'
 Route::get('/patterns/{pattern}', [\App\Http\Controllers\PatternController::class, 'show'])->name('patterns.show');
 
 // Wishlist (User)
-// Note: No 'auth' middleware here - TokenAuth middleware in web group handles authentication
-// Controller checks Auth::user() after TokenAuth runs
+// Index requires auth middleware for page load redirect
+// AJAX endpoints (add/remove/check) rely on TokenAuth middleware to avoid logout
 Route::prefix('wishlist')->name('wishlist.')->group(function () {
-    Route::get('/', [\App\Http\Controllers\WishlistController::class, 'index'])->name('index');
+    Route::middleware(['auth'])->get('/', [\App\Http\Controllers\WishlistController::class, 'index'])->name('index');
     Route::post('/add', [\App\Http\Controllers\WishlistController::class, 'add'])->name('add');
     Route::post('/remove', [\App\Http\Controllers\WishlistController::class, 'remove'])->name('remove');
     Route::post('/check', [\App\Http\Controllers\WishlistController::class, 'check'])->name('check');

@@ -11,18 +11,12 @@ use Illuminate\Support\Facades\Auth;
 
 class WishlistController extends Controller
 {
-    // Note: No auth middleware in constructor
-    // TokenAuth middleware in web group handles authentication via token
-    // Each method checks Auth::user() manually after TokenAuth runs
+    // Note: index() uses 'auth' middleware on route for proper login redirect
+    // AJAX methods (add, remove, check) rely on TokenAuth middleware
     
     public function index()
     {
         $user = Auth::user();
-        
-        if (!$user) {
-            return redirect()->route('login')->with('error', 'Please login to view your wishlist');
-        }
-        
         $wishlist = $user->wishlists()->default()->first() ?: $user->wishlists()->create(['name' => 'My Wishlist', 'is_default' => true]);
         $wishlist->load(['items.item', 'items.item.category']);
 
