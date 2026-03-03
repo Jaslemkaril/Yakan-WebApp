@@ -432,8 +432,8 @@
                                 <!-- Hover Overlay with Quick Actions -->
                                 <div class="product-overlay">
                                     <div class="quick-actions">
-                                        <button class="quick-action-btn" onclick="event.stopPropagation(); toggleWishlist({{ $product->id }})">
-                                            <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <button id="wishlist-btn-{{ $product->id }}" class="quick-action-btn" onclick="event.stopPropagation(); toggleWishlist({{ $product->id }})">
+                                            <svg class="w-4 h-4 inline mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                                             </svg>
                                             Save
@@ -545,6 +545,37 @@
     </div>
 
 <script>
+// Wishlist product IDs from server
+const wishlistProductIds = @json($wishlistProductIds ?? []);
+
+// Initialize wishlist hearts on page load
+document.addEventListener('DOMContentLoaded', function() {
+    wishlistProductIds.forEach(productId => {
+        updateWishlistHeart(productId, true);
+    });
+});
+
+// Update heart appearance
+function updateWishlistHeart(productId, inWishlist) {
+    const button = document.getElementById(`wishlist-btn-${productId}`);
+    if (!button) return;
+    
+    const svg = button.querySelector('svg');
+    const path = svg.querySelector('path');
+    
+    if (inWishlist) {
+        button.classList.add('in-wishlist');
+        button.style.color = '#800000';
+        svg.setAttribute('fill', '#800000');
+        svg.setAttribute('stroke', '#800000');
+    } else {
+        button.classList.remove('in-wishlist');
+        button.style.color = '';
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+    }
+}
+
 // Product interaction functions
 function toggleWishlist(productId) {
     event.stopPropagation();
@@ -569,13 +600,17 @@ function toggleWishlist(productId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            if (action === 'add') {
-                button.classList.add('in-wishlist');
-                button.style.color = '#800000';
+            const inWishlist = action === 'add';
+            updateWishlistHeart(productId, inWishlist);
+            
+            // Update the wishlistProductIds array
+            if (inWishlist) {
+                wishlistProductIds.push(productId);
             } else {
-                button.classList.remove('in-wishlist');
-                button.style.color = '';
+                const index = wishlistProductIds.indexOf(productId);
+                if (index > -1) wishlistProductIds.splice(index, 1);
             }
+            
             showNotification(data.message);
         } else {
             showNotification(data.message || 'Error occurred', 'error');

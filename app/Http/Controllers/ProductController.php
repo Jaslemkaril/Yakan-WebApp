@@ -63,8 +63,20 @@ class ProductController extends Controller
             // Fetch products with pagination and category relationship
             $products = $query->with(['category', 'inventory'])->paginate(12)->appends($request->all());
 
+            // Get wishlist items if user is authenticated
+            $wishlistProductIds = [];
+            if (auth()->check()) {
+                $wishlist = auth()->user()->wishlists()->default()->first();
+                if ($wishlist) {
+                    $wishlistProductIds = $wishlist->items()
+                        ->where('item_type', 'App\Models\Product')
+                        ->pluck('item_id')
+                        ->toArray();
+                }
+            }
+
             // Return the products view with products, categories, and selected category
-            return view('products.index', compact('products', 'categories', 'selectedCategory'));
+            return view('products.index', compact('products', 'categories', 'selectedCategory', 'wishlistProductIds'));
         } catch (\Exception $e) {
             // Log the error and return a simple response
             \Log::error('ProductController::shopIndex error: ' . $e->getMessage());
@@ -72,7 +84,17 @@ class ProductController extends Controller
             // Fallback to simple products query
             $products = Product::paginate(12);
             $categories = Category::withCount('products')->orderBy('name')->get();
-            return view('products.index', compact('products', 'categories'));
+            $wishlistProductIds = [];
+            if (auth()->check()) {
+                $wishlist = auth()->user()->wishlists()->default()->first();
+                if ($wishlist) {
+                    $wishlistProductIds = $wishlist->items()
+                        ->where('item_type', 'App\Models\Product')
+                        ->pluck('item_id')
+                        ->toArray();
+                }
+            }
+            return view('products.index', compact('products', 'categories', 'wishlistProductIds'));
         }
     }
 
@@ -141,7 +163,19 @@ class ProductController extends Controller
             }
         }
 
-        return view('products.index', compact('products', 'categories', 'selectedCategory'));
+        // Get wishlist items if user is authenticated
+        $wishlistProductIds = [];
+        if (auth()->check()) {
+            $wishlist = auth()->user()->wishlists()->default()->first();
+            if ($wishlist) {
+                $wishlistProductIds = $wishlist->items()
+                    ->where('item_type', 'App\Models\Product')
+                    ->pluck('item_id')
+                    ->toArray();
+            }
+        }
+
+        return view('products.index', compact('products', 'categories', 'selectedCategory', 'wishlistProductIds'));
     }
 
     /**
