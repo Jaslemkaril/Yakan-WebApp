@@ -173,7 +173,7 @@ class CartController extends Controller
         }
 
         // compute subtotal to validate min spend
-        $cartItems = Cart::with('product')->where('user_id', Auth::id())->get();
+        $cartItems = Cart::with('product.inventory')->where('user_id', Auth::id())->get();
         $subtotal = $cartItems->sum(fn($item) => $item->product->price * $item->quantity);
 
         // Detailed validation with specific error messages
@@ -244,10 +244,12 @@ class CartController extends Controller
                         ->orderBy('created_at', 'desc')
                         ->get();
 
-        // Manually load products to ensure they're loaded
+        // Manually load products with inventory to ensure they're loaded with stock data
         foreach ($cartItems as $item) {
             if (!$item->product) {
-                $item->load('product');
+                $item->load('product.inventory');
+            } else {
+                $item->load('product.inventory');
             }
         }
 
@@ -399,7 +401,7 @@ class CartController extends Controller
         }
 
         // Handle regular cart item (database-based)
-        $cartItem = Cart::with('product')
+        $cartItem = Cart::with('product.inventory')
                         ->where('id', $id)
                         ->where('user_id', Auth::id())
                         ->first();
@@ -428,7 +430,7 @@ class CartController extends Controller
             $itemSubtotal = $cartItem->quantity * $cartItem->product->price;
             
             // Get all cart items and calculate totals
-            $allCartItems = Cart::with('product')->where('user_id', Auth::id())->get();
+            $allCartItems = Cart::with('product.inventory')->where('user_id', Auth::id())->get();
             $cartTotal = $allCartItems->sum(function($item) {
                 return $item->quantity * $item->product->price;
             });
@@ -522,7 +524,7 @@ class CartController extends Controller
             $subtotal = $product->price * $buyNowItem['quantity'];
         } else {
             // Regular cart checkout
-            $cartItems = Cart::with('product')
+            $cartItems = Cart::with('product.inventory')
                             ->where('user_id', Auth::id())
                             ->get();
 
@@ -620,7 +622,7 @@ class CartController extends Controller
             ]);
         } else {
             // Regular cart checkout
-            $cartItems = Cart::with('product')->where('user_id', $userId)->get();
+            $cartItems = Cart::with('product.inventory')->where('user_id', $userId)->get();
 
             if ($cartItems->isEmpty()) {
                 return redirect()->back()->with('error', 'Your cart is empty.');

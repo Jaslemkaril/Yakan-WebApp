@@ -379,7 +379,8 @@
 
                                             <div class="mt-4">
                                                 @php
-                                                    $stockLevel = $product->stock ?? 0;
+                                                    // Check inventory table first (correct source), fallback to product.stock
+                                                    $stockLevel = $product->inventory ? $product->inventory->quantity : ($product->stock ?? 0);
                                                 @endphp
                                                 
                                                 @if($stockLevel > 10)
