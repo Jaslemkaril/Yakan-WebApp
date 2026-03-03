@@ -1478,7 +1478,22 @@
         const token = localStorage.getItem(STORAGE_KEY);
         if (!token) return; // No token, nothing to do
 
-        // 2. Append auth_token to all internal <a> links EXCEPT auth pages
+        // 2. If user has token but page doesn't have it in URL, add it and reload ONCE
+        // This ensures session persists even on page reload (F5)
+        const hasTokenInUrl = params.has('auth_token');
+        const isAuthenticated = {{ Auth::check() ? 'true' : 'false' }};
+        const requiresAuth = !isAuthPath(window.location.pathname); // Not on login/register page
+        
+        if (!hasTokenInUrl && !isAuthenticated && requiresAuth && token) {
+            // Add auth_token to current URL and reload to restore session
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('auth_token', token);
+            console.log('🔄 Session lost - restoring with auth_token...');
+            window.location.replace(currentUrl.toString());
+            return; // Stop execution, page will reload
+        }
+
+        // 3. Append auth_token to all internal <a> links EXCEPT auth pages
         function appendTokenToLinks() {
             document.querySelectorAll('a[href]').forEach(function(a) {
                 const href = a.getAttribute('href');
@@ -1501,7 +1516,7 @@
         const observer = new MutationObserver(appendTokenToLinks);
         observer.observe(document.body, { childList: true, subtree: true });
 
-        // 3. Intercept fetch() to include auth_token in requests (skip auth paths)
+        // 4. Intercept fetch() to include auth_token in requests (skip auth paths)
         const originalFetch = window.fetch;
         window.fetch = function(input, init) {
             try {
@@ -1525,7 +1540,7 @@
             return originalFetch.call(this, input, init);
         };
 
-        // 4. Intercept POST form submissions to include auth_token (skip auth forms)
+        // 5. Intercept POST form submissions to include auth_token (skip auth forms)
         document.addEventListener('submit', function(e) {
             const form = e.target;
             if (!form || form.method === 'get') return;
@@ -1543,7 +1558,7 @@
             }
         }, true);
 
-        // 5. Clear token on logout
+        // 6. Clear token on logout
         document.querySelectorAll('a[href*="logout"], form[action*="logout"]').forEach(function(el) {
             el.addEventListener('click', function() { localStorage.removeItem(STORAGE_KEY); });
             el.addEventListener('submit', function() { localStorage.removeItem(STORAGE_KEY); });
