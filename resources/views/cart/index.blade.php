@@ -601,7 +601,15 @@
                 || sessionStorage.getItem('yakan_auth_token')
                 || sessionStorage.getItem('auth_token');
             
-            console.log('Updating quantity:', { itemId, newQuantity, hasAuthToken: !!authToken, authTokenLength: authToken?.length });
+            // DEBUGGING: Show auth status
+            console.log('=== CART UPDATE DEBUG ===');
+            console.log('Item ID:', itemId);
+            console.log('New Quantity:', newQuantity);
+            console.log('Has Auth Token:', !!authToken);
+            console.log('Auth Token (first 20 chars):', authToken ? authToken.substring(0, 20) + '...' : 'NONE');
+            console.log('Session ID:', sessionStorage.getItem('auth_token') ? 'Found in sessionStorage' : 'Not in sessionStorage');
+            console.log('Local Storage:', localStorage.getItem('yakan_auth_token') ? 'Found in localStorage' : 'Not in localStorage');
+            console.log('========================');
             
             // Build request body with auth_token for Railway
             const requestBody = { 
@@ -622,33 +630,61 @@
                 body: JSON.stringify(requestBody)
             })
             .then(r => {
-                console.log('Update response status:', r.status);
+                console.log('=== RESPONSE DEBUG ===');
+                console.log('Status:', r.status);
+                console.log('Status Text:', r.statusText);
+                console.log('OK:', r.ok);
+                console.log('====================');
+                
                 if (r.status === 401) {
-                    // Unauthorized - redirect to login
-                    alert('Your session has expired. Please login again.');
-                    window.location.href = '/login-user';
+                    // Unauthorized - PAUSE before redirect
+                    const errorMsg = `❌ AUTHENTICATION FAILED (401)\n\n` +
+                        `Auth Token: ${authToken ? 'EXISTS (length: ' + authToken.length + ')' : 'MISSING'}\n` +
+                        `Session ID exists: ${!!sessionStorage.getItem('auth_token')}\n\n` +
+                        `Click OK to see more details in console, then you'll be redirected to login.`;
+                    
+                    alert(errorMsg);
+                    console.error('🔴 401 Unauthorized - Authentication failed');
+                    console.error('Auth token was:', authToken);
+                    
+                    // Wait 2 seconds before redirect so user can screenshot console
+                    setTimeout(() => {
+                        window.location.href = '/login-user';
+                    }, 2000);
+                    
                     throw new Error('Unauthorized');
                 }
                 if (!r.ok) {
+                    const errorMsg = `❌ REQUEST FAILED\nStatus: ${r.status} ${r.statusText}\n\nCheck console for details.`;
+                    alert(errorMsg);
                     throw new Error('Update failed with status: ' + r.status);
                 }
                 return r.json();
             })
             .then(data => {
-                console.log('Update response:', data);
+                console.log('=== SUCCESS RESPONSE ===');
+                console.log('Data:', data);
+                console.log('======================');
+                
                 if (data.success) {
                     location.reload();
                 } else if (data.redirect) {
+                    alert('⚠️ Redirecting: ' + data.message);
                     window.location.href = data.redirect;
                 } else {
-                    console.error('Update failed:', data.message);
-                    alert(data.message || 'Failed to update cart. Please try again.');
+                    console.error('❌ Update failed:', data.message);
+                    alert('❌ Update failed: ' + (data.message || 'Unknown error'));
                 }
             })
             .catch(error => {
-                console.error('Error updating cart:', error);
+                console.error('=== ERROR CAUGHT ===');
+                console.error('Error:', error);
+                console.error('Message:', error.message);
+                console.error('Stack:', error.stack);
+                console.error('==================');
+                
                 if (error.message !== 'Unauthorized') {
-                    alert('An error occurred. Please refresh the page and try again.');
+                    alert('❌ ERROR: ' + error.message + '\n\nCheck console for details.');
                 }
             });
         }
