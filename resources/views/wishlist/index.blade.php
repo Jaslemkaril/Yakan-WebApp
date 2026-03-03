@@ -405,7 +405,14 @@ function removeFromWishlist(type, id) {
     const button = event.target.closest('button');
     if (button) button.disabled = true;
     
-    fetch('{{ route("wishlist.remove") }}', {
+    // Get auth token for Railway session persistence
+    const authToken = localStorage.getItem('yakan_auth_token') || sessionStorage.getItem('auth_token');
+    const url = new URL('{{ route("wishlist.remove") }}', window.location.origin);
+    if (authToken) {
+        url.searchParams.append('auth_token', authToken);
+    }
+    
+    fetch(url.toString(), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -413,11 +420,19 @@ function removeFromWishlist(type, id) {
         },
         body: JSON.stringify({
             type: type,
-            id: id
+            id: id,
+            auth_token: authToken
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
+        console.log('Response data:', data);
         if (data.success) {
             // Fade out and remove the item
             itemElement.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
