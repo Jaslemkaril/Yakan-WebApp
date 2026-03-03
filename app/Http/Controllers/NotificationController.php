@@ -20,7 +20,12 @@ class NotificationController extends Controller
 
     public function markAsRead($id)
     {
-        $notification = Auth::user()->notifications()->findOrFail($id);
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Not authenticated'], 401);
+        }
+        
+        $notification = $user->notifications()->findOrFail($id);
         if (!$notification->read_at) {
             $notification->update(['read_at' => now()]);
         }
@@ -29,28 +34,62 @@ class NotificationController extends Controller
 
     public function markAllAsRead()
     {
-        Auth::user()->notifications()
+        \Log::info('Mark all as read request', [
+            'user_id' => Auth::id(),
+            'auth_check' => Auth::check(),
+            'has_auth_token' => request()->has('auth_token'),
+            'bearer_token' => request()->bearerToken() ? 'present' : 'null',
+            'x_auth_token' => request()->header('X-Auth-Token') ? 'present' : 'null',
+        ]);
+        
+        $user = Auth::user();
+        if (!$user) {
+            \Log::warning('Mark all as read failed - not authenticated');
+            return response()->json(['success' => false, 'message' => 'Not authenticated'], 401);
+        }
+        
+        $count = $user->notifications()->whereNull('read_at')->count();
+        \Log::info('Mark all as read executing', ['user_id' => $user->id, 'unread_count' => $count]);
+        
+        $user->notifications()
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
+            
+        \Log::info('Mark all as read completed', ['user_id' => $user->id]);
         return response()->json(['success' => true]);
     }
 
     public function getUnreadCount()
     {
-        $count = Auth::user()->notifications()->whereNull('read_at')->count();
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['count' => 0], 401);
+        }
+        
+        $count = $user->notifications()->whereNull('read_at')->count();
         return response()->json(['count' => $count]);
     }
 
     public function destroy($id)
     {
-        $notification = Auth::user()->notifications()->findOrFail($id);
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+        
+        $notification = $user->notifications()->findOrFail($id);
         $notification->delete();
         return back()->with('success', 'Notification deleted');
     }
 
     public function clear()
     {
-        Auth::user()->notifications()->delete();
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+        
+        $user->notifications()->delete();
         return back()->with('success', 'All notifications cleared');
     }
 }
