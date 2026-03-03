@@ -61,6 +61,9 @@ class WishlistController extends Controller
         $wishlist = $user->wishlists()->default()->first();
 
         if (!$wishlist) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'Wishlist not found.']);
+            }
             return redirect()->route('wishlist.index')->with('error', 'Wishlist not found.');
         }
 
@@ -73,9 +76,16 @@ class WishlistController extends Controller
 
         if ($item && $wishlist->hasItem($item)) {
             $wishlist->removeItem($item);
+            
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => true, 'message' => 'Removed from wishlist!']);
+            }
             return redirect()->route('wishlist.index')->with('success', 'Removed from wishlist!');
         }
 
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => false, 'message' => 'Item not in wishlist']);
+        }
         return redirect()->route('wishlist.index')->with('error', 'Item not in wishlist');
     }
 

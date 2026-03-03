@@ -242,7 +242,7 @@
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                     </svg>
-                    <span>{{ $wishlist->items->count() }} items saved</span>
+                    <span id="wishlist-count-text">{{ $wishlist->items->count() }} items saved</span>
                 </div>
             </div>
         </div>
@@ -250,11 +250,15 @@
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
         @if($wishlist->items->isNotEmpty())
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="wishlist-grid">
                 @foreach($wishlist->items as $item)
-                    <div class="wishlist-card">
+                    @php
+                        $entity = $item->item;
+                        $itemType = $entity instanceof \App\Models\Product ? 'product' : 'pattern';
+                    @endphp
+                    <div class="wishlist-card" id="wishlist-item-{{ $itemType }}-{{ $entity->id }}" data-item-type="{{ $itemType }}" data-item-id="{{ $entity->id }}">
                         @php
-                            $entity = $item->item;
+                            // $entity already set above
                         @endphp
                         @if($entity instanceof \App\Models\Product)
                             <div class="wishlist-image">
@@ -294,17 +298,12 @@
                                         </button>
                                     </form>
                                 </div>
-                                <form action="{{ route('wishlist.remove') }}" method="POST" onsubmit="return confirm('Remove from wishlist?')" class="mt-3">
-                                    @csrf
-                                    <input type="hidden" name="type" value="product" />
-                                    <input type="hidden" name="id" value="{{ $entity->id }}" />
-                                    <button type="submit" class="wishlist-remove w-full">
-                                        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                        </svg>
-                                        Remove
-                                    </button>
-                                </form>
+                                <button onclick="removeFromWishlist('product', {{ $entity->id }})" class="wishlist-remove w-full mt-3">
+                                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                    Remove
+                                </button>
                             </div>
                         @elseif($entity instanceof \App\Models\YakanPattern)
                             <div class="wishlist-image">
@@ -344,17 +343,12 @@
                                         Order
                                     </a>
                                 </div>
-                                <form action="{{ route('wishlist.remove') }}" method="POST" onsubmit="return confirm('Remove from wishlist?')" class="mt-3">
-                                    @csrf
-                                    <input type="hidden" name="type" value="pattern" />
-                                    <input type="hidden" name="id" value="{{ $entity->id }}" />
-                                    <button type="submit" class="wishlist-remove w-full">
-                                        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                        </svg>
-                                        Remove
-                                    </button>
-                                </form>
+                                <button onclick="removeFromWishlist('pattern', {{ $entity->id }})" class="wishlist-remove w-full mt-3">
+                                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                    Remove
+                                </button>
                             </div>
                         @endif
                     </div>
@@ -393,3 +387,93 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+function removeFromWishlist(type, id) {
+    if (!confirm('Remove this item from your wishlist?')) {
+        return;
+    }
+    
+    const itemElement = document.getElementById(`wishlist-item-${type}-${id}`);
+    if (!itemElement) {
+        console.error('Item element not found:', `wishlist-item-${type}-${id}`);
+        return;
+    }
+    
+    // Disable button to prevent double clicks
+    const button = event.target.closest('button');
+    if (button) button.disabled = true;
+    
+    fetch('{{ route("wishlist.remove") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            type: type,
+            id: id
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Fade out and remove the item
+            itemElement.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            itemElement.style.opacity = '0';
+            itemElement.style.transform = 'scale(0.9)';
+            
+            setTimeout(() => {
+                itemElement.remove();
+                
+                // Update wishlist count
+                const remainingItems = document.querySelectorAll('.wishlist-card').length;
+                const countText = document.getElementById('wishlist-count-text');
+                if (countText) {
+                    countText.textContent = `${remainingItems} items saved`;
+                }
+                
+                // Update header wishlist badge
+                const headerBadge = document.getElementById('wishlist-count-badge');
+                if (headerBadge) {
+                    if (remainingItems === 0) {
+                        headerBadge.classList.add('hidden');
+                    } else {
+                        headerBadge.textContent = remainingItems > 99 ? '99+' : remainingItems;
+                    }
+                }
+                
+                // Show empty state if no items left
+                if (remainingItems === 0) {
+                    location.reload();
+                }
+            }, 300);
+            
+            showNotification(data.message || 'Removed from wishlist!');
+        } else {
+            showNotification(data.message || 'Error occurred', 'error');
+            if (button) button.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error removing from wishlist:', error);
+        showNotification('Error removing from wishlist', 'error');
+        if (button) button.disabled = false;
+    });
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+        type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+    }`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+</script>
+@endpush
