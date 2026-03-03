@@ -25,10 +25,19 @@ class WishlistController extends Controller
 
     public function add(Request $request)
     {
-        $request->validate([
+        // Force JSON response for validation errors
+        $validator = \Validator::make($request->all(), [
             'type' => 'required|in:product,pattern',
             'id' => 'required|integer',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
         $user = Auth::user();
         
@@ -55,10 +64,19 @@ class WishlistController extends Controller
 
     public function remove(Request $request)
     {
-        $request->validate([
+        // Force JSON response for validation errors
+        $validator = \Validator::make($request->all(), [
             'type' => 'required|in:product,pattern',
             'id' => 'required|integer',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
         // Log request details for debugging
         \Log::info('Wishlist remove request', [
@@ -69,7 +87,9 @@ class WishlistController extends Controller
             'accept_header' => $request->header('Accept'),
             'content_type' => $request->header('Content-Type'),
             'is_json' => $request->isJson(),
-            'expects_json' => $request->expectsJson()
+            'expects_json' => $request->expectsJson(),
+            'authenticated' => Auth::check(),
+            'user_id' => Auth::id()
         ]);
 
         $user = Auth::user();
@@ -121,10 +141,19 @@ class WishlistController extends Controller
 
     public function check(Request $request)
     {
-        $request->validate([
+        // Force JSON response for validation errors
+        $validator = \Validator::make($request->all(), [
             'type' => 'required|in:product,pattern',
             'id' => 'required|integer',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
         $user = Auth::user();
         
