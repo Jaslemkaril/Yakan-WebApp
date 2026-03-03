@@ -595,7 +595,18 @@
 
         function updateQuantity(itemId, newQuantity) {
             if (newQuantity < 1) return;
+            
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const authToken = localStorage.getItem('yakan_auth_token') || sessionStorage.getItem('yakan_auth_token');
+            
+            // Build request body with auth_token for Railway
+            const requestBody = { 
+                quantity: newQuantity
+            };
+            if (authToken) {
+                requestBody.auth_token = authToken;
+            }
+            
             fetch(`/cart/update/${itemId}`, {
                 method: 'PATCH',
                 headers: {
@@ -603,23 +614,66 @@
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken
                 },
-                body: JSON.stringify({ quantity: newQuantity })
-            }).then(r => r.json()).then(data => {
-                if (data.success) location.reload();
+                credentials: 'include', // Include cookies for authentication
+                body: JSON.stringify(requestBody)
+            })
+            .then(r => {
+                if (!r.ok) {
+                    throw new Error('Update failed');
+                }
+                return r.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    console.error('Update failed:', data.message);
+                    alert('Failed to update cart. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating cart:', error);
+                alert('An error occurred. Please refresh the page and try again.');
             });
         }
 
         function removeItem(itemId) {
             if (!confirm('Remove this item?')) return;
+            
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            fetch(`/cart/remove/${itemId}`, {
+            const authToken = localStorage.getItem('yakan_auth_token') || sessionStorage.getItem('yakan_auth_token');
+            
+            // Build URL with auth_token query parameter for Railway
+            let url = `/cart/remove/${itemId}`;
+            if (authToken) {
+                url += `?auth_token=${encodeURIComponent(authToken)}`;
+            }
+            
+            fetch(url, {
                 method: 'DELETE',
                 headers: {
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': csrfToken
+                },
+                credentials: 'include' // Include cookies for authentication
+            })
+            .then(r => {
+                if (!r.ok) {
+                    throw new Error('Remove failed');
                 }
-            }).then(r => r.json()).then(data => {
-                if (data.success) location.reload();
+                return r.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    console.error('Remove failed:', data.message);
+                    alert('Failed to remove item. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error removing item:', error);
+                alert('An error occurred. Please refresh the page and try again.');
             });
         }
     </script>
