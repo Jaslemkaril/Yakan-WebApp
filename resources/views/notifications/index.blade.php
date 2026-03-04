@@ -31,10 +31,16 @@
                     </div>
                 </div>
                 @if($notifications->count() > 0)
-                    <button onclick="clearAllNotifications()" class="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition duration-300 shadow-md hover:shadow-lg font-medium flex items-center gap-2">
-                        <i class="fas fa-trash"></i>
-                        Clear All
-                    </button>
+                    <div class="flex gap-3">
+                        <button onclick="markAllAsRead()" class="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition duration-300 shadow-md hover:shadow-lg font-medium flex items-center gap-2">
+                            <i class="fas fa-check-double"></i>
+                            Mark All Read
+                        </button>
+                        <button onclick="clearAllNotifications()" class="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition duration-300 shadow-md hover:shadow-lg font-medium flex items-center gap-2">
+                            <i class="fas fa-trash"></i>
+                            Clear All
+                        </button>
+                    </div>
                 @endif
             </div>
         </div>
@@ -209,6 +215,38 @@ function deleteNotification(notificationId, button) {
     });
 }
 
+function markAllAsRead() {
+    const authToken = localStorage.getItem('yakan_auth_token');
+    const url = authToken ? `/notifications/read-all?auth_token=${authToken}` : '/notifications/read-all';
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json',
+            'Authorization': authToken ? `Bearer ${authToken}` : '',
+            'X-Auth-Token': authToken || ''
+        },
+        body: JSON.stringify({
+            auth_token: authToken
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message and reload
+            alert('All notifications marked as read!');
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to mark notifications as read');
+        }
+    })
+    .catch(error => {
+        console.error('Mark all as read error:', error);
+        alert('An error occurred. Please try again.');
+    });
+}
+
 function clearAllNotifications() {
     if (!confirm('Are you sure you want to delete all notifications?')) {
         return;
@@ -218,7 +256,7 @@ function clearAllNotifications() {
     const url = authToken ? `/notifications/clear?auth_token=${authToken}` : '/notifications/clear';
     
     fetch(url, {
-        method: 'POST',
+        method: 'DELETE',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
             'Content-Type': 'application/json',

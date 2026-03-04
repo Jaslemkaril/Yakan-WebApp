@@ -1419,10 +1419,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount']);
 });
 
-
-Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])
-    ->name('notifications.readAll.custom');
-
 // Fallback 404
 Route::fallback(function () {
     return response()->view('errors.404', [], 404);
