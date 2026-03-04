@@ -1414,7 +1414,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
 
     Route::delete('/notifications/clear', [NotificationController::class, 'clear'])
-        ->name('notifications.clear');
+        ->name('notifications.clearAll');
 
     Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount']);
 });
