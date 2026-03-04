@@ -32,10 +32,7 @@
                 </div>
                 @if($notifications->count() > 0)
                     <div class="flex gap-3">
-                        <button onclick="markAllAsRead()" class="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition duration-300 shadow-md hover:shadow-lg font-medium flex items-center gap-2">
-                            <i class="fas fa-check-double"></i>
-                            Mark All Read
-                        </button>
+            
                         <button onclick="clearAllNotifications()" class="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition duration-300 shadow-md hover:shadow-lg font-medium flex items-center gap-2">
                             <i class="fas fa-trash"></i>
                             Clear All
