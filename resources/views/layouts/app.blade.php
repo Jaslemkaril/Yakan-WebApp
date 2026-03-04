@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
-    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -1541,14 +1540,6 @@
             return originalFetch.call(this, input, init);
         };
 
-        <button id="clearNotifications" class="btn btn-danger">
-    Clear All
-</button>
-
-<button id="markAllReadBtn" class="btn btn-primary">
-    Mark All as Read
-</button>
-
         // 5. Intercept POST form submissions to include auth_token (skip auth forms)
         document.addEventListener('submit', function(e) {
             const form = e.target;
@@ -1574,55 +1565,5 @@
         });
     })();
     </script>
-    <script>
-document.getElementById('clearNotifications').addEventListener('click', function () {
-
-    fetch("{{ route('notifications.clear') }}", {
-        method: "DELETE",
-        headers: {
-            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            "Content-Type": "application/json"
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert("An error occurred. Please try again.");
-        }
-    })
-    .catch(error => {
-        alert("An error occurred. Please try again.");
-    });
-
-});
-</script>
-<script>
-document.getElementById('markAllReadBtn').addEventListener('click', function () {
-
-    fetch("{{ route('notifications.readAll') }}", {
-        method: "POST",
-        headers: {
-            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            "Content-Type": "application/json"
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert("An error occurred. Please try again.");
-        }
-    })
-    .catch(error => {
-        alert("An error occurred. Please try again.");
-    });
-
-});
-</script>
-
-
 </body>
 </html>

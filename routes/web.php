@@ -767,7 +767,7 @@ Route::prefix('notifications')->name('notifications.')->group(function () {
     Route::get('/unread-count', [NotificationController::class, 'getUnreadCount'])->name('unread-count');
     Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->name('read');
     Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
-    Route::delete('/clear', [NotificationController::class, 'clear'])->name('clear');
+    Route::post('/clear', [NotificationController::class, 'clear'])->name('clear');
 });
 
 // Test auth debugging
