@@ -1402,20 +1402,6 @@ if (config('app.debug')) {
     });
 }
 
-Route::middleware('auth')->group(function () {
-
-    Route::get('/notifications', [NotificationController::class, 'index'])
-        ->name('notifications.index');
-
-    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
-
-    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
-
-    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
-
-    Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount']);
-});
-
 // Fallback 404
 Route::fallback(function () {
     return response()->view('errors.404', [], 404);

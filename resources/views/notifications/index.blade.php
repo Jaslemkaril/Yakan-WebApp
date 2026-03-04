@@ -217,7 +217,7 @@ function deleteNotification(notificationId, button) {
 
 function markAllAsRead() {
     const authToken = localStorage.getItem('yakan_auth_token');
-    const url = authToken ? `/notifications/read-all?auth_token=${authToken}` : '/notifications/read-all';
+    const url = authToken ? `/notifications/mark-all-read?auth_token=${authToken}` : '/notifications/mark-all-read';
     
     fetch(url, {
         method: 'POST',
