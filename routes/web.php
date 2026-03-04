@@ -1414,14 +1414,14 @@ Route::middleware('auth')->group(function () {
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
 
     Route::delete('/notifications/clear', [NotificationController::class, 'clear'])
-        ->name('notifications.clearAll');
+        ->name('notifications.clear');
 
     Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount']);
 });
 
 
 Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])
-    ->name('notifications.readAll');
+    ->name('notifications.readAll.custom');
 
 // Fallback 404
 Route::fallback(function () {
