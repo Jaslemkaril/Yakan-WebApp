@@ -88,18 +88,24 @@
                 <h1><i class="fas fa-comments mr-2"></i>{{ $chat->subject }}</h1>
             </div>
             <div class="header-actions">
-                <form action="{{ route('admin.chats.update-status', $chat) }}" method="POST" class="inline">
+                <form action="{{ route('admin.chats.update-status', $chat) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" class="inline">
                     @csrf
                     @method('PATCH')
+                    @if(request('auth_token'))
+                        <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+                    @endif
                     <select name="status" onchange="this.form.submit()" class="status-select">
                         <option value="open" {{ $chat->status === 'open' ? 'selected' : '' }}>Open</option>
                         <option value="pending" {{ $chat->status === 'pending' ? 'selected' : '' }}>Pending</option>
                         <option value="closed" {{ $chat->status === 'closed' ? 'selected' : '' }}>Closed</option>
                     </select>
                 </form>
-                <form action="{{ route('admin.chats.destroy', $chat) }}" method="POST" onsubmit="return confirm('Delete this chat?');">
+                <form action="{{ route('admin.chats.destroy', $chat) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" onsubmit="return confirm('Delete this chat?');">
                     @csrf
                     @method('DELETE')
+                    @if(request('auth_token'))
+                        <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+                    @endif
                     <button type="submit" class="btn-delete">
                         <i class="fas fa-trash"></i> Delete
                     </button>
@@ -239,8 +245,13 @@
     @if($chat->status !== 'closed')
         <div class="reply-card">
             <h3><i class="fas fa-reply"></i> Send Reply</h3>
-            <form action="{{ route('admin.chats.reply', $chat) }}" method="POST" enctype="multipart/form-data" id="replyForm">
+            <form action="{{ route('admin.chats.reply', $chat) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" enctype="multipart/form-data" id="replyForm">
                 @csrf
+                
+                <!-- Include auth_token for Railway session handling -->
+                @if(request('auth_token'))
+                    <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+                @endif
                 
                 <!-- Hidden input for customer design images -->
                 <input type="hidden" name="reference_images[]" id="referenceImagesInput">
