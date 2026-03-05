@@ -246,6 +246,16 @@ class ChatController extends Controller
 
         ChatMessage::create($messageData);
 
+        if ($request->expectsJson() || $request->ajax()) {
+            $redirectUrl = $this->redirectWithToken('chats.show', $chat)->getTargetUrl();
+            return response()->json([
+                'success' => true,
+                'message' => 'Chat created successfully!',
+                'chat_id' => $chat->id,
+                'redirect_url' => $redirectUrl
+            ]);
+        }
+
         return $this->redirectWithToken('chats.show', $chat)->with('success', 'Chat created successfully!');
     }
 

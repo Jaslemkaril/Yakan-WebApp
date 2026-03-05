@@ -51,7 +51,7 @@
 
         <!-- Form Card -->
         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
-            <form action="{{ route('chats.store') }}" method="POST" enctype="multipart/form-data">
+            <form id="createChatForm" action="{{ route('chats.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
                 <!-- Subject -->
@@ -119,11 +119,15 @@
 
                 <!-- Buttons -->
                 <div class="flex gap-4 pt-4">
-                    <button type="submit" class="flex-1 btn-maroon px-6 py-3.5 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-md">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <button type="submit" id="submitButton" class="flex-1 btn-maroon px-6 py-3.5 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-md">
+                        <svg id="sendIcon" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/>
                         </svg>
-                        Send Chat
+                        <svg id="sendingIcon" class="w-5 h-5 hidden animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span id="submitText">Send Chat</span>
                     </button>
                     <a href="{{ route('chats.index') }}" class="flex-1 btn-outline px-6 py-3.5 rounded-lg font-semibold transition-all duration-300 text-center flex items-center justify-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,25 +145,79 @@
     const imageDropZone = document.getElementById('imageDropZone');
     const imageInput = document.getElementById('image');
 
-    imageDropZone.addEventListener('click', () => imageInput.click());
-    imageDropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        imageDropZone.style.borderColor = '#8B0000';
-        imageDropZone.style.backgroundColor = '#fef2f2';
-    });
-    imageDropZone.addEventListener('dragleave', () => {
-        imageDropZone.style.borderColor = '#d1d5db';
-        imageDropZone.style.backgroundColor = 'transparent';
-    });
-    imageDropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        imageDropZone.style.borderColor = '#d1d5db';
-        imageDropZone.style.backgroundColor = 'transparent';
-        if (e.dataTransfer.files.length) {
-            imageInput.files = e.dataTransfer.files;
-            updateImagePreview(imageInput);
+    // AJAX Form Submission
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('createChatForm');
+        const submitButton = document.getElementById('submitButton');
+        const sendIcon = document.getElementById('sendIcon');
+        const sendingIcon = document.getElementById('sendingIcon');
+        const submitText = document.getElementById('submitText');
+
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Disable form during submission
+                submitButton.disabled = true;
+                sendIcon.classList.add('hidden');
+                sendingIcon.classList.remove('hidden');
+                submitText.textContent = 'Sending...';
+                
+                const formData = new FormData(form);
+                
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.redirect_url) {
+                        // Smooth redirect without white screen
+                        window.location.href = data.redirect_url;
+                    } else {
+                        alert(data.message || 'Failed to create chat');
+                        submitButton.disabled = false;
+                        sendIcon.classList.remove('hidden');
+                        sendingIcon.classList.add('hidden');
+                        submitText.textContent = 'Send Chat';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to create chat. Please try again.');
+                    submitButton.disabled = false;
+                    sendIcon.classList.remove('hidden');
+                    sendingIcon.classList.add('hidden');
+                    submitText.textContent = 'Send Chat';
+                });
+            });
         }
     });
+
+    if (imageDropZone) {
+        imageDropZone.addEventListener('click', () => imageInput.click());
+        imageDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            imageDropZone.style.borderColor = '#8B0000';
+            imageDropZone.style.backgroundColor = '#fef2f2';
+        });
+        imageDropZone.addEventListener('dragleave', () => {
+            imageDropZone.style.borderColor = '#d1d5db';
+            imageDropZone.style.backgroundColor = 'transparent';
+        });
+        imageDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            imageDropZone.style.borderColor = '#d1d5db';
+            imageDropZone.style.backgroundColor = 'transparent';
+            if (e.dataTransfer.files.length) {
+                imageInput.files = e.dataTransfer.files;
+                updateImagePreview(imageInput);
+            }
+        });
+    }
 
     // Auto-resize textarea
     function autoResize(textarea) {
