@@ -595,7 +595,6 @@
             closeConfirmationModal();
         }
 
-    <script>
         function toggleSelectAll(checkbox) {
             const itemCheckboxes = document.querySelectorAll('.item-checkbox');
             itemCheckboxes.forEach(cb => {
