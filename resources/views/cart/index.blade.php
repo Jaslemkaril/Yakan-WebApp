@@ -387,9 +387,9 @@
                                                 </div>
 
                                                 <div class="quantity-control">
-                                                    <button type="button" class="quantity-btn" onclick="updateQuantity({{ $item->id }}, {{ $item->quantity - 1 }})">−</button>
+                                                    <button type="button" class="quantity-btn" onclick="updateQuantity({{ $item->id }}, parseInt(this.parentElement.querySelector('.quantity-input').value) - 1)">−</button>
                                                     <input type="number" value="{{ $item->quantity }}" min="1" class="quantity-input" data-item-id="{{ $item->id }}" readonly>
-                                                    <button type="button" class="quantity-btn" onclick="updateQuantity({{ $item->id }}, {{ $item->quantity + 1 }})">+</button>
+                                                    <button type="button" class="quantity-btn" onclick="updateQuantity({{ $item->id }}, parseInt(this.parentElement.querySelector('.quantity-input').value) + 1)">+</button>
                                                 </div>
                                             </div>
 
