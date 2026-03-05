@@ -146,64 +146,94 @@ class ChatController extends Controller
      */
     public function requestDetails(Chat $chat, $messageId)
     {
-        // Verify the message exists and belongs to this chat
-        $originalMessage = ChatMessage::where('id', $messageId)
-            ->where('chat_id', $chat->id)
-            ->first();
-        
-        if (!$originalMessage) {
-            return response()->json(['success' => false, 'message' => 'Message not found'], 404);
-        }
-        
-        // Create form request message
-        $formData = [
-            'original_message_id' => $messageId,
-            'fields' => [
-                [
-                    'name' => 'order_name',
-                    'label' => 'Order Name',
-                    'type' => 'text',
-                    'placeholder' => 'e.g., Custom Yakan Bag',
-                    'required' => true
-                ],
-                [
-                    'name' => 'quantity_meters',
-                    'label' => 'Quantity (meters)',
-                    'type' => 'number',
-                    'placeholder' => 'e.g., 5',
-                    'required' => true,
-                    'min' => 0.1,
-                    'step' => 0.1
-                ],
-                [
-                    'name' => 'fabric_type',
-                    'label' => 'Fabric Type (optional)',
-                    'type' => 'text',
-                    'placeholder' => 'e.g., Cotton, Polyester',
-                    'required' => false
-                ],
-                [
-                    'name' => 'additional_notes',
-                    'label' => 'Additional Details (optional)',
-                    'type' => 'textarea',
-                    'placeholder' => 'Any specific requirements or preferences',
-                    'required' => false
+        try {
+            \Log::info('Request details started', [
+                'chat_id' => $chat->id,
+                'message_id' => $messageId
+            ]);
+            
+            // Verify the message exists and belongs to this chat
+            $originalMessage = ChatMessage::where('id', $messageId)
+                ->where('chat_id', $chat->id)
+                ->first();
+            
+            if (!$originalMessage) {
+                \Log::warning('Original message not found', [
+                    'chat_id' => $chat->id,
+                    'message_id' => $messageId
+                ]);
+                return response()->json(['success' => false, 'message' => 'Message not found'], 404);
+            }
+            
+            // Create form request message
+            $formData = [
+                'original_message_id' => $messageId,
+                'fields' => [
+                    [
+                        'name' => 'order_name',
+                        'label' => 'Order Name',
+                        'type' => 'text',
+                        'placeholder' => 'e.g., Custom Yakan Bag',
+                        'required' => true
+                    ],
+                    [
+                        'name' => 'quantity_meters',
+                        'label' => 'Quantity (meters)',
+                        'type' => 'number',
+                        'placeholder' => 'e.g., 5',
+                        'required' => true,
+                        'min' => 0.1,
+                        'step' => 0.1
+                    ],
+                    [
+                        'name' => 'fabric_type',
+                        'label' => 'Fabric Type (optional)',
+                        'type' => 'text',
+                        'placeholder' => 'e.g., Cotton, Polyester',
+                        'required' => false
+                    ],
+                    [
+                        'name' => 'additional_notes',
+                        'label' => 'Additional Details (optional)',
+                        'type' => 'textarea',
+                        'placeholder' => 'Any specific requirements or preferences',
+                        'required' => false
+                    ]
                 ]
-            ]
-        ];
-        
-        ChatMessage::create([
-            'chat_id' => $chat->id,
-            'sender_type' => 'admin',
-            'message_type' => 'form_request',
-            'message' => '📋 Please provide the following details for your custom order request:',
-            'form_data' => $formData,
-            'is_read' => false,
-        ]);
-        
-        $chat->update(['updated_at' => now()]);
-        
-        return response()->json(['success' => true, 'message' => 'Details request sent to customer']);
+            ];
+            
+            \Log::info('Creating form request message', ['form_data' => $formData]);
+            
+            $message = ChatMessage::create([
+                'chat_id' => $chat->id,
+                'sender_type' => 'admin',
+                'message_type' => 'form_request',
+                'message' => '📋 Please provide the following details for your custom order request:',
+                'form_data' => $formData,
+                'is_read' => false,
+            ]);
+            
+            \Log::info('Form request message created', ['message_id' => $message->id]);
+            
+            $chat->update(['updated_at' => now()]);
+            
+            \Log::info('Request details completed successfully');
+            
+            return response()->json(['success' => true, 'message' => 'Details request sent to customer']);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error in requestDetails', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'chat_id' => $chat->id ?? 'unknown',
+                'message_id' => $messageId ?? 'unknown'
+            ]);
+            
+            return response()->json([
+                'success' => false, 
+                'message' => 'Server error: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

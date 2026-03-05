@@ -430,21 +430,36 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            }
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'include'
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response ok:', response.ok);
+            
+            if (!response.ok) {
+                return response.text().then(text => {
+                    console.error('Error response:', text);
+                    throw new Error(`HTTP ${response.status}: ${text.substring(0, 200)}`);
+                });
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Success data:', data);
             if (data.success) {
-                alert('Details request sent to customer!');
+                alert('✓ Details request sent to customer!');
                 location.reload();
             } else {
                 alert('Failed to send request: ' + (data.message || 'Unknown error'));
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while sending the request.');
+            console.error('Full error:', error);
+            alert('❌ Error: ' + error.message + '\n\nCheck console for details.');
         });
     }
 </script>
