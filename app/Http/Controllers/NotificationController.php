@@ -34,29 +34,22 @@ class NotificationController extends Controller
 
     public function markAllAsRead()
     {
-        \Log::info('Mark all as read request', [
-            'user_id' => Auth::id(),
-            'auth_check' => Auth::check(),
-            'has_auth_token' => request()->has('auth_token'),
-            'bearer_token' => request()->bearerToken() ? 'present' : 'null',
-            'x_auth_token' => request()->header('X-Auth-Token') ? 'present' : 'null',
-        ]);
-        
         $user = Auth::user();
         if (!$user) {
-            \Log::warning('Mark all as read failed - not authenticated');
             return response()->json(['success' => false, 'message' => 'Not authenticated'], 401);
         }
         
         $count = $user->notifications()->whereNull('read_at')->count();
-        \Log::info('Mark all as read executing', ['user_id' => $user->id, 'unread_count' => $count]);
         
         $user->notifications()
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
             
-        \Log::info('Mark all as read completed', ['user_id' => $user->id]);
-        return response()->json(['success' => true]);
+        return response()->json([
+            'success' => true,
+            'message' => 'All notifications marked as read',
+            'marked_count' => $count
+        ]);
     }
 
     public function getUnreadCount()

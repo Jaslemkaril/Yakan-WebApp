@@ -324,22 +324,26 @@ function markNotificationAsRead(notificationId, el) {
 function markAllNotificationsRead(e) {
     e.stopPropagation();
     
-    const authToken = localStorage.getItem('yakan_auth_token');
-    const url = authToken ? `/notifications/mark-all-read?auth_token=${authToken}` : '/notifications/mark-all-read';
+    const button = e.target;
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Marking...';
     
-    fetch(url, {
+    fetch('/notifications/mark-all-read', {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
             'Content-Type': 'application/json',
-            'Authorization': authToken ? `Bearer ${authToken}` : '',
-            'X-Auth-Token': authToken || ''
-        },
-        body: JSON.stringify({
-            auth_token: authToken
-        })
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
     })
-    .then(r => r.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             // Clear all unread styling
@@ -359,12 +363,37 @@ function markAllNotificationsRead(e) {
             document.querySelectorAll('.notif-pulse-ring').forEach(r => r.remove());
 
             // Remove the "mark all read" button and unread count
-            e.target.remove();
+            button.remove();
             const unreadPill = document.querySelector('.text-\\[11px\\].font-bold.text-\\[\\#800000\\]');
             if (unreadPill) unreadPill.remove();
+            
+            // Show success feedback
+            showNotificationToast('All notifications marked as read!', 'success');
+        } else {
+            throw new Error(data.message || 'Failed to mark as read');
         }
     })
-    .catch(err => console.error('Mark all error:', err));
+    .catch(err => {
+        console.error('Mark all error:', err);
+        button.disabled = false;
+        button.textContent = originalText;
+        showNotificationToast('Failed to mark notifications as read. Please try again.', 'error');
+    });
+}
+
+function showNotificationToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-[100] transition-all duration-300 ${
+        type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+    }`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-20px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
 // Add shake animation if there are unread notifications

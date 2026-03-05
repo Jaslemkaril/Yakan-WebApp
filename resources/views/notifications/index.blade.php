@@ -213,34 +213,35 @@ function deleteNotification(notificationId, button) {
 }
 
 function markAllAsRead() {
-    const authToken = localStorage.getItem('yakan_auth_token');
-    const url = authToken ? `/notifications/mark-all-read?auth_token=${authToken}` : '/notifications/mark-all-read';
+    const url = '/notifications/mark-all-read';
     
     fetch(url, {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
             'Content-Type': 'application/json',
-            'Authorization': authToken ? `Bearer ${authToken}` : '',
-            'X-Auth-Token': authToken || ''
-        },
-        body: JSON.stringify({
-            auth_token: authToken
-        })
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             // Show success message and reload
             alert('All notifications marked as read!');
             location.reload();
         } else {
-            alert(data.message || 'Failed to mark notifications as read');
+            throw new Error(data.message || 'Failed to mark notifications as read');
         }
     })
     .catch(error => {
         console.error('Mark all as read error:', error);
-        alert('An error occurred. Please try again.');
+        alert('Failed to mark notifications as read. Please try again.');
     });
 }
 
