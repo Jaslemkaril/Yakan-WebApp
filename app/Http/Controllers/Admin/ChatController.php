@@ -120,7 +120,13 @@ class ChatController extends Controller
             return response()->json(['success' => true]);
         }
 
-        return redirect()->route('admin.chats.show', $chat)->with('success', 'Reply sent successfully!');
+        // Include auth_token in redirect for Railway session handling
+        $authToken = $request->input('auth_token') ?? $request->query('auth_token');
+        $redirectUrl = route('admin.chats.show', $chat);
+        if ($authToken) {
+            $redirectUrl .= '?auth_token=' . urlencode($authToken);
+        }
+        return redirect($redirectUrl)->with('success', 'Reply sent successfully!');
     }
 
     /**
@@ -138,7 +144,13 @@ class ChatController extends Controller
             return response()->json(['success' => true, 'status' => $chat->status]);
         }
 
-        return redirect()->route('admin.chats.show', $chat)->with('success', 'Chat status updated!');
+        // Include auth_token in redirect for Railway session handling
+        $authToken = $request->input('auth_token') ?? $request->query('auth_token');
+        $redirectUrl = route('admin.chats.show', $chat);
+        if ($authToken) {
+            $redirectUrl .= '?auth_token=' . urlencode($authToken);
+        }
+        return redirect($redirectUrl)->with('success', 'Chat status updated!');
     }
     
     /**
@@ -239,11 +251,17 @@ class ChatController extends Controller
     /**
      * Delete chat
      */
-    public function destroy(Chat $chat)
+    public function destroy(Request $request, Chat $chat)
     {
         $chat->delete();
 
-        return redirect()->route('admin.chats.index')->with('success', 'Chat deleted successfully!');
+        // Include auth_token in redirect for Railway session handling
+        $authToken = $request->input('auth_token') ?? $request->query('auth_token');
+        $redirectUrl = route('admin.chats.index');
+        if ($authToken) {
+            $redirectUrl .= '?auth_token=' . urlencode($authToken);
+        }
+        return redirect($redirectUrl)->with('success', 'Chat deleted successfully!');
     }
 
     /**
