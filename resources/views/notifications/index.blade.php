@@ -171,22 +171,23 @@ function deleteNotification(notificationId, button) {
         return;
     }
     
-    const authToken = localStorage.getItem('yakan_auth_token');
-    const url = authToken ? `/notifications/${notificationId}?auth_token=${authToken}` : `/notifications/${notificationId}`;
+    button.disabled = true;
     
-    fetch(url, {
+    fetch(`/notifications/${notificationId}`, {
         method: 'DELETE',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
             'Content-Type': 'application/json',
-            'Authorization': authToken ? `Bearer ${authToken}` : '',
-            'X-Auth-Token': authToken || ''
-        },
-        body: JSON.stringify({
-            auth_token: authToken
-        })
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             // Fade out the notification card
@@ -203,12 +204,13 @@ function deleteNotification(notificationId, button) {
                 }
             }, 300);
         } else {
-            alert(data.message || 'Failed to delete notification');
+            throw new Error(data.message || 'Failed to delete notification');
         }
     })
     .catch(error => {
         console.error('Delete error:', error);
-        alert('An error occurred. Please try again.');
+        alert('Failed to delete notification. Please try again.');
+        button.disabled = false;
     });
 }
 
@@ -250,32 +252,31 @@ function clearAllNotifications() {
         return;
     }
     
-    const authToken = localStorage.getItem('yakan_auth_token');
-    const url = authToken ? `/notifications/clear?auth_token=${authToken}` : '/notifications/clear';
-    
-    fetch(url, {
-        method: 'DELETE',
+    fetch('/notifications/clear', {
+        method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
             'Content-Type': 'application/json',
-            'Authorization': authToken ? `Bearer ${authToken}` : '',
-            'X-Auth-Token': authToken || ''
-        },
-        body: JSON.stringify({
-            auth_token: authToken
-        })
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             location.reload(); // Reload to show empty state
         } else {
-            alert(data.message || 'Failed to clear notifications');
+            throw new Error(data.message || 'Failed to clear notifications');
         }
     })
     .catch(error => {
         console.error('Clear all error:', error);
-        alert('An error occurred. Please try again.');
+        alert('Failed to clear notifications. Please try again.');
     });
 }
 </script>
