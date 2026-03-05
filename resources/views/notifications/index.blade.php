@@ -279,7 +279,27 @@ function deleteNotification(notificationId, button) {
                 // Check if there are no more notifications
                 const container = document.querySelector('.space-y-3');
                 if (container && container.children.length === 0) {
-                    location.reload(); // Reload to show empty state
+                    // Show empty state without reload
+                    const emptyState = document.createElement('div');
+                    emptyState.className = 'bg-white rounded-xl shadow-sm p-16 text-center border border-gray-100';
+                    emptyState.innerHTML = `
+                        <div class="text-6xl mb-6">
+                            🔔
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2">No Notifications</h3>
+                        <p class="text-gray-600 mb-8 max-w-md mx-auto">You're all caught up! Check back later for updates on your orders and account activities.</p>
+                        <a href="${window.location.origin}/products" class="inline-block px-8 py-3 bg-gradient-to-r from-maroon-600 to-maroon-700 text-white rounded-lg hover:from-maroon-700 hover:to-maroon-800 transition duration-300 shadow-md hover:shadow-lg font-semibold flex items-center gap-2 justify-center">
+                            <i class="fas fa-home"></i>
+                            Back to Products
+                        </a>
+                    `;
+                    container.parentElement.replaceChild(emptyState, container);
+                    
+                    // Remove the "Clear All" button
+                    const clearAllBtn = document.querySelector('button[onclick="clearAllNotifications()"]');
+                    if (clearAllBtn) {
+                        clearAllBtn.parentElement.remove();
+                    }
                 }
             }, 300);
         } else {
@@ -350,7 +370,46 @@ function clearAllNotifications() {
     })
     .then(data => {
         if (data.success) {
-            location.reload(); // Reload to show empty state
+            // Remove all notification cards with animation
+            const notificationsList = document.querySelector('.space-y-3');
+            if (notificationsList) {
+                notificationsList.style.transition = 'opacity 0.3s ease';
+                notificationsList.style.opacity = '0';
+                
+                setTimeout(() => {
+                    // Replace with empty state
+                    const container = notificationsList.parentElement;
+                    notificationsList.remove();
+                    
+                    const emptyState = document.createElement('div');
+                    emptyState.className = 'bg-white rounded-xl shadow-sm p-16 text-center border border-gray-100';
+                    emptyState.innerHTML = `
+                        <div class="text-6xl mb-6">
+                            🔔
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2">No Notifications</h3>
+                        <p class="text-gray-600 mb-8 max-w-md mx-auto">You're all caught up! Check back later for updates on your orders and account activities.</p>
+                        <a href="${window.location.origin}/products" class="inline-block px-8 py-3 bg-gradient-to-r from-maroon-600 to-maroon-700 text-white rounded-lg hover:from-maroon-700 hover:to-maroon-800 transition duration-300 shadow-md hover:shadow-lg font-semibold flex items-center gap-2 justify-center">
+                            <i class="fas fa-home"></i>
+                            Back to Products
+                        </a>
+                    `;
+                    container.appendChild(emptyState);
+                    
+                    // Remove the "Clear All" button from header
+                    const clearAllBtn = document.querySelector('button[onclick="clearAllNotifications()"]');
+                    if (clearAllBtn) {
+                        clearAllBtn.parentElement.remove();
+                    }
+                    
+                    // Update notification badge in header
+                    const badge = document.getElementById('notification-badge');
+                    if (badge) {
+                        badge.classList.add('scale-0', 'opacity-0');
+                        badge.classList.remove('scale-100', 'opacity-100');
+                    }
+                }, 300);
+            }
         } else {
             throw new Error(data.message || 'Failed to clear notifications');
         }
