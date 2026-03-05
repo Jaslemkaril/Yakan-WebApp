@@ -836,7 +836,46 @@
                             // If cart is now empty, show empty cart message
                             const cartItems = document.querySelectorAll('.cart-item');
                             if (cartItems.length === 0) {
-                                location.reload(); // Only reload if cart is completely empty
+                                // Replace cart content with empty cart message (NO RELOAD - preserve session)
+                                const cartContainer = document.querySelector('.flex.flex-col.lg\\:flex-row.gap-8');
+                                if (cartContainer) {
+                                    cartContainer.innerHTML = `
+                                        <div class="empty-cart" style="width: 100%;">
+                                            <div class="empty-cart-icon">
+                                                <svg class="w-12 h-12 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                                                </svg>
+                                            </div>
+                                            
+                                            <h3 class="text-3xl font-bold text-gray-900 mb-3">Your cart is empty</h3>
+                                            <p class="text-gray-600 mb-8 max-w-md mx-auto text-lg leading-relaxed">
+                                                Looks like you haven't added any items yet. Start shopping to fill your cart with amazing products!
+                                            </p>
+                                            
+                                            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                                                <a href="{{ route('products.index') }}" class="btn-primary text-lg px-8 py-3">
+                                                    <span>Start Shopping</span>
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                                                    </svg>
+                                                </a>
+                                                
+                                                <a href="{{ route('custom_orders.index') }}" class="btn-secondary text-lg px-8 py-3">
+                                                    <span>Custom Orders</span>
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                                    </svg>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+                                
+                                // Update cart badge
+                                const cartBadge = document.querySelector('.cart-badge');
+                                if (cartBadge) {
+                                    cartBadge.textContent = '0';
+                                }
                             } else {
                                 // Show success message
                                 const msg = document.createElement('div');
