@@ -97,29 +97,34 @@ return Application::configure(basePath: dirname(__DIR__))
                 return redirect()->back()->with('error', 'Session expired. Please try again.');
             }
             if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
-                if ($request->expectsJson()) {
+                if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
                     return response()->json(['success' => false, 'message' => 'The requested item was not found.'], 404);
                 }
                 return null; // Let Laravel show 404 page
             }
 
             \Log::error('Global exception caught: ' . $e->getMessage(), [
+                'exception' => get_class($e),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'url' => $request->fullUrl(),
                 'method' => $request->method(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             $statusCode = $e instanceof \Symfony\Component\HttpKernel\Exception\HttpException
                 ? $e->getStatusCode()
                 : 500;
             
-            // JSON response for API/AJAX requests
-            if ($request->expectsJson()) {
+            // Force JSON response for AJAX/API requests (check multiple indicators)
+            if ($request->expectsJson() || $request->ajax() || $request->wantsJson() || $request->is('api/*') || $request->is('admin/chats/*')) {
                 return response()->json([
                     'success' => false,
                     'message' => $e->getMessage(),
                     'error' => $e->getMessage(),
+                    'exception' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
                 ], $statusCode);
             }
 
