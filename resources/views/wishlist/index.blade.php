@@ -399,55 +399,31 @@ function removeFromWishlist(type, id) {
     
     // Disable button to prevent double clicks
     const button = event.target.closest('button');
-    if (button) button.disabled = true;
-    
-    // Get auth token for Railway session persistence
-    const authToken = localStorage.getItem('yakan_auth_token') || sessionStorage.getItem('auth_token');
-    
-    console.log('Attempting to remove item:', { type, id, hasToken: !!authToken });
-    
-    const headers = {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-        'Accept': 'application/json'
-    };
-    
-    if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-        headers['X-Auth-Token'] = authToken;
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<svg class="w-4 h-4 inline animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Removing...';
     }
     
-    fetch('{{ route("wishlist.remove") }}?auth_token=' + (authToken || ''), {
+    fetch('{{ route("wishlist.remove") }}', {
         method: 'POST',
-        headers: headers,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         body: JSON.stringify({
             type: type,
-            id: id,
-            auth_token: authToken
+            id: id
         })
     })
     .then(response => {
-        console.log('Response status:', response.status);
-        console.log('Response headers:', {
-            contentType: response.headers.get('content-type'),
-            location: response.headers.get('location')
-        });
-        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        // Check if response is HTML instead of JSON
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('text/html')) {
-            console.error('Received HTML instead of JSON - probably redirected to login');
-            throw new Error('Session expired. Please refresh the page and login again.');
-        }
-        
         return response.json();
     })
     .then(data => {
-        console.log('Response data:', data);
         if (data.success) {
             // Fade out and remove the item
             itemElement.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
@@ -461,7 +437,7 @@ function removeFromWishlist(type, id) {
                 const remainingItems = document.querySelectorAll('.wishlist-card').length;
                 const countText = document.getElementById('wishlist-count-text');
                 if (countText) {
-                    countText.textContent = `${remainingItems} items saved`;
+                    countText.textContent = `${remainingItems} ${remainingItems === 1 ? 'item' : 'items'} saved`;
                 }
                 
                 // Update header wishlist badge
@@ -480,35 +456,37 @@ function removeFromWishlist(type, id) {
                 }
             }, 300);
             
-            showNotification(data.message || 'Removed from wishlist!');
+            showNotification(data.message || 'Removed from wishlist!', 'success');
         } else {
             showNotification(data.message || 'Error occurred', 'error');
-            if (button) button.disabled = false;
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = '<svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>Remove';
+            }
         }
     })
     .catch(error => {
         console.error('Error removing from wishlist:', error);
-        console.error('Error details:', {
-            name: error.name,
-            message: error.message,
-            hasToken: !!authToken,
-            tokenLength: authToken ? authToken.length : 0
-        });
-        showNotification('Error removing from wishlist. Please refresh and try again.', 'error');
-        if (button) button.disabled = false;
+        showNotification('Error removing from wishlist. Please try again.', 'error');
+        if (button) {
+            button.disabled = false;
+            button.innerHTML = '<svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>Remove';
+        }
     });
 }
 
 function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+    notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300 ${
         type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
     }`;
     notification.textContent = message;
     document.body.appendChild(notification);
     
     setTimeout(() => {
-        notification.remove();
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateY(-20px)';
+        setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
 </script>

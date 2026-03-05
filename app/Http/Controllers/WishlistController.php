@@ -55,70 +55,67 @@ class WishlistController extends Controller
 
     public function remove(Request $request)
     {
-        $request->validate([
-            'type' => 'required|in:product,pattern',
-            'id' => 'required|integer',
-        ]);
+        try {
+            $request->validate([
+                'type' => 'required|in:product,pattern',
+                'id' => 'required|integer',
+            ]);
 
-        // Log request details for debugging
-        \Log::info('Wishlist remove request', [
-            'type' => $request->type,
-            'id' => $request->id,
-            'wantsJson' => $request->wantsJson(),
-            'ajax' => $request->ajax(),
-            'accept_header' => $request->header('Accept'),
-            'content_type' => $request->header('Content-Type'),
-            'is_json' => $request->isJson(),
-            'expects_json' => $request->expectsJson(),
-            'authenticated' => Auth::check(),
-            'user_id' => Auth::id()
-        ]);
-
-        $user = Auth::user();
-        
-        if (!$user) {
-            \Log::warning('Wishlist remove: No authenticated user');
-            return response()->json(['success' => false, 'message' => 'Not authenticated'], 401);
-        }
-        
-        $wishlist = $user->wishlists()->default()->first();
-
-        if (!$wishlist) {
-            \Log::warning('Wishlist remove: Wishlist not found for user', ['user_id' => $user->id]);
-            return response()->json(['success' => false, 'message' => 'Wishlist not found.'], 404);
-        }
-
-        $item = null;
-        if ($request->type === 'product') {
-            $item = Product::findOrFail($request->id);
-        } elseif ($request->type === 'pattern') {
-            $item = YakanPattern::findOrFail($request->id);
-        }
-
-        if ($item && $wishlist->hasItem($item)) {
-            $wishlist->removeItem($item);
+            $user = Auth::user();
             
-            \Log::info('Wishlist remove: Item removed successfully', [
-                'type' => $request->type,
-                'id' => $request->id,
-                'returning_json' => true
+            if (!$user) {
+                return response()->json(['success' => false, 'message' => 'Not authenticated'], 401);
+            }
+            
+            $wishlist = $user->wishlists()->default()->first();
+
+            if (!$wishlist) {
+                return response()->json(['success' => false, 'message' => 'Wishlist not found.'], 404);
+            }
+
+            $item = null;
+            if ($request->type === 'product') {
+                $item = Product::find($request->id);
+            } elseif ($request->type === 'pattern') {
+                $item = YakanPattern::find($request->id);
+            }
+
+            if (!$item) {
+                return response()->json(['success' => false, 'message' => 'Item not found'], 404);
+            }
+
+            if ($wishlist->hasItem($item)) {
+                $wishlist->removeItem($item);
+                
+                \Log::info('Wishlist item removed successfully', [
+                    'user_id' => $user->id,
+                    'type' => $request->type,
+                    'id' => $request->id
+                ]);
+                
+                return response()->json([
+                    'success' => true, 
+                    'message' => 'Removed from wishlist!',
+                    'remaining_count' => $wishlist->items()->count()
+                ]);
+            }
+            
+            return response()->json([
+                'success' => false, 
+                'message' => 'Item not in wishlist'
+            ], 404);
+            
+        } catch (\Exception $e) {
+            \Log::error('Wishlist remove error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
             return response()->json([
-                'success' => true, 
-                'message' => 'Removed from wishlist!'
-            ])->header('Content-Type', 'application/json');
+                'success' => false,
+                'message' => 'An error occurred while removing the item'
+            ], 500);
         }
-
-        \Log::warning('Wishlist remove: Item not in wishlist', [
-            'type' => $request->type,
-            'id' => $request->id
-        ]);
-        
-        return response()->json([
-            'success' => false, 
-            'message' => 'Item not in wishlist'
-        ], 404)->header('Content-Type', 'application/json');
     }
 
     public function check(Request $request)
