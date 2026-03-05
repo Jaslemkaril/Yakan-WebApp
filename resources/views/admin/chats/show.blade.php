@@ -426,7 +426,17 @@
             return;
         }
         
-        fetch(`/admin/chats/{{ $chat->id }}/request-details/${messageId}`, {
+        // Get auth_token from URL for Railway session handling
+        const urlParams = new URLSearchParams(window.location.search);
+        const authToken = urlParams.get('auth_token');
+        
+        // Build URL with auth_token if present
+        let url = `/admin/chats/{{ $chat->id }}/request-details/${messageId}`;
+        if (authToken) {
+            url += `?auth_token=${encodeURIComponent(authToken)}`;
+        }
+        
+        fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
