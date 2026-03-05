@@ -12,6 +12,21 @@ use Illuminate\Support\Facades\Storage;
 class ChatController extends Controller
 {
     /**
+     * Helper to build redirect URL with auth_token if present
+     */
+    private function redirectWithToken($route, $parameters = [])
+    {
+        $url = route($route, $parameters);
+        $token = request()->input('auth_token') ?? request()->query('auth_token') ?? session('auth_token');
+        
+        if ($token) {
+            $url .= (strpos($url, '?') !== false ? '&' : '?') . 'auth_token=' . urlencode($token);
+        }
+        
+        return redirect($url);
+    }
+
+    /**
      * Show user's chat list
      */
     public function index()
@@ -26,8 +41,12 @@ class ChatController extends Controller
         try {
             if (!auth()->check()) {
                 \Log::error('ChatController index: User not authenticated, redirecting to login');
-                return redirect()->route('login.user.form')
-                    ->with('error', 'Please log in to view your chats.');
+                $url = route('login.user.form');
+                $token = request()->input('auth_token') ?? request()->query('auth_token') ?? session('auth_token');
+                if ($token) {
+                    $url .= '?auth_token=' . urlencode($token);
+                }
+                return redirect($url)->with('error', 'Please log in to view your chats.');
             }
             
             \Log::info('ChatController index: User authenticated, loading chats', [
@@ -124,7 +143,7 @@ class ChatController extends Controller
                 );
             }
             
-            return redirect()->route('chats.index')
+            return $this->redirectWithToken('chats.index')
                 ->with('error', 'Unable to load chat. Please try again.');
         }
     }
@@ -227,7 +246,7 @@ class ChatController extends Controller
 
         ChatMessage::create($messageData);
 
-        return redirect()->route('chats.show', $chat)->with('success', 'Chat created successfully!');
+        return $this->redirectWithToken('chats.show', $chat)->with('success', 'Chat created successfully!');
     }
 
     /**
@@ -308,7 +327,7 @@ class ChatController extends Controller
             return response()->json(['success' => true]);
         }
 
-        return redirect()->route('chats.show', $chat);
+        return $this->redirectWithToken('chats.show', $chat);
     }
 
     /**
@@ -322,7 +341,7 @@ class ChatController extends Controller
 
         $chat->update(['status' => 'closed']);
 
-        return redirect()->route('chats.index')->with('success', 'Chat closed successfully!');
+        return $this->redirectWithToken('chats.index')->with('success', 'Chat closed successfully!');
     }
 
     /**
@@ -451,7 +470,7 @@ class ChatController extends Controller
                 ]);
                 
                 // Show the actual error to user for debugging
-                return redirect()->route('chats.show', $chat)->with('error', 'Database Error: ' . $e->getMessage());
+                return $this->redirectWithToken('chats.show', $chat)->with('error', 'Database Error: ' . $e->getMessage());
             }
             
             $chat->update(['updated_at' => now()]);
@@ -459,7 +478,7 @@ class ChatController extends Controller
             $chat->update(['updated_at' => now()]);
         }
 
-        return redirect()->route('chats.show', $chat)->with('success', 'Response sent to admin!');
+        return $this->redirectWithToken('chats.show', $chat)->with('success', 'Response sent to admin!');
     }
     
     /**
@@ -613,6 +632,6 @@ class ChatController extends Controller
         
         $chat->update(['updated_at' => now()]);
         
-        return redirect()->route('chats.show', $chat)->with('success', 'Details submitted successfully! The admin will review and send you a price quote.');
+        return $this->redirectWithToken('chats.show', $chat)->with('success', 'Details submitted successfully! The admin will review and send you a price quote.');
     }
 }
