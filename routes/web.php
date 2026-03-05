@@ -719,25 +719,6 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{review}', [ReviewController::class, 'destroy'])->name('destroy');
     });
 
-    // Chat
-    Route::prefix('chats')->name('chats.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\ChatController::class, 'index'])->name('index');
-        Route::get('/create', [\App\Http\Controllers\ChatController::class, 'create'])->name('create');
-        Route::post('/', [\App\Http\Controllers\ChatController::class, 'store'])->name('store');
-        Route::get('/{chat}', [\App\Http\Controllers\ChatController::class, 'show'])->name('show');
-        Route::post('/{chat}/message', [\App\Http\Controllers\ChatController::class, 'sendMessage'])->name('send-message');
-        Route::post('/{chat}/close', [\App\Http\Controllers\ChatController::class, 'close'])->name('close');
-        Route::post('/{chat}/respond-quote', [\App\Http\Controllers\ChatController::class, 'respondToQuote'])->name('respond-quote');
-        Route::post('/{chat}/submit-form-response', [\App\Http\Controllers\ChatController::class, 'submitFormResponse'])->name('submit-form-response');
-        
-        // Payment routes for in-chat payments
-        Route::post('/{chat}/payment/submit', [\App\Http\Controllers\ChatPaymentController::class, 'submitPaymentProof'])->name('payment.submit');
-    });
-    
-    // Order payment method selection (for chat-based custom orders)
-    Route::post('/custom-orders/{customOrder}/set-payment-method', [\App\Http\Controllers\ChatController::class, 'setPaymentMethod'])->name('orders.set_payment_method')->middleware('auth');
-    Route::post('/custom-orders/{customOrder}/upload-receipt', [\App\Http\Controllers\ChatController::class, 'uploadReceipt'])->name('orders.upload_receipt')->middleware('auth');
-
     // Redirect old colors route to pattern selection
     Route::get('/custom-orders/create/colors', function() {
         return redirect()->route('custom_orders.create.pattern')
@@ -854,6 +835,26 @@ Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->gr
 });
 
 });
+
+// Chat Routes - Outside auth middleware to allow TokenAuth to work
+// Controllers verify ownership with auth()->id() checks
+Route::prefix('chats')->name('chats.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\ChatController::class, 'index'])->name('index');
+    Route::get('/create', [\App\Http\Controllers\ChatController::class, 'create'])->name('create');
+    Route::post('/', [\App\Http\Controllers\ChatController::class, 'store'])->name('store');
+    Route::get('/{chat}', [\App\Http\Controllers\ChatController::class, 'show'])->name('show');
+    Route::post('/{chat}/message', [\App\Http\Controllers\ChatController::class, 'sendMessage'])->name('send-message');
+    Route::post('/{chat}/close', [\App\Http\Controllers\ChatController::class, 'close'])->name('close');
+    Route::post('/{chat}/respond-quote', [\App\Http\Controllers\ChatController::class, 'respondToQuote'])->name('respond-quote');
+    Route::post('/{chat}/submit-form-response', [\App\Http\Controllers\ChatController::class, 'submitFormResponse'])->name('submit-form-response');
+    
+    // Payment routes for in-chat payments
+    Route::post('/{chat}/payment/submit', [\App\Http\Controllers\ChatPaymentController::class, 'submitPaymentProof'])->name('payment.submit');
+});
+
+// Order payment method selection (for chat-based custom orders)
+Route::post('/custom-orders/{customOrder}/set-payment-method', [\App\Http\Controllers\ChatController::class, 'setPaymentMethod'])->name('orders.set_payment_method')->middleware('auth');
+Route::post('/custom-orders/{customOrder}/upload-receipt', [\App\Http\Controllers\ChatController::class, 'uploadReceipt'])->name('orders.upload_receipt')->middleware('auth');
 
 // Track Order - Redirect old routes to new implementation
 Route::get('/track', function() {
