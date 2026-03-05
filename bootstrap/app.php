@@ -57,6 +57,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'chats/*',
             'cart/*',
             'wishlist/*',
+            'notifications/*',
             'addresses/*',
             'addresses',
             'payment/*',
