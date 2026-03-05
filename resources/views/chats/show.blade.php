@@ -674,7 +674,7 @@
         <!-- Message Form -->
         @if($chat->status !== 'closed')
             <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mt-6">
-                <form action="{{ route('chats.send-message', $chat) }}" method="POST" enctype="multipart/form-data">
+                <form id="chatMessageForm" action="{{ route('chats.send-message', $chat) }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     @if(request()->get('auth_token') || session('auth_token'))
                         <input type="hidden" name="auth_token" value="{{ request()->get('auth_token') ?? session('auth_token') }}">
@@ -713,9 +713,13 @@
                             <textarea id="message" name="message" rows="1" class="flex-1 border-none bg-transparent resize-none outline-none text-sm text-gray-900 placeholder-gray-400 px-2 py-1" placeholder="Type your message here..." style="min-height: 24px; max-height: 120px; overflow-y: auto;" oninput="autoResize(this)"></textarea>
 
                             <!-- Send Button -->
-                            <button type="submit" class="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] border-none rounded-full cursor-pointer transition-all duration-200 flex-shrink-0 p-0 shadow-md hover:shadow-lg" title="Send message">
-                                <svg class="w-4 h-4 text-white block" fill="currentColor" viewBox="0 0 24 24">
+                            <button type="submit" id="sendButton" class="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] border-none rounded-full cursor-pointer transition-all duration-200 flex-shrink-0 p-0 shadow-md hover:shadow-lg" title="Send message">
+                                <svg id="sendIcon" class="w-4 h-4 text-white block" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/>
+                                </svg>
+                                <svg id="sendingIcon" class="w-4 h-4 text-white hidden animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                             </button>
                         </div>
@@ -868,6 +872,124 @@
     function autoResize(textarea) {
         textarea.style.height = 'auto';
         textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    }
+
+    // AJAX Form Submission for Chat Messages
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('chatMessageForm');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('message');
+        const sendButton = document.getElementById('sendButton');
+        const sendIcon = document.getElementById('sendIcon');
+        const sendingIcon = document.getElementById('sendingIcon');
+
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(form);
+                const messageText = messageInput.value.trim();
+                const hasImage = document.getElementById('image').files.length > 0;
+                
+                // Require either message or image
+                if (!messageText && !hasImage) {
+                    return;
+                }
+                
+                // Disable form during submission
+                sendButton.disabled = true;
+                sendIcon.classList.add('hidden');
+                sendingIcon.classList.remove('hidden');
+                messageInput.disabled = true;
+                
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Add new message to chat
+                        if (data.message) {
+                            const messageHtml = createMessageElement(data.message);
+                            messagesContainer.insertAdjacentHTML('beforeend', messageHtml);
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        }
+                        
+                        // Clear form
+                        messageInput.value = '';
+                        messageInput.style.height = 'auto';
+                        clearImage();
+                        
+                        // Re-enable form
+                        sendButton.disabled = false;
+                        sendIcon.classList.remove('hidden');
+                        sendingIcon.classList.add('hidden');
+                        messageInput.disabled = false;
+                        messageInput.focus();
+                    } else {
+                        alert(data.message || 'Failed to send message');
+                        sendButton.disabled = false;
+                        sendIcon.classList.remove('hidden');
+                        sendingIcon.classList.add('hidden');
+                        messageInput.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to send message. Please try again.');
+                    sendButton.disabled = false;
+                    sendIcon.classList.remove('hidden');
+                    sendingIcon.classList.add('hidden');
+                    messageInput.disabled = false;
+                });
+            });
+        }
+    });
+
+    function createMessageElement(message) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        
+        let html = `
+            <div class="flex justify-end mb-4 animate-fadeIn">
+                <div class="max-w-[70%]">
+                    <div class="bg-gradient-to-br from-[#8B0000] to-[#6B0000] text-white rounded-2xl rounded-tr-none px-5 py-3 shadow-md">
+        `;
+        
+        if (message.message) {
+            html += `<p class="text-sm leading-relaxed whitespace-pre-wrap break-words">${escapeHtml(message.message)}</p>`;
+        }
+        
+        if (message.image_path) {
+            html += `
+                <div class="mt-3">
+                    <img src="${escapeHtml(message.image_path)}" alt="Chat image" class="max-w-full rounded-lg shadow-md border-2 border-white/30" style="max-height: 300px;">
+                </div>
+            `;
+        }
+        
+        html += `
+                    </div>
+                    <div class="text-right mt-1">
+                        <span class="text-xs text-gray-500">${dateStr} ${timeStr}</span>
+                        <span class="text-xs text-gray-400 ml-2">You</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     function updateImagePreview(input) {

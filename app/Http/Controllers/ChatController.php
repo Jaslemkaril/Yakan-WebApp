@@ -266,6 +266,12 @@ class ChatController extends Controller
 
         // Require either message or image
         if (empty($validated['message']) && !$request->hasFile('image')) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please provide either a message or an image'
+                ], 400);
+            }
             return back()->withErrors(['message' => 'Please provide either a message or an image']);
         }
 
@@ -316,15 +322,30 @@ class ChatController extends Controller
                     'chat_id' => $chat->id,
                     'user_id' => auth()->id(),
                 ]);
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Failed to upload image: ' . $e->getMessage()
+                    ], 500);
+                }
                 return back()->withErrors(['image' => 'Failed to upload image: ' . $e->getMessage()]);
             }
         }
 
-        ChatMessage::create($messageData);
+        $newMessage = ChatMessage::create($messageData);
         $chat->update(['updated_at' => now()]);
 
-        if ($request->expectsJson()) {
-            return response()->json(['success' => true]);
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => [
+                    'id' => $newMessage->id,
+                    'message' => $newMessage->message,
+                    'image_path' => $newMessage->image_path,
+                    'sender_type' => $newMessage->sender_type,
+                    'created_at' => $newMessage->created_at->toISOString(),
+                ]
+            ]);
         }
 
         return $this->redirectWithToken('chats.show', $chat);
