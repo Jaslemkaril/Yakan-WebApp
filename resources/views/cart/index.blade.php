@@ -281,6 +281,22 @@
         color: #800000;
         font-size: 24px;
     }
+    
+    /* Modal animations */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    
+    .animate-fadeIn {
+        animation: fadeIn 0.2s ease-out;
+    }
 </style>
 @endpush
 
@@ -515,6 +531,70 @@
         @endif
     </div>
 
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmationModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4 py-6">
+            <!-- Backdrop -->
+            <div class="fixed inset-0 transition-opacity bg-gray-900 bg-opacity-75" onclick="closeConfirmationModal()"></div>
+            
+            <!-- Modal -->
+            <div class="relative inline-block bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all max-w-lg w-full">
+                <div class="bg-white px-6 pt-6 pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-14 w-14 rounded-full bg-red-100 sm:mx-0 sm:h-12 sm:w-12">
+                            <svg class="h-7 w-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
+                            <h3 class="text-xl font-bold text-gray-900 mb-2" id="modalTitle">
+                                Remove Item?
+                            </h3>
+                            <p class="text-gray-600" id="modalMessage">
+                                Are you sure you want to remove this item from your cart?
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-6 py-4 sm:flex sm:flex-row-reverse gap-3">
+                    <button onclick="confirmAction()" 
+                            class="w-full sm:w-auto inline-flex justify-center rounded-lg border border-transparent shadow-sm px-6 py-2.5 bg-red-600 text-base font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200">
+                        Remove
+                    </button>
+                    <button onclick="closeConfirmationModal()" 
+                            class="mt-3 sm:mt-0 w-full sm:w-auto inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-6 py-2.5 bg-white text-base font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-maroon-500 transition-colors duration-200">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let confirmCallback = null;
+
+        function showConfirmationModal(title, message, callback) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            confirmCallback = callback;
+            const modal = document.getElementById('confirmationModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('animate-fadeIn');
+        }
+
+        function closeConfirmationModal() {
+            const modal = document.getElementById('confirmationModal');
+            modal.classList.add('hidden');
+            confirmCallback = null;
+        }
+
+        function confirmAction() {
+            if (confirmCallback) {
+                confirmCallback();
+            }
+            closeConfirmationModal();
+        }
+
     <script>
         function toggleSelectAll(checkbox) {
             const itemCheckboxes = document.querySelectorAll('.item-checkbox');
@@ -719,63 +799,67 @@
         }
 
         function removeItem(itemId) {
-            if (!confirm('Remove this item?')) return;
-            
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            const authToken = localStorage.getItem('yakan_auth_token') || sessionStorage.getItem('yakan_auth_token');
-            
-            // Build URL with auth_token query parameter for Railway
-            let url = `/cart/remove/${itemId}`;
-            if (authToken) {
-                url += `?auth_token=${encodeURIComponent(authToken)}`;
-            }
-            
-            fetch(url, {
-                method: 'DELETE',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
-                },
-                credentials: 'include' // Include cookies for authentication
-            })
-            .then(r => {
-                if (!r.ok) {
-                    throw new Error('Remove failed');
-                }
-                return r.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // DON'T reload - remove the item from DOM to preserve session
-                    const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
-                    if (itemElement) {
-                        itemElement.remove();
+            showConfirmationModal(
+                'Remove Item?',
+                'Are you sure you want to remove this item from your cart?',
+                () => {
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    const authToken = localStorage.getItem('yakan_auth_token') || sessionStorage.getItem('yakan_auth_token');
+                    
+                    // Build URL with auth_token query parameter for Railway
+                    let url = `/cart/remove/${itemId}`;
+                    if (authToken) {
+                        url += `?auth_token=${encodeURIComponent(authToken)}`;
                     }
                     
-                    // If cart is now empty, show empty cart message
-                    const cartItems = document.querySelectorAll('.cart-item');
-                    if (cartItems.length === 0) {
-                        location.reload(); // Only reload if cart is completely empty
-                    } else {
-                        // Show success message
-                        const msg = document.createElement('div');
-                        msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-                        msg.textContent = '✓ Item removed';
-                        document.body.appendChild(msg);
-                        setTimeout(() => msg.remove(), 2000);
-                        
-                        // Update selection to recalculate totals based on remaining checked items
-                        updateSelection();
-                    }
-                } else {
-                    console.error('Remove failed:', data.message);
-                    alert('Failed to remove item. Please try again.');
+                    fetch(url, {
+                        method: 'DELETE',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken
+                        },
+                        credentials: 'include' // Include cookies for authentication
+                    })
+                    .then(r => {
+                        if (!r.ok) {
+                            throw new Error('Remove failed');
+                        }
+                        return r.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // DON'T reload - remove the item from DOM to preserve session
+                            const itemElement = document.querySelector(`[data-item-id=\"${itemId}\"]`);
+                            if (itemElement) {
+                                itemElement.remove();
+                            }
+                            
+                            // If cart is now empty, show empty cart message
+                            const cartItems = document.querySelectorAll('.cart-item');
+                            if (cartItems.length === 0) {
+                                location.reload(); // Only reload if cart is completely empty
+                            } else {
+                                // Show success message
+                                const msg = document.createElement('div');
+                                msg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+                                msg.textContent = '✓ Item removed';
+                                document.body.appendChild(msg);
+                                setTimeout(() => msg.remove(), 2000);
+                                
+                                // Update selection to recalculate totals based on remaining checked items
+                                updateSelection();
+                            }
+                        } else {
+                            console.error('Remove failed:', data.message);
+                            alert('Failed to remove item. Please try again.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error removing item:', error);
+                        alert('An error occurred. Please refresh the page and try again.');
+                    });
                 }
-            })
-            .catch(error => {
-                console.error('Error removing item:', error);
-                alert('An error occurred. Please refresh the page and try again.');
-            });
+            );
         }
     </script>
 @endsection
