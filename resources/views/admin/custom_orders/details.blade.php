@@ -660,7 +660,7 @@
                     @endif
                     
                     {{-- 2. Payment Verification (Only shows when payment proof uploaded) --}}
-                    @if($order->payment_receipt && in_array($order->payment_status, ['pending', 'pending_verification']))
+                    @if($order->payment_receipt && $order->payment_status === 'paid' && empty($order->payment_confirmed_at))
                     <div class="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-lg p-5 border-2 border-yellow-200 shadow-sm">
                         <div class="flex items-center gap-2 mb-4">
                             <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -680,8 +680,11 @@
                         
                         <div class="space-y-2">
                             {{-- Confirm Payment Button --}}
-                            <form action="{{ route('admin.custom_orders.confirmPayment', $order) }}" method="POST">
+                            <form action="{{ route('admin.custom_orders.confirmPayment', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
                                 @csrf
+                                @if(request('auth_token'))
+                                <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+                                @endif
                                 <button type="submit" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-3.5 px-4 rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 transform hover:scale-[1.02]">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -691,8 +694,11 @@
                             </form>
                             
                             {{-- Reject Payment Button --}}
-                            <form action="{{ route('admin.custom_orders.rejectPayment', $order) }}" method="POST" onsubmit="return confirm('Are you sure you want to reject this payment? Customer will need to resubmit.');">
+                            <form action="{{ route('admin.custom_orders.rejectPayment', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" onsubmit="return confirm('Are you sure you want to reject this payment? Customer will need to resubmit.');">
                                 @csrf
+                                @if(request('auth_token'))
+                                <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+                                @endif
                                 <button type="submit" class="w-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 transform hover:scale-[1.01]">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>

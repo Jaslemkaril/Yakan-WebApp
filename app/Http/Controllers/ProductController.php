@@ -61,7 +61,7 @@ class ProductController extends Controller
             }
             
             // Fetch products with pagination and category relationship
-            $products = $query->with(['category', 'inventory'])->paginate(12)->appends($request->all());
+            $products = $query->with(['category', 'inventory'])->withCount('reviews')->paginate(12)->appends($request->all());
 
             // Get wishlist items if user is authenticated
             $wishlistProductIds = [];
@@ -82,7 +82,7 @@ class ProductController extends Controller
             \Log::error('ProductController::shopIndex error: ' . $e->getMessage());
             
             // Fallback to simple products query
-            $products = Product::paginate(12);
+            $products = Product::withCount('reviews')->paginate(12);
             $categories = Category::withCount('products')->orderBy('name')->get();
             $wishlistProductIds = [];
             if (auth()->check()) {

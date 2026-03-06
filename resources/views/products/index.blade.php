@@ -473,7 +473,7 @@
                                             @endif
                                         @endfor
                                     </div>
-                                    <span class="text-xs sm:text-sm text-gray-500 hidden sm:inline">(24 reviews)</span>
+                                    <span class="text-xs sm:text-sm text-gray-500 hidden sm:inline">({{ $product->reviews_count ?? 0 }} {{ Str::plural('review', $product->reviews_count ?? 0) }})</span>
                                 </div>
                                 
                                 <!-- Price Section -->

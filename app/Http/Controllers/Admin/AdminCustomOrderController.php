@@ -330,14 +330,19 @@ class AdminCustomOrderController extends Controller
 
     public function confirmPayment(CustomOrder $order)
     {
+        // Extract auth_token for redirect preservation
+        $authToken = request()->input('auth_token') ?? request()->query('auth_token');
+        $redirectUrl = $authToken ? url()->previous() . (strpos(url()->previous(), '?') !== false ? '&' : '?') . 'auth_token=' . urlencode($authToken) : url()->previous();
+        
         try {
             // Verify the order is in the correct state for payment confirmation
-            if ($order->status !== 'approved') {
-                return redirect()->back()->with('error', 'Order must be in approved status to confirm payment.');
+            // Accept both 'approved' and 'processing' statuses (processing is set when payment proof uploaded)
+            if (!in_array($order->status, ['approved', 'processing'])) {
+                return redirect($redirectUrl)->with('error', 'Order must be in approved or processing status to confirm payment.');
             }
 
             if ($order->payment_status !== 'paid' || !$order->payment_receipt) {
-                return redirect()->back()->with('error', 'Payment receipt must be uploaded before confirmation.');
+                return redirect($redirectUrl)->with('error', 'Payment receipt must be uploaded before confirmation.');
             }
 
             // Confirm payment by adding a timestamp - payment_status stays 'paid'
@@ -350,27 +355,32 @@ class AdminCustomOrderController extends Controller
                 'admin_id' => auth('admin')->id() ?? auth()->id()
             ]);
 
-            return redirect()->back()->with('success', 'Payment confirmed. You can now start production.');
+            return redirect($redirectUrl)->with('success', 'Payment confirmed. You can now start production.');
         } catch (\Exception $e) {
             \Log::error('Payment confirmation error', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage()
             ]);
 
-            return redirect()->back()->with('error', 'Failed to confirm payment: ' . $e->getMessage());
+            return redirect($redirectUrl)->with('error', 'Failed to confirm payment: ' . $e->getMessage());
         }
     }
 
     public function rejectPayment(CustomOrder $order)
     {
+        // Extract auth_token for redirect preservation
+        $authToken = request()->input('auth_token') ?? request()->query('auth_token');
+        $redirectUrl = $authToken ? url()->previous() . (strpos(url()->previous(), '?') !== false ? '&' : '?') . 'auth_token=' . urlencode($authToken) : url()->previous();
+        
         try {
             // Verify the order is in the correct state for payment rejection
-            if ($order->status !== 'approved') {
-                return redirect()->back()->with('error', 'Order must be in approved status to reject payment.');
+            // Accept both 'approved' and 'processing' statuses (processing is set when payment proof uploaded)
+            if (!in_array($order->status, ['approved', 'processing'])) {
+                return redirect($redirectUrl)->with('error', 'Order must be in approved or processing status to reject payment.');
             }
 
             if (!$order->payment_receipt) {
-                return redirect()->back()->with('error', 'No payment receipt found to reject.');
+                return redirect($redirectUrl)->with('error', 'No payment receipt found to reject.');
             }
 
             // Reject payment and set status back for customer to resubmit
@@ -384,14 +394,14 @@ class AdminCustomOrderController extends Controller
                 'admin_id' => auth('admin')->id() ?? auth()->id()
             ]);
 
-            return redirect()->back()->with('success', 'Payment rejected. Customer will need to resubmit payment.');
+            return redirect($redirectUrl)->with('success', 'Payment rejected. Customer will need to resubmit payment.');
         } catch (\Exception $e) {
             \Log::error('Payment rejection error', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage()
             ]);
 
-            return redirect()->back()->with('error', 'Failed to reject payment: ' . $e->getMessage());
+            return redirect($redirectUrl)->with('error', 'Failed to reject payment: ' . $e->getMessage());
         }
     }
     
