@@ -1064,8 +1064,18 @@
     
     // Payment Method Selection
     function selectPaymentMethod(orderId, method) {
+        // Extract auth_token from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const authToken = urlParams.get('auth_token');
+        
+        // Build URL with auth_token if present
+        let url = `/custom-orders/${orderId}/set-payment-method`;
+        if (authToken) {
+            url += `?auth_token=${encodeURIComponent(authToken)}`;
+        }
+        
         // Update order with selected payment method
-        fetch(`/custom-orders/${orderId}/set-payment-method`, {
+        fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1076,8 +1086,12 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Reload page to show payment details
-                window.location.reload();
+                // Reload page to show payment details with auth_token preserved
+                if (authToken) {
+                    window.location.href = window.location.pathname + '?auth_token=' + encodeURIComponent(authToken);
+                } else {
+                    window.location.reload();
+                }
             } else {
                 alert('Failed to set payment method. Please try again.');
             }
