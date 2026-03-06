@@ -141,21 +141,62 @@
                     <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
-                    Pattern Preview
-                    @if($order->design_method === 'pattern')
-                        <span class="text-sm font-normal text-[#800000]">(Customized Pattern)</span>
-                    @endif
+                    Design References
                 </h2>
                 
                 <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border-2 border-red-200">
-                    @if(str_starts_with($order->design_upload, 'data:image'))
-                        <img src="{{ $order->design_upload }}" alt="Pattern Preview" 
-                             class="w-full max-h-96 object-contain rounded-lg shadow-lg">
+                    @php
+                        // Handle multiple images (comma-separated)
+                        $designImages = is_string($order->design_upload) ? explode(',', $order->design_upload) : [$order->design_upload];
+                        $designImages = array_filter(array_map('trim', $designImages));
+                    @endphp
+                    
+                    @if(count($designImages) > 1)
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            @foreach($designImages as $imageUrl)
+                                <div class="bg-white rounded-lg p-2 shadow-md">
+                                    @if(str_starts_with($imageUrl, 'http'))
+                                        <img src="{{ $imageUrl }}" alt="Design Reference" 
+                                             class="w-full h-64 object-contain rounded cursor-pointer hover:scale-105 transition-transform"
+                                             onclick="window.open('{{ $imageUrl }}', '_blank')">
+                                    @elseif(str_starts_with($imageUrl, 'data:image'))
+                                        <img src="{{ $imageUrl }}" alt="Design Reference" 
+                                             class="w-full h-64 object-contain rounded">
+                                    @else
+                                        <img src="{{ asset('storage/' . $imageUrl) }}" alt="Design Reference" 
+                                             class="w-full h-64 object-contain rounded cursor-pointer hover:scale-105 transition-transform"
+                                             onclick="window.open('{{ asset('storage/' . $imageUrl) }}', '_blank')">
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
                     @else
-                        <img src="{{ asset('storage/' . $order->design_upload) }}" alt="Pattern Preview" 
-                             class="w-full max-h-96 object-contain rounded-lg shadow-lg">
+                        @php
+                            $singleImage = $designImages[0] ?? $order->design_upload;
+                        @endphp
+                        @if(str_starts_with($singleImage, 'http'))
+                            <img src="{{ $singleImage }}" alt="Design Reference" 
+                                 class="w-full max-h-96 object-contain rounded-lg shadow-lg cursor-pointer hover:scale-105 transition-transform"
+                                 onclick="window.open('{{ $singleImage }}', '_blank')">
+                        @elseif(str_starts_with($singleImage, 'data:image'))
+                            <img src="{{ $singleImage }}" alt="Design Reference" 
+                                 class="w-full max-h-96 object-contain rounded-lg shadow-lg">
+                        @else
+                            <img src="{{ asset('storage/' . $singleImage) }}" alt="Design Reference" 
+                                 class="w-full max-h-96 object-contain rounded-lg shadow-lg cursor-pointer hover:scale-105 transition-transform"
+                                 onclick="window.open('{{ asset('storage/' . $singleImage) }}', '_blank')">
+                        @endif
                     @endif
                 </div>
+                
+                @if(count($designImages) > 1)
+                    <p class="text-sm text-gray-600 mt-2">
+                        <svg class="w-4 h-4 inline text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Click on any image to view in full size
+                    </p>
+                @endif
                 
                 {{-- Customization Settings --}}
                 @if($order->design_metadata && is_array($order->design_metadata))

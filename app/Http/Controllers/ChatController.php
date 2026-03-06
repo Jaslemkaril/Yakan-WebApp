@@ -460,7 +460,41 @@ class ChatController extends Controller
                 \Log::warning('reference_images column might not exist yet', ['error' => $e->getMessage()]);
             }
             
+            // Get form response data from chat messages
+            $formResponseMessage = ChatMessage::where('chat_id', $chat->id)
+                ->where('sender_type', 'user')
+                ->where('message_type', 'form_response')
+                ->latest()
+                ->first();
+            
+            $formData = [];
+            $orderName = null;
+            $quantityMeters = 1;
+            $fabricType = null;
+            $customerNotes = null;
+            
+            if ($formResponseMessage && !empty($formResponseMessage->form_data['responses'])) {
+                $formData = $formResponseMessage->form_data['responses'];
+                $orderName = $formData['order_name'] ?? null;
+                $quantityMeters = $formData['quantity_meters'] ?? 1;
+                $fabricType = $formData['fabric_type'] ?? null;
+                $customerNotes = $formData['additional_notes'] ?? null;
+            }
+            
+            // Build detailed specifications
             $orderNotes = 'Custom order from chat ID: ' . $chat->id;
+            
+            if ($orderName) {
+                $orderNotes .= "\n\nOrder Name: " . $orderName;
+            }
+            
+            if ($quantityMeters) {
+                $orderNotes .= "\nQuantity: " . $quantityMeters . " meters";
+            }
+            
+            if ($fabricType) {
+                $orderNotes .= "\nFabric Type: " . $fabricType;
+            }
             
             if (!empty($designImages)) {
                 $orderNotes .= "\n\nDesign References:\n";
@@ -475,6 +509,8 @@ class ChatController extends Controller
                     'user_id' => auth()->id(),
                     'chat_id' => $chat->id,
                     'specifications' => $orderNotes,
+                    'quantity' => (int)$quantityMeters ?: 1,
+                    'product_type' => $fabricType,
                     'estimated_price' => $quotedPrice,
                     'final_price' => $totalAmount,
                     'delivery_address' => $formattedAddress,
@@ -483,7 +519,7 @@ class ChatController extends Controller
                     'email' => auth()->user()->email,
                     'payment_status' => 'pending',
                     'status' => 'price_quoted',
-                    'additional_notes' => 'Shipping Fee: ₱' . number_format($shippingFee, 2) . "\nQuoted Price: ₱" . number_format($quotedPrice, 2) . "\nTotal: ₱" . number_format($totalAmount, 2),
+                    'additional_notes' => ($customerNotes ? "Customer Notes: " . $customerNotes . "\n\n" : '') . 'Shipping Fee: ₱' . number_format($shippingFee, 2) . "\nQuoted Price: ₱" . number_format($quotedPrice, 2) . "\nTotal: ₱" . number_format($totalAmount, 2),
                     'design_upload' => !empty($designImages) ? (is_array($designImages) ? implode(',', $designImages) : $designImages) : null,
                 ]);
                 
