@@ -83,7 +83,13 @@ class ProfileController extends Controller
         $user->avatar = Storage::url($path);
         $user->save();
 
-        return Redirect::route('profile.edit')->with('status', 'avatar-updated');
+        // Preserve auth_token for Railway deployment
+        $authToken = $request->input('auth_token') ?? $request->query('auth_token');
+        $redirectUrl = $authToken 
+            ? route('profile.edit') . '?auth_token=' . urlencode($authToken)
+            : route('profile.edit');
+
+        return Redirect::to($redirectUrl)->with('status', 'avatar-updated');
     }
 
     /**
@@ -103,7 +109,13 @@ class ProfileController extends Controller
         $user->avatar = null;
         $user->save();
 
-        return Redirect::route('profile.edit')->with('status', 'avatar-deleted');
+        // Preserve auth_token for Railway deployment
+        $authToken = $request->input('auth_token') ?? $request->query('auth_token');
+        $redirectUrl = $authToken 
+            ? route('profile.edit') . '?auth_token=' . urlencode($authToken)
+            : route('profile.edit');
+
+        return Redirect::to($redirectUrl)->with('status', 'avatar-deleted');
     }
 
     /**
