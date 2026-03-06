@@ -1,7 +1,10 @@
 <section x-data="{ editing: false }">
-    <form method="post" action="{{ route('password.update') }}" class="space-y-5">
+    <form method="post" action="{{ route('password.update') }}{{ request('auth_token') ? '?auth_token=' . urlencode(request('auth_token')) : '' }}" class="space-y-5">
         @csrf
         @method('put')
+        @if(request('auth_token'))
+            <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+        @endif
 
         <div>
             <label for="update_password_current_password" class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>

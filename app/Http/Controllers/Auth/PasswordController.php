@@ -24,6 +24,13 @@ class PasswordController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
+        // Preserve auth_token for Railway deployment
+        $authToken = $request->input('auth_token') ?? $request->query('auth_token');
+        if ($authToken) {
+            $redirectUrl = route('profile.edit') . '?auth_token=' . urlencode($authToken);
+            return redirect()->to($redirectUrl)->with('status', 'password-updated');
+        }
+
         return back()->with('status', 'password-updated');
     }
 }

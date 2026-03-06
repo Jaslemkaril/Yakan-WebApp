@@ -1,11 +1,17 @@
 <section x-data="{ editing: false }">
-    <form id="send-verification" method="post" action="{{ route('verification.send') }}">
+    <form id="send-verification" method="post" action="{{ route('verification.send') }}{{ request('auth_token') ? '?auth_token=' . urlencode(request('auth_token')) : '' }}">
         @csrf
+        @if(request('auth_token'))
+            <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+        @endif
     </form>
 
-    <form method="post" action="{{ route('profile.update') }}" class="space-y-5">
+    <form method="post" action="{{ route('profile.update') }}{{ request('auth_token') ? '?auth_token=' . urlencode(request('auth_token')) : '' }}" class="space-y-5">
         @csrf
         @method('patch')
+        @if(request('auth_token'))
+            <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+        @endif
 
         <div>
             <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Name</label>
