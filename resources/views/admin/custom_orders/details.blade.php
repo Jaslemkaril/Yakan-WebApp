@@ -279,25 +279,104 @@
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 class="text-xl font-bold text-gray-900 mb-4">Pricing</h2>
                 
+                @php
+                    $materialCost = 0;
+                    $patternFee = 0;
+                    $shippingFee = 0;
+                    $isFromChat = !empty($order->chat_id);
+                    $breakdownParsed = false;
+                    
+                    if ($isFromChat) {
+                        // Chat custom order - parse quote from chat messages
+                        $quoteMessage = \App\Models\ChatMessage::where('chat_id', $order->chat_id)
+                            ->where('sender_type', 'admin')
+                            ->where('message', 'like', '%PRICE QUOTE%')
+                            ->latest()
+                            ->first();
+                        
+                        if ($quoteMessage) {
+                            // Parse Material Cost
+                            if (preg_match('/Material Cost:\s*₱?([\d,]+\.?\d*)/i', $quoteMessage->message, $matches)) {
+                                $materialCost = floatval(str_replace(',', '', $matches[1]));
+                                $breakdownParsed = true;
+                            }
+                            
+                            // Parse Pattern Fee
+                            if (preg_match('/Pattern Fee:\s*₱?([\d,]+\.?\d*)/i', $quoteMessage->message, $matches)) {
+                                $patternFee = floatval(str_replace(',', '', $matches[1]));
+                                $breakdownParsed = true;
+                            }
+                        }
+                        
+                        // Parse shipping from additional_notes or default to 0
+                        if (preg_match('/Shipping Fee:\s*₱?([\d,]+\.?\d*)/i', $order->additional_notes ?? '', $matches)) {
+                            $shippingFee = floatval(str_replace(',', '', $matches[1]));
+                        }
+                    } else {
+                        // Pattern customizer order - calculate from patterns
+                        $patternIds = $order->patterns;
+                        if (is_string($patternIds)) {
+                            $patternIds = json_decode($patternIds, true) ?? [];
+                        }
+                        
+                        $patterns = \App\Models\YakanPattern::whereIn('id', (array)$patternIds)->get();
+                        
+                        $totalPatternFee = 0;
+                        $pricePerMeter = 0;
+                        foreach ($patterns as $pattern) {
+                            $totalPatternFee += ($pattern->pattern_price ?? 0);
+                            $pricePerMeter = $pattern->price_per_meter ?? 0;
+                        }
+                        
+                        $patternFee = $totalPatternFee * ($order->quantity ?? 1);
+                        $materialCost = ($order->fabric_quantity_meters ?? 0) * $pricePerMeter * ($order->quantity ?? 1);
+                        
+                        // Calculate shipping
+                        $shippingFee = 100;
+                        $address = strtolower($order->delivery_address ?? '');
+                        $city = '';
+                        $province = '';
+                        
+                        if (!$order->delivery_address && $order->user) {
+                            $userDefaultAddr = $order->user->addresses()->where('is_default', true)->first();
+                            if ($userDefaultAddr) {
+                                $address = strtolower($userDefaultAddr->formatted_address ?? $userDefaultAddr->city . ', ' . $userDefaultAddr->province);
+                                $city = strtolower($userDefaultAddr->city ?? '');
+                                $province = strtolower($userDefaultAddr->province ?? '');
+                            }
+                        }
+                        
+                        if ($address || $city) {
+                            if (str_contains($address, 'zamboanga') || str_contains($city, 'zamboanga')) {
+                                $shippingFee = 0;
+                            } elseif (str_contains($province, 'zamboanga') || in_array($city, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
+                                $shippingFee = 100;
+                            } elseif (in_array($city, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) || str_contains($province, 'barmm') || str_contains($province, 'armm')) {
+                                $shippingFee = 120;
+                            } elseif (str_contains($province, 'mindanao') || in_array($city, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'])) {
+                                $shippingFee = 150;
+                            } elseif (str_contains($province, 'visayas') || in_array($city, ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'])) {
+                                $shippingFee = 180;
+                            } elseif (str_contains($city, 'manila') || str_contains($province, 'ncr') || in_array($city, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'])) {
+                                $shippingFee = 220;
+                            } elseif (str_contains($province, 'luzon') || in_array($city, ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'])) {
+                                $shippingFee = 250;
+                            } else {
+                                $shippingFee = 280;
+                            }
+                        }
+                        
+                        $breakdownParsed = true;
+                    }
+                    
+                    $subtotal = $materialCost + $patternFee;
+                    $totalCalculated = $subtotal + $shippingFee;
+                @endphp
+                
                 <div class="space-y-3">
-                    @if($order->estimated_price)
-                    <div class="flex justify-between items-center py-2 border-b border-gray-200">
-                        <span class="text-gray-600">Estimated Price:</span>
-                        <span class="text-lg font-semibold text-gray-900">₱{{ number_format($order->estimated_price, 2) }}</span>
-                    </div>
-                    @endif
-                    
-                    @if($order->final_price)
-                    <div class="flex justify-between items-center py-2 border-b border-gray-200">
-                        <span class="text-gray-600">Final Price:</span>
-                        <span class="text-2xl font-bold text-green-600">₱{{ number_format($order->final_price, 2) }}</span>
-                    </div>
-                    
-                    {{-- Pricing Breakdown --}}
-                    @php
-                        $materialCost = 0;
-                        $patternFee = 0;
-                        $shippingFee = 0;
+                    @if($breakdownParsed && ($materialCost > 0 || $patternFee > 0))
+                        {{-- Itemized Breakdown Only --}}
+                        <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border-2 border-gray-300">
                         $isFromChat = !empty($order->chat_id);
                         $breakdownParsed = false;
                         
@@ -427,26 +506,20 @@
                             </div>
                         </div>
                     @else
-                        {{-- Fallback: Simple breakdown --}}
-                        <div class="mt-3 bg-gray-50 rounded-lg p-3 border border-gray-200 text-sm">
-                            <div class="space-y-2 text-gray-700">
-                                <div class="flex justify-between">
-                                    <span>Quoted Price:</span>
-                                    <span class="font-semibold">₱{{ number_format($order->estimated_price ?? 0, 2) }}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>Shipping Fee:</span>
-                                    <span class="font-semibold {{ $shippingFee == 0 ? 'text-green-600' : '' }}">
-                                        {{ $shippingFee == 0 ? 'FREE' : '₱' . number_format($shippingFee, 2) }}
-                                    </span>
-                                </div>
-                                <div class="border-t border-gray-300 pt-2 mt-2 flex justify-between font-bold text-gray-900">
-                                    <span>Total:</span>
-                                    <span class="text-green-600">₱{{ number_format($order->final_price ?? 0, 2) }}</span>
-                                </div>
-                            </div>
+                        {{-- Fallback: Show estimated and final price when breakdown not available --}}
+                        @if($order->estimated_price)
+                        <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                            <span class="text-gray-600">Estimated Price:</span>
+                            <span class="text-lg font-semibold text-gray-900">₱{{ number_format($order->estimated_price, 2) }}</span>
                         </div>
-                    @endif
+                        @endif
+                        
+                        @if($order->final_price)
+                        <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                            <span class="text-gray-600">Final Price:</span>
+                            <span class="text-2xl font-bold text-green-600">₱{{ number_format($order->final_price, 2) }}</span>
+                        </div>
+                        @endif
                     @endif
                     
                     @if($order->payment_method)
