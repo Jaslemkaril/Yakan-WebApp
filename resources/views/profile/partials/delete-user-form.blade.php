@@ -15,9 +15,12 @@
     </button>
 
     <x-modal name="confirm-user-deletion" :show="$errors->userDeletion->isNotEmpty()" focusable>
-        <form method="post" action="{{ route('profile.destroy') }}" class="p-6">
+        <form method="post" action="{{ route('profile.destroy') }}{{ request('auth_token') ? '?auth_token=' . urlencode(request('auth_token')) : '' }}" class="p-6">
             @csrf
             @method('delete')
+            @if(request('auth_token'))
+                <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+            @endif
 
             <div class="mb-6">
                 <h2 class="text-xl font-bold text-gray-900 mb-2">
