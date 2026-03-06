@@ -327,10 +327,15 @@ function deleteProduct() {
     
     const token = document.querySelector('meta[name="csrf-token"]').content;
     
+    // Extract auth_token from URL for Railway deployment
+    const urlParams = new URLSearchParams(window.location.search);
+    const authToken = urlParams.get('auth_token');
+    const deleteUrl = authToken ? `/admin/products/${productToDelete}?auth_token=${encodeURIComponent(authToken)}` : `/admin/products/${productToDelete}`;
+    
     console.log('Deleting product:', productToDelete);
     console.log('CSRF Token:', token);
     
-    fetch(`/admin/products/${productToDelete}`, {
+    fetch(deleteUrl, {
         method: 'DELETE',
         headers: {
             'X-CSRF-TOKEN': token,
@@ -377,15 +382,20 @@ function bulkDeleteProducts() {
     
     const token = document.querySelector('meta[name="csrf-token"]').content;
     
-    Promise.all(productsToDelete.map(id =>
-        fetch(`/admin/products/${id}`, {
+    // Extract auth_token from URL for Railway deployment
+    const urlParams = new URLSearchParams(window.location.search);
+    const authToken = urlParams.get('auth_token');
+    
+    Promise.all(productsToDelete.map(id => {
+        const deleteUrl = authToken ? `/admin/products/${id}?auth_token=${encodeURIComponent(authToken)}` : `/admin/products/${id}`;
+        return fetch(deleteUrl, {
             method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': token,
                 'Accept': 'application/json'
             }
-        }).then(r => r.json())
-    ))
+        }).then(r => r.json());
+    }))
     .then(results => {
         const success = results.filter(r => r.success).length;
         showToast(`Deleted ${success}/${results.length} products`, 'success');

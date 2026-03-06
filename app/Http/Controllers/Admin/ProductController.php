@@ -335,6 +335,10 @@ class ProductController extends Controller
      */
     public function destroy(string $id)
     {
+        // Extract auth_token for redirect preservation
+        $authToken = request()->input('auth_token') ?? request()->query('auth_token');
+        $redirectUrl = $authToken ? route('admin.products.index') . '?auth_token=' . urlencode($authToken) : route('admin.products.index');
+        
         try {
             $product = Product::findOrFail($id);
             $productName = $product->name;
@@ -362,7 +366,7 @@ class ProductController extends Controller
                 ]);
             }
 
-            return redirect()->route('admin.products.index')
+            return redirect($redirectUrl)
                            ->with('success', "Product '{$productName}' deleted successfully.");
                            
         } catch (\Exception $e) {
@@ -375,7 +379,7 @@ class ProductController extends Controller
                 ], 500);
             }
 
-            return redirect()->route('admin.products.index')
+            return redirect($redirectUrl)
                            ->with('error', 'Failed to delete product.');
         }
     }
