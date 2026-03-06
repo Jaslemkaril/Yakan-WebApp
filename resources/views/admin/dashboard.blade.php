@@ -973,7 +973,7 @@
                                                     </p>
                                                 </div>
                                                 <div class="flex items-center space-x-2 text-sm text-gray-600 mt-1">
-                                                    <span>{{ $order->user_name ?? 'Guest' }}</span>
+                                                    <span>{{ $order->user ? $order->user->name : ($order->customer_name ?? 'Guest') }}</span>
                                                     <span>•</span>
                                                     <span>{{ $order->created_at ?? 'Recent' }}</span>
                                                 </div>
@@ -981,7 +981,7 @@
                                         </div>
                                         <div class="flex items-center space-x-3">
                                             <div class="text-right">
-                                                <p class="font-bold text-gray-900">₱{{ number_format($order->amount ?? 0, 0) }}</p>
+                                                <p class="font-bold text-gray-900">₱{{ number_format($order->total_amount ?? $order->total ?? 0, 0) }}</p>
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                                     {{ $order->status ?? 'pending' }}
                                                 </span>
