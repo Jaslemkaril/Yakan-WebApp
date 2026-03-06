@@ -35,6 +35,11 @@ use Illuminate\Support\Facades\Storage;
     <form action="{{ route('admin.products.update', $product->id) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
         @csrf
         @method('PUT')
+        
+        <!-- Preserve auth_token if present in URL -->
+        @if(request()->has('auth_token'))
+            <input type="hidden" name="auth_token" value="{{ request()->get('auth_token') }}">
+        @endif
 
         <!-- Product Name -->
         <div>

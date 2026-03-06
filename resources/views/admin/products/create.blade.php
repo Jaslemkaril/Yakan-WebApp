@@ -31,6 +31,11 @@
 
     <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
         @csrf
+        
+        <!-- Preserve auth_token if present in URL -->
+        @if(request()->has('auth_token'))
+            <input type="hidden" name="auth_token" value="{{ request()->get('auth_token') }}">
+        @endif
 
         <!-- Product Name -->
         <div>

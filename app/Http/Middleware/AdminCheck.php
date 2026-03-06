@@ -23,9 +23,17 @@ class AdminCheck
                 
                 if ($authToken) {
                     $user = \App\Models\User::find($authToken->user_id);
-                    if ($user) {
+                    if ($user && $user->role === 'admin') {
+                        // Login with remember flag to persist session
                         Auth::login($user, true);
-                        \Log::info('AdminCheck: Authenticated via token', ['user_id' => $user->id]);
+                        
+                        // Regenerate session ID for security
+                        $request->session()->regenerate();
+                        
+                        \Log::info('AdminCheck: Authenticated via token', [
+                            'user_id' => $user->id,
+                            'session_id' => $request->session()->getId()
+                        ]);
                     }
                 }
             }
@@ -33,17 +41,18 @@ class AdminCheck
         
         \Log::info('AdminCheck: Checking access', [
             'path' => $request->path(),
+            'method' => $request->method(),
             'auth_check' => Auth::check(),
             'user_id' => Auth::check() ? Auth::user()->id : null,
             'user_role' => Auth::check() ? Auth::user()->role : null,
-            'user_email' => Auth::check() ? Auth::user()->email : null,
+            'session_id' => $request->session()->getId(),
         ]);
 
         // Check if user is authenticated and is an admin
         if (Auth::check() && Auth::user()->role === 'admin') {
             \Log::info('AdminCheck: Access GRANTED for admin user');
             
-            // If token is present, append it to all redirects and links
+            // If token is present in query, append it to redirects
             if ($request->query('auth_token')) {
                 $request->merge(['_auth_token' => $request->query('auth_token')]);
             }
@@ -54,6 +63,7 @@ class AdminCheck
         // Log unauthorized attempt
         \Log::warning('AdminCheck: Access DENIED', [
             'url' => $request->fullUrl(),
+            'method' => $request->method(),
             'authenticated' => Auth::check(),
             'user_role' => Auth::check() ? Auth::user()->role : 'not_authenticated',
             'user_email' => Auth::check() ? Auth::user()->email : null,
