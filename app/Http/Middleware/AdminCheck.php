@@ -27,16 +27,25 @@ class AdminCheck
                         // Login with remember flag to persist session
                         Auth::login($user, true);
                         
-                        // Regenerate session ID for security
-                        $request->session()->regenerate();
+                        // CRITICAL: Force save session immediately
+                        $request->session()->save();
+                        
+                        // Store auth_token in session as backup
+                        $request->session()->put('admin_auth_token', $token);
+                        $request->session()->put('admin_authenticated', true);
+                        $request->session()->save();
                         
                         \Log::info('AdminCheck: Authenticated via token', [
                             'user_id' => $user->id,
-                            'session_id' => $request->session()->getId()
+                            'session_id' => $request->session()->getId(),
+                            'session_saved' => true
                         ]);
                     }
                 }
             }
+        } else {
+            // User is already authenticated via session, refresh it
+            $request->session()->put('admin_authenticated', true);
         }
         
         \Log::info('AdminCheck: Checking access', [
@@ -50,11 +59,16 @@ class AdminCheck
 
         // Check if user is authenticated and is an admin
         if (Auth::check() && Auth::user()->role === 'admin') {
-            \Log::info('AdminCheck: Access GRANTED for admin user');
+            \Log::info('AdminCheck: Access GRANTED for admin user', [
+                'user_id' => Auth::user()->id,
+                'session_id' => $request->session()->getId(),
+                'has_session_flag' => $request->session()->has('admin_authenticated')
+            ]);
             
-            // If token is present in query, append it to redirects
-            if ($request->query('auth_token')) {
-                $request->merge(['_auth_token' => $request->query('auth_token')]);
+            // Store auth_token in request for use in redirects
+            $authToken = $request->input('auth_token') ?? $request->query('auth_token') ?? $request->session()->get('admin_auth_token');
+            if ($authToken) {
+                $request->attributes->set('admin_auth_token', $authToken);
             }
             
             return $next($request);

@@ -162,7 +162,23 @@ class ProductController extends Controller
             $product->update(['all_images' => json_encode($allImages)]);
         }
 
-        return redirect()->route('admin.products.index')->with('success', 'Product created successfully with ' . count($allImages) . ' image(s).');
+        // Ensure session is saved before redirect
+        $request->session()->save();
+        
+        \Log::info('Product created successfully', [
+            'product_id' => $product->id,
+            'user_id' => auth()->id(),
+            'session_id' => $request->session()->getId()
+        ]);
+
+        // Get auth_token if present to append to redirect
+        $authToken = $request->input('auth_token') ?? $request->attributes->get('admin_auth_token');
+        $redirectUrl = route('admin.products.index');
+        if ($authToken) {
+            $redirectUrl .= '?auth_token=' . $authToken;
+        }
+        
+        return redirect($redirectUrl)->with('success', 'Product created successfully with ' . count($allImages) . ' image(s).');
     }
 
     /**
@@ -327,7 +343,23 @@ class ProductController extends Controller
             $message .= ". Deleted {$deletedCount} image(s)";
         }
 
-        return redirect()->route('admin.products.index')->with('success', $message . '.');
+        // Ensure session is saved before redirect
+        $request->session()->save();
+        
+        \Log::info('Product updated successfully', [
+            'product_id' => $product->id,
+            'user_id' => auth()->id(),
+            'session_id' => $request->session()->getId()
+        ]);
+
+        // Get auth_token if present to append to redirect
+        $authToken = $request->input('auth_token') ?? $request->attributes->get('admin_auth_token');
+        $redirectUrl = route('admin.products.index');
+        if ($authToken) {
+            $redirectUrl .= '?auth_token=' . $authToken;
+        }
+
+        return redirect($redirectUrl)->with('success', $message . '.');
     }
 
     /**
