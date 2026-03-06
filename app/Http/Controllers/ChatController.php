@@ -542,6 +542,10 @@ class ChatController extends Controller
      */
     public function uploadReceipt(Request $request, $orderId)
     {
+        // Extract auth_token for redirect preservation
+        $authToken = $request->input('auth_token') ?? $request->query('auth_token');
+        $redirectUrl = $authToken ? url()->previous() . (strpos(url()->previous(), '?') !== false ? '&' : '?') . 'auth_token=' . urlencode($authToken) : url()->previous();
+        
         $validated = $request->validate([
             'payment_proof' => 'required|image|mimes:jpeg,jpg,png|max:5120', // 5MB max
         ]);
@@ -550,12 +554,12 @@ class ChatController extends Controller
         
         // Verify ownership
         if ($order->user_id !== auth()->id()) {
-            return redirect()->back()->with('error', 'Unauthorized access.');
+            return redirect($redirectUrl)->with('error', 'Unauthorized access.');
         }
         
         // Verify order has payment method set
         if (!$order->payment_method) {
-            return redirect()->back()->with('error', 'Please select a payment method first.');
+            return redirect($redirectUrl)->with('error', 'Please select a payment method first.');
         }
         
         // Handle file upload
@@ -607,10 +611,10 @@ class ChatController extends Controller
                 ]);
             }
             
-            return redirect()->back()->with('success', 'Payment proof uploaded successfully! We will verify your payment shortly.');
+            return redirect($redirectUrl)->with('success', 'Payment proof uploaded successfully! We will verify your payment shortly.');
         }
         
-        return redirect()->back()->with('error', 'Failed to upload payment proof.');
+        return redirect($redirectUrl)->with('error', 'Failed to upload payment proof.');
     }
     
     /**

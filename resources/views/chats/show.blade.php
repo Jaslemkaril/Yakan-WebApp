@@ -586,8 +586,11 @@
                                             @endif
                                             
                                             {{-- Receipt Upload Form --}}
-                                            <form action="{{ route('orders.upload_receipt', $chatOrder) }}" method="POST" enctype="multipart/form-data">
+                                            <form action="{{ route('orders.upload_receipt', $chatOrder) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" enctype="multipart/form-data">
                                                 @csrf
+                                                @if(request('auth_token'))
+                                                    <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+                                                @endif
                                                 
                                                 <div class="bg-white/70 backdrop-blur rounded-xl p-4">
                                                     <label class="block text-sm font-bold text-gray-800 mb-3">📸 Upload Payment Receipt</label>
