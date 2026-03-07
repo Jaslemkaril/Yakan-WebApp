@@ -268,32 +268,44 @@
                         <div class="flex items-start">
                             <div class="w-20 h-20 rounded-xl flex items-center justify-center mr-4 flex-shrink-0 overflow-hidden shadow-md border-2" style="background-color:#fff5f5; border-color:#800000;">
                                 @php
-                                    // Load pattern model if available
-                                    $patternModel = null;
-                                    if (!empty($order->design_metadata) && isset($order->design_metadata['pattern_id'])) {
-                                        $patternModel = \App\Models\YakanPattern::find($order->design_metadata['pattern_id']);
-                                    } elseif (!empty($order->patterns) && is_array($order->patterns)) {
-                                        if (is_numeric($order->patterns[0])) {
-                                            $patternModel = \App\Models\YakanPattern::find($order->patterns[0]);
+                                    // Prioritize design_upload over pattern
+                                    $designUrl = null;
+                                    if ($order->design_upload) {
+                                        $designPath = $order->design_upload;
+                                        if (str_starts_with($designPath, 'http://') || str_starts_with($designPath, 'https://')) {
+                                            $designUrl = $designPath; // Cloudinary URL
+                                        } elseif (str_starts_with($designPath, 'data:image')) {
+                                            $designUrl = $designPath; // Data URL
+                                        } elseif (str_starts_with($designPath, 'storage/')) {
+                                            $designUrl = asset($designPath); // Already has storage/ prefix
                                         } else {
-                                            $patternModel = \App\Models\YakanPattern::where('name', $order->patterns[0])->first();
+                                            $designUrl = asset('storage/' . ltrim($designPath, '/')); // Add storage/ prefix
                                         }
                                     }
 
-                                    // Fallback to design_upload image
-                                    $designUrl = null;
-                                    if (!$patternModel && $order->design_upload) {
-                                        if (str_starts_with($order->design_upload, 'data:image')) {
-                                            $designUrl = $order->design_upload;
-                                        } elseif (str_starts_with($order->design_upload, 'custom_orders/') || str_starts_with($order->design_upload, 'custom_designs/')) {
-                                            $designUrl = asset('storage/' . $order->design_upload);
-                                        } else {
-                                            $designUrl = asset('storage/' . ltrim($order->design_upload, '/'));
+                                    // Load pattern model as fallback
+                                    $patternModel = null;
+                                    if (!$designUrl) {
+                                        if (!empty($order->design_metadata) && isset($order->design_metadata['pattern_id'])) {
+                                            $patternModel = \App\Models\YakanPattern::find($order->design_metadata['pattern_id']);
+                                        } elseif (!empty($order->patterns) && is_array($order->patterns)) {
+                                            if (is_numeric($order->patterns[0])) {
+                                                $patternModel = \App\Models\YakanPattern::find($order->patterns[0]);
+                                            } else {
+                                                $patternModel = \App\Models\YakanPattern::where('name', $order->patterns[0])->first();
+                                            }
                                         }
                                     }
                                 @endphp
 
-                                @if($patternModel && $patternModel->hasSvg())
+                                @if($designUrl)
+                                    <img src="{{ $designUrl }}" alt="Custom design preview" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <div class="w-full h-full flex items-center justify-center" style="display:none;">
+                                        <svg class="w-10 h-10" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                    </div>
+                                @elseif($patternModel && $patternModel->hasSvg())
                                     @php
                                         $customization = $order->customization_settings ?? [];
                                         $scale = $customization['scale'] ?? 1;
@@ -313,8 +325,6 @@
                                             {!! $patternModel->getSvgContent() !!}
                                         </div>
                                     </div>
-                                @elseif($designUrl)
-                                    <img src="{{ $designUrl }}" alt="Custom design preview" class="w-full h-full object-cover">
                                 @elseif(isset($order->product) && $order->product->image)
                                     <img src="{{ $order->product->image_src }}" alt="{{ $order->product->name }}" class="w-full h-full object-cover">
                                 @else
@@ -611,17 +621,21 @@
                     </div>
                     <div class="p-6">
                         @php
-                            if (str_starts_with($order->design_upload, 'data:image')) {
-                                $designUrl = $order->design_upload;
-                            } elseif (str_starts_with($order->design_upload, 'custom_orders/') || str_starts_with($order->design_upload, 'custom_designs/')) {
-                                $designUrl = asset('storage/' . $order->design_upload);
+                            $designPath = $order->design_upload;
+                            if (str_starts_with($designPath, 'http://') || str_starts_with($designPath, 'https://')) {
+                                $fullDesignUrl = $designPath; // Cloudinary URL
+                            } elseif (str_starts_with($designPath, 'data:image')) {
+                                $fullDesignUrl = $designPath; // Data URL
+                            } elseif (str_starts_with($designPath, 'storage/')) {
+                                $fullDesignUrl = asset($designPath); // Already has storage/ prefix
                             } else {
-                                $designUrl = asset('storage/' . ltrim($order->design_upload, '/'));
+                                $fullDesignUrl = asset('storage/' . ltrim($designPath, '/')); // Add storage/ prefix
                             }
                         @endphp
-                        <img src="{{ $designUrl }}" 
+                        <img src="{{ $fullDesignUrl }}" 
                              alt="Design Upload" 
-                             class="w-full rounded-xl shadow-lg border-2 border-gray-200">
+                             class="w-full rounded-xl shadow-lg border-2 border-gray-200"
+                             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22><rect fill=%22%23f3f4f6%22 width=%22400%22 height=%22300%22/><text fill=%22%239ca3af%22 font-size=%2218%22 x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 dy=%22.3em%22>Image not available</text></svg>'">
                     </div>
                 </div>
                 @endif
