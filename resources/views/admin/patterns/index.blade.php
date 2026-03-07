@@ -67,11 +67,14 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 @foreach($patterns as $pattern)
                     <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-                        @if($pattern->hasSvg())
+                        @php
+                            $svgContent = $pattern->hasSvg() ? $pattern->getSvgContent() : null;
+                        @endphp
+                        @if($svgContent)
                             <div class="w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center p-4 overflow-hidden">
                                 <div class="w-full h-full flex items-center justify-center">
                                     <div class="max-w-full max-h-full">
-                                        {!! $pattern->getSvgContent() !!}
+                                        {!! $svgContent !!}
                                     </div>
                                 </div>
                             </div>
