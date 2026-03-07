@@ -19,6 +19,9 @@
     }
     .preview-hover {
         position: relative;
+        display: inline-block;
+        width: 48px;
+        height: 48px;
     }
     .preview-hover .preview-popup {
         display: none;
