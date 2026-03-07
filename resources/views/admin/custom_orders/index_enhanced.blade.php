@@ -319,10 +319,25 @@
                                 </div>
                             @elseif($order->design_upload)
                                 <div class="preview-hover">
-                                    @php $imgSrc = str_starts_with($order->design_upload, 'data:image') ? $order->design_upload : asset('storage/' . $order->design_upload); @endphp
-                                    <img src="{{ $imgSrc }}" alt="Preview" class="w-12 h-12 rounded-lg object-cover border border-gray-200">
+                                    @php 
+                                        $designPath = $order->design_upload;
+                                        if (str_starts_with($designPath, 'http://') || str_starts_with($designPath, 'https://')) {
+                                            // Full URL (Cloudinary or external)
+                                            $imgSrc = $designPath;
+                                        } elseif (str_starts_with($designPath, 'data:image')) {
+                                            // Base64 data URL
+                                            $imgSrc = $designPath;
+                                        } elseif (str_starts_with($designPath, 'storage/')) {
+                                            // Storage path already prefixed
+                                            $imgSrc = asset($designPath);
+                                        } else {
+                                            // Default fallback - add storage prefix
+                                            $imgSrc = asset('storage/' . $designPath);
+                                        }
+                                    @endphp
+                                    <img src="{{ $imgSrc }}" alt="Preview" class="w-12 h-12 rounded-lg object-cover border border-gray-200" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23f3f4f6%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 font-size=%2212%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23d1d5db%22%3ENo Image%3C/text%3E%3C/svg%3E';">
                                     <div class="preview-popup w-48 h-48 bg-white rounded-xl shadow-2xl border border-gray-200 p-2">
-                                        <img src="{{ $imgSrc }}" alt="Preview" class="w-full h-full object-contain rounded-lg">
+                                        <img src="{{ $imgSrc }}" alt="Preview" class="w-full h-full object-contain rounded-lg" onerror="this.parentElement.innerHTML = '<div class=\'w-full h-full flex items-center justify-center text-gray-400 text-xs\'>Image unavailable</div>';">
                                     </div>
                                 </div>
                             @else
