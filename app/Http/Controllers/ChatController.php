@@ -346,12 +346,31 @@ class ChatController extends Controller
         $chat->update(['updated_at' => now()]);
 
         if ($request->expectsJson() || $request->ajax()) {
+            // Format image_path to proper URL for JavaScript
+            $imageUrl = null;
+            if ($newMessage->image_path) {
+                $imagePath = $newMessage->image_path;
+                if (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://')) {
+                    // Already a full URL
+                    $imageUrl = $imagePath;
+                } elseif (str_starts_with($imagePath, 'data:image')) {
+                    // Base64 data URL
+                    $imageUrl = $imagePath;
+                } elseif (str_starts_with($imagePath, 'storage/')) {
+                    // Storage path
+                    $imageUrl = asset($imagePath);
+                } else {
+                    // Default fallback - add storage prefix
+                    $imageUrl = asset('storage/' . $imagePath);
+                }
+            }
+            
             return response()->json([
                 'success' => true,
                 'message' => [
                     'id' => $newMessage->id,
                     'message' => $newMessage->message,
-                    'image_path' => $newMessage->image_path,
+                    'image_path' => $imageUrl,
                     'sender_type' => $newMessage->sender_type,
                     'created_at' => $newMessage->created_at->toISOString(),
                 ]

@@ -133,12 +133,20 @@
                                         // Handle different image path formats
                                         $imagePath = $message->image_path;
                                         if (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://')) {
+                                            // Full URL (Cloudinary or external)
                                             $chatImageUrl = $imagePath;
                                         } elseif (str_starts_with($imagePath, 'data:image')) {
+                                            // Base64 data URL
                                             $chatImageUrl = $imagePath;
-                                        } else {
-                                            // Try both storage and public paths
+                                        } elseif (str_starts_with($imagePath, 'storage/')) {
+                                            // Storage path
                                             $chatImageUrl = asset($imagePath);
+                                        } elseif (str_starts_with($imagePath, 'chat_images/')) {
+                                            // Old chat images format
+                                            $chatImageUrl = asset('storage/' . $imagePath);
+                                        } else {
+                                            // Default fallback - try as asset
+                                            $chatImageUrl = asset('storage/' . $imagePath);
                                         }
                                     @endphp
                                     <a href="{{ $chatImageUrl }}" target="_blank" class="block mb-3">
