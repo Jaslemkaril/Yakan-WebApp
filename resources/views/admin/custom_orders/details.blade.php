@@ -782,8 +782,8 @@
                     </div>
                     @endif
                     
-                    {{-- 3. Smart Workflow Progress (Only shows after quote sent) --}}
-                    @if(!empty($order->price_quoted_at))
+                    {{-- 3. Smart Workflow Progress (Shows after quote sent OR payment confirmed for chat orders) --}}
+                    @if(!empty($order->price_quoted_at) || $order->payment_status === 'paid' || !empty($order->payment_confirmed_at))
                     <div class="bg-white rounded-lg p-5 border-2 border-red-200 shadow-sm">
                         <div class="flex items-center gap-2 mb-4">
                             <svg class="w-5 h-5 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
