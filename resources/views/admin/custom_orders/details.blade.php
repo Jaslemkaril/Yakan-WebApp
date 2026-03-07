@@ -1239,7 +1239,10 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('With body:', { status: nextStatus });
             
             try {
-                const response = await fetch(`/admin/custom-orders/${orderId}/update-status`, {
+                const urlParams = new URLSearchParams(window.location.search);
+                const authToken = urlParams.get('auth_token');
+                const statusUrl = `/admin/custom-orders/${orderId}/update-status${authToken ? '?auth_token=' + authToken : ''}`;
+                const response = await fetch(statusUrl, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
@@ -1321,7 +1324,10 @@ document.addEventListener('DOMContentLoaded', function() {
             setButtonLoading(button, true);
             
             try {
-                const response = await fetch(`/admin/custom-orders/${orderId}/notify-delay`, {
+                const urlParams = new URLSearchParams(window.location.search);
+                const authToken = urlParams.get('auth_token');
+                const delayUrl = `/admin/custom-orders/${orderId}/notify-delay${authToken ? '?auth_token=' + authToken : ''}`;
+                const response = await fetch(delayUrl, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
@@ -1359,7 +1365,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         try {
-            const response = await fetch(`/admin/custom-orders/${orderId}/clear-delay`, {
+            const urlParams = new URLSearchParams(window.location.search);
+            const authToken = urlParams.get('auth_token');
+            const clearUrl = `/admin/custom-orders/${orderId}/clear-delay${authToken ? '?auth_token=' + authToken : ''}`;
+            const response = await fetch(clearUrl, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': csrfToken,
@@ -1402,8 +1411,13 @@ document.addEventListener('DOMContentLoaded', function() {
             
             setButtonLoading(button, true);
             
+            // Get auth_token from URL if present
+            const urlParams = new URLSearchParams(window.location.search);
+            const authToken = urlParams.get('auth_token');
+            const quoteUrl = `/admin/custom-orders/${orderId}/quote-price${authToken ? '?auth_token=' + authToken : ''}`;
+            
             try {
-                const response = await fetch(`/admin/custom-orders/${orderId}/quote-price`, {
+                const response = await fetch(quoteUrl, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
@@ -1477,12 +1491,16 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('=== Payment Verification Debug ===');
             console.log('Order ID:', orderId);
             console.log('CSRF Token:', csrfToken);
-            console.log('URL:', `/admin/custom-orders/${orderId}/verify-payment`);
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const authToken = urlParams.get('auth_token');
+            const verifyUrl = `/admin/custom-orders/${orderId}/verify-payment${authToken ? '?auth_token=' + authToken : ''}`;
+            console.log('URL:', verifyUrl);
             
             setButtonLoading(button, true);
             
             try {
-                const response = await fetch(`/admin/custom-orders/${orderId}/verify-payment`, {
+                const response = await fetch(verifyUrl, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
@@ -1545,7 +1563,10 @@ document.addEventListener('DOMContentLoaded', function() {
             setButtonLoading(button, true);
             
             try {
-                const response = await fetch(`/admin/custom-orders/${orderId}/verify-payment`, {
+                const urlParams = new URLSearchParams(window.location.search);
+                const authToken = urlParams.get('auth_token');
+                const verifyUrl = `/admin/custom-orders/${orderId}/verify-payment${authToken ? '?auth_token=' + authToken : ''}`;
+                const response = await fetch(verifyUrl, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
@@ -1593,7 +1614,10 @@ document.addEventListener('DOMContentLoaded', function() {
             setButtonLoading(button, true);
             
             try {
-                const response = await fetch(`/admin/custom-orders/${orderId}/reject`, {
+                const urlParams = new URLSearchParams(window.location.search);
+                const authToken = urlParams.get('auth_token');
+                const rejectUrl = `/admin/custom-orders/${orderId}/reject${authToken ? '?auth_token=' + authToken : ''}`;
+                const response = await fetch(rejectUrl, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
