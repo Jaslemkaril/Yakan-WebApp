@@ -322,12 +322,23 @@ class PatternController extends Controller
         return redirect($redirectUrl)->with('success', 'Pattern updated successfully.');
     }
 
-    public function destroy(YakanPattern $pattern)
+    public function destroy(Request $request, YakanPattern $pattern)
     {
         foreach ($pattern->media as $media) {
             Storage::disk('public')->delete($media->path);
         }
         $pattern->delete();
-        return redirect()->route('admin.patterns.index')->with('success', 'Pattern deleted successfully.');
+        
+        // Ensure session is saved before redirect
+        $request->session()->save();
+        
+        // Get auth_token if present to append to redirect
+        $authToken = $request->input('auth_token') ?? $request->attributes->get('admin_auth_token');
+        $redirectUrl = route('admin.patterns.index');
+        if ($authToken) {
+            $redirectUrl .= '?auth_token=' . $authToken;
+        }
+        
+        return redirect($redirectUrl)->with('success', 'Pattern deleted successfully.');
     }
 }
