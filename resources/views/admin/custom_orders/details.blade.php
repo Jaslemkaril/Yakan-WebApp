@@ -807,7 +807,14 @@
                                 'delivered' => ['svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>', 'label' => 'Delivered', 'color' => 'maroon']
                             ];
                             // If order is marked completed, treat it as delivered for display so earlier steps gray out correctly.
-                            $currentStatus = $order->status === 'completed' ? 'delivered' : $order->status;
+                            // If order is processing with payment confirmed (chat orders), treat as approved/paid
+                            if ($order->status === 'completed') {
+                                $currentStatus = 'delivered';
+                            } elseif ($order->status === 'processing' && ($order->payment_confirmed_at || $order->payment_status === 'paid')) {
+                                $currentStatus = 'approved';
+                            } else {
+                                $currentStatus = $order->status;
+                            }
                             $statusKeys = array_keys($statuses);
                             $currentIndex = array_search($currentStatus, $statusKeys);
                         @endphp
@@ -844,8 +851,8 @@
                             ];
                             
                             $nextAction = null;
-                            // Show Start Production if payment is confirmed (payment_confirmed_at is set)
-                            if ($order->status === 'approved' && $order->payment_confirmed_at) {
+                            // Show Start Production if payment is confirmed (for both approved and processing status with payment)
+                            if (($order->status === 'approved' || $order->status === 'processing') && ($order->payment_confirmed_at || $order->payment_status === 'paid')) {
                                 $nextAction = ['status' => 'in_production', 'label' => 'Start Production', 'svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>', 'color' => 'maroon'];
                             } elseif ($order->status === 'in_production') {
                                 $nextAction = ['status' => 'production_complete', 'label' => 'Complete Production', 'svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>', 'color' => 'maroon'];
@@ -888,7 +895,7 @@
                     @endif
                     
                     {{-- 4. Production Delay Notification --}}
-                    @if(in_array($order->status, ['approved', 'in_production', 'production_complete']))
+                    @if(in_array($order->status, ['approved', 'in_production', 'production_complete']) || ($order->status === 'processing' && ($order->payment_confirmed_at || $order->payment_status === 'paid')))
                     <div class="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-lg p-4 border border-yellow-200">
                         <label class="block text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
                             <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
