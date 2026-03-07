@@ -227,19 +227,33 @@
                                         }
                                     @endphp
                                     
-                                    @if($patternModel && $patternModel->hasSvg())
+                                    @if($order->design_upload)
+                                        @php
+                                            // Proper image path handling - prioritize uploaded design
+                                            $designPath = $order->design_upload;
+                                            if (str_starts_with($designPath, 'http://') || str_starts_with($designPath, 'https://')) {
+                                                $imgSrc = $designPath; // Cloudinary URL
+                                            } elseif (str_starts_with($designPath, 'data:image')) {
+                                                $imgSrc = $designPath; // Data URL
+                                            } elseif (str_starts_with($designPath, 'storage/')) {
+                                                $imgSrc = asset($designPath); // Already has storage/ prefix
+                                            } else {
+                                                $imgSrc = asset('storage/' . $designPath); // Add storage/ prefix
+                                            }
+                                        @endphp
+                                        <div class="mb-2">
+                                            <img src="{{ $imgSrc }}" 
+                                                 alt="Custom design upload"
+                                                 class="w-16 h-16 rounded-lg object-cover border border-gray-200 shadow-sm"
+                                                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><rect fill=%22%23f3f4f6%22 width=%22100%22 height=%22100%22/><text fill=%22%239ca3af%22 font-size=%2214%22 x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 dy=%22.3em%22>No Image</text></svg>'">
+                                        </div>
+                                    @elseif($patternModel && $patternModel->hasSvg())
                                         <div class="mb-2">
                                             <div class="w-16 h-16 rounded-lg border border-gray-200 shadow-sm bg-gray-50 p-1 flex items-center justify-center overflow-hidden">
                                                 <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; {{ $filterStyle }}">
                                                     {!! $patternModel->getSvgContent() !!}
                                                 </div>
                                             </div>
-                                        </div>
-                                    @elseif($order->design_upload)
-                                        <div class="mb-2">
-                                            <img src="{{ asset('storage/' . $order->design_upload) }}" 
-                                                 alt="Custom pattern preview"
-                                                 class="w-16 h-16 rounded-lg object-cover border border-gray-200 shadow-sm">
                                         </div>
                                     @endif
 
