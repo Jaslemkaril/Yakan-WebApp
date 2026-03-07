@@ -1076,6 +1076,12 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         // Main index page
         Route::get('/', [AdminCustomOrderController::class, 'index'])->name('index');
         
+        // Production Dashboard - MUST be before /{order} catch-all
+        Route::get('/production-dashboard', [AdminCustomOrderController::class, 'productionDashboard'])->name('production-dashboard');
+        
+        // Export - MUST be before /{order} catch-all
+        Route::get('/export', [AdminCustomOrderController::class, 'exportOrders'])->name('export');
+        
         // Create new custom order
         Route::get('/create', [AdminCustomOrderController::class, 'create'])->name('create');
         Route::post('/create', [AdminCustomOrderController::class, 'store'])->name('store');
@@ -1155,47 +1161,6 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         Route::get('/email', [DashboardController::class, 'emailSettings'])->name('settings.email');
         Route::post('/email', [DashboardController::class, 'updateEmailSettings'])->name('settings.email.update');
     });
-
-    // Custom Orders Management
-    Route::get('custom-orders', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'index'])->name('custom_orders.index');
-    
-    // View individual order - ADMIN SPECIFIC PATH
-    Route::get('custom-orders/view/{order}', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'show'])->name('custom_orders.show');
-    
-    // Production Dashboard (must be before dynamic routes)
-    Route::get('custom-orders/production-dashboard', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'productionDashboard'])->name('custom_orders.production-dashboard');
-    
-    // Export (must be before dynamic routes)
-    Route::get('custom-orders/export', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'exportOrders'])->name('custom_orders.export');
-    
-    // Dynamic routes
-    Route::post('custom-orders/{order}/update-status', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'updateStatus'])->name('custom_orders.update_status');
-    Route::post('custom-orders/{order}/quote-price', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'quotePrice'])->name('custom_orders.quote_price');
-    Route::post('custom-orders/{order}/verify-payment', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'verifyPayment'])->name('custom_orders.verify_payment');
-    Route::post('custom-orders/{order}/confirm-payment', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'confirmPayment'])->name('custom_orders.confirmPayment');
-    Route::post('custom-orders/{order}/reject-payment', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'rejectPayment'])->name('custom_orders.rejectPayment');
-    Route::post('custom-orders/{order}/reject', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'rejectOrder'])->name('custom_orders.reject');
-    Route::post('custom-orders/{order}/approve', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'approveOrder'])->name('custom_orders.approve');
-    Route::post('custom-orders/{order}/notify-delay', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'notifyDelay'])->name('custom_orders.notifyDelay');
-    Route::post('custom-orders/{order}/clear-delay', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'clearDelay'])->name('custom_orders.clearDelay');
-    Route::delete('custom-orders/{order}', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'destroy'])->name('custom_orders.delete');
-
-    // Custom Order Creation
-    Route::get('custom-orders/create', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'create'])->name('custom_orders.create');
-    Route::get('custom-orders/create/choice', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'createChoice'])->name('custom_orders.create.choice');
-    Route::get('custom-orders/create/product', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'createProductSelection'])->name('custom_orders.create.product');
-    Route::get('custom-orders/create/fabric', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'createFabricSelection'])->name('custom_orders.create.fabric');
-    Route::post('custom-orders/create/product', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'storeProductSelection'])->name('custom_orders.store.product');
-    Route::get('custom-orders/create/product/customize', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'createProductCustomization'])->name('custom_orders.create.product.customize');
-    Route::post('custom-orders/create/product/customize', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'storeProductCustomization'])->name('custom_orders.store.product.customization');
-    Route::post('custom-orders/create/fabric', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'storeFabricSelection'])->name('custom_orders.store.fabric');
-    Route::get('custom-orders/create/pattern', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'createPatternSelection'])->name('custom_orders.create.pattern');
-    Route::post('custom-orders/create/pattern', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'storePatternSelection'])->name('custom_orders.store.pattern');
-    Route::get('custom-orders/create/review', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'createReview'])->name('custom_orders.create.review');
-    Route::post('custom-orders', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'store'])->name('custom_orders.store');
-    
-    // Production Dashboard
-    Route::get('custom-orders/production-dashboard', [App\Http\Controllers\Admin\AdminCustomOrderController::class, 'productionDashboard'])->name('custom_orders.production-dashboard');
 
     // Chat Management
     Route::prefix('chats')->name('chats.')->group(function () {

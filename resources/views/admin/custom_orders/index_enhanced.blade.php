@@ -86,7 +86,7 @@
             <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Custom Orders</h1>
             <p class="text-gray-500 mt-1 text-sm">Manage and track all custom weaving orders</p>
         </div>
-        <a href="{{ route('admin.custom_orders.production-dashboard') }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" 
+        <a href="{{ route('admin.custom-orders.production-dashboard') }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" 
            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold shadow-md hover:shadow-lg transition-all text-sm"
            style="background: linear-gradient(135deg, #800000 0%, #a00000 100%);">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
