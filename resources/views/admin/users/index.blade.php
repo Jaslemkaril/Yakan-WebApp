@@ -40,7 +40,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600 font-medium">Active Users</p>
-                    <p class="text-2xl font-bold text-[#800000]">{{ $users->filter(function($user) { return $user->last_login_at && $user->last_login_at->diffInMinutes(now()) <= 5; })->count() }}</p>
+                    <p class="text-2xl font-bold text-[#800000]">{{ count($activeUserIds) }}</p>
                 </div>
                 <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                     <i class="fas fa-user-check text-[#800000] text-xl"></i>
@@ -177,12 +177,17 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @php
-                                        if ($user->last_login_at) {
-                                            $minutesAgo = $user->last_login_at->diffInMinutes(now());
-                                            $isActive = $minutesAgo <= 5; // Active if logged in within 5 minutes
-                                            $statusText = $isActive ? 'Active now' : 'Active ' . $user->last_login_at->diffForHumans();
-                                            $statusColor = $isActive ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800';
-                                            $dotColor = $isActive ? 'bg-green-600' : 'bg-blue-600';
+                                        // Check if user has an active session (logged in right now)
+                                        $hasActiveSession = in_array($user->id, $activeUserIds);
+                                        
+                                        if ($hasActiveSession) {
+                                            $statusText = 'Active now';
+                                            $statusColor = 'bg-green-100 text-green-800';
+                                            $dotColor = 'bg-green-600';
+                                        } elseif ($user->last_login_at) {
+                                            $statusText = 'Active ' . $user->last_login_at->diffForHumans();
+                                            $statusColor = 'bg-blue-100 text-blue-800';
+                                            $dotColor = 'bg-blue-600';
                                         } else {
                                             $statusText = 'Inactive';
                                             $statusColor = 'bg-gray-100 text-gray-600';

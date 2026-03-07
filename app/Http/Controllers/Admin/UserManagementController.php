@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class UserManagementController extends Controller
 {
@@ -47,14 +48,23 @@ class UserManagementController extends Controller
                            ->paginate(15)
                            ->withQueryString();
 
-            return view('admin.users.index', compact('users'));
+            // Get currently active users from sessions table
+            $activeUserIds = DB::table('sessions')
+                ->whereNotNull('user_id')
+                ->where('last_activity', '>', now()->subMinutes(5)->timestamp)
+                ->pluck('user_id')
+                ->unique()
+                ->toArray();
+
+            return view('admin.users.index', compact('users', 'activeUserIds'));
         } catch (\Exception $e) {
             // Log the error and return a simple fallback
             \Log::error('UserManagementController index error: ' . $e->getMessage());
             
             // Fallback to simple user query
             $users = User::orderByDesc('created_at')->paginate(15);
-            return view('admin.users.index', compact('users'));
+            $activeUserIds = [];
+            return view('admin.users.index', compact('users', 'activeUserIds'));
         }
     }
 
