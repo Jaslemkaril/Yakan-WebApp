@@ -54,7 +54,7 @@ class AdminCustomOrderController extends Controller
             $inProductionCount = CustomOrder::where('status', 'in_production')->count();
             $totalRevenue = CustomOrder::where('payment_status', 'paid')->sum('final_price');
             
-            return view('admin.custom-orders.index_enhanced', compact(
+            return view('admin.custom_orders.index_enhanced', compact(
                 'orders', 'totalOrders', 'todayOrders', 'pendingCount',
                 'approvedCount', 'inProductionCount', 'totalRevenue'
             ));
@@ -67,7 +67,7 @@ class AdminCustomOrderController extends Controller
     public function show(CustomOrder $order)
     {
         $order->load(['user', 'product']);
-        return view('admin.custom-orders.details', compact('order'));
+        return view('admin.custom_orders.details', compact('order'));
     }
 
     public function updateStatus(Request $request, CustomOrder $order)
@@ -710,7 +710,7 @@ class AdminCustomOrderController extends Controller
                 $request->session()->forget('admin_wizard');
             }
 
-            return view('admin.custom-orders.wizard.choice');
+            return view('admin.custom_orders.wizard.choice');
             
         } catch (\Exception $e) {
             \Log::error('Admin choice selection error: ' . $e->getMessage());
@@ -738,7 +738,7 @@ class AdminCustomOrderController extends Controller
             // Get users for assignment
             $users = \App\Models\User::where('role', 'user')->orderBy('name')->get();
 
-            return view('admin.custom-orders.wizard.product_selection', compact('products', 'users'));
+            return view('admin.custom_orders.wizard.product_selection', compact('products', 'users'));
             
         } catch (\Exception $e) {
             \Log::error('Admin product selection error: ' . $e->getMessage());
@@ -803,7 +803,7 @@ class AdminCustomOrderController extends Controller
             $product = \App\Models\Product::find($wizardData['product']['id']);
             $user = \App\Models\User::find($wizardData['user_id']);
             
-            return view('admin.custom-orders.wizard.step2', [
+            return view('admin.custom_orders.wizard.step2', [
                 'product' => $product,
                 'user' => $user,
                 'isAdminFlow' => true // Flag to indicate this is admin flow
@@ -871,7 +871,7 @@ class AdminCustomOrderController extends Controller
             // Get users for assignment
             $users = \App\Models\User::where('role', 'user')->orderBy('name')->get();
 
-            return view('admin.custom-orders.wizard.fabric_selection', compact('users'));
+            return view('admin.custom_orders.wizard.fabric_selection', compact('users'));
             
         } catch (\Exception $e) {
             \Log::error('Admin fabric selection error: ' . $e->getMessage());
@@ -937,7 +937,7 @@ class AdminCustomOrderController extends Controller
                 ->orderBy('name', 'asc')
                 ->get();
             
-            return view('admin.custom-orders.wizard.step2', [
+            return view('admin.custom_orders.wizard.step2', [
                 'user' => $user,
                 'patterns' => $patterns,
                 'isAdminFlow' => true,
@@ -1009,7 +1009,7 @@ class AdminCustomOrderController extends Controller
                 ->where('is_default', true)
                 ->first();
             
-            return view('admin.custom-orders.wizard.review', compact('wizardData', 'user', 'userAddresses', 'defaultAddress'));
+            return view('admin.custom_orders.wizard.review', compact('wizardData', 'user', 'userAddresses', 'defaultAddress'));
             
         } catch (\Exception $e) {
             \Log::error('Admin review error: ' . $e->getMessage());
@@ -1319,7 +1319,7 @@ class AdminCustomOrderController extends Controller
             
             $stats = compact('totalOrders', 'todayOrders', 'pendingCount', 'totalRevenue');
             
-            return view('admin.custom-orders.index_enhanced', compact('orders', 'stats'));
+            return view('admin.custom_orders.index_enhanced', compact('orders', 'stats'));
             
         } catch (\Exception $e) {
             \Log::error('Enhanced Custom Orders Index Error: ' . $e->getMessage());
@@ -1347,7 +1347,7 @@ class AdminCustomOrderController extends Controller
                 ->limit(10)
                 ->get();
 
-            return view('admin.custom-orders.production_dashboard', compact('stats', 'recentOrders'));
+            return view('admin.custom_orders.production_dashboard', compact('stats', 'recentOrders'));
             
         } catch (\Exception $e) {
             \Log::error('Production Dashboard Error: ' . $e->getMessage());
@@ -1380,4 +1380,5 @@ class AdminCustomOrderController extends Controller
         }
     }
 }
+
 
