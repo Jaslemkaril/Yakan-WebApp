@@ -159,6 +159,9 @@ class SocialAuthController extends Controller
 
             // Login the user with remember=true for persistent cookie
             Auth::login($user, true);
+            
+            // Update last login timestamp
+            $user->update(['last_login_at' => now()]);
 
             // Regenerate session ID to prevent session fixation
             // Do NOT call session()->save() — let StartSession middleware handle persistence

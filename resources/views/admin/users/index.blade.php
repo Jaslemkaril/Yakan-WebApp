@@ -40,7 +40,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600 font-medium">Active Users</p>
-                    <p class="text-2xl font-bold text-[#800000]">{{ $users->filter(function($user) { return $user->last_login_at && $user->last_login_at->gt(now()->subDays(30)); })->count() }}</p>
+                    <p class="text-2xl font-bold text-[#800000]">{{ $users->filter(function($user) { return $user->last_login_at && $user->last_login_at->diffInMinutes(now()) <= 5; })->count() }}</p>
                 </div>
                 <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                     <i class="fas fa-user-check text-[#800000] text-xl"></i>
@@ -177,15 +177,21 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @php
-                                        // Check if this user is currently logged in
-                                        $isCurrentUser = (auth()->guard('admin')->check() && auth()->guard('admin')->user()->email === $user->email) || 
-                                                         (auth()->check() && auth()->user()->email === $user->email);
-                                        // Check if logged in within 30 days
-                                        $isActive = $isCurrentUser || ($user->last_login_at && $user->last_login_at->gt(now()->subDays(30)));
+                                        if ($user->last_login_at) {
+                                            $minutesAgo = $user->last_login_at->diffInMinutes(now());
+                                            $isActive = $minutesAgo <= 5; // Active if logged in within 5 minutes
+                                            $statusText = $isActive ? 'Active now' : 'Active ' . $user->last_login_at->diffForHumans();
+                                            $statusColor = $isActive ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800';
+                                            $dotColor = $isActive ? 'bg-green-600' : 'bg-blue-600';
+                                        } else {
+                                            $statusText = 'Inactive';
+                                            $statusColor = 'bg-gray-100 text-gray-600';
+                                            $dotColor = 'bg-gray-400';
+                                        }
                                     @endphp
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600' }}">
-                                        <span class="w-2 h-2 mr-1 rounded-full {{ $isActive ? 'bg-green-600' : 'bg-gray-400' }}"></span>
-                                        {{ $isActive ? 'Active' : 'Inactive' }}
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $statusColor }}">
+                                        <span class="w-2 h-2 mr-1 rounded-full {{ $dotColor }}"></span>
+                                        {{ $statusText }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

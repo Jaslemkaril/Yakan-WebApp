@@ -26,6 +26,11 @@ class LoginController extends Controller
             }
 
             $user = Auth::user();
+            
+            // Update last login timestamp
+            if ($user) {
+                $user->update(['last_login_at' => now()]);
+            }
 
             if (!$user) {
                 Log::error('Login failed: Auth::user() returned null', [

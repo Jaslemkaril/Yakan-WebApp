@@ -67,6 +67,11 @@ class AuthenticatedSessionController extends Controller
         Auth::attempt($credentials, $request->boolean('remember'));
         $request->session()->regenerate();
         
+        // Update last login timestamp
+        if ($user) {
+            $user->update(['last_login_at' => now()]);
+        }
+        
         \Log::info('User login successful', ['user_id' => $user->id]);
         
         // Redirect with token as fallback
