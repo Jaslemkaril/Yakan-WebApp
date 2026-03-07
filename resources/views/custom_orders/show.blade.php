@@ -1134,6 +1134,67 @@
                             <p class="text-sm font-semibold text-gray-600 mb-2 uppercase tracking-wide">Total Amount to Pay</p>
                             <p class="text-5xl font-black mb-3" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
                             <p class="text-xs text-gray-500">Order #{{ $order->id }}</p>
+                            
+                            {{-- Price Breakdown --}}
+                            @php
+                                $priceBreakdown = $order->getPriceBreakdown();
+                                $breakdown = $priceBreakdown['breakdown'] ?? [];
+                                $hasBreakdown = !empty($breakdown);
+                            @endphp
+                            
+                            @if($hasBreakdown)
+                                <div class="border-t-2 border-gray-200 pt-4 mt-4">
+                                    <h3 class="text-sm font-bold text-gray-700 mb-3">Price Breakdown</h3>
+                                    
+                                    {{-- Material Cost --}}
+                                    @if(isset($breakdown['material_cost']) && $breakdown['material_cost'] > 0)
+                                        <div class="flex justify-between py-2 text-sm">
+                                            <span class="text-gray-600">Material Cost</span>
+                                            <span class="font-semibold text-gray-900">₱{{ number_format($breakdown['material_cost'], 2) }}</span>
+                                        </div>
+                                    @endif
+                                    
+                                    {{-- Pattern/Design Fee --}}
+                                    @if(isset($breakdown['pattern_fee']) && $breakdown['pattern_fee'] > 0)
+                                        <div class="flex justify-between py-2 text-sm">
+                                            <span class="text-gray-600">Pattern/Design Fee</span>
+                                            <span class="font-semibold text-gray-900">₱{{ number_format($breakdown['pattern_fee'], 2) }}</span>
+                                        </div>
+                                    @endif
+                                    
+                                    {{-- Labor Cost --}}
+                                    @if(isset($breakdown['labor_cost']) && $breakdown['labor_cost'] > 0)
+                                        <div class="flex justify-between py-2 text-sm">
+                                            <span class="text-gray-600">Labor Cost</span>
+                                            <span class="font-semibold text-gray-900">₱{{ number_format($breakdown['labor_cost'], 2) }}</span>
+                                        </div>
+                                    @endif
+                                    
+                                    {{-- Delivery Fee --}}
+                                    @if(isset($breakdown['delivery_fee']) && $breakdown['delivery_fee'] > 0)
+                                        <div class="flex justify-between py-2 text-sm">
+                                            <span class="text-gray-600">Delivery Fee</span>
+                                            <span class="font-semibold text-gray-900">₱{{ number_format($breakdown['delivery_fee'], 2) }}</span>
+                                        </div>
+                                    @endif
+                                    
+                                    {{-- Discount (if applicable) --}}
+                                    @if(isset($breakdown['discount']) && $breakdown['discount'] > 0)
+                                        <div class="flex justify-between py-2 text-sm">
+                                            <span class="text-gray-600">Discount</span>
+                                            <span class="font-semibold text-red-600">- ₱{{ number_format($breakdown['discount'], 2) }}</span>
+                                        </div>
+                                    @endif
+                                    
+                                    {{-- Admin Pricing Notes --}}
+                                    @if(!empty($priceBreakdown['notes']))
+                                        <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                            <p class="text-xs text-gray-600 font-medium mb-1">📝 Admin Note:</p>
+                                            <p class="text-sm text-gray-800">{{ $priceBreakdown['notes'] }}</p>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
                     @endif
 
