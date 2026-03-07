@@ -113,11 +113,11 @@
                     </div>
                     
                     <div class="flex items-end space-x-2">
-                        <button type="submit" class="flex-1 px-4 py-3 bg-maroon-700 text-white rounded-lg hover:bg-maroon-800 transition-colors font-medium">
+                        <button type="submit" class="flex-1 px-6 py-3 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-medium">
                             <i class="fas fa-search mr-2"></i>Search
                         </button>
-                        <a href="{{ route('admin.users.index') }}" class="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                            <i class="fas fa-times"></i>
+                        <a href="{{ route('admin.users.index') }}" class="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium flex items-center">
+                            <i class="fas fa-times mr-2"></i>Clear
                         </a>
                     </div>
                 </div>
