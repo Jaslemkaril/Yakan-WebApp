@@ -111,7 +111,7 @@
             <a href="{{ route('admin.custom_orders.create') }}" class="quick-action-btn primary">
                 <i class="fas fa-plus mr-2"></i>New Order
             </a>
-            <a href="{{ route('admin.custom_orders.index') }}" class="quick-action-btn success">
+            <a href="{{ route('admin.custom-orders.index') }}" class="quick-action-btn success">
                 <i class="fas fa-list mr-2"></i>All Orders
             </a>
             <button onclick="refreshDashboard()" class="quick-action-btn warning">

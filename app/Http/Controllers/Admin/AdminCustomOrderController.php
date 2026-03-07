@@ -714,7 +714,7 @@ class AdminCustomOrderController extends Controller
             
         } catch (\Exception $e) {
             \Log::error('Admin choice selection error: ' . $e->getMessage());
-            return redirect()->route('admin.custom_orders.index')
+            return redirect()->route('admin.custom-orders.index')
                 ->with('error', 'Unable to load custom order options. Please try again.');
         }
     }

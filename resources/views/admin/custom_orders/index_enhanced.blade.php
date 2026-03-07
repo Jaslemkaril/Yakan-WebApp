@@ -166,7 +166,7 @@
 
     {{-- ========== FILTERS ========== --}}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
-        <form method="GET" action="{{ route('admin.custom_orders.index') }}" id="filterForm">
+        <form method="GET" action="{{ route('admin.custom-orders.index') }}" id="filterForm">
             @if(request('auth_token'))
                 <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
             @endif
@@ -211,7 +211,7 @@
                         <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
                         Filter
                     </button>
-                    <a href="{{ route('admin.custom_orders.index') }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" 
+                    <a href="{{ route('admin.custom-orders.index') }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" 
                        class="px-3 py-2.5 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-all font-medium">
                         Clear
                     </a>

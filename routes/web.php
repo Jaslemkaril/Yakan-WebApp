@@ -1082,32 +1082,38 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         // Export - MUST be before /{order} catch-all
         Route::get('/export', [AdminCustomOrderController::class, 'exportOrders'])->name('export');
         
-        // Create new custom order
+        // Create wizard routes - MUST be before /{order} catch-all
         Route::get('/create', [AdminCustomOrderController::class, 'create'])->name('create');
-        Route::post('/create', [AdminCustomOrderController::class, 'store'])->name('store');
+        Route::get('/create/choice', [AdminCustomOrderController::class, 'createChoice'])->name('create.choice');
+        Route::get('/create/product', [AdminCustomOrderController::class, 'createProductSelection'])->name('create.product');
+        Route::post('/create/product', [AdminCustomOrderController::class, 'storeProductSelection'])->name('store.product');
+        Route::get('/create/product/customize', [AdminCustomOrderController::class, 'createProductCustomization'])->name('create.product.customize');
+        Route::post('/create/product/customize', [AdminCustomOrderController::class, 'storeProductCustomization'])->name('store.product.customization');
+        Route::get('/create/fabric', [AdminCustomOrderController::class, 'createFabricSelection'])->name('create.fabric');
+        Route::post('/create/fabric', [AdminCustomOrderController::class, 'storeFabricSelection'])->name('store.fabric');
+        Route::get('/create/pattern', [AdminCustomOrderController::class, 'createPatternSelection'])->name('create.pattern');
+        Route::post('/create/pattern', [AdminCustomOrderController::class, 'storePatternSelection'])->name('store.pattern');
+        Route::get('/create/review', [AdminCustomOrderController::class, 'createReview'])->name('create.review');
+        Route::post('/store', [AdminCustomOrderController::class, 'store'])->name('store');
         
-        // View and edit individual orders
-        Route::get('/{order}', [AdminCustomOrderController::class, 'show'])->name('show');
+        // View order - MUST use /view/ prefix to avoid conflict with other routes
+        Route::get('/view/{order}', [AdminCustomOrderController::class, 'show'])->name('show');
+        
+        // Order management actions
+        Route::post('/{order}/update-status', [AdminCustomOrderController::class, 'updateStatus'])->name('update_status');
+        Route::post('/{order}/quote-price', [AdminCustomOrderController::class, 'quotePrice'])->name('quote_price');
+        Route::post('/{order}/verify-payment', [AdminCustomOrderController::class, 'verifyPayment'])->name('verify_payment');
+        Route::post('/{order}/confirm-payment', [AdminCustomOrderController::class, 'confirmPayment'])->name('confirmPayment');
+        Route::post('/{order}/reject-payment', [AdminCustomOrderController::class, 'rejectPayment'])->name('rejectPayment');
+        Route::post('/{order}/reject', [AdminCustomOrderController::class, 'rejectOrder'])->name('reject');
+        Route::post('/{order}/approve', [AdminCustomOrderController::class, 'approveOrder'])->name('approve');
+        Route::post('/{order}/notify-delay', [AdminCustomOrderController::class, 'notifyDelay'])->name('notifyDelay');
+        Route::post('/{order}/clear-delay', [AdminCustomOrderController::class, 'clearDelay'])->name('clearDelay');
+        Route::delete('/{order}', [AdminCustomOrderController::class, 'destroy'])->name('delete');
+        
+        // Edit (at the end to avoid conflicts)
         Route::get('/{order}/edit', [AdminCustomOrderController::class, 'edit'])->name('edit');
         Route::put('/{order}', [AdminCustomOrderController::class, 'update'])->name('update');
-        
-        // Order status management
-        Route::post('/{order}/approve', [AdminCustomOrderController::class, 'approve'])->name('approve');
-        Route::post('/{order}/reject', [AdminCustomOrderController::class, 'reject'])->name('reject');
-        Route::post('/{order}/complete', [AdminCustomOrderController::class, 'markCompleted'])->name('complete');
-        
-        // Price and payment
-        Route::post('/{order}/set-price', [AdminCustomOrderController::class, 'setPrice'])->name('set-price');
-        Route::post('/{order}/verify-payment', [AdminCustomOrderController::class, 'verifyPayment'])->name('verify-payment');
-        
-        // Bulk operations
-        Route::post('/bulk-approve', [AdminCustomOrderController::class, 'bulkApprove'])->name('bulk-approve');
-        Route::post('/bulk-reject', [AdminCustomOrderController::class, 'bulkReject'])->name('bulk-reject');
-        Route::post('/bulk-delete', [AdminCustomOrderController::class, 'bulkDelete'])->name('bulk-delete');
-        
-        // Export and analytics
-        Route::get('/export', [AdminCustomOrderController::class, 'exportOrders'])->name('export');
-        Route::get('/analytics', [CustomOrderAnalyticsController::class, 'index'])->name('analytics');
     });
 
     // Reports & Analytics
