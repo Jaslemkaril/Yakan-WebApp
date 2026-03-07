@@ -173,7 +173,7 @@ class UserManagementController extends Controller
     /**
      * Remove the specified user from storage
      */
-    public function destroy(User $user)
+    public function destroy(Request $request, User $user)
     {
         try {
             // Prevent deletion of the currently authenticated admin
@@ -183,8 +183,17 @@ class UserManagementController extends Controller
 
             $user->delete();
 
-            return redirect()->route('admin.users.index')
-                ->with('success', 'User deleted successfully!');
+            // Ensure session is saved before redirect
+            $request->session()->save();
+            
+            // Get auth_token if present to append to redirect
+            $authToken = $request->input('auth_token') ?? $request->attributes->get('admin_auth_token');
+            $redirectUrl = route('admin.users.index');
+            if ($authToken) {
+                $redirectUrl .= '?auth_token=' . $authToken;
+            }
+
+            return redirect($redirectUrl)->with('success', 'User deleted successfully!');
         } catch (\Exception $e) {
             \Log::error('UserManagementController destroy error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to delete user.');

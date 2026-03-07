@@ -187,16 +187,19 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                                     <div class="flex space-x-2">
-                                        <a href="{{ route('admin.users.show', $user->id) }}" class="text-maroon-600 hover:text-maroon-900 transition-colors">
+                                        <a href="{{ route('admin.users.show', $user->id) }}{{ request()->has('auth_token') ? '?auth_token=' . request()->get('auth_token') : '' }}" class="text-maroon-600 hover:text-maroon-900 transition-colors">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <a href="{{ route('admin.users.edit', $user->id) }}" class="text-[#800000] hover:text-[#600000] transition-colors">
+                                        <a href="{{ route('admin.users.edit', $user->id) }}{{ request()->has('auth_token') ? '?auth_token=' . request()->get('auth_token') : '' }}" class="text-[#800000] hover:text-[#600000] transition-colors">
                                             <i class="fas fa-edit"></i>
                                         </a>
                                         @if($user->id != auth()->guard('admin')->id())
                                             <form method="POST" action="{{ route('admin.users.destroy', $user->id) }}" class="inline">
                                                 @csrf
                                                 @method('DELETE')
+                                                @if(request()->has('auth_token'))
+                                                    <input type="hidden" name="auth_token" value="{{ request()->get('auth_token') }}">
+                                                @endif
                                                 <button type="submit" class="text-[#800000] hover:text-[#600000] transition-colors" onclick="return confirm('Are you sure you want to delete this user?')">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
