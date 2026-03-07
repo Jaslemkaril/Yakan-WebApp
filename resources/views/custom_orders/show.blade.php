@@ -584,9 +584,9 @@
                                 </div>
                                 <div class="text-right">
                                     @if($order->final_price)
-                                        <div class="text-sm text-gray-600">Unit Price:</div>
-                                        <div class="text-lg font-bold" style="color:#800000;">₱{{ number_format($order->final_price / $order->quantity, 2) }}</div>
-                                        <div class="text-sm text-gray-500 mt-1">Total: <span class="font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</span></div>
+                                        <div class="text-sm text-gray-600">Quoted Price:</div>
+                                        <div class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</div>
+                                        <div class="text-xs text-gray-500 mt-1">Total for {{ $order->quantity }} {{ Str::plural('unit', $order->quantity) }}</div>
                                     @else
                                         <div class="text-xs text-gray-500">Price upon quote</div>
                                     @endif
