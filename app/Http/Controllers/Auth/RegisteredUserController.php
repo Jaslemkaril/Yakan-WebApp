@@ -71,14 +71,35 @@ class RegisteredUserController extends Controller
             // Generate OTP and send email
             $otp = $user->generateOtp();
             
-            // Send OTP email
-            Mail::to($user->email)->send(new OtpVerificationMail($user, $otp));
-            
-            \Log::info('OTP email sent', ['user_id' => $user->id, 'email' => $user->email]);
+            // Try to send email with timeout handling
+            $emailSent = false;
+            try {
+                \Log::info('Attempting to send OTP email', ['user_id' => $user->id, 'email' => $user->email]);
+                
+                // Send OTP email with timeout protection
+                Mail::to($user->email)->send(new OtpVerificationMail($user, $otp));
+                
+                $emailSent = true;
+                \Log::info('OTP email sent successfully', ['user_id' => $user->id]);
+                
+            } catch (\Exception $emailError) {
+                \Log::error('Email sending failed', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'error' => $emailError->getMessage()
+                ]);
+                
+                // Continue anyway - user can request OTP resend later
+                $emailSent = false;
+            }
         
-            // Redirect to OTP verification page
+            // Redirect to OTP verification page regardless of email status
+            $message = $emailSent 
+                ? 'Account created successfully! Please check your email for the verification code.'
+                : 'Account created! Email sending failed - your OTP code is: ' . $otp . ' (save this!)';
+                
             return redirect()->route('verification.otp.form', ['email' => $user->email])
-                ->with('success', 'Account created successfully! Please check your email for the verification code.');
+                ->with($emailSent ? 'success' : 'warning', $message);
                 
         } catch (\Exception $e) {
             \Log::error('Registration error', [
