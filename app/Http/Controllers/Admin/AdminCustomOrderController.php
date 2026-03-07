@@ -54,7 +54,7 @@ class AdminCustomOrderController extends Controller
             $inProductionCount = CustomOrder::where('status', 'in_production')->count();
             $totalRevenue = CustomOrder::where('payment_status', 'paid')->sum('final_price');
             
-            return view('admin.custom_orders.index_enhanced', compact(
+            return view('admin.custom-orders.index_enhanced', compact(
                 'orders', 'totalOrders', 'todayOrders', 'pendingCount',
                 'approvedCount', 'inProductionCount', 'totalRevenue'
             ));
@@ -67,7 +67,7 @@ class AdminCustomOrderController extends Controller
     public function show(CustomOrder $order)
     {
         $order->load(['user', 'product']);
-        return view('admin.custom_orders.details', compact('order'));
+        return view('admin.custom-orders.details', compact('order'));
     }
 
     public function updateStatus(Request $request, CustomOrder $order)
@@ -696,7 +696,7 @@ class AdminCustomOrderController extends Controller
      */
     public function create()
     {
-        return redirect()->route('admin.custom_orders.create.choice');
+        return redirect()->route('admin.custom-orders.create.choice');
     }
 
     /**
@@ -710,7 +710,7 @@ class AdminCustomOrderController extends Controller
                 $request->session()->forget('admin_wizard');
             }
 
-            return view('admin.custom_orders.wizard.choice');
+            return view('admin.custom-orders.wizard.choice');
             
         } catch (\Exception $e) {
             \Log::error('Admin choice selection error: ' . $e->getMessage());
@@ -738,11 +738,11 @@ class AdminCustomOrderController extends Controller
             // Get users for assignment
             $users = \App\Models\User::where('role', 'user')->orderBy('name')->get();
 
-            return view('admin.custom_orders.wizard.product_selection', compact('products', 'users'));
+            return view('admin.custom-orders.wizard.product_selection', compact('products', 'users'));
             
         } catch (\Exception $e) {
             \Log::error('Admin product selection error: ' . $e->getMessage());
-            return redirect()->route('admin.custom_orders.create.choice')
+            return redirect()->route('admin.custom-orders.create.choice')
                 ->with('error', 'Unable to load products. Please try again.');
         }
     }
@@ -777,11 +777,11 @@ class AdminCustomOrderController extends Controller
             $request->session()->put('admin_wizard', $wizardData);
             \Log::info('Admin product stored in wizard session', ['product' => $validated['product_name']]);
 
-            return redirect()->route('admin.custom_orders.create.product.customize');
+            return redirect()->route('admin.custom-orders.create.product.customize');
             
         } catch (\Exception $e) {
             \Log::error('Admin store product selection error: ' . $e->getMessage());
-            return redirect()->route('admin.custom_orders.create.product')
+            return redirect()->route('admin.custom-orders.create.product')
                 ->with('error', 'Unable to select product. Please try again.');
         }
     }
@@ -795,7 +795,7 @@ class AdminCustomOrderController extends Controller
             $wizardData = $request->session()->get('admin_wizard');
             
             if (!$wizardData || !isset($wizardData['product'])) {
-                return redirect()->route('admin.custom_orders.create.product')
+                return redirect()->route('admin.custom-orders.create.product')
                     ->with('error', 'Please select a product first.');
             }
 
@@ -803,7 +803,7 @@ class AdminCustomOrderController extends Controller
             $product = \App\Models\Product::find($wizardData['product']['id']);
             $user = \App\Models\User::find($wizardData['user_id']);
             
-            return view('admin.custom_orders.wizard.step2', [
+            return view('admin.custom-orders.wizard.step2', [
                 'product' => $product,
                 'user' => $user,
                 'isAdminFlow' => true // Flag to indicate this is admin flow
@@ -811,7 +811,7 @@ class AdminCustomOrderController extends Controller
             
         } catch (\Exception $e) {
             \Log::error('Admin product customization error: ' . $e->getMessage());
-            return redirect()->route('admin.custom_orders.create.product')
+            return redirect()->route('admin.custom-orders.create.product')
                 ->with('error', 'Unable to load customization options. Please try again.');
         }
     }
@@ -848,11 +848,11 @@ class AdminCustomOrderController extends Controller
                 'pattern' => $validated['pattern']
             ]);
 
-            return redirect()->route('admin.custom_orders.create.review');
+            return redirect()->route('admin.custom-orders.create.review');
             
         } catch (\Exception $e) {
             \Log::error('Admin store product customization error: ' . $e->getMessage());
-            return redirect()->route('admin.custom_orders.create.product.customize')
+            return redirect()->route('admin.custom-orders.create.product.customize')
                 ->with('error', 'Unable to save customization. Please try again.');
         }
     }
@@ -871,11 +871,11 @@ class AdminCustomOrderController extends Controller
             // Get users for assignment
             $users = \App\Models\User::where('role', 'user')->orderBy('name')->get();
 
-            return view('admin.custom_orders.wizard.fabric_selection', compact('users'));
+            return view('admin.custom-orders.wizard.fabric_selection', compact('users'));
             
         } catch (\Exception $e) {
             \Log::error('Admin fabric selection error: ' . $e->getMessage());
-            return redirect()->route('admin.custom_orders.create.choice')
+            return redirect()->route('admin.custom-orders.create.choice')
                 ->with('error', 'Unable to load fabric selection. Please try again.');
         }
     }
@@ -906,11 +906,11 @@ class AdminCustomOrderController extends Controller
 
             $request->session()->put('admin_wizard', $wizardData);
 
-            return redirect()->route('admin.custom_orders.create.pattern');
+            return redirect()->route('admin.custom-orders.create.pattern');
             
         } catch (\Exception $e) {
             \Log::error('Admin store fabric selection error: ' . $e->getMessage());
-            return redirect()->route('admin.custom_orders.create.fabric')
+            return redirect()->route('admin.custom-orders.create.fabric')
                 ->with('error', 'Unable to save fabric selection. Please try again.');
         }
     }
@@ -924,7 +924,7 @@ class AdminCustomOrderController extends Controller
             $wizardData = $request->session()->get('admin_wizard');
             
             if (!$wizardData || !isset($wizardData['fabric'])) {
-                return redirect()->route('admin.custom_orders.create.fabric')
+                return redirect()->route('admin.custom-orders.create.fabric')
                     ->with('error', 'Please select fabric first.');
             }
 
@@ -937,7 +937,7 @@ class AdminCustomOrderController extends Controller
                 ->orderBy('name', 'asc')
                 ->get();
             
-            return view('admin.custom_orders.wizard.step2', [
+            return view('admin.custom-orders.wizard.step2', [
                 'user' => $user,
                 'patterns' => $patterns,
                 'isAdminFlow' => true,
@@ -946,7 +946,7 @@ class AdminCustomOrderController extends Controller
             
         } catch (\Exception $e) {
             \Log::error('Admin pattern selection error: ' . $e->getMessage());
-            return redirect()->route('admin.custom_orders.create.fabric')
+            return redirect()->route('admin.custom-orders.create.fabric')
                 ->with('error', 'Unable to load pattern selection. Please try again.');
         }
     }
@@ -976,11 +976,11 @@ class AdminCustomOrderController extends Controller
             
             $request->session()->put('admin_wizard', $wizardData);
 
-            return redirect()->route('admin.custom_orders.create.review');
+            return redirect()->route('admin.custom-orders.create.review');
             
         } catch (\Exception $e) {
             \Log::error('Admin store pattern selection error: ' . $e->getMessage());
-            return redirect()->route('admin.custom_orders.create.pattern')
+            return redirect()->route('admin.custom-orders.create.pattern')
                 ->with('error', 'Unable to save pattern selection. Please try again.');
         }
     }
@@ -994,7 +994,7 @@ class AdminCustomOrderController extends Controller
             $wizardData = $request->session()->get('admin_wizard');
             
             if (!$wizardData) {
-                return redirect()->route('admin.custom_orders.create.choice')
+                return redirect()->route('admin.custom-orders.create.choice')
                     ->with('error', 'No order data found. Please start over.');
             }
 
@@ -1009,11 +1009,11 @@ class AdminCustomOrderController extends Controller
                 ->where('is_default', true)
                 ->first();
             
-            return view('admin.custom_orders.wizard.review', compact('wizardData', 'user', 'userAddresses', 'defaultAddress'));
+            return view('admin.custom-orders.wizard.review', compact('wizardData', 'user', 'userAddresses', 'defaultAddress'));
             
         } catch (\Exception $e) {
             \Log::error('Admin review error: ' . $e->getMessage());
-            return redirect()->route('admin.custom_orders.create.choice')
+            return redirect()->route('admin.custom-orders.create.choice')
                 ->with('error', 'Unable to load review page. Please try again.');
         }
     }
@@ -1027,7 +1027,7 @@ class AdminCustomOrderController extends Controller
             $wizardData = $request->session()->get('admin_wizard');
             
             if (!$wizardData) {
-                return redirect()->route('admin.custom_orders.create.choice')
+                return redirect()->route('admin.custom-orders.create.choice')
                     ->with('error', 'No order data found. Please start over.');
             }
 
@@ -1054,12 +1054,12 @@ class AdminCustomOrderController extends Controller
 
             \Log::info('Admin custom order created', ['order_id' => $customOrder->id]);
 
-            return redirect()->route('admin.custom_orders.show', $customOrder)
+            return redirect()->route('admin.custom-orders.show', $customOrder)
                 ->with('success', 'Custom order created successfully!');
 
         } catch (\Exception $e) {
             \Log::error('Admin store custom order error: ' . $e->getMessage());
-            return redirect()->route('admin.custom_orders.create.review')
+            return redirect()->route('admin.custom-orders.create.review')
                 ->with('error', 'Unable to create custom order. Please try again.');
         }
     }
@@ -1319,7 +1319,7 @@ class AdminCustomOrderController extends Controller
             
             $stats = compact('totalOrders', 'todayOrders', 'pendingCount', 'totalRevenue');
             
-            return view('admin.custom_orders.index_enhanced', compact('orders', 'stats'));
+            return view('admin.custom-orders.index_enhanced', compact('orders', 'stats'));
             
         } catch (\Exception $e) {
             \Log::error('Enhanced Custom Orders Index Error: ' . $e->getMessage());
@@ -1347,7 +1347,7 @@ class AdminCustomOrderController extends Controller
                 ->limit(10)
                 ->get();
 
-            return view('admin.custom_orders.production_dashboard', compact('stats', 'recentOrders'));
+            return view('admin.custom-orders.production_dashboard', compact('stats', 'recentOrders'));
             
         } catch (\Exception $e) {
             \Log::error('Production Dashboard Error: ' . $e->getMessage());
@@ -1380,3 +1380,4 @@ class AdminCustomOrderController extends Controller
         }
     }
 }
+

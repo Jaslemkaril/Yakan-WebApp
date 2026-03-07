@@ -108,7 +108,7 @@
     <!-- Quick Actions Bar -->
     <div class="bg-white rounded-lg shadow-lg p-4 mb-8 flex items-center justify-between">
         <div class="flex items-center space-x-4">
-            <a href="{{ route('admin.custom_orders.create') }}" class="quick-action-btn primary">
+            <a href="{{ route('admin.custom-orders.create') }}" class="quick-action-btn primary">
                 <i class="fas fa-plus mr-2"></i>New Order
             </a>
             <a href="{{ route('admin.custom-orders.index') }}" class="quick-action-btn success">
@@ -369,3 +369,4 @@ setInterval(() => {
 }, 30000);
 </script>
 @endsection
+

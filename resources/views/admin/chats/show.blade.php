@@ -142,7 +142,7 @@
                     ->first();
             @endphp
             @if($chatOrder)
-                <a href="{{ route('admin.custom_orders.show', $chatOrder->id) }}" class="btn-action btn-primary" style="margin-bottom: 10px; background: linear-gradient(135deg, #059669 0%, #047857 100%);">
+                <a href="{{ route('admin.custom-orders.show', $chatOrder->id) }}" class="btn-action btn-primary" style="margin-bottom: 10px; background: linear-gradient(135deg, #059669 0%, #047857 100%);">
                     <i class="fas fa-box"></i> View Custom Order #{{ $chatOrder->id }}
                 </a>
             @endif
@@ -567,3 +567,4 @@
     </div>
 </div>
 @endsection
+

@@ -497,7 +497,7 @@
                 {{-- Update Status Form --}}
                 <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
                     <h2 class="text-lg font-semibold mb-3 text-gray-900">Update Status</h2>
-                    <form action="{{ route('admin.custom_orders.update_status', $order->id) }}" method="POST" class="flex flex-col gap-3">
+                    <form action="{{ route('admin.custom-orders.update_status', $order->id) }}" method="POST" class="flex flex-col gap-3">
                         @csrf
                         <select name="status" class="border border-gray-300 rounded-lg px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#800000]">
                             <option value="pending" @selected($order->status === 'pending')>Pending</option>
@@ -689,7 +689,7 @@
                                 @endif
                             </p>
                         @endif
-                        <form action="{{ route('admin.custom_orders.verify_payment', $order->id) }}" method="POST" class="space-y-3 mt-3">
+                        <form action="{{ route('admin.custom-orders.verify_payment', $order->id) }}" method="POST" class="space-y-3 mt-3">
                             @csrf
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
@@ -721,7 +721,7 @@
                                 Expected Amount: <span class="font-semibold text-green-600">₱{{ number_format($order->final_price, 2) }}</span>
                             </p>
                         @endif
-                        <form action="{{ route('admin.custom_orders.verify_payment', $order->id) }}" method="POST" class="space-y-3 mt-3">
+                        <form action="{{ route('admin.custom-orders.verify_payment', $order->id) }}" method="POST" class="space-y-3 mt-3">
                             @csrf
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
@@ -749,7 +749,7 @@
                             This payment was processed via {{ ucfirst($order->payment_method) }}. Status will be updated automatically via webhook.
                         </p>
                         @if($order->transaction_id)
-                            <form action="{{ route('admin.custom_orders.check_payment', $order->id) }}" method="POST" class="inline">
+                            <form action="{{ route('admin.custom-orders.check_payment', $order->id) }}" method="POST" class="inline">
                                 @csrf
                                 <button type="submit" class="bg-[#800000] hover:bg-[#600000] text-white px-3 py-2 rounded-lg text-sm font-semibold">
                                     Check Status Manually
@@ -869,3 +869,4 @@ document.addEventListener('DOMContentLoaded', function() {
 @endpush
 
 @endsection
+

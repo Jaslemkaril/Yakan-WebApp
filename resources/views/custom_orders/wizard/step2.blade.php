@@ -856,10 +856,10 @@ function proceedToNext() {
         
         if (isProductFlow) {
             // Admin product flow
-            form.action = '{{ route("admin.custom_orders.store.product.customization") }}';
+            form.action = '{{ route("admin.custom-orders.store.product.customization") }}';
         } else {
             // Admin fabric flow
-            form.action = '{{ route("admin.custom_orders.store.pattern") }}';
+            form.action = '{{ route("admin.custom-orders.store.pattern") }}';
         }
         
         // Add CSRF token
@@ -3240,3 +3240,4 @@ html {
 <!-- No designer script needed - step simplified -->
 @endpush
 @endsection
+

@@ -680,7 +680,7 @@
                         
                         <div class="space-y-2">
                             {{-- Confirm Payment Button --}}
-                            <form action="{{ route('admin.custom_orders.confirmPayment', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
+                            <form action="{{ route('admin.custom-orders.confirmPayment', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
                                 @csrf
                                 @if(request('auth_token'))
                                 <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
@@ -694,7 +694,7 @@
                             </form>
                             
                             {{-- Reject Payment Button --}}
-                            <form action="{{ route('admin.custom_orders.rejectPayment', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" onsubmit="return confirm('Are you sure you want to reject this payment? Customer will need to resubmit.');">
+                            <form action="{{ route('admin.custom-orders.rejectPayment', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" onsubmit="return confirm('Are you sure you want to reject this payment? Customer will need to resubmit.');">
                                 @csrf
                                 @if(request('auth_token'))
                                 <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
@@ -767,7 +767,7 @@
                         {{-- Payment Confirmation Buttons (when status is approved and payment receipt exists but NOT yet confirmed) --}}
                         @if($order->status === 'approved' && $order->payment_receipt && $order->payment_status === 'paid' && !$order->payment_confirmed_at)
                         <div class="space-y-3">
-                            <form action="{{ route('admin.custom_orders.confirmPayment', $order) }}" method="POST">
+                            <form action="{{ route('admin.custom-orders.confirmPayment', $order) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="w-full bg-green-600 text-white font-bold py-3.5 px-4 rounded-lg transition-all shadow-lg hover:shadow-xl hover:bg-green-700 flex items-center justify-center gap-3 transform hover:scale-[1.02]">
                                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -776,7 +776,7 @@
                                     <span>Confirm Payment Received</span>
                                 </button>
                             </form>
-                            <form action="{{ route('admin.custom_orders.rejectPayment', $order) }}" method="POST" onsubmit="return confirm('Are you sure you want to reject this payment? Customer will need to resubmit.');">
+                            <form action="{{ route('admin.custom-orders.rejectPayment', $order) }}" method="POST" onsubmit="return confirm('Are you sure you want to reject this payment? Customer will need to resubmit.');">
                                 @csrf
                                 <button type="submit" class="w-full bg-red-600 text-white font-bold py-3.5 px-4 rounded-lg transition-all shadow-lg hover:shadow-xl hover:bg-red-700 flex items-center justify-center gap-3 transform hover:scale-[1.02]">
                                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1638,3 +1638,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endsection
+
