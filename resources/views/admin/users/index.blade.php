@@ -177,7 +177,11 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @php
-                                        $isActive = $user->last_login_at && $user->last_login_at->gt(now()->subDays(30));
+                                        // Check if this user is currently logged in
+                                        $isCurrentUser = (auth()->guard('admin')->check() && auth()->guard('admin')->user()->email === $user->email) || 
+                                                         (auth()->check() && auth()->user()->email === $user->email);
+                                        // Check if logged in within 30 days
+                                        $isActive = $isCurrentUser || ($user->last_login_at && $user->last_login_at->gt(now()->subDays(30)));
                                     @endphp
                                     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600' }}">
                                         <span class="w-2 h-2 mr-1 rounded-full {{ $isActive ? 'bg-green-600' : 'bg-gray-400' }}"></span>
@@ -189,16 +193,18 @@
                                     <div class="text-xs">{{ $user->created_at->diffForHumans() }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                    <div class="flex items-center space-x-3">
+                                    <div class="flex items-center space-x-2">
                                         <a href="{{ route('admin.users.show', $user->id) }}{{ request()->has('auth_token') ? '?auth_token=' . request()->get('auth_token') : '' }}" 
-                                           class="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all" 
+                                           class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all" 
                                            title="View Details">
-                                            <i class="fas fa-eye text-base"></i>
+                                            <i class="fas fa-eye mr-1.5"></i>
+                                            View
                                         </a>
                                         <a href="{{ route('admin.users.edit', $user->id) }}{{ request()->has('auth_token') ? '?auth_token=' . request()->get('auth_token') : '' }}" 
-                                           class="p-2 text-[#800000] hover:text-[#600000] hover:bg-red-50 rounded-lg transition-all" 
+                                           class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-[#800000] bg-red-50 hover:bg-red-100 rounded-lg transition-all" 
                                            title="Edit User">
-                                            <i class="fas fa-edit text-base"></i>
+                                            <i class="fas fa-edit mr-1.5"></i>
+                                            Edit
                                         </a>
                                         @if($user->id != auth()->guard('admin')->id())
                                             <form method="POST" action="{{ route('admin.users.destroy', $user->id) }}" class="inline">
@@ -208,10 +214,11 @@
                                                     <input type="hidden" name="auth_token" value="{{ request()->get('auth_token') }}">
                                                 @endif
                                                 <button type="submit" 
-                                                        class="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all" 
+                                                        class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-all" 
                                                         title="Delete User"
                                                         onclick="return confirm('Are you sure you want to delete this user?')">
-                                                    <i class="fas fa-trash text-base"></i>
+                                                    <i class="fas fa-trash mr-1.5"></i>
+                                                    Delete
                                                 </button>
                                             </form>
                                         @endif
