@@ -326,6 +326,11 @@
                             <span>OR</span>
                         </div>
 
+                        <!-- TEST: Deployment Check -->
+                        <div class="bg-yellow-100 border-2 border-yellow-500 text-yellow-900 px-4 py-3 rounded-lg mb-4 font-bold text-center">
+                            ⚠️ ERROR DISPLAY ACTIVE - Version March 8, 2026 @ {{ date('H:i:s') }}
+                        </div>
+
                         <!-- Error/Success Messages -->
                         @if($errors->any())
                             <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
