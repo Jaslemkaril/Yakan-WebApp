@@ -1708,6 +1708,15 @@ class CustomOrderController extends Controller
     public function show($id)
     {
         try {
+            // Ensure user is authenticated
+            if (!Auth::check()) {
+                \Log::warning('CustomOrder show - user not authenticated', [
+                    'order_id' => $id,
+                    'redirect_to' => 'login'
+                ]);
+                return redirect()->route('login')->with('error', 'Please log in to view your order.');
+            }
+
             // Find the order manually to catch any issues
             $order = CustomOrder::findOrFail($id);
             
@@ -1721,14 +1730,15 @@ class CustomOrderController extends Controller
                 'matches' => $order->user_id === Auth::id()
             ]);
 
+            // Check ownership
             if ($order->user_id !== Auth::id()) {
-                \Log::error('CustomOrder access denied', [
+                \Log::warning('CustomOrder access denied - ownership mismatch', [
                     'order_id' => $order->id,
                     'order_user_id' => $order->user_id,
                     'authenticated_user_id' => Auth::id(),
                     'reason' => 'Order does not belong to authenticated user'
                 ]);
-                abort(403, 'Unauthorized - This order does not belong to you');
+                return redirect()->route('custom_orders.index')->with('error', 'You do not have permission to view this order.');
             }
 
             $order->load('product');
@@ -1739,7 +1749,7 @@ class CustomOrderController extends Controller
                 'order_id' => $id,
                 'error' => $e->getMessage()
             ]);
-            abort(404, 'Custom Order not found');
+            return redirect()->route('custom_orders.index')->with('error', 'Custom order not found.');
             
         } catch (\Exception $e) {
             \Log::error('CustomOrder show error', [
@@ -1747,7 +1757,7 @@ class CustomOrderController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            abort(500, 'Server error: ' . $e->getMessage());
+            return redirect()->route('custom_orders.index')->with('error', 'An error occurred while loading the order.');
         }
     }
 
