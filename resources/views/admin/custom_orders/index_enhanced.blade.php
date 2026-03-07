@@ -20,11 +20,9 @@
     .preview-hover {
         position: relative;
         display: inline-block;
-        width: 48px;
-        height: 48px;
     }
     .preview-hover .preview-popup {
-        display: none;
+        display: none !important;
         position: absolute;
         left: 55px;
         top: -30px;
@@ -32,7 +30,8 @@
         pointer-events: none;
     }
     .preview-hover:hover .preview-popup {
-        display: block;
+        display: block !important;
+    }
     }
     .pill {
         display: inline-flex;
