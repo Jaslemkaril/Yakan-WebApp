@@ -40,7 +40,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600 font-medium">Active Users</p>
-                    <p class="text-2xl font-bold text-[#800000]">{{ $users->where('status', 'active')->count() }}</p>
+                    <p class="text-2xl font-bold text-[#800000]">{{ $users->filter(function($user) { return $user->last_login_at && $user->last_login_at->gt(now()->subDays(30)); })->count() }}</p>
                 </div>
                 <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                     <i class="fas fa-user-check text-[#800000] text-xl"></i>
@@ -176,9 +176,12 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $user->status == 'active' ? 'bg-red-100 text-[#800000]' : 'bg-red-100 text-[#800000]' }}">
-                                        <span class="w-2 h-2 mr-1 rounded-full {{ $user->status == 'active' ? 'bg-[#800000]' : 'bg-[#800000]' }}"></span>
-                                        {{ ucfirst($user->status) }}
+                                    @php
+                                        $isActive = $user->last_login_at && $user->last_login_at->gt(now()->subDays(30));
+                                    @endphp
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600' }}">
+                                        <span class="w-2 h-2 mr-1 rounded-full {{ $isActive ? 'bg-green-600' : 'bg-gray-400' }}"></span>
+                                        {{ $isActive ? 'Active' : 'Inactive' }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -186,12 +189,16 @@
                                     <div class="text-xs">{{ $user->created_at->diffForHumans() }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                    <div class="flex space-x-2">
-                                        <a href="{{ route('admin.users.show', $user->id) }}{{ request()->has('auth_token') ? '?auth_token=' . request()->get('auth_token') : '' }}" class="text-maroon-600 hover:text-maroon-900 transition-colors">
-                                            <i class="fas fa-eye"></i>
+                                    <div class="flex items-center space-x-3">
+                                        <a href="{{ route('admin.users.show', $user->id) }}{{ request()->has('auth_token') ? '?auth_token=' . request()->get('auth_token') : '' }}" 
+                                           class="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all" 
+                                           title="View Details">
+                                            <i class="fas fa-eye text-base"></i>
                                         </a>
-                                        <a href="{{ route('admin.users.edit', $user->id) }}{{ request()->has('auth_token') ? '?auth_token=' . request()->get('auth_token') : '' }}" class="text-[#800000] hover:text-[#600000] transition-colors">
-                                            <i class="fas fa-edit"></i>
+                                        <a href="{{ route('admin.users.edit', $user->id) }}{{ request()->has('auth_token') ? '?auth_token=' . request()->get('auth_token') : '' }}" 
+                                           class="p-2 text-[#800000] hover:text-[#600000] hover:bg-red-50 rounded-lg transition-all" 
+                                           title="Edit User">
+                                            <i class="fas fa-edit text-base"></i>
                                         </a>
                                         @if($user->id != auth()->guard('admin')->id())
                                             <form method="POST" action="{{ route('admin.users.destroy', $user->id) }}" class="inline">
@@ -200,8 +207,11 @@
                                                 @if(request()->has('auth_token'))
                                                     <input type="hidden" name="auth_token" value="{{ request()->get('auth_token') }}">
                                                 @endif
-                                                <button type="submit" class="text-[#800000] hover:text-[#600000] transition-colors" onclick="return confirm('Are you sure you want to delete this user?')">
-                                                    <i class="fas fa-trash"></i>
+                                                <button type="submit" 
+                                                        class="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all" 
+                                                        title="Delete User"
+                                                        onclick="return confirm('Are you sure you want to delete this user?')">
+                                                    <i class="fas fa-trash text-base"></i>
                                                 </button>
                                             </form>
                                         @endif
