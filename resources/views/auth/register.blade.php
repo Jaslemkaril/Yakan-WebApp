@@ -328,8 +328,21 @@
 
                         <!-- TEST: Deployment Check -->
                         <div class="bg-yellow-100 border-2 border-yellow-500 text-yellow-900 px-4 py-3 rounded-lg mb-4 font-bold text-center">
-                            ⚠️ ERROR DISPLAY ACTIVE - Version March 8, 2026 @ {{ date('H:i:s') }}
+                            ⚠️ ERROR DISPLAY ACTIVE - Version March 8, 2026 @ {{ date('H:i:s') }}<br>
+                            DEBUG: Errors count = {{ $errors->count() }} | Has errors: {{ $errors->any() ? 'YES' : 'NO' }}
                         </div>
+
+                        <!-- DEBUG: Force Show All Errors -->
+                        @if($errors->count() > 0)
+                            <div class="bg-red-100 border-4 border-red-600 text-red-900 px-4 py-3 rounded-lg mb-4">
+                                <p class="font-bold text-lg mb-2">🚨 VALIDATION ERRORS DETECTED ({{ $errors->count() }} errors):</p>
+                                <ul class="list-disc list-inside space-y-1 font-semibold">
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
 
                         <!-- Error/Success Messages -->
                         @if($errors->any())
