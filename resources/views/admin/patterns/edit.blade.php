@@ -36,6 +36,11 @@
         <form method="POST" action="{{ route('admin.patterns.update', $pattern) }}" enctype="multipart/form-data" class="space-y-6" id="patternForm">
             @csrf
             @method('PATCH')
+            
+            <!-- Preserve auth_token if present in URL -->
+            @if(request()->has('auth_token'))
+                <input type="hidden" name="auth_token" value="{{ request()->get('auth_token') }}">
+            @endif
 
             <!-- Basic Information -->
             <div class="bg-white rounded-xl shadow-lg p-6">

@@ -155,7 +155,23 @@ class PatternController extends Controller
             }
         }
 
-        return redirect()->route('admin.patterns.index')->with('success', 'Pattern created successfully.');
+        // Ensure session is saved before redirect
+        $request->session()->save();
+        
+        \Log::info('Pattern created successfully', [
+            'pattern_id' => $pattern->id,
+            'user_id' => auth()->id(),
+            'session_id' => $request->session()->getId()
+        ]);
+
+        // Get auth_token if present to append to redirect
+        $authToken = $request->input('auth_token') ?? $request->attributes->get('admin_auth_token');
+        $redirectUrl = route('admin.patterns.index');
+        if ($authToken) {
+            $redirectUrl .= '?auth_token=' . $authToken;
+        }
+        
+        return redirect($redirectUrl)->with('success', 'Pattern created successfully.');
     }
 
     public function show(YakanPattern $pattern)
@@ -287,7 +303,23 @@ class PatternController extends Controller
             }
         }
 
-        return redirect()->route('admin.patterns.index')->with('success', 'Pattern updated successfully.');
+        // Ensure session is saved before redirect
+        $request->session()->save();
+        
+        \Log::info('Pattern updated successfully', [
+            'pattern_id' => $pattern->id,
+            'user_id' => auth()->id(),
+            'session_id' => $request->session()->getId()
+        ]);
+
+        // Get auth_token if present to append to redirect
+        $authToken = $request->input('auth_token') ?? $request->attributes->get('admin_auth_token');
+        $redirectUrl = route('admin.patterns.index');
+        if ($authToken) {
+            $redirectUrl .= '?auth_token=' . $authToken;
+        }
+        
+        return redirect($redirectUrl)->with('success', 'Pattern updated successfully.');
     }
 
     public function destroy(YakanPattern $pattern)

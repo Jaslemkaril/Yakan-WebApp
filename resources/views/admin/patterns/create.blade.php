@@ -24,6 +24,11 @@
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         <form id="patternCreateForm" method="POST" action="{{ route('admin.patterns.store') }}" enctype="multipart/form-data" class="space-y-6">
             @csrf
+            
+            <!-- Preserve auth_token if present in URL -->
+            @if(request()->has('auth_token'))
+                <input type="hidden" name="auth_token" value="{{ request()->get('auth_token') }}">
+            @endif
 
             <!-- Basic Information -->
             <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-maroon-600 hover:shadow-xl transition-shadow duration-300">
