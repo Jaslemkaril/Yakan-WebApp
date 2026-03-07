@@ -17,22 +17,6 @@
     .order-row:hover {
         background-color: #fdf8f8;
     }
-    .preview-hover {
-        position: relative;
-        display: inline-block;
-    }
-    .preview-hover .preview-popup {
-        display: none !important;
-        position: absolute;
-        left: 55px;
-        top: -30px;
-        z-index: 9999;
-        pointer-events: none;
-    }
-    .preview-hover:hover .preview-popup {
-        display: block !important;
-    }
-    }
     .pill {
         display: inline-flex;
         align-items: center;
@@ -304,44 +288,29 @@
                                         $c['opacity'] ?? 1, $c['scale'] ?? 1, $c['rotation'] ?? 0
                                     );
                                 @endphp
-                                <div class="preview-hover">
-                                    <div class="w-12 h-12 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center p-1 overflow-hidden">
-                                        <div style="{{ $filterStyle }} transform-origin: center; width: 100%; height: 100%;">
-                                            {!! $patternModel->getSvgContent() !!}
-                                        </div>
-                                    </div>
-                                    <div class="preview-popup w-48 h-48 bg-white rounded-xl shadow-2xl border border-gray-200 p-2">
-                                        <div class="w-full h-40 bg-gray-50 rounded-lg flex items-center justify-center p-3 overflow-hidden">
-                                            <div style="{{ $filterStyle }} transform-origin: center; width: 100%; height: 100%;">
-                                                {!! $patternModel->getSvgContent() !!}
-                                            </div>
-                                        </div>
-                                        <p class="text-[10px] text-center font-semibold text-gray-600 mt-1">{{ $patternModel->name }}</p>
+                                <div class="w-12 h-12 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center p-1 overflow-hidden">
+                                    <div style="{{ $filterStyle }} transform-origin: center; width: 100%; height: 100%;">
+                                        {!! $patternModel->getSvgContent() !!}
                                     </div>
                                 </div>
                             @elseif($order->design_upload)
-                                <div class="preview-hover">
-                                    @php 
-                                        $designPath = $order->design_upload;
-                                        if (str_starts_with($designPath, 'http://') || str_starts_with($designPath, 'https://')) {
-                                            // Full URL (Cloudinary or external)
-                                            $imgSrc = $designPath;
-                                        } elseif (str_starts_with($designPath, 'data:image')) {
-                                            // Base64 data URL
-                                            $imgSrc = $designPath;
-                                        } elseif (str_starts_with($designPath, 'storage/')) {
-                                            // Storage path already prefixed
-                                            $imgSrc = asset($designPath);
-                                        } else {
-                                            // Default fallback - add storage prefix
-                                            $imgSrc = asset('storage/' . $designPath);
-                                        }
-                                    @endphp
-                                    <img src="{{ $imgSrc }}" alt="Preview" class="w-12 h-12 rounded-lg object-cover border border-gray-200" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23f3f4f6%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 font-size=%2212%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23d1d5db%22%3ENo Image%3C/text%3E%3C/svg%3E';">
-                                    <div class="preview-popup w-48 h-48 bg-white rounded-xl shadow-2xl border border-gray-200 p-2">
-                                        <img src="{{ $imgSrc }}" alt="Preview" class="w-full h-full object-contain rounded-lg" onerror="this.parentElement.innerHTML = '<div class=\'w-full h-full flex items-center justify-center text-gray-400 text-xs\'>Image unavailable</div>';">
-                                    </div>
-                                </div>
+                                @php 
+                                    $designPath = $order->design_upload;
+                                    if (str_starts_with($designPath, 'http://') || str_starts_with($designPath, 'https://')) {
+                                        // Full URL (Cloudinary or external)
+                                        $imgSrc = $designPath;
+                                    } elseif (str_starts_with($designPath, 'data:image')) {
+                                        // Base64 data URL
+                                        $imgSrc = $designPath;
+                                    } elseif (str_starts_with($designPath, 'storage/')) {
+                                        // Storage path already prefixed
+                                        $imgSrc = asset($designPath);
+                                    } else {
+                                        // Default fallback - add storage prefix
+                                        $imgSrc = asset('storage/' . $designPath);
+                                    }
+                                @endphp
+                                <img src="{{ $imgSrc }}" alt="Preview" class="w-12 h-12 rounded-lg object-cover border border-gray-200" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23f3f4f6%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 font-size=%2212%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23d1d5db%22%3ENo Image%3C/text%3E%3C/svg%3E';">
                             @else
                                 <div class="w-12 h-12 bg-gray-50 rounded-lg border border-dashed border-gray-200 flex items-center justify-center">
                                     <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
