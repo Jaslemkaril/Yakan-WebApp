@@ -812,7 +812,6 @@
                             <strong>Status:</strong> {{ ucwords(str_replace('_', ' ', $order->status)) }}
                         </div>
                         @endif
-                        @endif
                     </div>
                     @endif
                     
