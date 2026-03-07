@@ -413,20 +413,6 @@
                             </div>
                         </div>
                     @else
-                        {{-- Fallback: Show estimated and final price when breakdown not available --}}
-                        @if($order->estimated_price)
-                        <div class="flex justify-between items-center py-2 border-b border-gray-200">
-                            <span class="text-gray-600">Estimated Price:</span>
-                            <span class="text-lg font-semibold text-gray-900">₱{{ number_format($order->estimated_price, 2) }}</span>
-                        </div>
-                        @endif
-                        
-                        @if($order->final_price)
-                        <div class="flex justify-between items-center py-2 border-b border-gray-200">
-                            <span class="text-gray-600">Final Price:</span>
-                            <span class="text-2xl font-bold text-green-600">₱{{ number_format($order->final_price, 2) }}</span>
-                        </div>
-                        
                         {{-- Price Breakdown from getPriceBreakdown() method --}}
                         @php
                             $priceBreakdown = $order->getPriceBreakdown();
@@ -497,7 +483,21 @@
                                     </div>
                                 @endif
                             </div>
-                        @endif
+                        @else
+                            {{-- Fallback when no breakdown available --}}
+                            @if($order->estimated_price)
+                            <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                                <span class="text-gray-600">Estimated Price:</span>
+                                <span class="text-lg font-semibold text-gray-900">₱{{ number_format($order->estimated_price, 2) }}</span>
+                            </div>
+                            @endif
+                            
+                            @if($order->final_price)
+                            <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                                <span class="text-gray-600">Final Price:</span>
+                                <span class="text-2xl font-bold text-green-600">₱{{ number_format($order->final_price, 2) }}</span>
+                            </div>
+                            @endif
                         @endif
                     @endif
                     
