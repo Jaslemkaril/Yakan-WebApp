@@ -170,11 +170,11 @@ return [
     |
     */
 
-    // HTTPS-only cookies: Auto-detect from request when SESSION_SECURE_COOKIE is not set
-    // Railway's trust proxies will properly detect HTTPS from X-Forwarded-Proto header
+    // For Railway HTTPS: Set to null to let Laravel auto-detect based on actual request scheme
+    // This ensures cookies work properly with Railway's proxy setup
     'secure' => env('SESSION_SECURE_COOKIE') !== null 
         ? filter_var(env('SESSION_SECURE_COOKIE'), FILTER_VALIDATE_BOOLEAN)
-        : (env('APP_ENV') === 'production' ? true : null),
+        : null,
 
     /*
     |--------------------------------------------------------------------------
