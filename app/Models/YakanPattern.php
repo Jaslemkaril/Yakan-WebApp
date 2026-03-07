@@ -125,13 +125,32 @@ class YakanPattern extends Model
      */
     public function getSvgContent(?array $colors = null): ?string
     {
-        // If svg_path exists, read from file
+        // If svg_path exists, read from file or URL
         if (!empty($this->svg_path)) {
-            $svgPath = public_path('uploads/patterns/svg/' . $this->svg_path);
-            if (file_exists($svgPath)) {
-                $svgContent = file_get_contents($svgPath);
+            // Check if it's a URL (Cloudinary or other remote storage)
+            if (filter_var($this->svg_path, FILTER_VALIDATE_URL)) {
+                try {
+                    $svgContent = file_get_contents($this->svg_path);
+                    if ($svgContent === false) {
+                        \Log::warning('Failed to fetch SVG from URL', ['url' => $this->svg_path]);
+                        return null;
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Error fetching SVG from URL', [
+                        'url' => $this->svg_path,
+                        'error' => $e->getMessage()
+                    ]);
+                    return null;
+                }
             } else {
-                return null;
+                // Local file path
+                $svgPath = public_path('uploads/patterns/svg/' . $this->svg_path);
+                if (file_exists($svgPath)) {
+                    $svgContent = file_get_contents($svgPath);
+                } else {
+                    \Log::warning('SVG file not found', ['path' => $svgPath]);
+                    return null;
+                }
             }
         }
         // If pattern_data array has an 'svg' key
