@@ -438,15 +438,47 @@ class OrderController extends Controller
     public function confirmReceived(Order $order)
     {
         try {
+            // Verify the order belongs to the authenticated user
+            if ($order->user_id !== auth()->id()) {
+                \Log::warning('Unauthorized order confirmation attempt', [
+                    'order_id' => $order->id,
+                    'order_user_id' => $order->user_id,
+                    'auth_user_id' => auth()->id()
+                ]);
+                return redirect()->back()->with('error', 'Unauthorized action.');
+            }
+
+            // Check if order is in delivered status
+            if ($order->status !== 'delivered') {
+                \Log::warning('Invalid status for order confirmation', [
+                    'order_id' => $order->id,
+                    'current_status' => $order->status
+                ]);
+                return redirect()->back()->with('error', 'Order must be delivered before confirmation.');
+            }
+
             // Update order status to completed when customer confirms receipt
             $order->update([
                 'status' => 'completed',
                 'delivered_at' => now(),
             ]);
 
+            // Force save session to ensure persistence
+            request()->session()->save();
+
+            \Log::info('Order marked as received by customer', [
+                'order_id' => $order->id,
+                'user_id' => auth()->id(),
+                'completed_at' => now()
+            ]);
+
             return redirect()->back()->with('success', 'Order marked as received. Thank you for your confirmation!');
         } catch (\Exception $e) {
-            Log::error('Error confirming order received: ' . $e->getMessage());
+            \Log::error('Error confirming order received', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return redirect()->back()->with('error', 'Failed to confirm order received. Please try again.');
         }
     }
