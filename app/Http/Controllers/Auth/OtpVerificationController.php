@@ -4,9 +4,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Mail\OtpVerificationMail;
+use App\Services\SendGridService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
@@ -115,18 +114,14 @@ class OtpVerificationController extends Controller
         $otp = $user->generateOtp();
         \Log::info('OTP resend - generated new OTP', ['user_id' => $user->id, 'email' => $email]);
 
-        // Send OTP email
-        $emailSent = false;
-        try {
-            Mail::to($user->email)->send(new OtpVerificationMail($user, $otp));
-            $emailSent = true;
-            \Log::info('OTP resend - email sent successfully', ['user_id' => $user->id]);
-        } catch (\Exception $e) {
-            \Log::error('OTP resend - email failed', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage()
-            ]);
-        }
+        // Send OTP email via SendGrid HTTP API (SMTP blocked on Railway)
+        $emailSent = SendGridService::sendView(
+            $user->email,
+            'Verify Your Email - Yakan E-commerce',
+            'emails.otp-verification',
+            ['user' => $user, 'otp' => $otp]
+        );
+        \Log::info('OTP resend attempt', ['user_id' => $user->id, 'sent' => $emailSent]);
 
         // Render view directly (no redirect to avoid session loss)
         $message = $emailSent

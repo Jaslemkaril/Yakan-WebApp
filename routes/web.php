@@ -340,45 +340,23 @@ Route::get('/test-registration-access', function () {
     ]);
 });
 
-// Test SendGrid email - sends a simple test email
+// Test SendGrid email via HTTP API (SMTP is blocked on Railway)
 Route::get('/test-sendgrid', function () {
     $email = request()->get('email', 'coloresdeartes16@gmail.com');
     
-    try {
-        \Mail::raw('This is a test email from Yakan E-commerce sent via SendGrid at ' . now(), function ($message) use ($email) {
-            $message->to($email)
-                    ->subject('Yakan - SendGrid Test Email');
-        });
-        
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Test email sent to ' . $email,
-            'mail_config' => [
-                'mailer' => config('mail.default'),
-                'host' => config('mail.mailers.smtp.host'),
-                'port' => config('mail.mailers.smtp.port'),
-                'encryption' => config('mail.mailers.smtp.encryption'),
-                'username' => config('mail.mailers.smtp.username'),
-                'from' => config('mail.from.address'),
-                'password_set' => !empty(config('mail.mailers.smtp.password')),
-            ]
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage(),
-            'class' => get_class($e),
-            'mail_config' => [
-                'mailer' => config('mail.default'),
-                'host' => config('mail.mailers.smtp.host'),
-                'port' => config('mail.mailers.smtp.port'),
-                'encryption' => config('mail.mailers.smtp.encryption'),
-                'username' => config('mail.mailers.smtp.username'),
-                'from' => config('mail.from.address'),
-                'password_set' => !empty(config('mail.mailers.smtp.password')),
-            ]
-        ], 500);
-    }
+    $result = \App\Services\SendGridService::send(
+        $email,
+        'Yakan - SendGrid Test Email',
+        '<h1>Test Email</h1><p>This is a test email from Yakan E-commerce sent via SendGrid HTTP API at ' . now() . '</p>'
+    );
+    
+    return response()->json([
+        'status' => $result ? 'success' : 'error',
+        'message' => $result ? 'Test email sent to ' . $email : 'Failed to send email - check logs',
+        'method' => 'SendGrid HTTP API (not SMTP)',
+        'from' => config('mail.from.address'),
+        'api_key_set' => !empty(config('mail.mailers.smtp.password')),
+    ], $result ? 200 : 500);
 });
 
 // Check which DB tables exist

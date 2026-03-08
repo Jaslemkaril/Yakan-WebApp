@@ -4,13 +4,11 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Mail\OtpVerificationMail;
-use App\Mail\WelcomeEmail;
+use App\Services\SendGridService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
@@ -85,26 +83,22 @@ class RegisteredUserController extends Controller
             $otp = $user->generateOtp();
             \Log::info('OTP generated', ['user_id' => $user->id]);
 
-            // Try to send OTP email
-            $emailSent = false;
-            try {
-                Mail::to($user->email)->send(new OtpVerificationMail($user, $otp));
-                $emailSent = true;
-                \Log::info('OTP email sent successfully', ['user_id' => $user->id]);
-            } catch (\Exception $emailError) {
-                \Log::error('OTP email sending failed', [
-                    'user_id' => $user->id,
-                    'error' => $emailError->getMessage()
-                ]);
-            }
+            // Send OTP email via SendGrid HTTP API (SMTP is blocked on Railway)
+            $emailSent = SendGridService::sendView(
+                $user->email,
+                'Verify Your Email - Yakan E-commerce',
+                'emails.otp-verification',
+                ['user' => $user, 'otp' => $otp]
+            );
+            \Log::info('OTP email send attempt', ['user_id' => $user->id, 'sent' => $emailSent]);
 
-            // Try to send welcome email (non-blocking)
-            try {
-                Mail::to($user->email)->send(new WelcomeEmail($user));
-                \Log::info('Welcome email sent', ['user_id' => $user->id]);
-            } catch (\Exception $welcomeError) {
-                \Log::error('Welcome email failed', ['error' => $welcomeError->getMessage()]);
-            }
+            // Send welcome email (non-blocking)
+            SendGridService::sendView(
+                $user->email,
+                'Welcome to Yakan E-commerce!',
+                'emails.welcome',
+                ['user' => $user]
+            );
 
             \Log::info('=== REGISTRATION SUCCESS - Rendering OTP page ===', ['email' => $user->email]);
 
