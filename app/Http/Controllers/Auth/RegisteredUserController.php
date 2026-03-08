@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Mail\OtpVerificationMail;
+use App\Mail\WelcomeEmail;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -91,6 +92,17 @@ class RegisteredUserController extends Controller
                 
                 // Continue anyway - user can request OTP resend later
                 $emailSent = false;
+            }
+        
+            // Send welcome email asynchronously (don't block registration if it fails)
+            try {
+                Mail::to($user->email)->send(new WelcomeEmail($user));
+                \Log::info('Welcome email sent', ['user_id' => $user->id]);
+            } catch (\Exception $welcomeError) {
+                \Log::error('Welcome email failed', [
+                    'user_id' => $user->id,
+                    'error' => $welcomeError->getMessage()
+                ]);
             }
         
             // Redirect to OTP verification page regardless of email status

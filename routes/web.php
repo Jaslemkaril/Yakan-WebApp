@@ -278,6 +278,57 @@ Route::get('/debug/run-migrations', function () {
     }
 });
 
+// Test welcome email
+Route::get('/test-welcome-email', function () {
+    try {
+        // Create a test user object (don't save to DB)
+        $testUser = new \App\Models\User([
+            'name' => 'Test User',
+            'email' => request()->get('email', 'coloresdeartes16@gmail.com'),
+            'first_name' => 'Test',
+            'last_name' => 'User',
+        ]);
+        
+        \Log::info('Attempting to send test welcome email via SendGrid', ['email' => $testUser->email]);
+        
+        // Send the welcome email
+        \Mail::to($testUser->email)->send(new \App\Mail\WelcomeEmail($testUser));
+        
+        \Log::info('Test welcome email sent successfully via SendGrid');
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Welcome email sent successfully via SendGrid!',
+            'sent_to' => $testUser->email,
+            'mail_config' => [
+                'mailer' => config('mail.default'),
+                'host' => config('mail.mailers.smtp.host'),
+                'port' => config('mail.mailers.smtp.port'),
+                'from' => config('mail.from.address'),
+                'username' => config('mail.mailers.smtp.username'),
+            ]
+        ]);
+        
+    } catch (\Exception $e) {
+        \Log::error('Test welcome email failed', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Failed to send email: ' . $e->getMessage(),
+            'mail_config' => [
+                'mailer' => config('mail.default'),
+                'host' => config('mail.mailers.smtp.host'),
+                'port' => config('mail.mailers.smtp.port'),
+                'from' => config('mail.from.address'),
+                'username' => config('mail.mailers.smtp.username'),
+            ]
+        ], 500);
+    }
+});
+
 // Check which DB tables exist
 Route::get('/debug/db-tables', function () {
     try {
