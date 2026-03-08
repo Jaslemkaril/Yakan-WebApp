@@ -33,6 +33,11 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         try {
+            \Log::info('=== REGISTRATION START ===', [
+                'ip' => $request->ip(),
+                'data' => $request->except(['password', 'password_confirmation'])
+            ]);
+
             $validated = $request->validate([
                 'first_name' => 'required|string|max:255',
                 'last_name' => 'required|string|max:255',
@@ -56,7 +61,7 @@ class RegisteredUserController extends Controller
                 'terms.accepted' => 'You must agree to the Terms of Service and Privacy Policy.',
             ]);
         
-            \Log::info('Registration attempt', ['email' => $validated['email']]);
+            \Log::info('Validation passed', ['email' => $validated['email']]);
         
             $user = User::create([
                 'first_name' => $validated['first_name'],
@@ -72,7 +77,17 @@ class RegisteredUserController extends Controller
             \Log::info('User created successfully', ['user_id' => $user->id]);
             
             // Generate OTP and send email
-            $otp = $user->generateOtp();
+            try {
+                $otp = $user->generateOtp();
+                \Log::info('OTP generated', ['user_id' => $user->id, 'otp' => $otp]);
+            } catch (\Exception $otpError) {
+                \Log::error('OTP generation failed', [
+                    'user_id' => $user->id,
+                    'error' => $otpError->getMessage(),
+                    'trace' => $otpError->getTraceAsString()
+                ]);
+                throw $otpError; // Re-throw to catch block
+            }
             
             // Try to send email with timeout handling
             $emailSent = false;
