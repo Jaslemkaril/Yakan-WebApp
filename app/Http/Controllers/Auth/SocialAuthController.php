@@ -248,12 +248,107 @@ HTML);
                 'session_id' => session()->getId(),
             ]);
 
-            // Redirect with auth_token in URL — the JavaScript in the layout will
-            // save it to localStorage and use it for all subsequent requests.
-            // Cookies don't work on Railway (edge proxy strips Set-Cookie headers).
+            // Return a branded loading page instead of a plain redirect response.
+            // PHP redirect() produces a plain "Redirecting to..." HTML body; using JS
+            // redirect avoids that and gives users a proper loading screen.
             $redirectUrl = route('welcome') . '?auth_token=' . $token;
-            return redirect()->to($redirectUrl)
-                ->with('success', 'Successfully logged in with ' . ucfirst($provider) . '!');
+            $providerName = ucfirst($provider);
+            $userName = htmlspecialchars($user->name ?? 'there', ENT_QUOTES, 'UTF-8');
+            $redirectUrlJs = json_encode($redirectUrl);
+
+            return response(<<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Signed in — Yakan</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(160deg, #6b0000 0%, #8b0000 45%, #3d0000 100%);
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+        .card {
+            background: rgba(255,255,255,0.09);
+            border: 1px solid rgba(255,255,255,0.18);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 48px 40px;
+            text-align: center;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 32px 64px rgba(0,0,0,0.35);
+            animation: fadeUp 0.4s ease-out;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .logo {
+            width: 56px; height: 56px;
+            background: linear-gradient(135deg, #800000, #a00000);
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        .logo span { color: white; font-weight: 800; font-size: 26px; }
+        .check-circle {
+            width: 52px; height: 52px;
+            background: rgba(16,185,129,0.2);
+            border: 2px solid rgba(16,185,129,0.5);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px;
+            animation: pop 0.4s ease-out 0.2s both;
+        }
+        @keyframes pop {
+            from { transform: scale(0); opacity: 0; }
+            to   { transform: scale(1); opacity: 1; }
+        }
+        .check-circle svg { width: 26px; height: 26px; }
+        h2 { color: white; font-size: 1.25rem; font-weight: 700; margin-bottom: 6px; }
+        .sub { color: rgba(255,220,220,0.75); font-size: 0.875rem; margin-bottom: 28px; }
+        .progress-bar {
+            height: 3px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, rgba(255,255,255,0.6), white);
+            border-radius: 2px;
+            animation: fill 1.2s ease-out forwards;
+        }
+        @keyframes fill { from { width: 0%; } to { width: 100%; } }
+        .status { color: rgba(255,220,220,0.6); font-size: 0.75rem; margin-top: 12px; letter-spacing: 0.05em; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo"><span>Y</span></div>
+        <div class="check-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+            </svg>
+        </div>
+        <h2>Welcome, {$userName}!</h2>
+        <p class="sub">Signed in with {$providerName} — loading your account…</p>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+        <p class="status">REDIRECTING</p>
+    </div>
+    <script>
+        setTimeout(function() { window.location.href = {$redirectUrlJs}; }, 1200);
+    </script>
+</body>
+</html>
+HTML);
 
         } catch (\Exception $e) {
             \Log::error('OAuth callback error', [
