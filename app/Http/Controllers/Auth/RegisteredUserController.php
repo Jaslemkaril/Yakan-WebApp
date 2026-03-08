@@ -7,11 +7,11 @@ use App\Models\User;
 use App\Mail\OtpVerificationMail;
 use App\Mail\WelcomeEmail;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 
@@ -27,43 +27,48 @@ class RegisteredUserController extends Controller
 
     /**
      * Handle an incoming registration request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request)
     {
-        try {
-            \Log::info('=== REGISTRATION START ===', [
-                'ip' => $request->ip(),
-                'data' => $request->except(['password', 'password_confirmation'])
-            ]);
+        \Log::info('=== REGISTRATION START ===', [
+            'ip' => $request->ip(),
+            'data' => $request->except(['password', 'password_confirmation'])
+        ]);
 
-            $validated = $request->validate([
-                'first_name' => 'required|string|max:255',
-                'last_name' => 'required|string|max:255',
-                'middle_initial' => 'nullable|string|max:1',
-                'email' => 'required|string|email|max:255|unique:users',
-                'password' => [
-                    'required',
-                    'string',
-                    'min:8',
-                    'confirmed',
-                    'regex:/[a-z]/',      // at least one lowercase
-                    'regex:/[A-Z]/',      // at least one uppercase
-                    'regex:/[0-9]/',      // at least one number
-                    'regex:/[@$!%*#?&]/', // at least one special character
-                ],
-                'terms' => 'required|in:1', // Must be checked (value must be "1")
-            ], [
-                'password.regex' => 'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character (@$!%*#?&).',
-                'password.min' => 'Password must be at least 8 characters long.',
-                'password.confirmed' => 'Password confirmation does not match.',
-                'terms.required' => 'You must agree to the Terms of Service and Privacy Policy.',
-                'terms.in' => 'You must agree to the Terms of Service and Privacy Policy.',
-            ]);
-        
+        // Manual validation so we can render view directly instead of redirect
+        $validator = Validator::make($request->all(), [
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'middle_initial' => 'nullable|string|max:1',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/[a-z]/',
+                'regex:/[A-Z]/',
+                'regex:/[0-9]/',
+                'regex:/[@$!%*#?&]/',
+            ],
+        ], [
+            'password.regex' => 'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character (@$!%*#?&).',
+            'password.min' => 'Password must be at least 8 characters long.',
+            'password.confirmed' => 'Password confirmation does not match.',
+        ]);
+
+        if ($validator->fails()) {
+            \Log::info('Validation failed', ['errors' => $validator->errors()->all()]);
+            // Render the register view directly with errors (no redirect needed)
+            return view('auth.register')
+                ->withErrors($validator)
+                ->with('_old_input', $request->except('password', 'password_confirmation'));
+        }
+
+        try {
+            $validated = $validator->validated();
             \Log::info('Validation passed', ['email' => $validated['email']]);
-        
+
             $user = User::create([
                 'first_name' => $validated['first_name'],
                 'last_name' => $validated['last_name'],
@@ -72,75 +77,58 @@ class RegisteredUserController extends Controller
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
                 'role' => 'user',
-                // Remove auto-verification - require email verification
             ]);
-            
+
             \Log::info('User created successfully', ['user_id' => $user->id]);
-            
-            // Generate OTP and send email
-            try {
-                $otp = $user->generateOtp();
-                \Log::info('OTP generated', ['user_id' => $user->id, 'otp' => $otp]);
-            } catch (\Exception $otpError) {
-                \Log::error('OTP generation failed', [
-                    'user_id' => $user->id,
-                    'error' => $otpError->getMessage(),
-                    'trace' => $otpError->getTraceAsString()
-                ]);
-                throw $otpError; // Re-throw to catch block
-            }
-            
-            // Try to send email with timeout handling
+
+            // Generate OTP
+            $otp = $user->generateOtp();
+            \Log::info('OTP generated', ['user_id' => $user->id]);
+
+            // Try to send OTP email
             $emailSent = false;
             try {
-                \Log::info('Attempting to send OTP email', ['user_id' => $user->id, 'email' => $user->email]);
-                
-                // Send OTP email with timeout protection
                 Mail::to($user->email)->send(new OtpVerificationMail($user, $otp));
-                
                 $emailSent = true;
                 \Log::info('OTP email sent successfully', ['user_id' => $user->id]);
-                
             } catch (\Exception $emailError) {
-                \Log::error('Email sending failed', [
+                \Log::error('OTP email sending failed', [
                     'user_id' => $user->id,
-                    'email' => $user->email,
                     'error' => $emailError->getMessage()
                 ]);
-                
-                // Continue anyway - user can request OTP resend later
-                $emailSent = false;
             }
-        
-            // Send welcome email asynchronously (don't block registration if it fails)
+
+            // Try to send welcome email (non-blocking)
             try {
                 Mail::to($user->email)->send(new WelcomeEmail($user));
                 \Log::info('Welcome email sent', ['user_id' => $user->id]);
             } catch (\Exception $welcomeError) {
-                \Log::error('Welcome email failed', [
-                    'user_id' => $user->id,
-                    'error' => $welcomeError->getMessage()
-                ]);
+                \Log::error('Welcome email failed', ['error' => $welcomeError->getMessage()]);
             }
-        
-            // Redirect to OTP verification page regardless of email status
-            $message = $emailSent 
+
+            \Log::info('=== REGISTRATION SUCCESS - Rendering OTP page ===', ['email' => $user->email]);
+
+            // Render OTP view directly instead of redirect (sessions don't persist on Railway)
+            $message = $emailSent
                 ? 'Account created successfully! Please check your email for the verification code.'
                 : 'Account created! Email sending failed - your OTP code is: ' . $otp . ' (save this!)';
-                
-            return redirect()->route('verification.otp.form', ['email' => $user->email])
-                ->with($emailSent ? 'success' : 'warning', $message);
-                
+
+            return view('auth.verify-otp', [
+                'user' => $user,
+                'success' => $message,
+                'emailSent' => $emailSent,
+            ]);
+
         } catch (\Exception $e) {
             \Log::error('Registration error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
-            return redirect()->back()
-                ->withInput($request->except('password', 'password_confirmation'))
-                ->with('error', 'Registration failed. Please try again.');
+
+            // Render register view directly with error (no redirect)
+            return view('auth.register')
+                ->with('error', 'Registration failed: ' . $e->getMessage())
+                ->with('_old_input', $request->except('password', 'password_confirmation'));
         }
     }
-    
 }
