@@ -329,6 +329,17 @@ Route::get('/test-welcome-email', function () {
     }
 });
 
+// Test registration endpoint
+Route::get('/test-registration-access', function () {
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Registration endpoint is accessible',
+        'database' => \DB::connection()->getPdo() ? 'Connected' : 'Not connected',
+        'session' => session()->getId(),
+        'csrf' => csrf_token(),
+    ]);
+});
+
 // Check which DB tables exist
 Route::get('/debug/db-tables', function () {
     try {
