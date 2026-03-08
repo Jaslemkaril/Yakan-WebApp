@@ -628,7 +628,7 @@
         }
     </style>
 </head>
-<body class="antialiased" style="opacity: 0;">
+<body class="antialiased">
     <!-- ===== Page Loading Screen ===== -->
     <div id="pageLoader" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#ffffff;transition:opacity 0.4s ease, visibility 0.4s ease;">
         <div style="text-align:center;">
