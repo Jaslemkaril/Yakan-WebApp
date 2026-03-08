@@ -544,6 +544,9 @@
                                     I agree to the <a href="#" class="text-red-600 hover:text-red-700">Terms of Service</a> and <a href="#" class="text-red-600 hover:text-red-700">Privacy Policy</a>
                                 </label>
                             </div>
+                            @error('terms')
+                                <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                            @enderror
 
                             <button 
                                 type="submit" 
