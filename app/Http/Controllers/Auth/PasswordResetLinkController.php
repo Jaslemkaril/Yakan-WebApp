@@ -26,7 +26,7 @@ class PasswordResetLinkController extends Controller
      * Handle an incoming password reset link request.
      * Using SendGrid HTTP API instead of SMTP (blocked on Railway).
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request)
     {
         $request->validate([
             'email' => ['required', 'email'],
