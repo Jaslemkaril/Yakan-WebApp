@@ -544,13 +544,15 @@
                             @enderror
 
                             <div class="terms-checkbox">
-                                <input type="checkbox" name="terms" id="terms" value="1" {{ old('terms') ? 'checked' : '' }} required>
+                                <!-- Hidden input to ensure 'terms' is always sent -->
+                                <input type="hidden" name="terms" value="0">
+                                <input type="checkbox" name="terms" id="terms" value="1" {{ old('terms') ? 'checked' : '' }}>
                                 <label for="terms" class="text-sm text-gray-700">
                                     I agree to the <a href="{{ route('terms-of-service') }}" target="_blank" class="text-red-600 hover:text-red-700">Terms of Service</a> and <a href="{{ route('privacy-policy') }}" target="_blank" class="text-red-600 hover:text-red-700">Privacy Policy</a>
                                 </label>
                             </div>
                             @error('terms')
-                                <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                                <p class="text-red-600 text-sm mt-1 font-bold">{{ $message }}</p>
                             @enderror
 
                             <button 

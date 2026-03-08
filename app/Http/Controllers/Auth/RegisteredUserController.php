@@ -53,12 +53,13 @@ class RegisteredUserController extends Controller
                     'regex:/[0-9]/',      // at least one number
                     'regex:/[@$!%*#?&]/', // at least one special character
                 ],
-                'terms' => 'accepted', // Add terms validation
+                'terms' => 'required|in:1', // Must be checked (value must be "1")
             ], [
                 'password.regex' => 'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character (@$!%*#?&).',
                 'password.min' => 'Password must be at least 8 characters long.',
                 'password.confirmed' => 'Password confirmation does not match.',
-                'terms.accepted' => 'You must agree to the Terms of Service and Privacy Policy.',
+                'terms.required' => 'You must agree to the Terms of Service and Privacy Policy.',
+                'terms.in' => 'You must agree to the Terms of Service and Privacy Policy.',
             ]);
         
             \Log::info('Validation passed', ['email' => $validated['email']]);
