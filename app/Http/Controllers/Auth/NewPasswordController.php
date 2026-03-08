@@ -25,10 +25,9 @@ class NewPasswordController extends Controller
 
     /**
      * Handle an incoming new password request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
+     * Renders views directly instead of redirect (sessions don't persist on Railway).
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request)
     {
         $request->validate([
             'token' => ['required'],
@@ -51,12 +50,15 @@ class NewPasswordController extends Controller
             }
         );
 
-        // If the password was successfully reset, we will redirect the user back to
-        // the application's home authenticated view. If there is an error we can
-        // redirect them back to where they came from with their error message.
-        return $status == Password::PASSWORD_RESET
-                    ? redirect()->route('login.user.form')->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                        ->withErrors(['email' => __($status)]);
+        // Render views directly instead of redirect (sessions don't persist on Railway)
+        if ($status == Password::PASSWORD_RESET) {
+            return view('auth.user-login', [
+                'status' => 'Your password has been reset successfully! You can now login with your new password.',
+            ]);
+        } else {
+            return view('auth.reset-password', ['request' => $request])
+                ->withErrors(['email' => __($status)])
+                ->with('_old_input', $request->only('email'));
+        }
     }
 }
