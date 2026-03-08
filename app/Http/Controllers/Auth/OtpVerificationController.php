@@ -95,40 +95,47 @@ class OtpVerificationController extends Controller
      */
     public function resend(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email|exists:users,email',
-        ]);
+        $email = $request->input('email');
 
-        $user = User::where('email', $request->email)->first();
+        if (!$email) {
+            return redirect()->route('register');
+        }
+
+        $user = User::where('email', $email)->first();
 
         if (!$user) {
-            return back()->withErrors([
-                'email' => 'User not found.',
-            ]);
+            return redirect()->route('register');
         }
 
         if ($user->hasVerifiedEmail()) {
-            return redirect()->route('login')
-                ->with('success', 'Email already verified. Please login.');
+            return redirect()->route('login');
         }
 
         // Generate new OTP
         $otp = $user->generateOtp();
+        \Log::info('OTP resend - generated new OTP', ['user_id' => $user->id, 'email' => $email]);
 
         // Send OTP email
+        $emailSent = false;
         try {
             Mail::to($user->email)->send(new OtpVerificationMail($user, $otp));
-            
-            return back()->with('success', 'New verification code sent to your email.');
+            $emailSent = true;
+            \Log::info('OTP resend - email sent successfully', ['user_id' => $user->id]);
         } catch (\Exception $e) {
-            \Log::error('Failed to send OTP email', [
+            \Log::error('OTP resend - email failed', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage()
             ]);
-            
-            return back()->withErrors([
-                'email' => 'Failed to send verification code. Please try again.',
-            ]);
         }
+
+        // Render view directly (no redirect to avoid session loss)
+        $message = $emailSent
+            ? 'New verification code sent to your email!'
+            : 'Email sending failed. Your OTP code is: ' . $otp;
+
+        return view('auth.verify-otp', [
+            'user' => $user,
+            'success' => $message,
+        ]);
     }
 }

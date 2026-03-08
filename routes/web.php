@@ -340,6 +340,47 @@ Route::get('/test-registration-access', function () {
     ]);
 });
 
+// Test SendGrid email - sends a simple test email
+Route::get('/test-sendgrid', function () {
+    $email = request()->get('email', 'coloresdeartes16@gmail.com');
+    
+    try {
+        \Mail::raw('This is a test email from Yakan E-commerce sent via SendGrid at ' . now(), function ($message) use ($email) {
+            $message->to($email)
+                    ->subject('Yakan - SendGrid Test Email');
+        });
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Test email sent to ' . $email,
+            'mail_config' => [
+                'mailer' => config('mail.default'),
+                'host' => config('mail.mailers.smtp.host'),
+                'port' => config('mail.mailers.smtp.port'),
+                'encryption' => config('mail.mailers.smtp.encryption'),
+                'username' => config('mail.mailers.smtp.username'),
+                'from' => config('mail.from.address'),
+                'password_set' => !empty(config('mail.mailers.smtp.password')),
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'class' => get_class($e),
+            'mail_config' => [
+                'mailer' => config('mail.default'),
+                'host' => config('mail.mailers.smtp.host'),
+                'port' => config('mail.mailers.smtp.port'),
+                'encryption' => config('mail.mailers.smtp.encryption'),
+                'username' => config('mail.mailers.smtp.username'),
+                'from' => config('mail.from.address'),
+                'password_set' => !empty(config('mail.mailers.smtp.password')),
+            ]
+        ], 500);
+    }
+});
+
 // Check which DB tables exist
 Route::get('/debug/db-tables', function () {
     try {
