@@ -736,10 +736,12 @@
             }, 200);
         }
 
-        // Hide loader when page is fully loaded
+        // Hide loader as soon as HTML is parsed (don't wait for CDNs/images)
+        document.addEventListener('DOMContentLoaded', hideLoader);
+        // Also on full load in case DOMContentLoaded already fired
         window.addEventListener('load', hideLoader);
-        // Fallback: hide after 4s max
-        setTimeout(hideLoader, 4000);
+        // Fallback: hide after 1.5s max
+        setTimeout(hideLoader, 1500);
 
         // ===== Navigation Loading Bar =====
         document.addEventListener('DOMContentLoaded', function() {
