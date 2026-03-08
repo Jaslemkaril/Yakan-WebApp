@@ -36,7 +36,10 @@ class PasswordResetLinkController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user) {
-            return back()->withErrors(['email' => 'We could not find a user with that email address.']);
+            // Render view directly with error (no redirect) 
+            return view('auth.forgot-password')
+                ->withErrors(['email' => 'We could not find a user with that email address.'])
+                ->with('_old_input', $request->only('email'));
         }
 
         // Generate password reset token
@@ -82,10 +85,15 @@ class PasswordResetLinkController extends Controller
             'sent' => $emailSent,
         ]);
 
+        // Render view directly instead of redirect (sessions don't persist on Railway)
         if ($emailSent) {
-            return back()->with('status', 'We have emailed your password reset link!');
+            return view('auth.forgot-password', [
+                'status' => 'We have emailed your password reset link! Please check your inbox (including spam folder).',
+            ]);
         } else {
-            return back()->withErrors(['email' => 'Failed to send reset email. Please try again or contact support.']);
+            return view('auth.forgot-password')
+                ->withErrors(['email' => 'Failed to send reset email. Please try again or contact support.'])
+                ->with('_old_input', $request->only('email'));
         }
     }
 }
