@@ -326,41 +326,6 @@
                             <span>OR</span>
                         </div>
 
-                        <!-- TEST: Deployment Check -->
-                        <div class="bg-yellow-100 border-2 border-yellow-500 text-yellow-900 px-4 py-3 rounded-lg mb-4 font-bold text-center">
-                            ⚠️ ERROR DISPLAY ACTIVE - Version March 8, 2026 @ {{ date('H:i:s') }}<br>
-                            DEBUG: Errors count = {{ $errors->count() }} | Has errors: {{ $errors->any() ? 'YES' : 'NO' }}<br>
-                            Terms checked: {{ old('terms') ? 'YES' : 'NO' }}<br>
-                            Session ID: {{ substr(session()->getId(), 0, 10) }}...<br>
-                            @if($errors->count() > 0)
-                                <span class="text-red-700">★ ERRORS: {{ implode(', ', $errors->all()) }}</span>
-                            @endif
-                            @if(session('error') || isset($error))
-                                <span class="text-red-700">★ ERROR: {{ session('error') ?? $error }}</span>
-                            @endif
-                        </div>
-
-                        <!-- DEBUG: Force Show All Errors EVEN IF EMPTY -->
-                        <div class="bg-purple-100 border-4 border-purple-600 text-purple-900 px-4 py-3 rounded-lg mb-4">
-                            <p class="font-bold text-lg mb-2">🔍 FORM SUBMISSION TEST</p>
-                            <p class="text-sm">If you submitted the form and see this message, the page loaded successfully.</p>
-                            <p class="text-sm font-bold mt-2">
-                                Old input preserved: {{ old('email') ? 'YES ('.old('email').')' : 'NO' }}
-                            </p>
-                        </div>
-
-                        <!-- DEBUG: Force Show All Errors -->
-                        @if($errors->count() > 0)
-                            <div class="bg-red-100 border-4 border-red-600 text-red-900 px-4 py-3 rounded-lg mb-4">
-                                <p class="font-bold text-lg mb-2">🚨 VALIDATION ERRORS DETECTED ({{ $errors->count() }} errors):</p>
-                                <ul class="list-disc list-inside space-y-1 font-semibold">
-                                    @foreach($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        @endif
-
                         <!-- Error/Success Messages -->
                         @if($errors->any())
                             <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
