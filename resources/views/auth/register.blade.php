@@ -330,8 +330,13 @@
                         <div class="bg-yellow-100 border-2 border-yellow-500 text-yellow-900 px-4 py-3 rounded-lg mb-4 font-bold text-center">
                             ⚠️ ERROR DISPLAY ACTIVE - Version March 8, 2026 @ {{ date('H:i:s') }}<br>
                             DEBUG: Errors count = {{ $errors->count() }} | Has errors: {{ $errors->any() ? 'YES' : 'NO' }}<br>
+                            Terms checked: {{ old('terms') ? 'YES' : 'NO' }}<br>
+                            Session ID: {{ substr(session()->getId(), 0, 10) }}...<br>
                             @if($errors->count() > 0)
-                                <span class="text-red-700">★ ERRORS DETECTED: {{ implode(', ', $errors->all()) }}</span>
+                                <span class="text-red-700">★ ERRORS: {{ implode(', ', $errors->all()) }}</span>
+                            @endif
+                            @if(session('error'))
+                                <span class="text-red-700">★ SESSION ERROR: {{ session('error') }}</span>
                             @endif
                         </div>
 
@@ -539,9 +544,9 @@
                             @enderror
 
                             <div class="terms-checkbox">
-                                <input type="checkbox" name="terms" id="terms" required>
+                                <input type="checkbox" name="terms" id="terms" value="1" {{ old('terms') ? 'checked' : '' }} required>
                                 <label for="terms" class="text-sm text-gray-700">
-                                    I agree to the <a href="#" class="text-red-600 hover:text-red-700">Terms of Service</a> and <a href="#" class="text-red-600 hover:text-red-700">Privacy Policy</a>
+                                    I agree to the <a href="{{ route('terms-of-service') }}" target="_blank" class="text-red-600 hover:text-red-700">Terms of Service</a> and <a href="{{ route('privacy-policy') }}" target="_blank" class="text-red-600 hover:text-red-700">Privacy Policy</a>
                                 </label>
                             </div>
                             @error('terms')
