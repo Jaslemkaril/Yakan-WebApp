@@ -5,27 +5,44 @@
 @push('styles')
 <style>
     .hero-section {
-        background: linear-gradient(135deg, rgba(139, 0, 0, 0.92) 0%, rgba(100, 0, 0, 0.95) 100%), url('https://images.unsplash.com/photo-1577720643272-265e434f3894?w=1200&h=600&fit=crop') center/cover;
+        background: linear-gradient(160deg, #6b0000 0%, #8b0000 40%, #6b0000 70%, #3d0000 100%);
         position: relative;
         overflow: hidden;
-        min-height: 100vh;
-    }
-    
-    @media (max-width: 768px) {
-        .hero-section {
-            min-height: auto;
-        }
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
     }
 
     .hero-section::before {
         content: '';
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/><circle cx="10" cy="50" r="0.5" fill="white" opacity="0.1"/><circle cx="90" cy="30" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-        opacity: 0.4;
+        inset: 0;
+        background:
+            radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,255,255,0.06) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 80% at 80% 100%, rgba(180,0,0,0.25) 0%, transparent 60%),
+            radial-gradient(ellipse 50% 60% at 20% 100%, rgba(100,0,0,0.3) 0%, transparent 60%);
+        pointer-events: none;
+    }
+
+    /* Subtle woven-pattern overlay */
+    .hero-section::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 18px,
+            rgba(255,255,255,0.015) 18px,
+            rgba(255,255,255,0.015) 19px
+        ), repeating-linear-gradient(
+            -45deg,
+            transparent,
+            transparent 18px,
+            rgba(255,255,255,0.015) 18px,
+            rgba(255,255,255,0.015) 19px
+        );
+        pointer-events: none;
     }
 
     .hero-content {
@@ -33,13 +50,42 @@
         z-index: 10;
     }
 
-    .weaver-image-container {
-        position: relative;
-        transition: transform 0.5s ease;
+    .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.25);
+        backdrop-filter: blur(10px);
+        border-radius: 999px;
+        padding: 6px 18px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: rgba(255,230,230,0.95);
+        margin-bottom: 1.5rem;
     }
 
-    .weaver-image-container:hover {
-        transform: scale(1.02);
+    .hero-badge .dot {
+        width: 6px;
+        height: 6px;
+        background: #ff6b6b;
+        border-radius: 50%;
+        animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.4); }
+    }
+
+    .hero-divider {
+        width: 60px;
+        height: 3px;
+        background: linear-gradient(90deg, rgba(255,255,255,0.8), rgba(255,255,255,0.2));
+        border-radius: 999px;
+        margin: 1.5rem auto;
     }
 
 
@@ -202,71 +248,64 @@
     @endif
 
     <!-- Hero Section -->
-    <section class="hero-section text-white py-12 sm:py-16 md:py-20 lg:py-32">
-        <div class="hero-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 items-center">
-                <div class="animate-fade-in-up space-y-4 md:space-y-6">
-                    <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 md:mb-6 leading-tight text-white drop-shadow-2xl break-words">
-                        TUWAS YAKAN
-                    </h1>
-                    <p class="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mb-4 md:mb-6 text-red-100 leading-snug md:leading-relaxed font-semibold tracking-wide drop-shadow-lg">
-                        Weaving Through Generations
-                    </p>
-                    <p class="text-base sm:text-lg md:text-xl lg:text-xl xl:text-2xl mb-6 md:mb-8 text-red-100 leading-relaxed font-light max-w-xl">
-                        Authentic handcrafted products with traditional artistry passed down through generations of skilled Yakan weavers
-                    </p>
-                    <div class="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4">
-                        <a href="{{ route('products.index') }}" class="group bg-maroon-800 hover:bg-maroon-900 text-white text-sm sm:text-base md:text-lg px-6 sm:px-8 md:px-10 py-3 sm:py-4 md:py-5 inline-flex items-center justify-center shadow-2xl hover:shadow-red-500/50 transform hover:scale-105 transition-all duration-300 rounded-lg font-semibold" style="background-color: #800000;">
-                            <svg class="w-5 h-5 md:w-6 md:h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                            </svg>
-                            <span>Shop Products</span>
-                            <svg class="w-4 h-4 md:w-5 md:h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-                            </svg>
-                        </a>
-                        <a href="{{ route('custom_orders.index') }}" class="group btn-secondary text-sm sm:text-base md:text-lg px-6 sm:px-8 md:px-10 py-3 sm:py-4 md:py-5 inline-flex items-center justify-center shadow-2xl border-2 hover:shadow-white/30 transform hover:scale-105 transition-all duration-300">
-                            <svg class="w-5 h-5 md:w-6 md:h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                            </svg>
-                            <span>Custom Orders</span>
-                        </a>
-                    </div>
-                    
-                    <!-- Stats or features -->
-                    <div class="grid grid-cols-3 gap-3 sm:gap-4 md:gap-6 pt-6 md:pt-8 border-t border-white/20">
-                        <div class="text-center">
-                            <div class="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">1000+</div>
-                            <div class="text-xs sm:text-sm text-red-200">Happy Customers</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">500+</div>
-                            <div class="text-xs sm:text-sm text-red-200">Products</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1">100%</div>
-                            <div class="text-xs sm:text-sm text-red-200">Authentic</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="relative animate-float">
-                    <div class="bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/30 shadow-2xl overflow-hidden weaver-image-container">
-                        <div class="aspect-square rounded-2xl flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-red-700 to-red-900 shadow-inner">
-                            <!-- Yakan weaver with traditional loom image -->
-                            <img src="{{ asset('images/yakan-weaver.webp') }}" 
-                                 onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?w=600&h=600&fit=crop&q=80';"
-                                 alt="Yakan Weaver" class="w-full h-full object-cover" loading="lazy">
-                            <!-- Decorative corner accent -->
-                            <div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-white/20 to-transparent"></div>
-                            <div class="absolute bottom-0 left-0 w-20 h-20 bg-gradient-to-tr from-white/20 to-transparent"></div>
-                        </div>
-                        <!-- Traditional pattern decoration -->
-                        <div class="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full opacity-20 blur-xl"></div>
-                        <div class="absolute -bottom-4 -left-4 w-24 h-24 bg-gradient-to-br from-red-400 to-pink-500 rounded-full opacity-20 blur-xl"></div>
-                    </div>
-                </div>
+    <section class="hero-section text-white">
+        <div class="hero-content w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-36 text-center">
+
+            <!-- Badge -->
+            <div class="flex justify-center animate-fade-in-up" style="animation-delay:0s">
+                <span class="hero-badge">
+                    <span class="dot"></span>
+                    Philippine Heritage Craft
+                </span>
             </div>
+
+            <!-- Headline -->
+            <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight tracking-tight text-white drop-shadow-2xl animate-fade-in-up" style="animation-delay:0.1s">
+                TUWAS YAKAN
+            </h1>
+
+            <!-- Divider -->
+            <div class="hero-divider animate-fade-in-up" style="animation-delay:0.2s"></div>
+
+            <!-- Sub-headline -->
+            <p class="text-lg sm:text-xl md:text-2xl lg:text-3xl text-red-100 font-semibold tracking-wide animate-fade-in-up" style="animation-delay:0.25s">
+                Weaving Through Generations
+            </p>
+
+            <!-- Description -->
+            <p class="mt-4 text-base sm:text-lg text-red-200 leading-relaxed max-w-2xl mx-auto font-light animate-fade-in-up" style="animation-delay:0.35s">
+                Authentic handcrafted products with traditional artistry passed down through generations of skilled Yakan weavers from Basilan, Philippines.
+            </p>
+
+            <!-- CTA Buttons -->
+            <div class="mt-10 flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up" style="animation-delay:0.45s">
+                <a href="{{ route('products.index') }}" class="group inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-base font-semibold text-white shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-red-900/60" style="background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.35); backdrop-filter: blur(12px);">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                    Shop Products
+                    <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                </a>
+                <a href="{{ route('custom_orders.index') }}" class="group inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-base font-semibold shadow-2xl transition-all duration-300 hover:scale-105" style="background: white; color: #800000; border: 1.5px solid white;">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                    Custom Orders
+                </a>
+            </div>
+
+            <!-- Trust pills -->
+            <div class="mt-10 flex flex-wrap justify-center gap-3 animate-fade-in-up" style="animation-delay:0.55s">
+                <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm text-red-100" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15)">
+                    <svg class="w-4 h-4 text-red-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                    100% Authentic
+                </span>
+                <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm text-red-100" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15)">
+                    <svg class="w-4 h-4 text-red-300" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                    Handcrafted with Pride
+                </span>
+                <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm text-red-100" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15)">
+                    <svg class="w-4 h-4 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    Basilan, Philippines
+                </span>
+            </div>
+
         </div>
     </section>
 
