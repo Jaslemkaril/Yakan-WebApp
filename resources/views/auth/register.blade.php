@@ -329,7 +329,19 @@
                         <!-- TEST: Deployment Check -->
                         <div class="bg-yellow-100 border-2 border-yellow-500 text-yellow-900 px-4 py-3 rounded-lg mb-4 font-bold text-center">
                             ⚠️ ERROR DISPLAY ACTIVE - Version March 8, 2026 @ {{ date('H:i:s') }}<br>
-                            DEBUG: Errors count = {{ $errors->count() }} | Has errors: {{ $errors->any() ? 'YES' : 'NO' }}
+                            DEBUG: Errors count = {{ $errors->count() }} | Has errors: {{ $errors->any() ? 'YES' : 'NO' }}<br>
+                            @if($errors->count() > 0)
+                                <span class="text-red-700">★ ERRORS DETECTED: {{ implode(', ', $errors->all()) }}</span>
+                            @endif
+                        </div>
+
+                        <!-- DEBUG: Force Show All Errors EVEN IF EMPTY -->
+                        <div class="bg-purple-100 border-4 border-purple-600 text-purple-900 px-4 py-3 rounded-lg mb-4">
+                            <p class="font-bold text-lg mb-2">🔍 FORM SUBMISSION TEST</p>
+                            <p class="text-sm">If you submitted the form and see this message, the page loaded successfully.</p>
+                            <p class="text-sm font-bold mt-2">
+                                Old input preserved: {{ old('email') ? 'YES ('.old('email').')' : 'NO' }}
+                            </p>
                         </div>
 
                         <!-- DEBUG: Force Show All Errors -->
