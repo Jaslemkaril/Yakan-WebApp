@@ -89,11 +89,14 @@ class PasswordResetLinkController extends Controller
         if ($emailSent) {
             return view('auth.forgot-password', [
                 'status' => 'We have emailed your password reset link! Please check your inbox (including spam folder).',
+                'resetUrl' => $resetUrl,
             ]);
         } else {
-            return view('auth.forgot-password')
-                ->withErrors(['email' => 'Failed to send reset email. Please try again or contact support.'])
-                ->with('_old_input', $request->only('email'));
+            // Email failed - show the reset link directly as fallback
+            return view('auth.forgot-password', [
+                'status' => 'We could not send the email, but you can use the link below to reset your password.',
+                'resetUrl' => $resetUrl,
+            ]);
         }
     }
 }

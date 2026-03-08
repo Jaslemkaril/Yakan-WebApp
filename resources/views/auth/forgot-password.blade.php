@@ -178,6 +178,14 @@
                                 <p>{{ session('status') ?? $status }}</p>
                             </div>
                         </div>
+                        @if (isset($resetUrl))
+                            <div class="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg mb-4">
+                                <p class="text-sm font-semibold mb-2">Didn't receive the email? Use this link to reset your password:</p>
+                                <a href="{{ $resetUrl }}" class="inline-block px-4 py-2 bg-red-700 text-white text-sm font-semibold rounded-lg hover:bg-red-800 transition" style="color: white; text-decoration: none;">
+                                    Reset My Password
+                                </a>
+                            </div>
+                        @endif
                     @endif
 
                     @if ($errors->any())
