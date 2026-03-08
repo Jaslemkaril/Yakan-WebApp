@@ -359,6 +359,52 @@ Route::get('/test-sendgrid', function () {
     ], $result ? 200 : 500);
 });
 
+// Test password reset email specifically
+Route::get('/test-password-reset-email', function () {
+    $email = request()->get('email', 'coloresdeartes16@gmail.com');
+    
+    $user = \App\Models\User::where('email', $email)->first();
+    
+    if (!$user) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'User not found with email: ' . $email,
+        ], 404);
+    }
+    
+    $resetUrl = 'https://yakan-webapp-production.up.railway.app/reset-password/TEST_TOKEN_123?email=' . urlencode($email);
+    
+    try {
+        $result = \App\Services\SendGridService::sendView(
+            $user->email,
+            'Reset Your Password - Yakan E-commerce',
+            'emails.password-reset',
+            [
+                'user' => $user,
+                'resetUrl' => $resetUrl,
+                'token' => 'TEST_TOKEN_123',
+            ]
+        );
+        
+        return response()->json([
+            'status' => $result ? 'success' : 'error',
+            'message' => $result ? 'Password reset email sent to ' . $email : 'Failed to send - check logs',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ],
+            'reset_url' => $resetUrl,
+        ], $result ? 200 : 500);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Exception: ' . $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+        ], 500);
+    }
+});
+
 // Check which DB tables exist
 Route::get('/debug/db-tables', function () {
     try {
