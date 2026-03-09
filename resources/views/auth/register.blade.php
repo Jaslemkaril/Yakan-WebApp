@@ -5,7 +5,7 @@
 @push('styles')
 <style>
     .auth-container {
-        background: url('{{ asset("images/jus.jpg") }}') center center / cover no-repeat;
+        background-color: #800000;
         min-height: 100vh;
         position: relative;
         overflow: hidden;
@@ -15,7 +15,7 @@
         content: '';
         position: absolute;
         inset: 0;
-        background: rgba(100, 0, 0, 0.55);
+        background: rgba(80, 0, 0, 0.50);
         z-index: 0;
         pointer-events: none;
     }
@@ -312,7 +312,7 @@
 @endpush
 
 @section('content')
-<div class="auth-container relative">
+<div class="auth-container relative" style="background-image: url('{{ asset('images/jus.jpg') }}'); background-size: cover; background-position: center center;">
     <!-- Hide main header for auth page -->
     <style>
         body > header {
