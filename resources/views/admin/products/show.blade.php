@@ -49,7 +49,6 @@
                     </div>
                     
                     <div class="mt-4 text-center">
-                        <p class="text-sm text-gray-600 font-medium">{{ $product->image }}</p>
                         <p class="text-xs text-gray-500">Click expand to view full size</p>
                     </div>
                 @else
@@ -103,19 +102,22 @@
                             <div class="text-2xl font-bold text-green-600">₱{{ number_format($product->price, 2) }}</div>
                         </div>
                         
+                        @php
+                            $displayStock = $product->inventory->quantity ?? $product->stock;
+                        @endphp
                         <div class="bg-gray-50 rounded-lg p-4">
                             <div class="text-sm text-gray-600 mb-1">Stock Quantity</div>
                             <div class="flex items-center justify-between">
-                                <div class="text-2xl font-bold {{ $product->stock <= 5 ? 'text-red-600' : 'text-gray-900' }}">
-                                    {{ $product->stock }}
+                                <div class="text-2xl font-bold {{ $displayStock <= 5 ? 'text-red-600' : 'text-gray-900' }}">
+                                    {{ $displayStock }}
                                 </div>
                                 <span class="text-sm text-gray-500">units</span>
                             </div>
-                            @if($product->stock <= 5 && $product->stock > 0)
+                            @if($displayStock <= 5 && $displayStock > 0)
                                 <div class="mt-2 text-xs text-yellow-600 font-medium">
                                     <i class="fas fa-exclamation-triangle mr-1"></i>Low Stock
                                 </div>
-                            @elseif($product->stock == 0)
+                            @elseif($displayStock == 0)
                                 <div class="mt-2 text-xs text-red-600 font-medium">
                                     <i class="fas fa-times-circle mr-1"></i>Out of Stock
                                 </div>
@@ -126,7 +128,7 @@
                     <div class="space-y-4">
                         <div class="bg-gray-50 rounded-lg p-4">
                             <div class="text-sm text-gray-600 mb-1">Total Inventory Value</div>
-                            <div class="text-2xl font-bold text-[#800000]">₱{{ number_format($product->price * $product->stock, 2) }}</div>
+                            <div class="text-2xl font-bold text-[#800000]">₱{{ number_format($product->price * $displayStock, 2) }}</div>
                         </div>
                         
                         <div class="bg-gray-50 rounded-lg p-4">
@@ -247,14 +249,7 @@
                                     </span>
                                 @endif
                             </div>
-                            <div class="flex gap-2">
-                                <a href="{{ route('admin.inventory.edit', $product->inventory->id) }}" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
-                                    <i class="fas fa-edit mr-2"></i>Edit Inventory
-                                </a>
-                                <a href="{{ route('admin.inventory.show', $product->inventory->id) }}" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
-                                    <i class="fas fa-eye mr-2"></i>View Details
-                                </a>
-                            </div>
+
                         </div>
                     </div>
                 @else
@@ -278,7 +273,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-[#800000] font-medium">Potential Revenue</p>
-                                <p class="text-2xl font-bold text-[#800000]">₱{{ number_format($product->price * $product->stock, 2) }}</p>
+                                <p class="text-2xl font-bold text-[#800000]">₱{{ number_format($product->price * $displayStock, 2) }}</p>
                             </div>
                             <i class="fas fa-dollar-sign text-[#800000] text-2xl"></i>
                         </div>
@@ -289,7 +284,7 @@
                             <div>
                                 <p class="text-sm text-green-600 font-medium">Stock Status</p>
                                 <p class="text-2xl font-bold text-green-900">
-                                    {{ $product->stock > 10 ? 'Healthy' : ($product->stock > 0 ? 'Low' : 'Out') }}
+                                    {{ $displayStock > 10 ? 'Healthy' : ($displayStock > 0 ? 'Low' : 'Out') }}
                                 </p>
                             </div>
                             <i class="fas fa-warehouse text-green-500 text-2xl"></i>
@@ -300,7 +295,8 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-amber-600 font-medium">Product Age</p>
-                                <p class="text-2xl font-bold text-amber-900">{{ $product->created_at->diffInDays() }} days</p>
+                                <p class="text-2xl font-bold text-amber-900">{{ $product->created_at->diffForHumans(null, true, true) }}</p>
+                                <p class="text-xs text-amber-700 mt-1">since {{ $product->created_at->format('M d, Y') }}</p>
                             </div>
                             <i class="fas fa-calendar text-amber-500 text-2xl"></i>
                         </div>
@@ -320,7 +316,7 @@
                         </div>
                         <div class="flex items-center justify-between">
                             <span class="text-sm text-gray-600">Recommended Restock</span>
-                            <span class="text-sm font-medium text-gray-900">{{ max(20, $product->stock * 2) }} units</span>
+                            <span class="text-sm font-medium text-gray-900">{{ max(20, $displayStock * 2) }} units</span>
                         </div>
                     </div>
                 </div>

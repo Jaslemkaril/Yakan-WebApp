@@ -1115,6 +1115,61 @@
         </div>
     </footer>
 
+    <!-- ── Page Transition Loading Overlay ── -->
+    <div id="pageTransitionOverlay" style="display:none;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;background:linear-gradient(160deg,#6b0000 0%,#8b0000 45%,#3d0000 100%);font-family:'Inter',system-ui,sans-serif;">
+        <div style="text-align:center;animation:ptofadeup 0.35s ease-out;">
+            <div style="width:56px;height:56px;background:linear-gradient(135deg,#800000,#a00000);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 8px 24px rgba(0,0,0,0.3);">
+                <span style="color:white;font-weight:800;font-size:26px;">Y</span>
+            </div>
+            <div style="width:44px;height:44px;border:3px solid rgba(255,255,255,0.2);border-top-color:rgba(255,255,255,0.85);border-radius:50%;animation:ptospin 0.75s linear infinite;margin:0 auto 18px;"></div>
+            <p id="ptoMessage" style="color:rgba(255,220,220,0.9);font-size:0.9rem;font-weight:500;margin-bottom:20px;">Please wait…</p>
+            <div style="height:3px;background:rgba(255,255,255,0.15);border-radius:2px;overflow:hidden;width:200px;margin:0 auto;">
+                <div id="ptoFill" style="height:100%;background:linear-gradient(90deg,rgba(255,255,255,0.4),rgba(255,255,255,0.85));border-radius:2px;animation:ptofill 2.5s ease-out forwards;"></div>
+            </div>
+        </div>
+    </div>
+    <style>
+        @keyframes ptofadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes ptospin{to{transform:rotate(360deg)}}
+        @keyframes ptofill{from{width:0%}to{width:100%}}
+    </style>
+    <script>
+        function showPageTransitionOverlay(msg) {
+            var ov = document.getElementById('pageTransitionOverlay');
+            var msgEl = document.getElementById('ptoMessage');
+            var fill = document.getElementById('ptoFill');
+            if (ov) {
+                if (msg && msgEl) msgEl.textContent = msg;
+                // Restart progress bar animation
+                if (fill) { fill.style.animation = 'none'; fill.offsetHeight; fill.style.animation = 'ptofill 2.5s ease-out forwards'; }
+                ov.style.display = 'flex';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // ── Show loading screen when logout form is submitted
+            document.querySelectorAll('form[action*="/logout"]').forEach(function(form) {
+                form.addEventListener('submit', function() {
+                    showPageTransitionOverlay('Signing out…');
+                });
+            });
+
+            // ── Show loading screen when a review form is submitted (forms with a rating input)
+            document.querySelectorAll('form').forEach(function(form) {
+                var action = form.getAttribute('action') || '';
+                var hasRating = form.querySelector('input[name="rating"]');
+                var isReviewForm = action.indexOf('/reviews/') !== -1 || (hasRating && (action.indexOf('/review') !== -1 || form.id === 'product-review-form'));
+                if (isReviewForm && hasRating) {
+                    form.addEventListener('submit', function(e) {
+                        if (!e.defaultPrevented) {
+                            showPageTransitionOverlay('Submitting your review…');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+
     @stack('scripts')
     
     <script>
