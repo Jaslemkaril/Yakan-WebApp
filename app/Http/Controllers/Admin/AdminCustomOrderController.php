@@ -38,9 +38,11 @@ class AdminCustomOrderController extends Controller
                     })
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%")
-                    ->orWhere('order_name', 'like', "%{$search}%")
-                    ->orWhere('specifications', 'like', "%{$search}%")
-                    ->orWhere('id', 'like', "%{$search}%");
+                    ->orWhere('specifications', 'like', "%{$search}%");
+
+                    if (is_numeric($search)) {
+                        $q->orWhere('id', (int) $search);
+                    }
                 });
             }
 
