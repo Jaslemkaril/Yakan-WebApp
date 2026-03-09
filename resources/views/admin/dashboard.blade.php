@@ -665,7 +665,7 @@
                         </div>
                         <div>
                             <h2 class="text-lg font-bold text-gray-900">Sales Overview</h2>
-                            <p class="text-sm text-gray-500">Last 7 days performance</p>
+                            <p class="text-sm text-gray-500">Delivered orders revenue</p>
                         </div>
                     </div>
                     <div class="flex items-center space-x-2">
@@ -737,16 +737,16 @@
             <div x-show="activeTab === 'bestsellers'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
                 @if($topProducts->count() > 0)
                     <!-- Best Sellers Chart -->
-                    <div class="mb-8 bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-6 border border-emerald-200 shadow-sm">
+                    <div class="mb-8 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-sm font-bold text-gray-800 flex items-center">
-                                <span class="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-600 rounded-lg flex items-center justify-center mr-2 shadow-sm">
+                                <span class="w-8 h-8 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center mr-2 shadow-sm">
                                     <i class="fas fa-chart-bar text-white text-xs"></i>
                                 </span>
-                                Sales Comparison
+                                Units Sold by Product
                             </h3>
-                            <span class="text-xs text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full font-medium">
-                                <i class="fas fa-arrow-up mr-1"></i>Top Performers
+                            <span class="text-xs text-[#800000] bg-red-50 px-3 py-1 rounded-full font-medium border border-red-200">
+                                <i class="fas fa-trophy mr-1"></i>Top Performers
                             </span>
                         </div>
                         <div class="relative h-80">
@@ -760,18 +760,18 @@
                                 $product = $item->product;
                             @endphp
                             <div class="group relative">
-                                <div class="absolute -inset-0.5 bg-gradient-to-r from-green-400 to-emerald-600 rounded-xl opacity-0 group-hover:opacity-100 transition duration-300"></div>
-                                <div class="relative bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 text-center border border-green-100 hover:border-green-200 transition-all duration-300">
-                                    <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-600 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-lg">
+                                <div class="absolute -inset-0.5 bg-gradient-to-r from-[#800000] to-[#600000] rounded-xl opacity-0 group-hover:opacity-100 transition duration-300"></div>
+                                <div class="relative bg-white rounded-xl p-4 text-center border border-gray-200 hover:border-red-300 transition-all duration-300 shadow-sm">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-[#800000] to-[#600000] rounded-lg flex items-center justify-center mx-auto mb-3 shadow-lg">
                                         <span class="text-white font-bold text-lg">{{ $index + 1 }}</span>
                                     </div>
                                     @if($product && $product->image_src)
                                         <div class="w-16 h-16 mx-auto mb-3 rounded-lg overflow-hidden bg-white shadow-md">
-                                            <img src="{{ $product->image_src }}" alt="{{ $product->name }}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\'w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center\'><i class=\'fas fa-box text-green-600 text-2xl\'></i></div>'">
+                                            <img src="{{ $product->image_src }}" alt="{{ $product->name }}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\'w-full h-full bg-red-50 flex items-center justify-center\'><i class=\'fas fa-box text-[#800000] text-2xl\'></i></div>'">
                                         </div>
                                     @else
-                                        <div class="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-md">
-                                            <i class="fas fa-box text-green-600 text-2xl"></i>
+                                        <div class="w-16 h-16 bg-red-50 rounded-lg flex items-center justify-center mx-auto mb-3 shadow-md">
+                                            <i class="fas fa-box text-[#800000] text-2xl"></i>
                                         </div>
                                     @endif
                                     <h3 class="font-bold text-gray-900 text-sm mb-1 truncate" title="{{ $product->name ?? 'N/A' }}">
@@ -780,7 +780,7 @@
                                     <p class="text-xs text-gray-600 mb-1">
                                         <i class="fas fa-box mr-1"></i>{{ $item->sold ?? 0 }} sold
                                     </p>
-                                    <p class="text-xs font-semibold text-green-600">
+                                    <p class="text-xs font-semibold text-[#800000]">
                                         <i class="fas fa-peso-sign mr-1"></i>{{ number_format($item->revenue ?? 0, 2) }}
                                     </p>
                                     @if($product && $product->available_stock > 0)
@@ -809,15 +809,15 @@
             <div x-show="activeTab === 'lowsales'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
                 @if($lowSalesProducts->count() > 0)
                     <!-- Low Sales Chart -->
-                    <div class="mb-8 bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-200 shadow-sm">
+                    <div class="mb-8 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-sm font-bold text-gray-800 flex items-center">
                                 <span class="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-500 rounded-lg flex items-center justify-center mr-2 shadow-sm">
                                     <i class="fas fa-chart-bar text-white text-xs"></i>
                                 </span>
-                                Sales Comparison
+                                Units Sold by Product
                             </h3>
-                            <span class="text-xs text-orange-600 bg-orange-100 px-3 py-1 rounded-full font-medium">
+                            <span class="text-xs text-orange-600 bg-orange-100 px-3 py-1 rounded-full font-medium border border-orange-200">
                                 <i class="fas fa-arrow-down mr-1"></i>Needs Attention
                             </span>
                         </div>
@@ -1081,10 +1081,10 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Sales Data Labels:', @json($allSalesData->isNotEmpty() ? $allSalesData->pluck('date') : []));
     console.log('Sales Data Values:', @json($allSalesData->isNotEmpty() ? $allSalesData->pluck('revenue') : []));
     console.log('Order Status Data:', [
-        {{ $ordersByStatus['completed'] ?? 0 }},
-        {{ $ordersByStatus['processing'] ?? 0 }},
-        {{ $ordersByStatus['pending'] ?? 0 }},
-        {{ $ordersByStatus['cancelled'] ?? 0 }}
+        {{ ($ordersByStatus['completed'] ?? 0) + ($ordersByStatus['delivered'] ?? 0) }},
+        {{ ($ordersByStatus['processing'] ?? 0) + ($ordersByStatus['confirmed'] ?? 0) + ($ordersByStatus['shipped'] ?? 0) }},
+        {{ ($ordersByStatus['pending'] ?? 0) + ($ordersByStatus['pending_confirmation'] ?? 0) }},
+        {{ ($ordersByStatus['cancelled'] ?? 0) + ($ordersByStatus['refunded'] ?? 0) }}
     ]);
     
     // Chart.js global defaults
@@ -1093,23 +1093,29 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Sales Chart
     const salesCtx = document.getElementById('salesChart').getContext('2d');
+    const salesGradientFill = salesCtx.createLinearGradient(0, 0, 0, 320);
+    salesGradientFill.addColorStop(0, 'rgba(128, 0, 0, 0.25)');
+    salesGradientFill.addColorStop(1, 'rgba(128, 0, 0, 0.02)');
     new Chart(salesCtx, {
         type: 'line',
         data: {
             labels: @json($allSalesData->isNotEmpty() ? $allSalesData->pluck('date') : []),
             datasets: [{
-                label: 'Sales',
+                label: 'Revenue (Delivered Orders)',
                 data: @json($allSalesData->isNotEmpty() ? $allSalesData->pluck('revenue') : []),
-                borderColor: 'rgb(59, 130, 246)',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderColor: '#800000',
+                backgroundColor: salesGradientFill,
                 borderWidth: 3,
                 tension: 0.4,
                 fill: true,
-                pointBackgroundColor: 'rgb(59, 130, 246)',
+                pointBackgroundColor: '#800000',
                 pointBorderColor: '#fff',
                 pointBorderWidth: 2,
                 pointRadius: 6,
-                pointHoverRadius: 8
+                pointHoverRadius: 9,
+                pointHoverBackgroundColor: '#600000',
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 3
             }]
         },
         options: {
@@ -1124,19 +1130,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     display: false
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    padding: 12,
-                    cornerRadius: 8,
-                    titleFont: {
-                        size: 14,
-                        weight: 'bold'
-                    },
-                    bodyFont: {
-                        size: 13
-                    },
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    padding: 14,
+                    cornerRadius: 10,
+                    titleFont: { size: 14, weight: 'bold' },
+                    bodyFont: { size: 13 },
                     callbacks: {
                         label: function(context) {
-                            return 'Sales: ₱' + context.parsed.y.toLocaleString();
+                            return ' Revenue: ₱' + Number(context.parsed.y).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
                         }
                     }
                 }
@@ -1144,27 +1145,21 @@ document.addEventListener('DOMContentLoaded', function() {
             scales: {
                 y: {
                     beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    },
+                    grid: { color: 'rgba(0, 0, 0, 0.05)' },
                     ticks: {
                         callback: function(value) {
+                            if (value >= 1000) return '₱' + (value / 1000).toFixed(0) + 'k';
                             return '₱' + value.toLocaleString();
                         },
-                        font: {
-                            size: 12
-                        }
-                    }
+                        font: { size: 12 },
+                        color: '#6b7280'
+                    },
+                    border: { display: false }
                 },
                 x: {
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        font: {
-                            size: 12
-                        }
-                    }
+                    grid: { display: false },
+                    ticks: { font: { size: 11 }, color: '#6b7280' },
+                    border: { display: false }
                 }
             }
         }
@@ -1176,13 +1171,13 @@ document.addEventListener('DOMContentLoaded', function() {
     new Chart(statusCtx, {
         type: 'doughnut',
         data: {
-            labels: ['\u2705 Completed', '\u2699\uFE0F Processing', '\u23F3 Pending', '\u274C Cancelled'],
+            labels: ['\u2705 Delivered', '\u2699\uFE0F Processing', '\u23F3 Pending', '\u274C Cancelled'],
             datasets: [{
                 data: [
-                    {{ $ordersByStatus['completed'] ?? 0 }},
-                    {{ $ordersByStatus['processing'] ?? 0 }},
-                    {{ $ordersByStatus['pending'] ?? 0 }},
-                    {{ $ordersByStatus['cancelled'] ?? 0 }}
+                    {{ ($ordersByStatus['completed'] ?? 0) + ($ordersByStatus['delivered'] ?? 0) }},
+                    {{ ($ordersByStatus['processing'] ?? 0) + ($ordersByStatus['confirmed'] ?? 0) + ($ordersByStatus['shipped'] ?? 0) }},
+                    {{ ($ordersByStatus['pending'] ?? 0) + ($ordersByStatus['pending_confirmation'] ?? 0) }},
+                    {{ ($ordersByStatus['cancelled'] ?? 0) + ($ordersByStatus['refunded'] ?? 0) }}
                 ],
                 backgroundColor: [
                     'rgb(34, 197, 94)',
@@ -1251,9 +1246,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const bestSellersCtx = document.getElementById('bestSellersChart');
     if (bestSellersCtx) {
         const bestSellersChart = bestSellersCtx.getContext('2d');
-        const bestSellersGradient = bestSellersChart.createLinearGradient(0, 0, bestSellersCtx.width, 0);
-        bestSellersGradient.addColorStop(0, 'rgba(16, 185, 129, 0.9)');
-        bestSellersGradient.addColorStop(1, 'rgba(5, 150, 105, 0.9)');
 
         new Chart(bestSellersChart, {
             type: 'bar',
@@ -1265,96 +1257,76 @@ document.addEventListener('DOMContentLoaded', function() {
                     backgroundColor: function(context) {
                         const chart = context.chart;
                         const {ctx, chartArea} = chart;
-                        if (!chartArea) return 'rgba(16, 185, 129, 0.85)';
-                        const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
-                        gradient.addColorStop(0, 'rgba(16, 185, 129, 0.85)');
-                        gradient.addColorStop(1, 'rgba(5, 150, 105, 0.95)');
+                        if (!chartArea) return 'rgba(128, 0, 0, 0.85)';
+                        const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                        gradient.addColorStop(0, 'rgba(128, 0, 0, 0.95)');
+                        gradient.addColorStop(1, 'rgba(180, 20, 20, 0.70)');
                         return gradient;
                     },
-                    borderColor: 'rgba(5, 150, 105, 1)',
-                    borderRadius: 10,
+                    borderColor: 'rgba(96, 0, 0, 1)',
+                    borderRadius: { topLeft: 8, topRight: 8 },
                     borderWidth: 1,
                     borderSkipped: false,
-                    barThickness: 28,
-                    hoverBackgroundColor: 'rgba(5, 150, 105, 1)',
-                    hoverBorderColor: 'rgba(4, 120, 87, 1)',
+                    barThickness: 40,
+                    hoverBackgroundColor: 'rgba(96, 0, 0, 1)',
+                    hoverBorderColor: 'rgba(64, 0, 0, 1)',
                     hoverBorderWidth: 2
                 }]
             },
             options: {
-                indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: {
-                    duration: 1000,
+                    duration: 800,
                     easing: 'easeOutQuart'
                 },
                 plugins: {
-                    legend: {
-                        display: false
-                    },
+                    legend: { display: false },
                     tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        backgroundColor: 'rgba(15, 23, 42, 0.92)',
                         padding: 14,
                         cornerRadius: 10,
-                        titleFont: {
-                            size: 14,
-                            weight: 'bold'
-                        },
-                        bodyFont: {
-                            size: 13
-                        },
+                        titleFont: { size: 14, weight: 'bold' },
+                        bodyFont: { size: 13 },
                         displayColors: false,
                         callbacks: {
                             title: function(context) {
                                 return '\uD83C\uDFC6 ' + context[0].label;
                             },
                             label: function(context) {
-                                return 'Sold: ' + context.parsed.x + ' units';
+                                return 'Units Sold: ' + context.parsed.y;
                             }
                         }
                     }
                 },
                 scales: {
-                    x: {
+                    y: {
                         beginAtZero: true,
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.06)',
-                            drawBorder: false
-                        },
+                        grid: { color: 'rgba(0, 0, 0, 0.05)', drawBorder: false },
                         ticks: {
                             stepSize: 1,
                             precision: 0,
                             callback: function(value) {
-                                if (Math.floor(value) === value) {
-                                    return value + ' units';
-                                }
+                                if (Math.floor(value) === value) return value;
                             },
-                            font: {
-                                size: 12,
-                                weight: '500'
-                            },
+                            font: { size: 12, weight: '500' },
                             color: '#6b7280'
                         },
-                        border: {
-                            display: false
-                        }
+                        border: { display: false }
                     },
-                    y: {
-                        grid: {
-                            display: false
-                        },
+                    x: {
+                        grid: { display: false },
                         ticks: {
-                            font: {
-                                size: 13,
-                                weight: '600'
-                            },
+                            font: { size: 12, weight: '600' },
                             color: '#374151',
-                            padding: 8
+                            maxRotation: 30,
+                            minRotation: 0,
+                            callback: function(value, index) {
+                                const label = this.getLabelForValue(value);
+                                return label.length > 14 ? label.substring(0, 14) + '…' : label;
+                            }
                         },
-                        border: {
-                            display: false
-                        }
+                        border: { display: false }
                     }
                 }
             }
@@ -1377,95 +1349,75 @@ document.addEventListener('DOMContentLoaded', function() {
                         const chart = context.chart;
                         const {ctx, chartArea} = chart;
                         if (!chartArea) return 'rgba(251, 146, 60, 0.85)';
-                        const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
-                        gradient.addColorStop(0, 'rgba(251, 146, 60, 0.85)');
-                        gradient.addColorStop(1, 'rgba(234, 88, 12, 0.95)');
+                        const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                        gradient.addColorStop(0, 'rgba(234, 88, 12, 0.95)');
+                        gradient.addColorStop(1, 'rgba(251, 146, 60, 0.70)');
                         return gradient;
                     },
                     borderColor: 'rgba(234, 88, 12, 1)',
-                    borderRadius: 10,
+                    borderRadius: { topLeft: 8, topRight: 8 },
                     borderWidth: 1,
                     borderSkipped: false,
-                    barThickness: 28,
+                    barThickness: 40,
                     hoverBackgroundColor: 'rgba(234, 88, 12, 1)',
                     hoverBorderColor: 'rgba(194, 65, 12, 1)',
                     hoverBorderWidth: 2
                 }]
             },
             options: {
-                indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: {
-                    duration: 1000,
+                    duration: 800,
                     easing: 'easeOutQuart'
                 },
                 plugins: {
-                    legend: {
-                        display: false
-                    },
+                    legend: { display: false },
                     tooltip: {
                         backgroundColor: 'rgba(15, 23, 42, 0.9)',
                         padding: 14,
                         cornerRadius: 10,
-                        titleFont: {
-                            size: 14,
-                            weight: 'bold'
-                        },
-                        bodyFont: {
-                            size: 13
-                        },
+                        titleFont: { size: 14, weight: 'bold' },
+                        bodyFont: { size: 13 },
                         displayColors: false,
                         callbacks: {
                             title: function(context) {
                                 return '\uD83D\uDCC9 ' + context[0].label;
                             },
                             label: function(context) {
-                                return 'Sold: ' + context.parsed.x + ' units';
+                                return 'Units Sold: ' + context.parsed.y;
                             }
                         }
                     }
                 },
                 scales: {
-                    x: {
+                    y: {
                         beginAtZero: true,
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.06)',
-                            drawBorder: false
-                        },
+                        grid: { color: 'rgba(0, 0, 0, 0.05)', drawBorder: false },
                         ticks: {
                             stepSize: 1,
                             precision: 0,
                             callback: function(value) {
-                                if (Math.floor(value) === value) {
-                                    return value + ' units';
-                                }
+                                if (Math.floor(value) === value) return value;
                             },
-                            font: {
-                                size: 12,
-                                weight: '500'
-                            },
+                            font: { size: 12, weight: '500' },
                             color: '#6b7280'
                         },
-                        border: {
-                            display: false
-                        }
+                        border: { display: false }
                     },
-                    y: {
-                        grid: {
-                            display: false
-                        },
+                    x: {
+                        grid: { display: false },
                         ticks: {
-                            font: {
-                                size: 13,
-                                weight: '600'
-                            },
+                            font: { size: 12, weight: '600' },
                             color: '#374151',
-                            padding: 8
+                            maxRotation: 30,
+                            minRotation: 0,
+                            callback: function(value, index) {
+                                const label = this.getLabelForValue(value);
+                                return label.length > 14 ? label.substring(0, 14) + '…' : label;
+                            }
                         },
-                        border: {
-                            display: false
-                        }
+                        border: { display: false }
                     }
                 }
             }

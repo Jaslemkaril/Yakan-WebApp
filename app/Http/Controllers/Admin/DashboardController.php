@@ -162,6 +162,7 @@ class DashboardController extends Controller
             }
             
             $allSalesData = \App\Models\Order::where('created_at', '>=', now()->subDays($salesDataRange))
+                ->whereIn('status', ['delivered', 'completed'])
                 ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue, COUNT(*) as orders')
                 ->groupBy('date')
                 ->orderBy('date')
