@@ -345,51 +345,106 @@
                         
                         <div class="space-y-3">
                             <!-- GCash Payment Option -->
-                            <label class="relative flex items-center p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-red-300 hover:bg-red-50 transition-all duration-200 group">
-                                <input type="radio" name="payment_method" value="online" required class="w-5 h-5 text-red-600 focus:ring-red-500 focus:ring-2" form="checkout-form">
-                                <div class="ml-4 flex-1">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center group-hover:from-blue-200 group-hover:to-blue-300 transition-all">
-                                            <svg class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <div class="font-semibold text-gray-900">GCash</div>
-                                            <div class="text-sm text-gray-600">Pay securely online</div>
+                            <div class="border-2 border-gray-200 rounded-xl overflow-hidden transition-all duration-200" id="gcash-option-wrap">
+                                <label class="relative flex items-center p-4 cursor-pointer hover:bg-blue-50 transition-all duration-200 group">
+                                    <input type="radio" name="payment_method" value="online" required class="w-5 h-5 text-blue-600 focus:ring-blue-500 focus:ring-2" form="checkout-form" onclick="showPaymentDetails('gcash')">
+                                    <div class="ml-4 flex-1">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center text-2xl">📱</div>
+                                            <div>
+                                                <div class="font-bold text-gray-900">GCash</div>
+                                                <div class="text-sm text-gray-500">Fast & secure e-wallet payment</div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="ml-4">
-                                    <svg class="w-6 h-6 text-green-600 opacity-0 group-hover:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                    <svg class="w-5 h-5 text-blue-600 payment-check-gcash hidden" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                     </svg>
+                                </label>
+                                <!-- GCash Details (shown on select) -->
+                                <div id="gcash-details" class="hidden px-4 pb-4">
+                                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
+                                        <p class="text-xs font-bold text-blue-800 uppercase tracking-wide mb-2">Send payment to:</p>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm text-gray-600 font-medium">GCash Number</span>
+                                            <span class="font-bold text-blue-700 text-base font-mono">{{ \App\Models\SystemSetting::get('gcash_number', '—') }}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm text-gray-600 font-medium">Account Name</span>
+                                            <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('gcash_name', 'Tuwas Yakan') }}</span>
+                                        </div>
+                                        <p class="text-xs text-blue-700 mt-2 pt-2 border-t border-blue-200">Upload your GCash receipt on the order confirmation page.</p>
+                                    </div>
                                 </div>
-                            </label>
+                            </div>
 
                             <!-- Bank Transfer Option -->
-                            <label class="relative flex items-center p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-red-300 hover:bg-red-50 transition-all duration-200 group">
-                                <input type="radio" name="payment_method" value="bank_transfer" class="w-5 h-5 text-red-600 focus:ring-red-500 focus:ring-2" form="checkout-form">
-                                <div class="ml-4 flex-1">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center group-hover:from-green-200 group-hover:to-green-300 transition-all">
-                                            <svg class="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <div class="font-semibold text-gray-900">Bank Transfer</div>
-                                            <div class="text-sm text-gray-600">Direct bank payment</div>
+                            <div class="border-2 border-gray-200 rounded-xl overflow-hidden transition-all duration-200" id="bank-option-wrap">
+                                <label class="relative flex items-center p-4 cursor-pointer hover:bg-green-50 transition-all duration-200 group">
+                                    <input type="radio" name="payment_method" value="bank_transfer" class="w-5 h-5 text-green-600 focus:ring-green-500 focus:ring-2" form="checkout-form" onclick="showPaymentDetails('bank')">
+                                    <div class="ml-4 flex-1">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-12 h-12 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center text-2xl">🏦</div>
+                                            <div>
+                                                <div class="font-bold text-gray-900">Bank Transfer</div>
+                                                <div class="text-sm text-gray-500">Direct transfer to our bank account</div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="ml-4">
-                                    <svg class="w-6 h-6 text-green-600 opacity-0 group-hover:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                    <svg class="w-5 h-5 text-green-600 payment-check-bank hidden" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                     </svg>
+                                </label>
+                                <!-- Bank Details (shown on select) -->
+                                <div id="bank-details" class="hidden px-4 pb-4">
+                                    <div class="bg-green-50 border border-green-200 rounded-xl p-4 space-y-2">
+                                        <p class="text-xs font-bold text-green-800 uppercase tracking-wide mb-2">Transfer to:</p>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm text-gray-600 font-medium">Bank</span>
+                                            <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('bank_name', '—') }}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm text-gray-600 font-medium">Account Name</span>
+                                            <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('bank_account_name', 'Tuwas Yakan') }}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm text-gray-600 font-medium">Account Number</span>
+                                            <span class="font-bold text-green-700 text-base font-mono">{{ \App\Models\SystemSetting::get('bank_account_number', '—') }}</span>
+                                        </div>
+                                        @if(\App\Models\SystemSetting::get('bank_branch'))
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm text-gray-600 font-medium">Branch</span>
+                                            <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('bank_branch') }}</span>
+                                        </div>
+                                        @endif
+                                        <p class="text-xs text-green-700 mt-2 pt-2 border-t border-green-200">Upload your bank receipt on the order confirmation page.</p>
+                                    </div>
                                 </div>
-                            </label>
+                            </div>
                         </div>
+
+                        <script>
+                        function showPaymentDetails(type) {
+                            // Reset borders
+                            document.getElementById('gcash-option-wrap').classList.remove('border-blue-400');
+                            document.getElementById('bank-option-wrap').classList.remove('border-green-400');
+                            // Hide all details
+                            document.getElementById('gcash-details').classList.add('hidden');
+                            document.getElementById('bank-details').classList.add('hidden');
+                            // Hide checks
+                            document.querySelectorAll('.payment-check-gcash, .payment-check-bank').forEach(el => el.classList.add('hidden'));
+                            // Show selected
+                            if (type === 'gcash') {
+                                document.getElementById('gcash-details').classList.remove('hidden');
+                                document.getElementById('gcash-option-wrap').classList.add('border-blue-400');
+                                document.querySelectorAll('.payment-check-gcash').forEach(el => el.classList.remove('hidden'));
+                            } else {
+                                document.getElementById('bank-details').classList.remove('hidden');
+                                document.getElementById('bank-option-wrap').classList.add('border-green-400');
+                                document.querySelectorAll('.payment-check-bank').forEach(el => el.classList.remove('hidden'));
+                            }
+                        }
+                        </script>
                     </div>
 
                     <!-- Customer Notes Section -->

@@ -528,11 +528,11 @@
                                                     <div class="space-y-2">
                                                         <div class="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
                                                             <span class="text-sm font-semibold text-gray-700">GCash Number:</span>
-                                                            <span class="font-bold text-blue-600 text-lg">09123456789</span>
+                                                            <span class="font-bold text-blue-600 text-lg">{{ \App\Models\SystemSetting::get('gcash_number', '—') }}</span>
                                                         </div>
                                                         <div class="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
                                                             <span class="text-sm font-semibold text-gray-700">Account Name:</span>
-                                                            <span class="font-bold text-gray-900">Tuwas Yakan</span>
+                                                            <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('gcash_name', 'Tuwas Yakan') }}</span>
                                                         </div>
                                                         <div class="flex justify-between items-center bg-green-100 p-3 rounded-lg border-2 border-green-300">
                                                             <span class="text-sm font-bold text-gray-800">Amount to Pay:</span>
@@ -563,15 +563,15 @@
                                                     <div class="space-y-2">
                                                         <div class="flex justify-between items-center bg-green-50 p-3 rounded-lg">
                                                             <span class="text-sm font-semibold text-gray-700">Bank Name:</span>
-                                                            <span class="font-bold text-gray-900">Sample Bank</span>
+                                                            <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('bank_name', '—') }}</span>
                                                         </div>
                                                         <div class="flex justify-between items-center bg-green-50 p-3 rounded-lg">
                                                             <span class="text-sm font-semibold text-gray-700">Account Number:</span>
-                                                            <span class="font-bold text-green-600 text-lg">1234567890</span>
+                                                            <span class="font-bold text-green-600 text-lg">{{ \App\Models\SystemSetting::get('bank_account_number', '—') }}</span>
                                                         </div>
                                                         <div class="flex justify-between items-center bg-green-50 p-3 rounded-lg">
                                                             <span class="text-sm font-semibold text-gray-700">Account Name:</span>
-                                                            <span class="font-bold text-gray-900">Tuwas Yakan</span>
+                                                            <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('bank_account_name', 'Tuwas Yakan') }}</span>
                                                         </div>
                                                         <div class="flex justify-between items-center bg-green-100 p-3 rounded-lg border-2 border-green-300">
                                                             <span class="text-sm font-bold text-gray-800">Amount to Pay:</span>

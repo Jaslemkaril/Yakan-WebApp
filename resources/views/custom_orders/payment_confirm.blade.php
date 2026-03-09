@@ -56,13 +56,13 @@
                     </div>
                     @break
 
-                @case('gcash')
+                                @case('gcash')
                     <div class="space-y-4">
                         <div>
                             <p class="text-sm text-gray-600 mb-2">Send payment to our GCash account:</p>
-                            <div class="bg-gray-50 rounded-lg p-4 space-y-1">
-                                <p class="font-mono text-sm">GCash Number: <span class="font-semibold">09123456789</span></p>
-                                <p class="font-mono text-sm">Account Name: <span class="font-semibold">Yakan E-commerce</span></p>
+                            <div class="bg-blue-50 rounded-lg p-4 space-y-2 border border-blue-200">
+                                <p class="font-mono text-sm">GCash Number: <span class="font-bold text-blue-700">{{ \App\Models\SystemSetting::get('gcash_number', '—') }}</span></p>
+                                <p class="font-mono text-sm">Account Name: <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('gcash_name', 'Tuwas Yakan') }}</span></p>
                             </div>
                         </div>
                         <p class="text-sm text-gray-600">After sending, please upload the screenshot or enter the reference number.</p>
@@ -73,11 +73,13 @@
                     <div class="space-y-4">
                         <div>
                             <p class="text-sm text-gray-600 mb-2">Transfer to our bank account:</p>
-                            <div class="bg-gray-50 rounded-lg p-4 space-y-1">
-                                <p class="font-mono text-sm">Bank: <span class="font-semibold">Sample Bank</span></p>
-                                <p class="font-mono text-sm">Account Name: <span class="font-semibold">Yakan E-commerce</span></p>
-                                <p class="font-mono text-sm">Account Number: <span class="font-semibold">1234567890</span></p>
-                                <p class="font-mono text-sm">Branch: <span class="font-semibold">Main Branch</span></p>
+                            <div class="bg-green-50 rounded-lg p-4 space-y-2 border border-green-200">
+                                <p class="font-mono text-sm">Bank: <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('bank_name', '—') }}</span></p>
+                                <p class="font-mono text-sm">Account Name: <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('bank_account_name', 'Tuwas Yakan') }}</span></p>
+                                <p class="font-mono text-sm">Account Number: <span class="font-bold text-green-700">{{ \App\Models\SystemSetting::get('bank_account_number', '—') }}</span></p>
+                                @if(\App\Models\SystemSetting::get('bank_branch'))
+                                    <p class="font-mono text-sm">Branch: <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('bank_branch') }}</span></p>
+                                @endif
                             </div>
                         </div>
                         <p class="text-sm text-gray-600">After transferring, please upload the receipt or enter the transaction reference.</p>

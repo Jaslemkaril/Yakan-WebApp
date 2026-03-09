@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CustomOrder;
 use App\Models\Order;
+use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -62,23 +63,46 @@ class PaymentController extends Controller
             return redirect()->route('custom_orders.payment', $order);
         }
 
-        // Create simple instructions
-        $instructions = [
-            'title' => ucfirst(str_replace('_', ' ', $order->payment_method)) . ' Instructions',
-            'steps' => [
-                '1. Complete the payment using your selected method',
-                '2. Save the transaction ID or receipt',
-                '3. Come back to this page to confirm payment',
-                '4. Upload receipt or enter transaction ID'
-            ],
-            'bank_name' => 'Sample Bank',
-            'account_name' => 'Yakan E-commerce',
-            'account_number' => '1234567890',
-            'branch' => 'Main Branch',
-            'amount' => $order->final_price,
-            'reference_code' => $order->transaction_id ?? 'REF_' . $order->id,
-            'notes' => 'Please include your order ID (' . $order->id . ') in the payment reference.'
-        ];
+        // Build instructions from system settings
+        $isGcash = in_array($order->payment_method, ['gcash', 'online_banking']);
+
+        if ($isGcash) {
+            $instructions = [
+                'title'         => 'GCash Payment Instructions',
+                'gcash_number'  => SystemSetting::get('gcash_number', ''),
+                'account_name'  => SystemSetting::get('gcash_name', 'Tuwas Yakan'),
+                'steps'         => [
+                    'Open your GCash app and tap "Send Money".',
+                    'Enter the GCash number shown below.',
+                    'Enter the exact amount: ₱' . number_format($order->final_price, 2) . '.',
+                    'Use your Order ID (' . $order->id . ') as the payment message/reference.',
+                    'Take a screenshot of the success screen.',
+                    'Come back here and confirm your payment below.',
+                ],
+                'amount'         => $order->final_price,
+                'reference_code' => $order->transaction_id ?? 'ORDER-' . $order->id,
+                'notes'          => 'Include Order #' . $order->id . ' in your GCash message for quick verification.',
+            ];
+        } else {
+            $instructions = [
+                'title'          => 'Bank Transfer Instructions',
+                'bank_name'      => SystemSetting::get('bank_name', ''),
+                'account_name'   => SystemSetting::get('bank_account_name', 'Tuwas Yakan'),
+                'account_number' => SystemSetting::get('bank_account_number', ''),
+                'branch'         => SystemSetting::get('bank_branch', ''),
+                'steps'          => [
+                    'Go to your bank or use your online banking app.',
+                    'Transfer to the bank account details shown below.',
+                    'Enter the exact amount: ₱' . number_format($order->final_price, 2) . '.',
+                    'Use your Order ID (' . $order->id . ') as the payment reference.',
+                    'Keep your transfer receipt or confirmation.',
+                    'Come back here and confirm your payment below.',
+                ],
+                'amount'         => $order->final_price,
+                'reference_code' => $order->transaction_id ?? 'ORDER-' . $order->id,
+                'notes'          => 'Include Order #' . $order->id . ' in the transfer reference for quick verification.',
+            ];
+        }
 
         return view('custom_orders.payment_instructions', compact('order', 'instructions'));
     }
