@@ -698,22 +698,41 @@ class CartController extends Controller
             $regionLower = strtolower($userAddress->province ?? $userAddress->region ?? '');
             $postalCode = $userAddress->postal_code ?? '';
 
-            if (str_contains($cityLower, 'zamboanga') && str_starts_with($postalCode, '7')) {
+            // Zone 0 — FREE: Zamboanga City
+            if (str_contains($cityLower, 'zamboanga')) {
                 $shippingFee = 0;
-            } elseif (str_contains($regionLower, 'zamboanga') || in_array($cityLower, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
-                $shippingFee = 80;
-            } elseif (in_array($cityLower, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) || str_contains($regionLower, 'barmm') || str_contains($regionLower, 'armm')) {
-                $shippingFee = 120;
-            } elseif (str_contains($regionLower, 'mindanao') || in_array($cityLower, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'])) {
-                $shippingFee = 150;
-            } elseif (str_contains($regionLower, 'visayas') || in_array($cityLower, ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'])) {
+            // Zone 1 — ₱100: Zamboanga Peninsula + BARMM
+            } elseif (str_contains($regionLower, 'zamboanga') || str_contains($regionLower, 'barmm') || str_contains($regionLower, 'bangsamoro') ||
+                      in_array($cityLower, ['dipolog city', 'dapitan city', 'pagadian city', 'isabela city',
+                                            'zamboanga del norte', 'zamboanga del sur', 'zamboanga sibugay',
+                                            'ipil', 'jolo', 'bongao', 'cotabato city', 'marawi city', 'lamitan city'])) {
+                $shippingFee = 100;
+            // Zone 2 — ₱180: Other Mindanao
+            } elseif (str_contains($regionLower, 'mindanao') || str_contains($regionLower, 'davao') ||
+                      str_contains($regionLower, 'soccsksargen') || str_contains($regionLower, 'caraga') ||
+                      str_contains($regionLower, 'northern mindanao') ||
+                      in_array($cityLower, ['davao city', 'digos city', 'tagum city', 'panabo city',
+                                            'general santos city', 'koronadal city', 'kidapawan city',
+                                            'cagayan de oro city', 'iligan city', 'ozamiz city',
+                                            'butuan city', 'surigao city', 'malaybalay city'])) {
                 $shippingFee = 180;
-            } elseif (str_contains($cityLower, 'manila') || str_contains($regionLower, 'ncr') || in_array($cityLower, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'])) {
-                $shippingFee = 220;
-            } elseif (str_contains($regionLower, 'luzon') || in_array($cityLower, ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'])) {
+            // Zone 3 — ₱250: Visayas
+            } elseif (str_contains($regionLower, 'visayas') ||
+                      in_array($cityLower, ['cebu city', 'iloilo city', 'bacolod city',
+                                            'tacloban city', 'dumaguete city', 'tagbilaran city',
+                                            'ormoc city', 'calbayog city', 'roxas city'])) {
                 $shippingFee = 250;
+            // Zone 4 — ₱300: NCR + nearby Luzon
+            } elseif (str_contains($regionLower, 'ncr') || str_contains($regionLower, 'metro manila') ||
+                      str_contains($cityLower, 'manila') || str_contains($regionLower, 'calabarzon') ||
+                      str_contains($regionLower, 'central luzon') ||
+                      in_array($cityLower, ['quezon city', 'makati city', 'pasig city', 'taguig city',
+                                            'caloocan city', 'antipolo city', 'angeles city',
+                                            'san fernando city', 'batangas city', 'lucena city'])) {
+                $shippingFee = 300;
+            // Zone 5 — ₱350: Far Luzon / remote
             } else {
-                $shippingFee = 280;
+                $shippingFee = 350;
             }
         } else {
             $deliveryAddress = 'Store Pickup';
@@ -859,14 +878,82 @@ class CartController extends Controller
         $authToken = request()->input('auth_token') ?? session('auth_token');
         $tokenParam = $authToken ? '?auth_token=' . $authToken : '';
 
-        // Redirect based on payment method
-        if ($request->payment_method === 'online') {
-            return redirect(route('payment.online', $order->id) . $tokenParam)
-                             ->with('success', 'Order placed! Complete payment online.');
-        }
+        // Redirect based on payment method — use JS redirect to avoid Railway's broken
+        // plain "Redirecting to..." HTML body that PHP redirect() produces.
+        $redirectUrl = $request->payment_method === 'online'
+            ? route('payment.online', $order->id) . $tokenParam
+            : route('payment.bank', $order->id) . $tokenParam;
 
-        return redirect(route('payment.bank', $order->id) . $tokenParam)
-                         ->with('success', 'Order placed! Complete bank payment.');
+        $redirectUrlJs   = json_encode($redirectUrl);
+        $orderRef        = htmlspecialchars($order->order_ref ?? '#' . $order->id, ENT_QUOTES, 'UTF-8');
+        $totalFormatted  = '₱' . number_format($totalAmount, 2);
+        $paymentLabel    = $request->payment_method === 'online' ? 'Complete GCash Payment' : 'Complete Bank Transfer';
+
+        return response(<<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Order Placed — Yakan</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(160deg, #6b0000 0%, #800000 45%, #3d0000 100%);
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 48px 40px;
+            text-align: center;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 32px 64px rgba(0,0,0,0.4);
+            animation: fadeUp 0.4s ease-out;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .icon { font-size: 56px; margin-bottom: 20px; display: block; }
+        h1 { color: #fff; font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+        .sub { color: rgba(255,255,255,0.75); font-size: 14px; margin-bottom: 6px; }
+        .amount { color: #ffd700; font-size: 18px; font-weight: 700; margin-bottom: 24px; }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid rgba(255,255,255,0.25);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .msg { color: rgba(255,255,255,0.65); font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <span class="icon">✅</span>
+        <h1>Order Placed!</h1>
+        <p class="sub">Order {$orderRef}</p>
+        <p class="amount">{$totalFormatted}</p>
+        <div class="spinner"></div>
+        <p class="msg">Taking you to {$paymentLabel}…</p>
+    </div>
+    <script>
+        setTimeout(function() { window.location.href = {$redirectUrlJs}; }, 1200);
+    </script>
+</body>
+</html>
+HTML
+        );
     }
 
     /**

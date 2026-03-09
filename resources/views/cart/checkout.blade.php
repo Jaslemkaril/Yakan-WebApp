@@ -543,8 +543,7 @@
                                         $postalCode = $defaultAddress->postal_code ?? '';
 
                                         // Zone 0 — FREE: Within Zamboanga City
-                                        if (str_contains($city, 'zamboanga city') || 
-                                            (str_contains($city, 'zamboanga') && str_starts_with($postalCode, '70'))) {
+                                        if (str_contains($city, 'zamboanga')) {
                                             $shippingFee = 0;
                                         }
                                         // Zone 1 — ₱100: Zamboanga Peninsula + BARMM (~150–500 km)
@@ -663,6 +662,20 @@
     </div>
 </div>
 
+<!-- Order Placement Loading Overlay -->
+<div id="checkout-loading-overlay" style="display:none; position:fixed; inset:0; z-index:9999; background:linear-gradient(160deg,#6b0000 0%,#800000 45%,#3d0000 100%); align-items:center; justify-content:center; flex-direction:column;">
+    <div style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); backdrop-filter:blur(20px); border-radius:24px; padding:48px 40px; text-align:center; max-width:340px; width:90%; box-shadow:0 32px 64px rgba(0,0,0,0.4); animation:checkFadeUp 0.3s ease-out;">
+        <div style="font-size:52px; margin-bottom:16px;">🛒</div>
+        <h2 style="color:#fff; font-size:20px; font-weight:700; margin-bottom:8px; font-family:system-ui,sans-serif;">Placing Your Order…</h2>
+        <p style="color:rgba(255,255,255,0.7); font-size:13px; margin-bottom:24px; font-family:system-ui,sans-serif;">Please wait, do not close this page.</p>
+        <div style="width:40px;height:40px;border:4px solid rgba(255,255,255,0.25);border-top-color:#fff;border-radius:50%;animation:checkSpin 0.8s linear infinite;margin:0 auto;"></div>
+    </div>
+</div>
+<style>
+@keyframes checkFadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes checkSpin   { to{transform:rotate(360deg)} }
+</style>
+
 <script>
 // Helper: inject auth_token (and buy_now params if applicable) into any form before programmatic submit
 // (form.submit() doesn't fire the submit event, so the layout JS can't intercept it)
@@ -684,6 +697,9 @@ function injectAuthAndSubmit(form) {
             }
         });
     }
+    // Show loading overlay before submitting
+    const overlay = document.getElementById('checkout-loading-overlay');
+    if (overlay) { overlay.style.display = 'flex'; }
     form.submit();
 }
 
@@ -964,7 +980,7 @@ function selectAddress(addressId, fullName, phoneNumber, formattedAddress, city,
     const regionLower = region.toLowerCase();
     
     // FREE - Zamboanga City proper
-    if (cityLower.includes('zamboanga') && postalCode.startsWith('7')) {
+    if (cityLower.includes('zamboanga')) {
         shippingFee = 0;
     }
     // ₱80 - Zamboanga Peninsula (nearby)
