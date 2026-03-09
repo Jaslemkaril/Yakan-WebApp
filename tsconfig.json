@@ -1,7 +1,10 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "lib": ["ESNext", "DOM"],
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
     "allowJs": true,
     "jsx": "react-native",
     "noEmit": true,
@@ -14,6 +17,16 @@
     "esModuleInterop": true,
     "baseUrl": "."
   },
-  "include": ["src/**/*", "App.js", "index.js"],
-  "exclude": ["node_modules", "vendor", "public", "storage"]
+  "include": [
+    "src/**/*",
+    "App.js",
+    "index.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "vendor",
+    "public",
+    "storage"
+  ],
+  "extends": "expo/tsconfig.base"
 }

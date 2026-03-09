@@ -190,6 +190,105 @@ HTML);
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('admin.login.form');
+        // Return branded sign-out page instead of plain "Redirecting to..." text.
+        $loginUrl = json_encode(route('admin.login.form'));
+
+        return response(<<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Signing out — Yakan Admin</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(160deg, #3d0000 0%, #6b0000 45%, #1a0000 100%);
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+        .card {
+            background: rgba(255,255,255,0.09);
+            border: 1px solid rgba(255,255,255,0.18);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 48px 40px;
+            text-align: center;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 32px 64px rgba(0,0,0,0.45);
+            animation: fadeUp 0.4s ease-out;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .logo {
+            width: 56px; height: 56px;
+            background: linear-gradient(135deg, #5a0000, #800000);
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        .logo span { color: white; font-weight: 800; font-size: 26px; }
+        .badge {
+            background: rgba(255,200,0,0.15);
+            border: 1px solid rgba(255,200,0,0.35);
+            color: rgba(255,220,100,0.9);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            padding: 3px 10px;
+            border-radius: 99px;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        .spinner-ring {
+            width: 52px; height: 52px;
+            border: 3px solid rgba(255,255,255,0.15);
+            border-top-color: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        h2 { color: white; font-size: 1.25rem; font-weight: 700; margin-bottom: 6px; }
+        .sub { color: rgba(255,220,220,0.75); font-size: 0.875rem; margin-bottom: 28px; }
+        .progress-bar {
+            height: 3px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, rgba(255,255,255,0.4), white);
+            border-radius: 2px;
+            animation: fill 1.4s ease-out forwards;
+        }
+        @keyframes fill { from { width: 0%; } to { width: 100%; } }
+        .status { color: rgba(255,220,220,0.5); font-size: 0.7rem; margin-top: 12px; letter-spacing: 0.08em; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo"><span>Y</span></div>
+        <div class="badge">ADMIN</div>
+        <div class="spinner-ring"></div>
+        <h2>Signing Out</h2>
+        <p class="sub">Your session has ended securely.</p>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+        <p class="status">REDIRECTING TO LOGIN</p>
+    </div>
+    <script>
+        setTimeout(function() { window.location.href = {$loginUrl}; }, 1500);
+    </script>
+</body>
+</html>
+HTML);
     }
 }

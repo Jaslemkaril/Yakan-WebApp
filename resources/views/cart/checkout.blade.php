@@ -541,46 +541,50 @@
                                         $city = strtolower($defaultAddress->city ?? '');
                                         $region = strtolower($defaultAddress->province ?? $defaultAddress->region ?? '');
                                         $postalCode = $defaultAddress->postal_code ?? '';
-                                        
-                                        // Regional-based shipping (Professional Philippine courier rates)
-                                        
-                                        // FREE - Zamboanga City proper
-                                        if (str_contains($city, 'zamboanga') && str_starts_with($postalCode, '7')) {
+
+                                        // Zone 0 — FREE: Within Zamboanga City
+                                        if (str_contains($city, 'zamboanga city') || 
+                                            (str_contains($city, 'zamboanga') && str_starts_with($postalCode, '70'))) {
                                             $shippingFee = 0;
                                         }
-                                        // ₱80 - Zamboanga Peninsula (nearby)
-                                        elseif (str_contains($region, 'zamboanga') || 
-                                                in_array($city, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
-                                            $shippingFee = 80;
+                                        // Zone 1 — ₱100: Zamboanga Peninsula + BARMM (~150–500 km)
+                                        elseif (str_contains($region, 'zamboanga') ||
+                                                str_contains($region, 'barmm') || str_contains($region, 'bangsamoro') ||
+                                                in_array($city, ['dipolog city', 'dapitan city', 'pagadian city',
+                                                                 'isabela city', 'zamboanga del norte', 'zamboanga del sur',
+                                                                 'zamboanga sibugay', 'ipil', 'jolo', 'bongao',
+                                                                 'cotabato city', 'marawi city', 'lamitan city'])) {
+                                            $shippingFee = 100;
                                         }
-                                        // ₱120 - Western Mindanao
-                                        elseif (in_array($city, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) ||
-                                                str_contains($region, 'barmm') || str_contains($region, 'armm')) {
-                                            $shippingFee = 120;
-                                        }
-                                        // ₱150 - Other Mindanao regions
-                                        elseif (str_contains($region, 'mindanao') ||
-                                                in_array($city, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'])) {
-                                            $shippingFee = 150;
-                                        }
-                                        // ₱180 - Visayas
-                                        elseif (str_contains($region, 'visayas') ||
-                                                in_array($city, ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'])) {
+                                        // Zone 2 — ₱180: Other Mindanao (~500–900 km)
+                                        elseif (str_contains($region, 'mindanao') || str_contains($region, 'davao') ||
+                                                str_contains($region, 'soccsksargen') || str_contains($region, 'caraga') ||
+                                                str_contains($region, 'northern mindanao') ||
+                                                in_array($city, ['davao city', 'digos city', 'tagum city', 'panabo city',
+                                                                 'general santos city', 'koronadal city', 'kidapawan city',
+                                                                 'cagayan de oro city', 'iligan city', 'ozamiz city',
+                                                                 'butuan city', 'surigao city', 'malaybalay city'])) {
                                             $shippingFee = 180;
                                         }
-                                        // ₱220 - Metro Manila & nearby
-                                        elseif (str_contains($city, 'manila') || str_contains($region, 'ncr') ||
-                                                in_array($city, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'])) {
-                                            $shippingFee = 220;
-                                        }
-                                        // ₱250 - Northern Luzon
-                                        elseif (str_contains($region, 'luzon') ||
-                                                in_array($city, ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'])) {
+                                        // Zone 3 — ₱250: Visayas (~700–1200 km)
+                                        elseif (str_contains($region, 'visayas') ||
+                                                in_array($city, ['cebu city', 'iloilo city', 'bacolod city',
+                                                                 'tacloban city', 'dumaguete city', 'tagbilaran city',
+                                                                 'ormoc city', 'calbayog city', 'roxas city'])) {
                                             $shippingFee = 250;
                                         }
-                                        // ₱280 - Remote islands & far areas
+                                        // Zone 4 — ₱300: NCR + Luzon nearby (~1400–1800 km)
+                                        elseif (str_contains($region, 'ncr') || str_contains($region, 'metro manila') ||
+                                                str_contains($city, 'manila') || str_contains($region, 'calabarzon') ||
+                                                str_contains($region, 'central luzon') ||
+                                                in_array($city, ['quezon city', 'makati city', 'pasig city', 'taguig city',
+                                                                 'caloocan city', 'antipolo city', 'angeles city',
+                                                                 'san fernando city', 'batangas city', 'lucena city'])) {
+                                            $shippingFee = 300;
+                                        }
+                                        // Zone 5 — ₱350: Far Luzon / Remote (~1800+ km)
                                         else {
-                                            $shippingFee = 280;
+                                            $shippingFee = 350;
                                         }
                                     }
                                 @endphp
@@ -846,9 +850,28 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Add change listeners
+    const deliveryShippingFee = {{ $shippingFee }};
     deliveryTypeRadios.forEach(radio => {
         radio.addEventListener('change', function() {
             toggleDeliveryPickup(this.value);
+
+            // Update shipping fee display
+            const feeDisplay = document.getElementById('shippingFeeDisplay');
+            const feeInput   = document.getElementById('shippingFeeInput');
+            if (this.value === 'pickup') {
+                feeDisplay.textContent = 'FREE';
+                feeDisplay.className = 'font-bold text-green-600 text-lg';
+                if (feeInput) feeInput.value = 0;
+            } else {
+                if (deliveryShippingFee === 0) {
+                    feeDisplay.textContent = 'FREE';
+                    feeDisplay.className = 'font-bold text-green-600 text-lg';
+                } else {
+                    feeDisplay.textContent = '₱' + deliveryShippingFee.toFixed(2);
+                    feeDisplay.className = 'font-bold text-gray-900 text-lg';
+                }
+                if (feeInput) feeInput.value = deliveryShippingFee;
+            }
             
             // Update visual styling for selected option
             const deliveryLabel = document.getElementById('delivery-radio-label');
@@ -1031,11 +1054,36 @@ function openEditAddressModal(addressId, label, fullName, phoneNumber, streetAdd
     document.getElementById('editFullName').value = fullName;
     document.getElementById('editPhoneNumber').value = phoneNumber;
     document.getElementById('editStreetAddress').value = streetAddress;
-    document.getElementById('editBarangay').value = barangay;
-    document.getElementById('editCity').value = city;
-    document.getElementById('editRegion').value = region;
     document.getElementById('editPostalCode').value = postalCode;
     document.getElementById('editIsDefault').checked = isDefault;
+
+    // Populate cascading selects
+    const regionSel = document.getElementById('editRegion');
+    populateRegionDropdown('edit');
+    // Try to match stored region to an option
+    for (let i = 0; i < regionSel.options.length; i++) {
+        if (regionSel.options[i].value.toLowerCase().includes(region.toLowerCase()) ||
+            region.toLowerCase().includes(regionSel.options[i].value.toLowerCase())) {
+            regionSel.selectedIndex = i;
+            break;
+        }
+    }
+    populateCityDropdown('edit');
+    const citySel = document.getElementById('editCity');
+    for (let i = 0; i < citySel.options.length; i++) {
+        if (citySel.options[i].value.toLowerCase() === city.toLowerCase()) {
+            citySel.selectedIndex = i;
+            break;
+        }
+    }
+    populateBarangayDropdown('edit');
+    const brgySel = document.getElementById('editBarangay');
+    for (let i = 0; i < brgySel.options.length; i++) {
+        if (brgySel.options[i].value.toLowerCase() === barangay.toLowerCase()) {
+            brgySel.selectedIndex = i;
+            break;
+        }
+    }
     
     // Show edit modal
     document.getElementById('editAddressModal').classList.remove('hidden');
@@ -1049,6 +1097,7 @@ function closeEditAddressModal() {
 
 function openNewAddressModal() {
     closeAddressModal();
+    populateRegionDropdown('new');
     document.getElementById('newAddressModal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
 }
@@ -1090,6 +1139,278 @@ function submitNewAddress() {
     form.method = 'POST';
     injectAuthAndSubmit(form);
 }
+</script>
+
+<!-- Philippine Locations + Distance Shipping Script -->
+<script>
+// ============================================================
+// Philippine Locations Data (Region → City → Barangay)
+// Shipping zones measured from store: Zamboanga City
+// ============================================================
+const PH_LOCATIONS = {
+    "Zamboanga Peninsula (Region IX)": {
+        shippingZone: 0,
+        cities: {
+            "Zamboanga City":          { postal: "7000", barangays: ["Ayala","Baliwasan","Baluno","Boalan","Buenavista","Cabatangan","Calarian","Campo Islam","Campo Uno","Canelar","Capisan","Cawa-Cawa","Culianan","Dita","Divisoria","Dulian (Upper Bunguiao)","Guiwan","Kasanyangan","La Paz","Labuan","Lamisahan","Lapakan","Latawan","Licomo","Ligaw","Lumayang","Lumbangan","Lunzuran","Maasin","Mampang","Manicahan","Mercedes","Pababag","Pagatpat","Pamucutan","Panubigan","Pasonanca","Putik","San Jose Cawa-Cawa","San Jose Gusu","San Roque","Santa Barbara","Santa Catalina","Santa Maria","Santo Niño","Sibulao","Sinunoc","Taluksangay","Tawagan Norte","Tawagan Sur","Taytay","Tetuan","Tigbalabag","Tolosa","Tugbungan","Tumaga","Tukuran","Tulungatung","Upper Calarian","Vitali","Zambowood","Other"] },
+            "Zamboanga del Norte (Dipolog City)": { postal: "7100", barangays: [] },
+            "Dapitan City":            { postal: "7101", barangays: [] },
+            "Pagadian City":           { postal: "7016", barangays: [] },
+            "Zamboanga del Sur (Molave)": { postal: "7023", barangays: [] },
+            "Ipil (Zamboanga Sibugay)":{ postal: "7001", barangays: [] },
+            "Isabela City (Basilan)":  { postal: "7300", barangays: [] }
+        }
+    },
+    "BARMM (Bangsamoro)": {
+        shippingZone: 1,
+        cities: {
+            "Jolo (Sulu)":         { postal: "7400", barangays: [] },
+            "Bongao (Tawi-Tawi)":  { postal: "7500", barangays: [] },
+            "Cotabato City":       { postal: "9600", barangays: [] },
+            "Marawi City":         { postal: "9700", barangays: [] },
+            "Lamitan City (Basilan)":{ postal: "7302", barangays: [] },
+            "Parang (Maguindanao)":{ postal: "9607", barangays: [] }
+        }
+    },
+    "Davao Region (Region XI)": {
+        shippingZone: 2,
+        cities: {
+            "Davao City":          { postal: "8000", barangays: [] },
+            "Digos City":          { postal: "8002", barangays: [] },
+            "Tagum City":          { postal: "8100", barangays: [] },
+            "Panabo City":         { postal: "8105", barangays: [] },
+            "Mati City":           { postal: "8200", barangays: [] }
+        }
+    },
+    "SOCCSKSARGEN (Region XII)": {
+        shippingZone: 2,
+        cities: {
+            "General Santos City": { postal: "9500", barangays: [] },
+            "Koronadal City":      { postal: "9506", barangays: [] },
+            "Kidapawan City":      { postal: "9400", barangays: [] },
+            "Tacurong City":       { postal: "9800", barangays: [] },
+            "Isulan (Sultan Kudarat)": { postal: "9805", barangays: [] }
+        }
+    },
+    "Northern Mindanao (Region X)": {
+        shippingZone: 2,
+        cities: {
+            "Cagayan de Oro City": { postal: "9000", barangays: [] },
+            "Iligan City":         { postal: "9200", barangays: [] },
+            "Ozamiz City":         { postal: "7200", barangays: [] },
+            "Oroquieta City":      { postal: "7207", barangays: [] },
+            "Gingoog City":        { postal: "9014", barangays: [] },
+            "Malaybalay City":     { postal: "8700", barangays: [] },
+            "Valencia City":       { postal: "8709", barangays: [] }
+        }
+    },
+    "Caraga (Region XIII)": {
+        shippingZone: 2,
+        cities: {
+            "Butuan City":         { postal: "8600", barangays: [] },
+            "Surigao City":        { postal: "8400", barangays: [] },
+            "Bayugan City":        { postal: "8502", barangays: [] },
+            "Tandag City":         { postal: "8300", barangays: [] }
+        }
+    },
+    "Central Visayas (Region VII)": {
+        shippingZone: 3,
+        cities: {
+            "Cebu City":           { postal: "6000", barangays: [] },
+            "Mandaue City":        { postal: "6014", barangays: [] },
+            "Lapu-Lapu City":      { postal: "6015", barangays: [] },
+            "Dumaguete City":      { postal: "6200", barangays: [] },
+            "Tagbilaran City":     { postal: "6300", barangays: [] }
+        }
+    },
+    "Western Visayas (Region VI)": {
+        shippingZone: 3,
+        cities: {
+            "Iloilo City":         { postal: "5000", barangays: [] },
+            "Bacolod City":        { postal: "6100", barangays: [] },
+            "Roxas City":          { postal: "5800", barangays: [] },
+            "Kalibo (Aklan)":      { postal: "5600", barangays: [] }
+        }
+    },
+    "Eastern Visayas (Region VIII)": {
+        shippingZone: 3,
+        cities: {
+            "Tacloban City":       { postal: "6500", barangays: [] },
+            "Ormoc City":          { postal: "6541", barangays: [] },
+            "Calbayog City":       { postal: "6710", barangays: [] },
+            "Catbalogan City":     { postal: "6700", barangays: [] }
+        }
+    },
+    "NCR (Metro Manila)": {
+        shippingZone: 4,
+        cities: {
+            "Manila":              { postal: "1000", barangays: [] },
+            "Quezon City":         { postal: "1100", barangays: [] },
+            "Makati City":         { postal: "1200", barangays: [] },
+            "Pasig City":          { postal: "1600", barangays: [] },
+            "Taguig City":         { postal: "1630", barangays: [] },
+            "Caloocan City":       { postal: "1400", barangays: [] },
+            "Mandaluyong City":    { postal: "1550", barangays: [] },
+            "Marikina City":       { postal: "1800", barangays: [] },
+            "Parañaque City":      { postal: "1700", barangays: [] },
+            "Las Piñas City":      { postal: "1750", barangays: [] },
+            "Muntinlupa City":     { postal: "1770", barangays: [] },
+            "Valenzuela City":     { postal: "1440", barangays: [] },
+            "Malabon City":        { postal: "1470", barangays: [] },
+            "Navotas City":        { postal: "1485", barangays: [] },
+            "San Juan City":       { postal: "1500", barangays: [] },
+            "Pasay City":          { postal: "1300", barangays: [] }
+        }
+    },
+    "CALABARZON (Region IV-A)": {
+        shippingZone: 4,
+        cities: {
+            "Antipolo City":       { postal: "1870", barangays: [] },
+            "Lucena City":         { postal: "4301", barangays: [] },
+            "Calamba City":        { postal: "4027", barangays: [] },
+            "Santa Rosa City":     { postal: "4026", barangays: [] },
+            "Batangas City":       { postal: "4200", barangays: [] },
+            "Lipa City":           { postal: "4217", barangays: [] },
+            "Cavite City":         { postal: "4100", barangays: [] },
+            "Bacoor City":         { postal: "4102", barangays: [] }
+        }
+    },
+    "Central Luzon (Region III)": {
+        shippingZone: 4,
+        cities: {
+            "San Fernando City (Pampanga)": { postal: "2000", barangays: [] },
+            "Angeles City":        { postal: "2009", barangays: [] },
+            "Olongapo City":       { postal: "2200", barangays: [] },
+            "Malolos City":        { postal: "3000", barangays: [] },
+            "Cabanatuan City":     { postal: "3100", barangays: [] },
+            "Tarlac City":         { postal: "2300", barangays: [] }
+        }
+    },
+    "Ilocos Region (Region I)": {
+        shippingZone: 5,
+        cities: {
+            "Laoag City":          { postal: "2900", barangays: [] },
+            "Vigan City":          { postal: "2700", barangays: [] },
+            "San Fernando City (La Union)": { postal: "2500", barangays: [] },
+            "Dagupan City":        { postal: "2400", barangays: [] }
+        }
+    },
+    "Cagayan Valley (Region II)": {
+        shippingZone: 5,
+        cities: {
+            "Tuguegarao City":     { postal: "3500", barangays: [] },
+            "Santiago City":       { postal: "3311", barangays: [] },
+            "Ilagan City":         { postal: "3300", barangays: [] }
+        }
+    },
+    "CAR (Cordillera)": {
+        shippingZone: 5,
+        cities: {
+            "Baguio City":         { postal: "2600", barangays: [] },
+            "Tabuk City":          { postal: "3800", barangays: [] }
+        }
+    },
+    "Bicol Region (Region V)": {
+        shippingZone: 5,
+        cities: {
+            "Legazpi City":        { postal: "4500", barangays: [] },
+            "Naga City":           { postal: "4400", barangays: [] },
+            "Sorsogon City":       { postal: "4700", barangays: [] }
+        }
+    },
+    "MIMAROPA (Region IV-B)": {
+        shippingZone: 5,
+        cities: {
+            "Puerto Princesa City":{ postal: "5300", barangays: [] },
+            "Calapan City":        { postal: "5200", barangays: [] },
+            "Romblon (Romblon)":   { postal: "5500", barangays: [] }
+        }
+    }
+};
+
+// Shipping fees per zone (distance from Zamboanga City)
+const SHIPPING_ZONES = {
+    0: 0,    // Within Zamboanga City — FREE
+    1: 100,  // Zamboanga Peninsula + BARMM (~150-500 km)
+    2: 180,  // Other Mindanao regions (~500-900 km)
+    3: 250,  // Visayas (~700-1200 km)
+    4: 300,  // NCR + Luzon nearby (~1400-1800 km)
+    5: 350   // Far Luzon / Remote (~1800+ km)
+};
+
+function populateRegionDropdown(prefix) {
+    const sel = document.getElementById(prefix + 'Region');
+    const currentVal = sel.value;
+    sel.innerHTML = '<option value="">-- Select Region --</option>';
+    for (const region in PH_LOCATIONS) {
+        const opt = document.createElement('option');
+        opt.value = region;
+        opt.textContent = region;
+        if (region === currentVal) opt.selected = true;
+        sel.appendChild(opt);
+    }
+    populateCityDropdown(prefix);
+}
+
+function populateCityDropdown(prefix) {
+    const regionSel = document.getElementById(prefix + 'Region');
+    const citySel   = document.getElementById(prefix + 'City');
+    const region    = regionSel.value;
+    citySel.innerHTML = '<option value="">-- Select City --</option>';
+    if (region && PH_LOCATIONS[region]) {
+        const cities = PH_LOCATIONS[region].cities;
+        for (const city in cities) {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            citySel.appendChild(opt);
+        }
+    }
+    populateBarangayDropdown(prefix);
+    autoFillPostal(prefix);
+}
+
+function populateBarangayDropdown(prefix) {
+    const regionSel = document.getElementById(prefix + 'Region');
+    const citySel   = document.getElementById(prefix + 'City');
+    const brgySel   = document.getElementById(prefix + 'Barangay');
+    const region    = regionSel.value;
+    const city      = citySel.value;
+    brgySel.innerHTML = '<option value="">-- Select Barangay --</option>';
+    if (region && city && PH_LOCATIONS[region] && PH_LOCATIONS[region].cities[city]) {
+        const barangays = PH_LOCATIONS[region].cities[city].barangays;
+        if (barangays.length > 0) {
+            barangays.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b;
+                opt.textContent = b;
+                brgySel.appendChild(opt);
+            });
+        } else {
+            const opt = document.createElement('option');
+            opt.value = 'N/A';
+            opt.textContent = 'N/A (not applicable)';
+            brgySel.appendChild(opt);
+        }
+    }
+}
+
+function autoFillPostal(prefix) {
+    const regionSel  = document.getElementById(prefix + 'Region');
+    const citySel    = document.getElementById(prefix + 'City');
+    const postalInp  = document.getElementById(prefix + 'PostalCode');
+    const region     = regionSel.value;
+    const city       = citySel.value;
+    if (region && city && PH_LOCATIONS[region] && PH_LOCATIONS[region].cities[city]) {
+        const postal = PH_LOCATIONS[region].cities[city].postal;
+        if (postal) postalInp.value = postal;
+    }
+}
+
+// Initialize region dropdowns on page load (for possible pre-fill)
+document.addEventListener('DOMContentLoaded', function() {
+    populateRegionDropdown('edit');
+    populateRegionDropdown('new');
+});
 </script>
 
 <!-- Address Selection Modal -->
@@ -1226,26 +1547,32 @@ function submitNewAddress() {
                     <input type="text" id="editStreetAddress" name="formatted_address" required placeholder="House No., Building, Street Name" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
                 </div>
                 
-                <!-- Barangay -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Barangay</label>
-                    <input type="text" id="editBarangay" name="barangay" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
-                </div>
-                
-                <!-- City -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        City <span style="color: #800000;">*</span>
-                    </label>
-                    <input type="text" id="editCity" name="city" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
-                </div>
-                
                 <!-- Region -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                         Province/Region <span style="color: #800000;">*</span>
                     </label>
-                    <input type="text" id="editRegion" name="region" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
+                    <select id="editRegion" name="region" required onchange="populateCityDropdown('edit')" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
+                        <option value="">-- Select Region --</option>
+                    </select>
+                </div>
+
+                <!-- City -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        City / Municipality <span style="color: #800000;">*</span>
+                    </label>
+                    <select id="editCity" name="city" required onchange="populateBarangayDropdown('edit'); autoFillPostal('edit')" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
+                        <option value="">-- Select City --</option>
+                    </select>
+                </div>
+                
+                <!-- Barangay -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Barangay</label>
+                    <select id="editBarangay" name="barangay" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
+                        <option value="">-- Select Barangay --</option>
+                    </select>
                 </div>
                 
                 <!-- Postal Code -->
@@ -1341,26 +1668,32 @@ function submitNewAddress() {
                     <input type="text" name="formatted_address" required placeholder="House No., Building, Street Name" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
                 </div>
                 
-                <!-- Barangay -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Barangay</label>
-                    <input type="text" name="barangay" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
-                </div>
-                
-                <!-- City -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        City <span style="color: #800000;">*</span>
-                    </label>
-                    <input type="text" name="city" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
-                </div>
-                
                 <!-- Region -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                         Province/Region <span style="color: #800000;">*</span>
                     </label>
-                    <input type="text" name="region" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
+                    <select id="newRegion" name="region" required onchange="populateCityDropdown('new')" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
+                        <option value="">-- Select Region --</option>
+                    </select>
+                </div>
+
+                <!-- City -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        City / Municipality <span style="color: #800000;">*</span>
+                    </label>
+                    <select id="newCity" name="city" required onchange="populateBarangayDropdown('new'); autoFillPostal('new')" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
+                        <option value="">-- Select City --</option>
+                    </select>
+                </div>
+                
+                <!-- Barangay -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Barangay</label>
+                    <select id="newBarangay" name="barangay" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
+                        <option value="">-- Select Barangay --</option>
+                    </select>
                 </div>
                 
                 <!-- Postal Code -->
@@ -1368,7 +1701,7 @@ function submitNewAddress() {
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                         Postal Code <span style="color: #800000;">*</span>
                     </label>
-                    <input type="text" name="postal_code" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
+                    <input type="text" id="newPostalCode" name="postal_code" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
                 </div>
                 
                 <!-- Set as Default -->
