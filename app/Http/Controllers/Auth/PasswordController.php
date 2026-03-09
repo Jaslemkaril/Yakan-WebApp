@@ -12,25 +12,52 @@ class PasswordController extends Controller
 {
     /**
      * Update the user's password.
+     * Uses manual validation + explicit redirect so Railway (no persistent session)
+     * never gets a 500 from validateWithBag trying to call back() with no _previous.url.
      */
     public function update(Request $request): RedirectResponse
     {
-        $validated = $request->validateWithBag('updatePassword', [
-            'current_password' => ['required', 'current_password'],
-            'password' => ['required', Password::defaults(), 'confirmed'],
-        ]);
+        $authToken  = $request->input('auth_token') ?? $request->query('auth_token');
+        $profileUrl = route('profile.edit') . ($authToken ? '?auth_token=' . urlencode($authToken) : '');
 
-        $request->user()->update([
-            'password' => Hash::make($validated['password']),
-        ]);
+        $user = $request->user();
 
-        // Preserve auth_token for Railway deployment
-        $authToken = $request->input('auth_token') ?? $request->query('auth_token');
-        if ($authToken) {
-            $redirectUrl = route('profile.edit') . '?auth_token=' . urlencode($authToken);
-            return redirect()->to($redirectUrl)->with('status', 'password-updated');
+        // ── Manual validation ─────────────────────────────────────────────
+        $errors = [];
+
+        $currentPassword = $request->input('current_password', '');
+        $newPassword     = $request->input('password', '');
+        $confirmation    = $request->input('password_confirmation', '');
+
+        // Current password
+        if (empty($currentPassword)) {
+            $errors['current_password'] = ['The current password field is required.'];
+        } elseif (empty($user->getAuthPassword())) {
+            // OAuth account with no local password set — skip the check
+            // but inform clearly (they should just set a new password)
+        } elseif (!Hash::check($currentPassword, $user->getAuthPassword())) {
+            $errors['current_password'] = ['The current password is incorrect.'];
         }
 
-        return back()->with('status', 'password-updated');
+        // New password
+        if (empty($newPassword)) {
+            $errors['password'] = ['The new password field is required.'];
+        } elseif (strlen($newPassword) < 8) {
+            $errors['password'] = ['The new password must be at least 8 characters.'];
+        } elseif ($newPassword !== $confirmation) {
+            $errors['password_confirmation'] = ['The password confirmation does not match.'];
+        }
+
+        if (!empty($errors)) {
+            return redirect()->to($profileUrl)
+                ->withErrors($errors, 'updatePassword')
+                ->withInput($request->except(['current_password', 'password', 'password_confirmation']));
+        }
+
+        // ── Save new password ─────────────────────────────────────────────
+        $user->forceFill(['password' => Hash::make($newPassword)])->save();
+
+        return redirect()->to($profileUrl)->with('status', 'password-updated');
     }
 }
+
