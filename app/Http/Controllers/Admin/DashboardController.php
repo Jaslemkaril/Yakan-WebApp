@@ -259,22 +259,21 @@ class DashboardController extends Controller
     {
         try {
             $period = $request->get('period', 30);
-            
-            $salesData = Order::where('status', 'completed')
-                ->where('created_at', '>=', now()->subDays($period))
+
+            // Daily sales for the chosen period (all orders, not just completed)
+            $salesData = Order::where('created_at', '>=', now()->subDays($period))
                 ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue, COUNT(*) as orders')
                 ->groupBy('date')
                 ->orderBy('date')
                 ->get();
 
-            $totalRevenue = (float) Order::where('status', 'completed')->sum('total_amount');
-            $totalOrders = Order::count();
+            $totalRevenue    = (float) Order::sum('total_amount');
+            $totalOrders     = Order::count();
             $completedOrders = Order::where('status', 'completed')->count();
-            $averageOrderValue = $completedOrders > 0 ? $totalRevenue / $completedOrders : 0;
+            $averageOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
 
-            // Monthly revenue for the past 12 months
-            $monthlyRevenue = Order::where('status', 'completed')
-                ->where('created_at', '>=', now()->subMonths(12))
+            // Monthly revenue for the past 12 months (all orders)
+            $monthlyRevenue = Order::where('created_at', '>=', now()->subMonths(12))
                 ->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, SUM(total_amount) as revenue, COUNT(*) as orders')
                 ->groupBy('year', 'month')
                 ->orderBy('year')
@@ -294,6 +293,11 @@ class DashboardController extends Controller
                 ->take(10)
                 ->get();
 
+            // Order status breakdown
+            $statusBreakdown = Order::selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->get();
+
             return view('admin.analytics.sales', compact(
                 'salesData',
                 'totalRevenue',
@@ -303,6 +307,7 @@ class DashboardController extends Controller
                 'monthlyRevenue',
                 'paymentMethods',
                 'topProducts',
+                'statusBreakdown',
                 'period'
             ));
         } catch (\Exception $e) {
