@@ -889,14 +889,14 @@ Route::get('/test-auth', function() {
 Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->group(function () {
     Route::get('/', [\App\Http\Controllers\CustomOrderController::class, 'userIndex'])->name('index');
     
-    // Redirect /create to fabric selection (step 1)
+    // Redirect /create to fabric selection (step 1) — show loading screen
     Route::get('/create', function(\Illuminate\Http\Request $request) {
         $token = $request->query('auth_token');
         $url = route('custom_orders.create.step1');
         if ($token) {
             $url .= '?auth_token=' . urlencode($token);
         }
-        return redirect($url);
+        return response()->view('custom_orders.loading', ['redirectUrl' => $url]);
     })->name('create');
     
     // Test route for debugging auth
