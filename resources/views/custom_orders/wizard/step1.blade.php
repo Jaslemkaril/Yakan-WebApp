@@ -47,6 +47,7 @@
     <div class="container mx-auto px-4 py-8">
         <form action="{{ route('custom_orders.store.step1') }}" method="POST" id="fabricSelectionForm">
             @csrf
+            <input type="hidden" name="auth_token" id="step1AuthToken" value="{{ request('auth_token') }}">
             
             <!-- Fabric Type Selection -->
             <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 mb-8">
@@ -236,36 +237,22 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// Form validation
+// Form validation & AJAX submit
 document.getElementById('fabricSelectionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
     const fabricType = document.querySelector('input[name="fabric_type"]:checked');
     const quantity = document.getElementById('fabric_quantity_meters').value;
     const intendedUse = document.getElementById('intended_use').value;
     
-    if (!fabricType) {
-        e.preventDefault();
-        showNotification('Please select a fabric type', 'warning');
-        return false;
-    }
+    if (!fabricType) { showNotification('Please select a fabric type', 'warning'); return; }
+    if (!quantity || quantity < 0.5 || quantity > 100) { showNotification('Please enter a valid quantity between 0.5 and 100 meters', 'warning'); return; }
+    if (!intendedUse) { showNotification('Please select the intended use for this fabric', 'warning'); return; }
     
-    if (!quantity || quantity < 0.5 || quantity > 100) {
-        e.preventDefault();
-        showNotification('Please enter a valid quantity between 0.5 and 100 meters', 'warning');
-        return false;
-    }
+    // Sync auth token from URL into hidden field
+    const urlToken = new URLSearchParams(window.location.search).get('auth_token');
+    if (urlToken) document.getElementById('step1AuthToken').value = urlToken;
     
-    if (!intendedUse) {
-        e.preventDefault();
-        showNotification('Please select the intended use for this fabric', 'warning');
-        return false;
-    }
-    
-    // Show loading state
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span class="flex items-center"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Processing...</span>';
-    
-    showNotification('Processing your fabric selection...', 'info');
+    submitWizardForm('fabricSelectionForm', 'Saving fabric selection...', 'Almost there!');
 });
 
 // Update fabric cost dynamically based on selected pattern's price_per_meter
@@ -308,4 +295,55 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
+
+<!-- Wizard Loading Overlay -->
+<div id="wizardLoadingOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#800000 0%,#500000 60%,#300000 100%);align-items:center;justify-content:center;">
+    <div style="text-align:center;animation:wlFadeIn 0.4s ease;color:white;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:40px;">
+            <div style="width:52px;height:52px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#800000;box-shadow:0 4px 20px rgba(0,0,0,0.3);">Y</div>
+            <span style="font-size:28px;font-weight:800;letter-spacing:-0.5px;">Yakan</span>
+        </div>
+        <div style="width:64px;height:64px;border:4px solid rgba(255,255,255,0.3);border-top:4px solid white;border-radius:50%;animation:wlSpin 0.9s linear infinite;margin:0 auto 24px;"></div>
+        <p style="font-size:18px;font-weight:600;margin-bottom:8px;" id="wlTitle">Saving your progress...</p>
+        <p style="font-size:14px;opacity:0.7;" id="wlSubtitle">Please wait a moment</p>
+    </div>
+</div>
+<style>
+@keyframes wlSpin { to { transform: rotate(360deg); } }
+@keyframes wlFadeIn { from { opacity:0;transform:translateY(20px); } to { opacity:1;transform:translateY(0); } }
+</style>
+<script>
+function showWizardLoading(title, subtitle) {
+    var ov = document.getElementById('wizardLoadingOverlay');
+    if (title) document.getElementById('wlTitle').textContent = title;
+    if (subtitle) document.getElementById('wlSubtitle').textContent = subtitle;
+    ov.style.display = 'flex';
+}
+function hideWizardLoading() { document.getElementById('wizardLoadingOverlay').style.display = 'none'; }
+function getWizardAuthToken() {
+    return new URLSearchParams(window.location.search).get('auth_token') ||
+           localStorage.getItem('yakan_auth_token') || '';
+}
+function submitWizardForm(formId, title, subtitle) {
+    var form = document.getElementById(formId);
+    if (!form) return;
+    showWizardLoading(title || 'Saving your progress...', subtitle || 'Please wait a moment');
+    var formData = new FormData(form);
+    var token = getWizardAuthToken();
+    var url = form.action;
+    if (token) {
+        formData.set('auth_token', token);
+        url += (url.indexOf('?') >= 0 ? '&' : '?') + 'auth_token=' + encodeURIComponent(token);
+    }
+    fetch(url, { method: 'POST', body: formData, headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success && (data.redirect_url || data.next_url || data.review_url)) {
+            window.location.href = data.redirect_url || data.next_url || data.review_url;
+        } else if (data.success) { location.reload(); }
+        else { hideWizardLoading(); alert(data.message || 'An error occurred. Please try again.'); }
+    })
+    .catch(function() { hideWizardLoading(); form.submit(); });
+}
+</script>
 @endsection

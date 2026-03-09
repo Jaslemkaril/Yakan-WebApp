@@ -18,13 +18,7 @@
                         </svg>
                         Check Updates
                     </button>
-                    <a href="{{ route('chats.create') }}"
-                       class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-[#6B0000] to-[#5B0000] hover:from-[#5B0000] hover:to-[#4B0000] text-white font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                        </svg>
-                        Send Design Request
-                    </a>
+
                     <a href="{{ route('custom_orders.create') }}"
                        class="inline-flex items-center px-6 py-3 bg-red-700 hover:bg-red-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -661,41 +655,12 @@ function filterUserOrders(status) {
 }
 
 function checkForUpdates() {
-    const refreshBtn = event.target;
+    const refreshBtn = event.currentTarget || event.target;
     const originalContent = refreshBtn.innerHTML;
-    
-    // Show loading state
-    refreshBtn.innerHTML = '<svg class="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Checking...';
+    refreshBtn.innerHTML = '<svg class="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Refreshing...';
     refreshBtn.disabled = true;
-    
-    // API call to check for updates
-    fetch('/api/v1/custom-orders/status-check', {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showNotification(data.message || 'No new updates', 'info');
-            if (data.has_updates) {
-                // Update the page with new data
-                location.reload();
-            }
-        } else {
-            showNotification('Failed to check for updates', 'error');
-        }
-    })
-    .catch(error => {
-        showNotification('Network error while checking updates', 'error');
-    })
-    .finally(() => {
-        refreshBtn.innerHTML = originalContent;
-        refreshBtn.disabled = false;
-    });
+    // Simply reload the page to get the latest order statuses
+    location.reload();
 }
 
 function checkForNotifications() {

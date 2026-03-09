@@ -226,13 +226,25 @@ class CustomOrderController extends Controller
                 'has_details' => isset($wizardData['details']),
             ]);
 
+            $isAjax = $request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest';
+            if ($isAjax) {
+                $token = $request->input('auth_token') ?? $request->query('auth_token') ?? session('auth_token');
+                $redirectUrl = route('custom_orders.create.step4') . ($token ? '?auth_token=' . urlencode($token) : '');
+                return response()->json(['success' => true, 'message' => 'Order details saved!', 'redirect_url' => $redirectUrl]);
+            }
             return $this->redirectToRouteWithToken('custom_orders.create.step4');
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return redirect()->back()
-                ->withErrors($e->errors())
-                ->withInput();
+            $isAjax = $request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest';
+            if ($isAjax) {
+                return response()->json(['success' => false, 'message' => 'Validation failed', 'errors' => $e->errors()], 422);
+            }
+            return redirect()->back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
             \Log::error('storeStep3 error', ['error' => $e->getMessage()]);
+            $isAjax = $request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest';
+            if ($isAjax) {
+                return response()->json(['success' => false, 'message' => 'Unable to save order details. Please try again.'], 500);
+            }
             return redirect()->back()->with('error', 'Unable to save order details. Please try again.');
         }
     }
@@ -559,9 +571,12 @@ class CustomOrderController extends Controller
                      $request->header('Accept') === 'application/json';
 
             if ($isAjax) {
+                $token = $request->input('auth_token') ?? $request->query('auth_token') ?? session('auth_token');
+                $redirectUrl = route('custom_orders.create.pattern') . ($token ? '?auth_token=' . urlencode($token) : '');
                 return response()->json([
                     'success' => true,
                     'message' => 'Fabric selection saved successfully',
+                    'redirect_url' => $redirectUrl,
                     'fabric' => [
                         'type' => $fabricType,
                         'quantity_meters' => $request->fabric_quantity_meters,
@@ -1506,6 +1521,12 @@ class CustomOrderController extends Controller
             }
 
             // Redirect to success page
+            $isAjax = $request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest';
+            if ($isAjax) {
+                $token = $request->input('auth_token') ?? $request->query('auth_token') ?? session('auth_token');
+                $successUrl = route('custom_orders.success', ['order' => $customOrder->id]) . ($token ? '?auth_token=' . urlencode($token) : '');
+                return response()->json(['success' => true, 'message' => 'Order submitted successfully!', 'redirect_url' => $successUrl]);
+            }
             return $this->redirectToRouteWithToken('custom_orders.success', ['order' => $customOrder->id]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {

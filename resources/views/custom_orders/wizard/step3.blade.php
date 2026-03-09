@@ -60,6 +60,7 @@
     <div class="container mx-auto px-4 py-8">
         <form id="orderDetailsForm" method="POST" action="{{ route('custom_orders.store.step3') }}" class="max-w-4xl mx-auto">
             @csrf
+            <input type="hidden" name="auth_token" id="step3AuthToken" value="{{ request('auth_token') }}">
             
             <!-- Order Information Section -->
             <div class="bg-white rounded-2xl shadow-xl border-2 p-8 mb-8" style="border-color:#e0b0b0;">
@@ -294,4 +295,66 @@
         box-shadow: 0 0 0 3px rgba(128, 0, 0, 0.1);
     }
 </style>
+
+<!-- Wizard Loading Overlay -->
+<div id="wizardLoadingOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#800000 0%,#500000 60%,#300000 100%);align-items:center;justify-content:center;">
+    <div style="text-align:center;animation:wlFadeIn 0.4s ease;color:white;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:40px;">
+            <div style="width:52px;height:52px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#800000;box-shadow:0 4px 20px rgba(0,0,0,0.3);">Y</div>
+            <span style="font-size:28px;font-weight:800;letter-spacing:-0.5px;">Yakan</span>
+        </div>
+        <div style="width:64px;height:64px;border:4px solid rgba(255,255,255,0.3);border-top:4px solid white;border-radius:50%;animation:wlSpin 0.9s linear infinite;margin:0 auto 24px;"></div>
+        <p style="font-size:18px;font-weight:600;margin-bottom:8px;" id="wlTitle">Saving order details...</p>
+        <p style="font-size:14px;opacity:0.7;" id="wlSubtitle">Please wait a moment</p>
+    </div>
+</div>
+<style>
+@keyframes wlSpin { to { transform: rotate(360deg); } }
+@keyframes wlFadeIn { from { opacity:0;transform:translateY(20px); } to { opacity:1;transform:translateY(0); } }
+</style>
+<script>
+function showWizardLoading(title, subtitle) {
+    var ov = document.getElementById('wizardLoadingOverlay');
+    if (title) document.getElementById('wlTitle').textContent = title;
+    if (subtitle) document.getElementById('wlSubtitle').textContent = subtitle;
+    ov.style.display = 'flex';
+}
+function hideWizardLoading() { document.getElementById('wizardLoadingOverlay').style.display = 'none'; }
+function getWizardAuthToken() {
+    return new URLSearchParams(window.location.search).get('auth_token') ||
+           localStorage.getItem('yakan_auth_token') || '';
+}
+function submitWizardForm(formId, title, subtitle) {
+    var form = document.getElementById(formId);
+    if (!form) return;
+    showWizardLoading(title || 'Saving...', subtitle || 'Please wait');
+    var formData = new FormData(form);
+    var token = getWizardAuthToken();
+    var url = form.action;
+    if (token) {
+        formData.set('auth_token', token);
+        url += (url.indexOf('?') >= 0 ? '&' : '?') + 'auth_token=' + encodeURIComponent(token);
+    }
+    fetch(url, { method: 'POST', body: formData, headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success && (data.redirect_url || data.next_url)) {
+            window.location.href = data.redirect_url || data.next_url;
+        } else if (data.success) { location.reload(); }
+        else { hideWizardLoading(); alert(data.message || 'An error occurred.'); }
+    })
+    .catch(function() { hideWizardLoading(); form.submit(); });
+}
+document.addEventListener('DOMContentLoaded', function() {
+    var form = document.getElementById('orderDetailsForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var urlToken = new URLSearchParams(window.location.search).get('auth_token');
+            if (urlToken) document.getElementById('step3AuthToken').value = urlToken;
+            submitWizardForm('orderDetailsForm', 'Saving order details...', 'Almost there!');
+        });
+    }
+});
+</script>
 @endsection

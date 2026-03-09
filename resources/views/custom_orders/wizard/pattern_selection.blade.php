@@ -1682,7 +1682,32 @@ function submitPatternSelection() {
     }
 
     document.body.appendChild(form);
-    form.submit();
+
+    // Show loading overlay and submit via AJAX
+    var authToken = getWizardAuthToken();
+    var actionUrl = form.action;
+    if (authToken && actionUrl.indexOf('auth_token') === -1) {
+        actionUrl += (actionUrl.indexOf('?') >= 0 ? '&' : '?') + 'auth_token=' + encodeURIComponent(authToken);
+    }
+    showWizardLoading('Saving your pattern selection...', 'Almost there!');
+    var fd = new FormData(form);
+    fetch(actionUrl, {
+        method: 'POST',
+        body: fd,
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success && (data.redirect_url || data.next_url || data.review_url)) {
+            window.location.href = data.redirect_url || data.next_url || data.review_url;
+        } else if (data.success) {
+            location.reload();
+        } else {
+            hideWizardLoading();
+            showToast(data.message || 'An error occurred. Please try again.');
+        }
+    })
+    .catch(function() { hideWizardLoading(); form.submit(); });
 }
 
 function calculateComplexity() {
@@ -2500,4 +2525,40 @@ window.togglePatternSelection = function(patternId) {
 };
 
 </script>
+
+<div id="wizardLoadingOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#800000 0%,#500000 60%,#300000 100%);align-items:center;justify-content:center;flex-direction:column;">
+    <div style="text-align:center;animation:wlFadeIn 0.4s ease;color:white;padding:20px;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:40px;">
+            <div style="width:52px;height:52px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#800000;">Y</div>
+            <span style="font-size:28px;font-weight:800;letter-spacing:-0.5px;">Yakan</span>
+        </div>
+        <div style="width:56px;height:56px;border:4px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:wlSpin 0.8s linear infinite;margin:0 auto 32px;"></div>
+        <p id="wlTitle" style="font-size:22px;font-weight:700;margin:0 0 10px;">Saving your pattern selection...</p>
+        <p id="wlSubtitle" style="font-size:15px;opacity:0.75;margin:0;">Almost there!</p>
+    </div>
+</div>
+<style>
+@keyframes wlSpin { to { transform: rotate(360deg); } }
+@keyframes wlFadeIn { from { opacity:0;transform:translateY(20px); } to { opacity:1;transform:translateY(0); } }
+</style>
+<script>
+function showWizardLoading(title, subtitle) {
+    var overlay = document.getElementById('wizardLoadingOverlay');
+    if (overlay) {
+        document.getElementById('wlTitle').textContent = title || 'Saving your progress...';
+        document.getElementById('wlSubtitle').textContent = subtitle || 'Please wait a moment';
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+}
+function hideWizardLoading() {
+    var overlay = document.getElementById('wizardLoadingOverlay');
+    if (overlay) { overlay.style.display = 'none'; document.body.style.overflow = ''; }
+}
+function getWizardAuthToken() {
+    return new URLSearchParams(window.location.search).get('auth_token') ||
+           localStorage.getItem('yakan_auth_token') || '';
+}
+</script>
+
 @endsection

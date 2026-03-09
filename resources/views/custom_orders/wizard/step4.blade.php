@@ -612,6 +612,7 @@
                 <div class="space-y-4">
                     <form method="POST" action="{{ route('custom_orders.complete.wizard') }}" id="submitOrderForm">
                         @csrf
+                        <input type="hidden" name="auth_token" id="step4AuthToken" value="{{ request('auth_token') }}">
                         <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 mb-2">
                             <div class="flex items-center mb-4">
                                 <svg class="w-6 h-6 mr-3" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -835,11 +836,11 @@
                             return false;
                         }
                         
-                        // All validation passed, disable button and show submitting message
-                        const btn = document.getElementById('submitBtn');
-                        const btnText = document.getElementById('submitBtnText');
-                        btn.disabled = true;
-                        btnText.innerHTML = '<svg class="w-6 h-6 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Submitting...';
+                        // All validation passed - use AJAX submit with loading overlay
+                        e.preventDefault();
+                        var urlToken = new URLSearchParams(window.location.search).get('auth_token');
+                        if (urlToken) document.getElementById('step4AuthToken').value = urlToken;
+                        submitWizardForm('submitOrderForm', 'Submitting your order...', 'Creating your custom order...');
                     });
                     </script>
                     
@@ -1163,5 +1164,76 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 </style>
 @endpush
+
+<div id="wizardLoadingOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#800000 0%,#500000 60%,#300000 100%);align-items:center;justify-content:center;flex-direction:column;">
+    <div style="text-align:center;animation:wlFadeIn 0.4s ease;color:white;padding:20px;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:40px;">
+            <div style="width:52px;height:52px;background:white;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#800000;">Y</div>
+            <span style="font-size:28px;font-weight:800;letter-spacing:-0.5px;">Yakan</span>
+        </div>
+        <div style="width:56px;height:56px;border:4px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:wlSpin 0.8s linear infinite;margin:0 auto 32px;"></div>
+        <p id="wlTitle" style="font-size:22px;font-weight:700;margin:0 0 10px;">Submitting your order...</p>
+        <p id="wlSubtitle" style="font-size:15px;opacity:0.75;margin:0;">Creating your custom order...</p>
+    </div>
+</div>
+<style>
+@keyframes wlSpin { to { transform: rotate(360deg); } }
+@keyframes wlFadeIn { from { opacity:0;transform:translateY(20px); } to { opacity:1;transform:translateY(0); } }
+</style>
+<script>
+function showWizardLoading(title, subtitle) {
+    var overlay = document.getElementById('wizardLoadingOverlay');
+    if (overlay) {
+        document.getElementById('wlTitle').textContent = title || 'Saving your progress...';
+        document.getElementById('wlSubtitle').textContent = subtitle || 'Please wait a moment';
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+}
+function hideWizardLoading() {
+    var overlay = document.getElementById('wizardLoadingOverlay');
+    if (overlay) { overlay.style.display = 'none'; document.body.style.overflow = ''; }
+}
+function getWizardAuthToken() {
+    return new URLSearchParams(window.location.search).get('auth_token') ||
+           localStorage.getItem('yakan_auth_token') || '';
+}
+function submitWizardForm(formId, title, subtitle) {
+    showWizardLoading(title || 'Saving your progress...', subtitle || 'Please wait a moment');
+    var form = document.getElementById(formId);
+    if (!form) { hideWizardLoading(); return; }
+    var token = getWizardAuthToken();
+    if (token) {
+        var at = form.querySelector('input[name="auth_token"]');
+        if (at) at.value = token;
+    }
+    var formData = new FormData(form);
+    var url = form.action;
+    if (token && url.indexOf('auth_token') === -1) {
+        url += (url.indexOf('?') >= 0 ? '&' : '?') + 'auth_token=' + encodeURIComponent(token);
+    }
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success && data.redirect_url) {
+            window.location.href = data.redirect_url;
+        } else if (data.success) {
+            location.reload();
+        } else {
+            hideWizardLoading();
+            alert(data.message || 'An error occurred. Please try again.');
+        }
+    })
+    .catch(function(err) {
+        console.error('Submit error:', err);
+        hideWizardLoading();
+        form.submit();
+    });
+}
+</script>
 
 @endsection
