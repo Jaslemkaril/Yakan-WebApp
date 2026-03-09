@@ -3,6 +3,7 @@
 @section('title', 'Coupons Management')
 
 @section('content')
+@php $authQ = request('auth_token') ? ['auth_token' => request('auth_token')] : []; @endphp
 <div class="space-y-6">
     <!-- Header -->
     <div class="bg-[#800000] rounded-2xl p-8 text-white shadow-xl">
@@ -11,7 +12,7 @@
                 <h1 class="text-xl md:text-3xl font-bold">Coupons Management</h1>
                 <p class="text-red-100 text-lg mt-2">Manage promotional codes and discounts</p>
             </div>
-            <a href="{{ route('admin.coupons.create') }}" class="inline-flex items-center px-6 py-3 bg-white text-[#800000] rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+            <a href="{{ route('admin.coupons.create', $authQ) }}" class="inline-flex items-center px-6 py-3 bg-white text-[#800000] rounded-lg font-semibold hover:bg-gray-100 transition-colors">
                 <i class="fas fa-plus mr-2"></i>New Coupon
             </a>
         </div>
@@ -63,6 +64,7 @@
                             <td class="px-6 py-4">
                                 <form action="{{ route('admin.coupons.toggle', $coupon) }}" method="POST" class="inline">
                                     @csrf
+                                    <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
                                     <button type="submit" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium transition-colors {{ $coupon->active ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-800 hover:bg-gray-200' }}">
                                         <i class="fas {{ $coupon->active ? 'fa-check-circle' : 'fa-times-circle' }} mr-1"></i>
                                         {{ $coupon->active ? 'Active' : 'Inactive' }}
@@ -71,12 +73,13 @@
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <div class="flex items-center justify-end gap-2">
-                                    <a href="{{ route('admin.coupons.edit', $coupon) }}" class="inline-flex items-center px-3 py-2 bg-red-50 text-[#800000] rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
+                                    <a href="{{ route('admin.coupons.edit', array_merge(['coupon' => $coupon->id], $authQ)) }}" class="inline-flex items-center px-3 py-2 bg-red-50 text-[#800000] rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
                                         <i class="fas fa-edit mr-1"></i>Edit
                                     </a>
                                     <form action="{{ route('admin.coupons.destroy', $coupon) }}" method="POST" class="inline" onsubmit="return confirm('Delete this coupon?');">
                                         @csrf
                                         @method('DELETE')
+                                        <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
                                         <button type="submit" class="inline-flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium">
                                             <i class="fas fa-trash mr-1"></i>Delete
                                         </button>

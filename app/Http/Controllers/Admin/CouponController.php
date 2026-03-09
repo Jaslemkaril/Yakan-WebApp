@@ -38,7 +38,9 @@ class CouponController extends Controller
         $data['active'] = (bool)($data['active'] ?? true);
         $data['min_spend'] = $data['min_spend'] ?? 0;
         Coupon::create($data);
-        return redirect()->route('admin.coupons.index')->with('success', 'Coupon created');
+        $token = $request->input('auth_token') ?? $request->query('auth_token');
+        $params = $token ? ['auth_token' => $token] : [];
+        return redirect()->route('admin.coupons.index', $params)->with('success', 'Coupon created');
     }
 
     public function edit(Coupon $coupon)
@@ -63,19 +65,27 @@ class CouponController extends Controller
         $data['active'] = (bool)($data['active'] ?? $coupon->active);
         $data['min_spend'] = $data['min_spend'] ?? 0;
         $coupon->update($data);
-        return redirect()->route('admin.coupons.index')->with('success', 'Coupon updated');
+        $token = $request->input('auth_token') ?? $request->query('auth_token');
+        $params = $token ? ['auth_token' => $token] : [];
+        return redirect()->route('admin.coupons.index', $params)->with('success', 'Coupon updated');
     }
 
     public function destroy(Coupon $coupon)
     {
         $coupon->delete();
-        return redirect()->route('admin.coupons.index')->with('success', 'Coupon deleted');
+        $token = request()->input('auth_token') ?? request()->query('auth_token');
+        $params = $token ? ['auth_token' => $token] : [];
+        return redirect()->route('admin.coupons.index', $params)->with('success', 'Coupon deleted');
     }
 
     public function toggle(Coupon $coupon)
     {
         $coupon->active = !$coupon->active;
         $coupon->save();
+        $token = request()->input('auth_token') ?? request()->query('auth_token');
+        if ($token) {
+            return redirect()->back()->withInput(['auth_token' => $token])->with('success', 'Coupon status updated');
+        }
         return redirect()->back()->with('success', 'Coupon status updated');
     }
 }

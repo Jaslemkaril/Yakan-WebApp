@@ -3,6 +3,7 @@
 @section('title', 'Create Coupon')
 
 @section('content')
+@php $authQ = request('auth_token') ? ['auth_token' => request('auth_token')] : []; @endphp
 <div class="space-y-6">
     <!-- Header -->
     <div class="flex items-center justify-between">
@@ -10,7 +11,7 @@
             <h1 class="text-3xl font-bold text-gray-900">Create New Coupon</h1>
             <p class="text-gray-600 mt-2">Add a new promotional code to your store</p>
         </div>
-        <a href="{{ route('admin.coupons.index') }}" class="inline-flex items-center px-4 py-2 text-gray-700 hover:text-gray-900">
+        <a href="{{ route('admin.coupons.index', $authQ) }}" class="inline-flex items-center px-4 py-2 text-gray-700 hover:text-gray-900">
             <i class="fas fa-arrow-left mr-2"></i>Back to Coupons
         </a>
     </div>
@@ -34,8 +35,9 @@
 
     <!-- Form -->
     <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-        <form method="POST" action="{{ route('admin.coupons.store') }}" class="p-8 space-y-6">
+        <form method="POST" action="{{ route('admin.coupons.store', $authQ) }}" class="p-8 space-y-6">
             @csrf
+            <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
 
             <!-- Basic Information -->
             <div class="border-b pb-6">
