@@ -63,6 +63,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'payment/*',
             'orders/*',
             'custom-orders/*',
+            'profile',
             'profile/*',
             'admin/*',
         ]);
