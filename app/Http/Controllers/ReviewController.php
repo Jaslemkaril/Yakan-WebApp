@@ -102,28 +102,33 @@ class ReviewController extends Controller
             }
         }
 
-        // Check if review already exists
-        $existingReview = Review::where('order_item_id', $orderItem->id)
-            ->where('user_id', Auth::id())
+        // Check if review already exists — match on the DB unique key (user_id + product_id)
+        // so we never violate the unique constraint even when the same product appears in
+        // multiple orders / order-items.
+        $existingReview = Review::where('user_id', Auth::id())
+            ->where('product_id', $orderItem->product_id)
             ->first();
 
         if ($existingReview) {
-            // Update existing review
+            // Update existing review, refresh images only if new ones were uploaded
             $existingReview->update(array_merge($validated, [
-                'review_images' => !empty($imageUrls) ? $imageUrls : ($existingReview->review_images ?? []),
+                'order_id'       => $order->id,
+                'order_item_id'  => $orderItem->id,
+                'review_images'  => !empty($imageUrls) ? $imageUrls : ($existingReview->review_images ?? []),
+                'verified_purchase' => true,
             ]));
             $message = 'Review updated successfully!';
         } else {
             // Create new review
             Review::create([
-                'user_id' => Auth::id(),
-                'product_id' => $orderItem->product_id,
-                'order_id' => $order->id,
-                'order_item_id' => $orderItem->id,
-                'rating' => $validated['rating'],
-                'title' => $validated['title'],
-                'comment' => $validated['comment'],
-                'review_images' => $imageUrls,
+                'user_id'          => Auth::id(),
+                'product_id'       => $orderItem->product_id,
+                'order_id'         => $order->id,
+                'order_item_id'    => $orderItem->id,
+                'rating'           => $validated['rating'],
+                'title'            => $validated['title'],
+                'comment'          => $validated['comment'],
+                'review_images'    => $imageUrls,
                 'verified_purchase' => true,
             ]);
             $message = 'Review submitted successfully!';
