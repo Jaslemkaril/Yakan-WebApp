@@ -853,20 +853,22 @@ class CustomOrderController extends Controller
                 'session_has_pattern' => isset($wizardData['pattern']),
             ]);
             
-            // Return JSON response with review URL
+            // Return JSON response — go to step4 directly for fabric flow (fabric+pattern, no product)
             $token = request()->input('auth_token') ?? request()->query('auth_token') ?? session('auth_token');
-            $step3Url = route('custom_orders.create.step3') . ($token ? '?auth_token=' . $token : '');
+            $isFabricFlow = isset($wizardData['fabric']) && !isset($wizardData['product']);
+            $nextRoute = $isFabricFlow ? 'custom_orders.create.step4' : 'custom_orders.create.step3';
+            $nextUrl = route($nextRoute) . ($token ? '?auth_token=' . $token : '');
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Patterns saved successfully!',
-                    'review_url' => $step3Url,
-                    'next_url' => $step3Url,
+                    'redirect_url' => $nextUrl,
+                    'review_url' => $nextUrl,
+                    'next_url' => $nextUrl,
                 ]);
             }
-            
-            // Skip Details step and go directly to Review (step 4)
-            return $this->redirectToRouteWithToken('custom_orders.create.step3');
+
+            return $this->redirectToRouteWithToken($nextRoute);
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Pattern validation error:', $e->errors());

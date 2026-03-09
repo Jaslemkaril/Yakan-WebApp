@@ -292,12 +292,7 @@ input[type='range']::-moz-range-thumb {
             <div id="selectedPatternsList" class="flex flex-wrap gap-3">
                 <!-- Selected patterns will appear here -->
             </div>
-            <div class="mt-4 p-3 bg-purple-50 rounded-lg">
-                <p class="text-sm text-purple-800">
-                    <strong>Combination Info:</strong> 
-                    <span id="combinationInfo">Select patterns to see combination details</span>
-                </p>
-            </div>
+
         </div>
 
         <!-- Floating Live Preview Sidebar -->
@@ -487,20 +482,7 @@ input[type='range']::-moz-range-thumb {
                                        oninput="updateCanvasPreview()">
                             </div>
                             
-                            <!-- Quick Color Presets -->
-                            <div class="mt-2">
-                                <p class="text-xs font-medium text-gray-700 mb-1">Quick Colors:</p>
-                                <div class="flex gap-1 flex-wrap">
-                                    <button type="button" onclick="applyColorPreset('red')" class="w-6 h-6 rounded-full bg-red-500 hover:ring-2 ring-purple-400 transition-all" title="Red"></button>
-                                    <button type="button" onclick="applyColorPreset('blue')" class="w-6 h-6 rounded-full bg-blue-500 hover:ring-2 ring-purple-400 transition-all" title="Blue"></button>
-                                    <button type="button" onclick="applyColorPreset('green')" class="w-6 h-6 rounded-full bg-green-500 hover:ring-2 ring-purple-400 transition-all" title="Green"></button>
-                                    <button type="button" onclick="applyColorPreset('yellow')" class="w-6 h-6 rounded-full bg-yellow-500 hover:ring-2 ring-purple-400 transition-all" title="Yellow"></button>
-                                    <button type="button" onclick="applyColorPreset('purple')" class="w-6 h-6 rounded-full bg-purple-500 hover:ring-2 ring-purple-400 transition-all" title="Purple"></button>
-                                    <button type="button" onclick="applyColorPreset('pink')" class="w-6 h-6 rounded-full bg-pink-500 hover:ring-2 ring-purple-400 transition-all" title="Pink"></button>
-                                    <button type="button" onclick="applyColorPreset('orange')" class="w-6 h-6 rounded-full bg-orange-500 hover:ring-2 ring-purple-400 transition-all" title="Orange"></button>
-                                    <button type="button" onclick="applyColorPreset('teal')" class="w-6 h-6 rounded-full bg-teal-500 hover:ring-2 ring-purple-400 transition-all" title="Teal"></button>
-                                </div>
-                            </div>
+
                         </div>
                     </div>
                     

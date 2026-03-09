@@ -110,18 +110,7 @@
                 <p class="text-xs text-gray-600">✓ Each pattern has its own individual price set above</p>
             </div>
 
-            <!-- Tags -->
-            <div class="bg-white rounded-xl shadow-lg p-6">
-                <h2 class="text-xl font-black text-gray-900 mb-4">Tags</h2>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    @foreach($tags as $tag)
-                        <label class="flex items-center">
-                            <input type="checkbox" name="tags[]" value="{{ $tag->id }}" @checked(in_array($tag->id, old('tags', $pattern->tags->pluck('id')->toArray()))) class="rounded mr-2" />
-                            <span class="text-sm">{{ $tag->name }}</span>
-                        </label>
-                    @endforeach
-                </div>
-            </div>
+
 
             <!-- Existing Media -->
             @if($pattern->media->isNotEmpty())
