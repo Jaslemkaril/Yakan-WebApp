@@ -3,7 +3,7 @@
 @section('title', 'Review Your Order - Custom Order')
 
 @section('content')
-<div class="min-h-screen bg-gradient-to-br from-maroon-50 via-white to-maroon-50">
+<div class="min-h-screen bg-gray-50">
     <!-- Enhanced Progress Bar -->
     <div class="bg-white shadow-lg border-b-2" style="border-bottom-color:#e0b0b0;">
         <div class="container mx-auto px-4 py-6">
@@ -31,19 +31,7 @@
 
     <!-- Enhanced Header -->
     <div class="bg-white border-b border-gray-200">
-        <div class="absolute inset-0 opacity-[0.02] pointer-events-none">
-            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                    <pattern id="yakanReviewPattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-                        <circle cx="50" cy="50" r="35" fill="#8B0000" stroke="#ffffff" stroke-width="1"/>
-                        <circle cx="50" cy="50" r="25" fill="#FFD700" stroke="#ffffff" stroke-width="0.5"/>
-                        <circle cx="50" cy="50" r="12" fill="#8B0000"/>
-                    </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#yakanReviewPattern)"/>
-            </svg>
-        </div>
-        <div class="container mx-auto px-4 py-8 relative z-10">
+        <div class="container mx-auto px-4 py-8">
             <div class="text-center">
                 <h1 class="text-4xl font-bold text-gray-900 mb-2">Review Your Order</h1>
                 <p class="text-lg text-gray-600 max-w-2xl mx-auto">Confirm your custom design and submit your order to our master craftsmen</p>
@@ -331,103 +319,112 @@
 
                             @php
                                 $user = auth()->user();
-                                // Build full name from user's account
                                 $fullName = $user->name;
                                 if ($user->first_name && $user->last_name) {
                                     $fullName = trim($user->first_name . ' ' . ($user->middle_initial ? $user->middle_initial . '. ' : '') . $user->last_name);
                                 }
-                                
-                                $customerName      = $fullName;
-                                $customerEmail     = $user->email;
-                                $customerPhone     = data_get($wizardData, 'details.customer_phone') ?? ($defaultAddress ? $defaultAddress->phone_number : null);
-                                $deliveryType      = data_get($wizardData, 'details.delivery_type') ?? 'delivery';
-                                $deliveryAddressText = '';
-                                
-                                if ($deliveryType === 'delivery' && $defaultAddress) {
-                                    $addressParts = array_filter([
-                                        $defaultAddress->street ?? null,
-                                        $defaultAddress->barangay ?? null,
-                                        $defaultAddress->city ?? null,
-                                        $defaultAddress->province ?? null,
-                                        $defaultAddress->postal_code ?? null,
-                                    ]);
-                                    $deliveryAddressText = implode(', ', $addressParts);
-                                }
+                                $customerName  = $fullName;
+                                $customerEmail = $user->email;
+                                $customerPhone = data_get($wizardData, 'details.customer_phone') ?? ($defaultAddress ? $defaultAddress->phone_number : null);
+                                $deliveryType  = data_get($wizardData, 'details.delivery_type') ?? 'delivery';
                             @endphp
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                @if($customerName)
-                                    <div class="flex items-center">
-                                        <span class="text-gray-500 font-medium w-24">Name</span>
-                                        <span class="ml-2 text-gray-900 font-medium">{{ $customerName }}</span>
-                                    </div>
-                                @endif
-
-                                @if($customerEmail)
-                                    <div class="flex items-center">
-                                        <span class="text-gray-500 font-medium w-24">Email</span>
-                                        <span class="ml-2 text-gray-900 font-medium">{{ $customerEmail }}</span>
-                                    </div>
-                                @endif
-
+                            <!-- Account row -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mb-4">
+                                <div class="flex flex-col bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Full Name</span>
+                                    <span class="font-semibold text-gray-900">{{ $customerName }}</span>
+                                </div>
+                                <div class="flex flex-col bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Email</span>
+                                    <span class="font-semibold text-gray-900 break-all">{{ $customerEmail }}</span>
+                                </div>
                                 @if($customerPhone)
-                                    <div class="flex items-center">
-                                        <span class="text-gray-500 font-medium w-24">Phone</span>
-                                        <span class="ml-2 text-gray-900 font-medium">{{ $customerPhone }}</span>
-                                    </div>
+                                <div class="flex flex-col bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Phone</span>
+                                    <span class="font-semibold text-gray-900">{{ $customerPhone }}</span>
+                                </div>
                                 @endif
-
-                                <div class="flex items-center">
-                                    <span class="text-gray-500 font-medium w-24">Delivery</span>
-                                    <span class="ml-2 text-gray-900 font-medium" id="deliveryTypeDisplay">
-                                        @if($deliveryType === 'pickup')
-                                            🏪 Store Pickup
-                                        @else
-                                            🚚 Delivery
-                                        @endif
+                                <div class="flex flex-col bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Delivery Method</span>
+                                    <span class="font-semibold text-gray-900" id="deliveryTypeDisplay">
+                                        @if($deliveryType === 'pickup') 🏪 Store Pickup @else 🚚 Delivery to Address @endif
                                     </span>
                                 </div>
-
-                                @if($deliveryType === 'delivery' && $deliveryAddressText)
-                                    <div class="md:col-span-2" id="deliveryAddressRow">
-                                        <span class="text-gray-500 font-medium block mb-1">Delivery Address</span>
-                                        <span class="ml-2 text-gray-900 font-medium text-sm leading-relaxed block">{{ $deliveryAddressText }}</span>
-                                    </div>
-                                @elseif($deliveryType === 'delivery')
-                                    <div class="md:col-span-2 hidden" id="deliveryAddressRow">
-                                        <span class="text-gray-500 font-medium block mb-1">Delivery Address</span>
-                                        <span class="ml-2 text-gray-900 font-medium text-sm leading-relaxed block">{{ $deliveryAddressText }}</span>
-                                    </div>
-                                @endif
-
-                                @if($defaultAddress && $deliveryType === 'delivery')
-                                    <div class="md:col-span-2">
-                                        <div class="bg-gradient-to-r from-maroon-50 to-transparent rounded-lg p-3 border-l-4" style="border-left-color:#800000;">
-                                            <div class="flex items-start">
-                                                <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                </svg>
-                                                <div class="flex-1">
-                                                    <div class="flex items-center mb-1">
-                                                        <span class="font-semibold text-gray-700 text-xs">{{ $defaultAddress->label ?? 'Default Address' }}</span>
-                                                        @if($defaultAddress->is_default)
-                                                            <span class="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">Default</span>
-                                                        @endif
-                                                    </div>
-                                                    @if($defaultAddress->full_name)
-                                                        <p class="text-xs text-gray-700 font-medium">{{ $defaultAddress->full_name }}</p>
-                                                    @endif
-                                                    @if($defaultAddress->phone_number)
-                                                        <p class="text-xs text-gray-600">{{ $defaultAddress->phone_number }}</p>
-                                                    @endif
-                                                    <p class="text-xs text-gray-600 mt-1">{{ $defaultAddress->formatted_address }}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endif
                             </div>
+
+                            @if($deliveryType === 'delivery' && $defaultAddress)
+                            <!-- Full address card -->
+                            <div class="rounded-xl border-2 p-4" style="border-color:#d0a0a0; background: linear-gradient(135deg,#fff8f8,#fff0f0);" id="deliveryAddressRow">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center gap-2">
+                                        <svg class="w-4 h-4 flex-shrink-0" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                        <span class="text-sm font-bold" style="color:#800000;">Delivery Address</span>
+                                        @if($defaultAddress->label)
+                                            <span class="text-xs px-2 py-0.5 rounded-full font-semibold" style="background:#f5e6e8;color:#800000;">{{ $defaultAddress->label }}</span>
+                                        @endif
+                                    </div>
+                                    @if($defaultAddress->is_default)
+                                        <span class="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold">Default</span>
+                                    @endif
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                                    @if($defaultAddress->full_name)
+                                    <div class="flex flex-col">
+                                        <span class="text-xs text-gray-500 font-medium">Recipient</span>
+                                        <span class="font-semibold text-gray-800">{{ $defaultAddress->full_name }}</span>
+                                    </div>
+                                    @endif
+                                    @if($defaultAddress->phone_number)
+                                    <div class="flex flex-col">
+                                        <span class="text-xs text-gray-500 font-medium">Contact No.</span>
+                                        <span class="font-semibold text-gray-800">{{ $defaultAddress->phone_number }}</span>
+                                    </div>
+                                    @endif
+                                    @if($defaultAddress->house_number || $defaultAddress->street_name)
+                                    <div class="flex flex-col sm:col-span-2">
+                                        <span class="text-xs text-gray-500 font-medium">House / Street</span>
+                                        <span class="font-semibold text-gray-800">{{ trim(($defaultAddress->house_number ?? '') . ' ' . ($defaultAddress->street_name ?? '')) }}</span>
+                                    </div>
+                                    @endif
+                                    @if($defaultAddress->barangay)
+                                    <div class="flex flex-col">
+                                        <span class="text-xs text-gray-500 font-medium">Barangay</span>
+                                        <span class="font-semibold text-gray-800">{{ $defaultAddress->barangay }}</span>
+                                    </div>
+                                    @endif
+                                    @if($defaultAddress->city)
+                                    <div class="flex flex-col">
+                                        <span class="text-xs text-gray-500 font-medium">City / Municipality</span>
+                                        <span class="font-semibold text-gray-800">{{ $defaultAddress->city }}</span>
+                                    </div>
+                                    @endif
+                                    @if($defaultAddress->province)
+                                    <div class="flex flex-col">
+                                        <span class="text-xs text-gray-500 font-medium">Province</span>
+                                        <span class="font-semibold text-gray-800">{{ $defaultAddress->province }}</span>
+                                    </div>
+                                    @endif
+                                    @if($defaultAddress->zip_code ?? $defaultAddress->postal_code ?? null)
+                                    <div class="flex flex-col">
+                                        <span class="text-xs text-gray-500 font-medium">ZIP Code</span>
+                                        <span class="font-semibold text-gray-800">{{ $defaultAddress->zip_code ?? $defaultAddress->postal_code }}</span>
+                                    </div>
+                                    @endif
+                                    @if($defaultAddress->landmark)
+                                    <div class="flex flex-col sm:col-span-2">
+                                        <span class="text-xs text-gray-500 font-medium">Landmark</span>
+                                        <span class="font-semibold text-gray-800">{{ $defaultAddress->landmark }}</span>
+                                    </div>
+                                    @endif
+                                </div>
+                            </div>
+                            @elseif($deliveryType === 'delivery')
+                            <div class="hidden" id="deliveryAddressRow"></div>
+                            @endif
                         </div>
                     </div>
                 </div>
