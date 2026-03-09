@@ -49,19 +49,30 @@ class DashboardController extends Controller
             }
             
             $totalOrders = (clone $dateQuery)->count();
-            $pendingOrders = (clone $dateQuery)->where('status', 'pending')->count();
-            $completedOrders = (clone $dateQuery)->where('status', 'completed')->count();
+            // Real statuses: pending_confirmation, confirmed, processing, shipped, delivered, cancelled, refunded
+            $pendingOrders = (clone $dateQuery)->whereIn('status', ['pending_confirmation', 'pending'])->count();
+            $completedOrders = (clone $dateQuery)->whereIn('status', ['delivered', 'completed'])->count();
             $totalUsers = \App\Models\User::count();
-            // Revenue counts ALL orders (not just 'completed') since orders go through
-            // pending → processing → shipped → delivered before being marked completed
+            // Revenue counts ALL orders (all statuses)
             $totalRevenue = (float) (clone $dateQuery)->sum('total_amount');
 
             // New analytics
             $averageOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
-            $ordersWithNotes = (clone $dateQuery)->whereNotNull('customer_notes')->where('customer_notes', '!=', '')->count();
-            $todayOrders = \App\Models\Order::whereDate('created_at', today())->count();
-            $todayRevenue = (float) \App\Models\Order::whereDate('created_at', today())->sum('total_amount');
-            $shippedOrders = (clone $dateQuery)->where('status', 'shipped')->count();
+            // Check both customer_notes and notes columns
+            $ordersWithNotes = (clone $dateQuery)->where(function($q) {
+                $q->where(function($q2) {
+                    $q2->whereNotNull('customer_notes')->where('customer_notes', '!=', '');
+                })->orWhere(function($q2) {
+                    $q2->whereNotNull('notes')->where('notes', '!=', '');
+                });
+            })->count();
+            // Use a UTC range for "today" in Manila timezone to avoid date mismatch
+            // (Manila is UTC+8; at 11 PM PH time the UTC date is still the previous day)
+            $todayStart = \Carbon\Carbon::today('Asia/Manila');
+            $todayEnd   = \Carbon\Carbon::tomorrow('Asia/Manila');
+            $todayOrders  = \App\Models\Order::whereBetween('created_at', [$todayStart, $todayEnd])->count();
+            $todayRevenue = (float) \App\Models\Order::whereBetween('created_at', [$todayStart, $todayEnd])->sum('total_amount');
+            $shippedOrders   = (clone $dateQuery)->where('status', 'shipped')->count();
             $deliveredOrders = (clone $dateQuery)->where('status', 'delivered')->count();
             
             // Payment method breakdown - normalize payment methods
