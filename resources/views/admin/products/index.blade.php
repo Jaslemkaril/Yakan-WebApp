@@ -19,9 +19,6 @@ use Illuminate\Support\Facades\Storage;
                 <button id="bulkDeleteBtn" onclick="confirmBulkDelete()" class="hidden bg-red-500/90 backdrop-blur-sm text-white border border-red-400/30 rounded-lg px-4 py-2 hover:bg-red-600 transition-colors">
                     <i class="fas fa-trash mr-2"></i>Delete Selected (<span id="selectedCount">0</span>)
                 </button>
-                <button class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
-                    <i class="fas fa-download mr-2"></i>Export Products
-                </button>
                 <a href="{{ route('admin.products.create') }}" class="bg-white text-[#800000] px-4 py-2 rounded-lg hover:bg-gray-100 font-medium transition-colors">
                     <i class="fas fa-plus mr-2"></i>Add Product
                 </a>
@@ -85,6 +82,7 @@ use Illuminate\Support\Facades\Storage;
     <!-- Search & Filter -->
     <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
         <form id="filterForm" method="GET" action="{{ route('admin.products.index') }}" class="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+            @if(request('auth_token'))<input type="hidden" name="auth_token" value="{{ request('auth_token') }}">@endif
             <div class="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
                 <div class="relative">
                     <input type="text" name="search" value="{{ request('search') }}" placeholder="Search products..." 

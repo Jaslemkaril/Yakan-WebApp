@@ -446,8 +446,8 @@
                     </div>
                     
                     @php
-                        // Calculate shipping fee based on selected address (same logic as checkout)
-                        $shippingFee = 0;
+                        // Calculate shipping fee based on selected address (minimum ₱100 for delivery)
+                        $shippingFee = 100; // default standard rate
                         $selectedAddressForShipping = $defaultAddress;
                         
                         if ($selectedAddressForShipping) {
@@ -457,14 +457,14 @@
                             
                             // Regional-based shipping (Professional Philippine courier rates)
                             
-                            // FREE - Zamboanga City proper
+                            // ₱100 - Zamboanga City proper (standard minimum)
                             if (str_contains($city, 'zamboanga') && str_starts_with($postalCode, '7')) {
-                                $shippingFee = 0;
+                                $shippingFee = 100;
                             }
-                            // ₱80 - Zamboanga Peninsula (nearby)
+                            // ₱100 - Zamboanga Peninsula (nearby, standard minimum)
                             elseif (str_contains($region, 'zamboanga') || 
                                     in_array($city, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
-                                $shippingFee = 80;
+                                $shippingFee = 100;
                             }
                             // ₱120 - Western Mindanao
                             elseif (in_array($city, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) ||
@@ -543,6 +543,7 @@
                         data-base-price="{{ $patternFee }}"
                         data-fabric-cost-base="{{ $fabricCost }}"
                         data-shipping-fee="{{ $shippingFee }}"
+                        data-delivery-shipping-fee="{{ $shippingFee }}"
                         data-addons-total="{{ $addonsTotal }}"
                         data-price-per-meter="{{ $pricePerMeterValue }}"
                         data-fabric-meters="{{ $wizardData['fabric']['quantity_meters'] ?? 0 }}">
@@ -1113,24 +1114,50 @@ document.addEventListener('DOMContentLoaded', function() {
     const deliveryAddressRow = document.getElementById('deliveryAddressRow');
     
     if (deliveryRadios.length > 0) {
+        const priceDataEl = document.getElementById('priceData');
+        const deliveryShippingFee = priceDataEl ? parseFloat(priceDataEl.dataset.deliveryShippingFee) || 100 : 100;
+        const addonsTotal = priceDataEl ? parseFloat(priceDataEl.dataset.addonsTotal) || 0 : 0;
+        const basePrice = priceDataEl ? parseFloat(priceDataEl.dataset.basePrice) || 0 : 0;
+        const fabricCostBase = priceDataEl ? parseFloat(priceDataEl.dataset.fabricCostBase) || 0 : 0;
+
+        function updateShippingAndTotal(isPickup) {
+            const shippingRow = document.getElementById('shippingFeeRow');
+            const shippingDisplay = document.getElementById('shippingFeeDisplay');
+            const finalTotalDisplay = document.getElementById('finalTotalDisplay');
+            const qty = parseInt(document.getElementById('quantity')?.value) || 1;
+            const fee = isPickup ? 0 : deliveryShippingFee;
+
+            if (priceDataEl) priceDataEl.dataset.shippingFee = fee;
+
+            if (shippingDisplay) {
+                if (isPickup) {
+                    shippingDisplay.textContent = 'FREE';
+                    shippingDisplay.className = 'font-medium text-green-600';
+                } else {
+                    shippingDisplay.textContent = '₱' + fee.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                    shippingDisplay.className = 'font-medium text-gray-900';
+                }
+            }
+
+            if (finalTotalDisplay) {
+                const newTotal = (basePrice + fabricCostBase) * qty + fee + addonsTotal;
+                finalTotalDisplay.textContent = '₱' + newTotal.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+        }
+
         deliveryRadios.forEach(radio => {
             radio.addEventListener('change', function() {
+                const isPickup = this.value === 'pickup';
+
                 if (deliveryTypeDisplay) {
-                    if (this.value === 'pickup') {
-                        deliveryTypeDisplay.innerHTML = '🏪 Store Pickup';
-                    } else {
-                        deliveryTypeDisplay.innerHTML = '🚚 Delivery';
-                    }
+                    deliveryTypeDisplay.innerHTML = isPickup ? '🏪 Store Pickup' : '🚚 Delivery';
                 }
-                
-                // Show/hide delivery address row based on selection
+
                 if (deliveryAddressRow) {
-                    if (this.value === 'pickup') {
-                        deliveryAddressRow.classList.add('hidden');
-                    } else {
-                        deliveryAddressRow.classList.remove('hidden');
-                    }
+                    deliveryAddressRow.classList.toggle('hidden', isPickup);
                 }
+
+                updateShippingAndTotal(isPickup);
             });
         });
     }

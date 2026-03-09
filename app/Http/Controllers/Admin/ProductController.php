@@ -19,7 +19,12 @@ class ProductController extends Controller
         $query = Product::with('category');
 
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+            $term = '%' . $request->search . '%';
+            $query->where(function ($q) use ($term) {
+                $q->where('name', 'like', $term)
+                  ->orWhere('description', 'like', $term)
+                  ->orWhere('sku', 'like', $term);
+            });
         }
 
         // Status filter — only apply if explicitly set
