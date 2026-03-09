@@ -101,7 +101,7 @@
         select.classList.toggle('bg-gray-100', loading);
     }
 
-    // Step 1 – load all regions, select current
+    // Step 1 – load all regions, always select & cascade if region_id known
     function loadRegions() {
         fetch(apiUrl('/addresses/api/regions'))
             .then(r => r.json())
@@ -112,12 +112,13 @@
                     const opt = new Option(region.name, region.id, false, region.id == preselect.region_id);
                     regionSelect.add(opt);
                 });
-                if (preselect.province_id) loadProvinces(preselect.region_id);
+                // Always cascade as long as we have a region selected
+                if (preselect.region_id) loadProvinces(preselect.region_id);
             })
             .catch(e => console.error('Error loading regions:', e));
     }
 
-    // Step 2 – load provinces for selected region, select current
+    // Step 2 – load provinces; cascade further if province known
     function loadProvinces(regionId) {
         setLoading(provinceSelect, true);
         fetch(apiUrl(`/addresses/api/provinces/${regionId}`))
@@ -130,12 +131,13 @@
                     provinceSelect.add(opt);
                 });
                 setLoading(provinceSelect, false);
-                if (preselect.city_id) loadCities(preselect.province_id);
+                // Cascade further when province is known
+                if (preselect.province_id) loadCities(preselect.province_id);
             })
             .catch(e => { console.error('Error loading provinces:', e); setLoading(provinceSelect, false); });
     }
 
-    // Step 3 – load cities for selected province, select current
+    // Step 3 – load cities; cascade further if city known
     function loadCities(provinceId) {
         setLoading(citySelect, true);
         fetch(apiUrl(`/addresses/api/cities/${provinceId}`))
@@ -148,12 +150,13 @@
                     citySelect.add(opt);
                 });
                 setLoading(citySelect, false);
-                if (preselect.barangay_id) loadBarangays(preselect.city_id);
+                // Cascade further when city is known
+                if (preselect.city_id) loadBarangays(preselect.city_id);
             })
             .catch(e => { console.error('Error loading cities:', e); setLoading(citySelect, false); });
     }
 
-    // Step 4 – load barangays for selected city, select current
+    // Step 4 – load barangays for selected city
     function loadBarangays(cityId) {
         setLoading(barangaySelect, true);
         fetch(apiUrl(`/addresses/api/barangays/${cityId}`))

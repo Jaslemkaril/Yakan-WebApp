@@ -124,28 +124,54 @@ class AddressController extends Controller
     {
         $this->authorize('update', $address);
 
-        // Resolve IDs by searching city name first (most reliable — city is stored correctly).
-        // Province column may contain the region name (legacy data), so don't rely on it alone.
-        $city     = PhilippineCity::where('name', $address->city)->first();
-        $province = null;
-        $region   = null;
-
-        if ($city) {
-            $province = PhilippineProvince::find($city->province_id);
-            $region   = $province ? PhilippineRegion::find($province->region_id) : null;
-        } else {
-            // Fallback: try exact province name match
-            $province = PhilippineProvince::where('name', $address->province)->first();
-            // Also try partial match (handles stored region names like 'Zamboanga Peninsula (Region IX)')
-            if (!$province) {
-                $province = PhilippineProvince::where('name', 'like', '%' . trim(explode('(', $address->province)[0]) . '%')->first();
-            }
-            $region = $province ? PhilippineRegion::find($province->region_id) : null;
+        // --- Step 1: resolve city (case-insensitive, with fallback partial match) ---
+        $citySearch = strtolower(trim($address->city ?? ''));
+        $city = $citySearch
+            ? PhilippineCity::whereRaw('LOWER(name) = ?', [$citySearch])->first()
+            : null;
+        // Partial match: "San Fernando City" stored as "San Fernando" or vice-versa
+        if (!$city && $citySearch) {
+            $city = PhilippineCity::whereRaw('LOWER(name) LIKE ?', ['%' . $citySearch . '%'])->first();
+        }
+        if (!$city && $citySearch) {
+            $city = PhilippineCity::whereRaw('? LIKE CONCAT(\'%\', LOWER(name), \'%\')', [$citySearch])->first();
         }
 
-        $barangay = ($city && $address->barangay)
-            ? PhilippineBarangay::where('name', $address->barangay)->where('city_id', $city->id)->first()
-            : null;
+        // --- Step 2: resolve province ---
+        $province = null;
+        if ($city) {
+            $province = PhilippineProvince::find($city->province_id);
+        } else {
+            // Try exact, then partial match on stored province/region text
+            $province = PhilippineProvince::whereRaw('LOWER(name) = ?', [strtolower(trim($address->province))])->first();
+            if (!$province && $address->province) {
+                $base     = trim(explode('(', $address->province)[0]);
+                $province = PhilippineProvince::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($base) . '%'])->first();
+            }
+        }
+
+        // --- Step 3: resolve region ---
+        $region = null;
+        if ($province) {
+            $region = PhilippineRegion::find($province->region_id);
+        } else {
+            // Last resort: match stored province text against region names
+            if ($address->province) {
+                $base   = trim(explode('(', $address->province)[0]);
+                $region = PhilippineRegion::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($base) . '%'])->first();
+            }
+            // Also try matching the city column against region names
+            if (!$region && $address->city) {
+                $region = PhilippineRegion::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower(trim($address->city)) . '%'])->first();
+            }
+        }
+
+        // --- Step 4: resolve barangay ---
+        $barangay = null;
+        if ($city && $address->barangay) {
+            $barangay = PhilippineBarangay::whereRaw('LOWER(name) = ?', [strtolower(trim($address->barangay))])
+                ->where('city_id', $city->id)->first();
+        }
 
         return view('addresses.edit', compact('address', 'region', 'province', 'city', 'barangay'));
     }
