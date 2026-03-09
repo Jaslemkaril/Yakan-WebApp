@@ -126,8 +126,33 @@ class ProductController extends Controller
                     ->get();
             }
 
+            // Reviews — find if logged-in user can leave a review for this product
+            $userOrderItem = null;
+            $userReview    = null;
+            if (auth()->check()) {
+                $userId = auth()->id();
+                // IDs of order items this user already reviewed
+                $reviewedItemIds = \App\Models\Review::where('user_id', $userId)
+                    ->whereNotNull('order_item_id')
+                    ->pluck('order_item_id');
+                // First unreviewed delivered/completed order item for this product
+                $userOrderItem = \App\Models\OrderItem::where('product_id', $product->id)
+                    ->whereNotIn('id', $reviewedItemIds)
+                    ->whereHas('order', function ($q) use ($userId) {
+                        $q->where('user_id', $userId)
+                          ->whereIn('status', ['delivered', 'completed']);
+                    })
+                    ->latest('id')
+                    ->first();
+                // Existing review from this user for this product
+                $userReview = \App\Models\Review::where('product_id', $product->id)
+                    ->where('user_id', $userId)
+                    ->latest()
+                    ->first();
+            }
+
             // Return the product details view
-            return view('products.show', compact('product', 'relatedProducts'));
+            return view('products.show', compact('product', 'relatedProducts', 'userOrderItem', 'userReview'));
         } catch (\Exception $e) {
             \Log::error('ProductController::show error: ' . $e->getMessage());
             

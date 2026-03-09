@@ -77,15 +77,19 @@
                 <!-- Rating -->
                 <div class="flex items-center gap-4 mb-4">
                     <div class="flex text-yellow-400" title="4.0 out of 5 stars">
-                        @for($i = 1; $i <= 5; $i++)
-                            @if($i <= 4)
+                        @php
+                        $avgRating = \App\Models\Review::where('product_id', $product->id)->where('is_approved', true)->avg('rating') ?? 0;
+                        $reviewCount = \App\Models\Review::where('product_id', $product->id)->where('is_approved', true)->count();
+                    @endphp
+                    @for($i = 1; $i <= 5; $i++)
+                            @if($i <= round($avgRating))
                                 ★
                             @else
                                 ☆
                             @endif
                         @endfor
                     </div>
-                    <span class="text-sm text-gray-500">({{ \App\Models\Review::where('product_id', $product->id)->where('is_approved', true)->count() }} reviews)</span>
+                    <span class="text-sm text-gray-500">({{ $reviewCount }} {{ Str::plural('review', $reviewCount) }})</span>
                     <span class="text-sm text-gray-400">|</span>
                     <span class="text-sm text-gray-500">SKU: {{ $product->sku ?? 'N/A' }}</span>
                 </div>
@@ -275,26 +279,54 @@
 
             <!-- Customer Reviews Section -->
             <div class="bg-white rounded-xl shadow-lg p-6 border-t-4" style="border-top-color: #800000;">
-                <h2 class="text-2xl font-bold text-gray-900 mb-6">Customer Reviews</h2>
-                
                 @php
-                    // Get approved reviews for this product
-                    $reviews = \App\Models\Review::where('product_id', $product->id)
-                        ->where('is_approved', true)
-                        ->with('user')
-                        ->orderByDesc('created_at')
-                        ->get();
+                    $reviews    = \App\Models\Review::where('product_id', $product->id)->where('is_approved', true)->with('user')->orderByDesc('created_at')->get();
+                    $ratingAvg  = $reviews->count() ? round($reviews->avg('rating'), 1) : 0;
+                    $ratingDist = $reviews->groupBy('rating')->map->count();
                 @endphp
 
+                <!-- Header + Rating Summary -->
+                <div class="flex flex-col sm:flex-row gap-6 mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 mb-1">Customer Reviews</h2>
+                        @if($reviews->count())
+                            <div class="flex items-center gap-2">
+                                <span class="text-4xl font-extrabold" style="color:#800000;">{{ $ratingAvg }}</span>
+                                <div>
+                                    <div class="flex text-yellow-400 text-xl">
+                                        @for($i=1;$i<=5;$i++)<span>{{ $i <= round($ratingAvg) ? '★' : '☆' }}</span>@endfor
+                                    </div>
+                                    <p class="text-xs text-gray-500">{{ $reviews->count() }} {{ Str::plural('review', $reviews->count()) }}</p>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                    @if($reviews->count())
+                    <div class="flex-1 space-y-1.5 max-w-xs">
+                        @for($s=5;$s>=1;$s--)
+                            @php $cnt = $ratingDist[$s] ?? 0; $pct = $reviews->count() ? round($cnt/$reviews->count()*100) : 0; @endphp
+                            <div class="flex items-center gap-2 text-xs">
+                                <span class="w-4 text-right text-gray-600 font-semibold">{{ $s }}</span>
+                                <svg class="w-3 h-3 text-yellow-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                <div class="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                                    <div class="h-2 rounded-full" style="width:{{ $pct }}%; background:#800000;"></div>
+                                </div>
+                                <span class="text-gray-500 w-8">{{ $cnt }}</span>
+                            </div>
+                        @endfor
+                    </div>
+                    @endif
+                </div>
+
+                <!-- Reviews List -->
                 @if($reviews->count() > 0)
-                    <div class="space-y-6">
+                    <div class="space-y-6 mb-8">
                         @foreach($reviews as $review)
                             <div class="border-b pb-6 last:border-b-0">
-                                <!-- Review Header -->
                                 <div class="flex items-start justify-between mb-3">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, #800000, #600000);">
-                                            <span class="text-white font-bold text-sm">{{ strtoupper(substr($review->user->name ?? 'User', 0, 1)) }}</span>
+                                        <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#800000,#600000);">
+                                            <span class="text-white font-bold text-sm">{{ strtoupper(substr($review->user->name ?? 'U', 0, 1)) }}</span>
                                         </div>
                                         <div>
                                             <p class="font-semibold text-gray-900">{{ $review->user->name ?? 'Anonymous' }}</p>
@@ -303,73 +335,124 @@
                                     </div>
                                     @if($review->verified_purchase)
                                         <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                            </svg>
+                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
                                             Verified Purchase
                                         </span>
                                     @endif
                                 </div>
-
-                                <!-- Rating Stars -->
-                                <div class="flex items-center gap-2 mb-3">
+                                <div class="flex items-center gap-2 mb-2">
                                     <div class="flex text-yellow-400">
-                                        @for($i = 1; $i <= 5; $i++)
-                                            @if($i <= $review->rating)
-                                                <span class="text-lg">★</span>
-                                            @else
-                                                <span class="text-lg opacity-30">★</span>
-                                            @endif
-                                        @endfor
+                                        @for($i=1;$i<=5;$i++)<span class="text-lg">{{ $i <= $review->rating ? '★' : '☆' }}</span>@endfor
                                     </div>
-                                    <span class="text-sm font-semibold text-gray-900">{{ $review->rating }}.0</span>
+                                    <span class="text-sm font-semibold text-gray-700">{{ $review->rating }}/5</span>
                                 </div>
-
-                                <!-- Review Title -->
-                                @if($review->title)
-                                    <h4 class="font-semibold text-gray-900 mb-2">{{ $review->title }}</h4>
+                                @if($review->title)<h4 class="font-semibold text-gray-900 mb-1">{{ $review->title }}</h4>@endif
+                                @if($review->comment)<p class="text-gray-700 mb-3 leading-relaxed text-sm">{{ $review->comment }}</p>@endif
+                                @if($review->review_images && count($review->review_images))
+                                    <div class="flex flex-wrap gap-2 mb-3">
+                                        @foreach($review->review_images as $img)
+                                            <img src="{{ $img }}" alt="Review photo" class="w-20 h-20 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90" onclick="this.requestFullscreen&&this.requestFullscreen()">
+                                        @endforeach
+                                    </div>
                                 @endif
-
-                                <!-- Review Comment -->
-                                @if($review->comment)
-                                    <p class="text-gray-700 mb-4 leading-relaxed">{{ $review->comment }}</p>
-                                @endif
-
-                                <!-- Helpful/Unhelpful -->
                                 <div class="flex items-center gap-4 text-sm">
-                                    <button class="flex items-center gap-1 text-gray-500 hover:text-green-600 transition-colors" 
-                                            onclick="markHelpful({{ $review->id }})">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.646 7.23a2 2 0 01-1.789 1.106H7a2 2 0 01-2-2V9a6 6 0 0112-6z"/>
-                                        </svg>
-                                        <span>Helpful ({{ $review->helpful_count }})</span>
-                                    </button>
-                                    <button class="flex items-center gap-1 text-gray-500 hover:text-red-600 transition-colors"
-                                            onclick="markUnhelpful({{ $review->id }})">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.646-7.23a2 2 0 011.789-1.106H17a2 2 0 012 2v9a6 6 0 01-12 0z"/>
-                                        </svg>
-                                        <span>Not Helpful ({{ $review->unhelpful_count }})</span>
+                                    <button class="flex items-center gap-1 text-gray-500 hover:text-green-600 transition-colors" onclick="markHelpful({{ $review->id }}, this)">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.646 7.23A2 2 0 0117 18H7a2 2 0 01-2-2V9a6 6 0 0112-6z"/></svg>
+                                        Helpful (<span class="helpful-count-{{ $review->id }}">{{ $review->helpful_count }}</span>)
                                     </button>
                                 </div>
                             </div>
                         @endforeach
                     </div>
+                @else
+                    <div class="py-8 text-center text-gray-400 text-sm mb-6">No reviews yet. Be the first to review this product!</div>
                 @endif
 
-                <!-- Review Submission Form -->
-                <div class="mt-8 pt-8 border-t">
-                    <h3 class="text-xl font-bold text-gray-900 mb-6">Leave a Review</h3>
-                    
-                    @if(auth()->check())
-                        <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                            <p class="text-blue-700">Review submission coming soon! We're preparing the review system.</p>
-                        </div>
+                <!-- Leave a Review -->
+                <div class="pt-6 border-t">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">Leave a Review</h3>
+
+                    @auth
+                        @if($userOrderItem)
+                            {{-- User has a delivered order with this product and hasn't reviewed yet --}}
+                            <form action="{{ route('reviews.store.order-item', $userOrderItem) }}" method="POST" enctype="multipart/form-data" id="product-review-form">
+                                @csrf
+                                <div class="space-y-4">
+                                    {{-- Star Rating --}}
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Rating <span class="text-red-500">*</span></label>
+                                        <div class="flex gap-1" id="product-stars">
+                                            @for($s=1;$s<=5;$s++)
+                                                <button type="button" data-value="{{ $s }}"
+                                                    class="product-star-btn w-9 h-9 text-gray-300 hover:text-yellow-400 transition-colors"
+                                                    onclick="setProductRating({{ $s }})">
+                                                    <svg fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                                </button>
+                                            @endfor
+                                        </div>
+                                        <input type="hidden" name="rating" id="product-rating-input" required>
+                                        <p class="text-xs text-gray-400 mt-1" id="rating-label">Click a star to rate</p>
+                                    </div>
+
+                                    {{-- Title --}}
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-1">Review Title</label>
+                                        <input type="text" name="title" maxlength="255" placeholder="Summarize your experience"
+                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent">
+                                    </div>
+
+                                    {{-- Comment --}}
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-1">Your Review</label>
+                                        <textarea name="comment" rows="4" maxlength="1000" placeholder="Share your experience with this product..."
+                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent resize-none"></textarea>
+                                    </div>
+
+                                    {{-- Photos --}}
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-1">Photos <span class="text-gray-400 font-normal">(optional, up to 5)</span></label>
+                                        <input type="file" name="images[]" accept="image/*" multiple
+                                            class="block w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#800000] file:text-white hover:file:bg-[#600000] cursor-pointer"
+                                            onchange="previewProductImages(this)">
+                                        <div id="product-img-preview" class="flex flex-wrap gap-2 mt-2"></div>
+                                    </div>
+
+                                    <button type="submit"
+                                        class="inline-flex items-center gap-2 bg-[#800000] hover:bg-[#600000] text-white font-bold py-2.5 px-6 rounded-lg transition-colors duration-200 shadow">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                        Submit Review
+                                    </button>
+                                </div>
+                            </form>
+
+                        @elseif($userReview)
+                            {{-- Already reviewed --}}
+                            <div class="bg-green-50 rounded-xl p-4 border border-green-200">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                    <span class="font-semibold text-green-800">You already reviewed this product</span>
+                                    <span class="ml-auto text-xs text-gray-500">{{ $userReview->created_at->format('M d, Y') }}</span>
+                                </div>
+                                <div class="flex text-yellow-400 mb-1">
+                                    @for($i=1;$i<=5;$i++)<span>{{ $i <= $userReview->rating ? '★' : '☆' }}</span>@endfor
+                                </div>
+                                @if($userReview->title)<p class="font-semibold text-gray-800 text-sm">"{{ $userReview->title }}"</p>@endif
+                                @if($userReview->comment)<p class="text-gray-700 text-sm mt-1">{{ $userReview->comment }}</p>@endif
+                            </div>
+
+                        @else
+                            {{-- Not purchased or not yet delivered --}}
+                            <div class="bg-amber-50 rounded-xl p-4 border border-amber-200 flex items-start gap-3">
+                                <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <p class="text-amber-800 text-sm">You can leave a review after purchasing this product and receiving your order. Once your order status is <strong>Delivered</strong>, a review form will appear here and in your <a href="{{ route('orders.index') }}" class="underline font-semibold">order history</a>.</p>
+                            </div>
+                        @endif
+
                     @else
-                        <div class="bg-gray-50 rounded-lg p-6 text-center">
-                            <p class="text-gray-600 mb-4">Please <a href="{{ route('login') }}" class="text-[#800000] font-semibold hover:underline">log in</a> to leave a review.</p>
+                        <div class="bg-gray-50 rounded-xl p-5 text-center">
+                            <p class="text-gray-600 text-sm">Please <a href="{{ route('login') }}" class="text-[#800000] font-semibold hover:underline">log in</a> to leave a review.</p>
                         </div>
-                    @endif
+                    @endauth
                 </div>
             </div>
         </div>
@@ -377,39 +460,84 @@
 </div>
 
 <script>
-// Helpful/Unhelpful functionality
-function markHelpful(reviewId) {
+const CSRF = '{{ csrf_token() }}';
+
+// ── Helpful button (no page reload)
+function markHelpful(reviewId, btn) {
     fetch(`/reviews/${reviewId}/helpful`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        }
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF }
     })
-    .then(response => response.json())
+    .then(r => r.json())
     .then(data => {
         if (data.success) {
-            location.reload();
+            const el = document.querySelector(`.helpful-count-${reviewId}`);
+            if (el) el.textContent = data.helpful_count;
+            if (btn) { btn.classList.add('text-green-600'); btn.disabled = true; }
         }
     })
-    .catch(error => console.error('Error:', error));
+    .catch(console.error);
 }
 
-function markUnhelpful(reviewId) {
-    fetch(`/reviews/${reviewId}/unhelpful`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        }
-    })
-    .catch(error => console.error('Error:', error));
+// ── Star rating for the product page inline form
+const ratingLabels = ['','Terrible','Poor','Okay','Good','Excellent'];
+function setProductRating(value) {
+    document.getElementById('product-rating-input').value = value;
+    document.getElementById('rating-label').textContent = ratingLabels[value] || '';
+    document.querySelectorAll('.product-star-btn').forEach(btn => {
+        const v = parseInt(btn.getAttribute('data-value'));
+        btn.classList.toggle('text-yellow-400', v <= value);
+        btn.classList.toggle('text-gray-300',   v >  value);
+    });
+}
+
+// Hover preview
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.product-star-btn').forEach(btn => {
+        btn.addEventListener('mouseenter', function() {
+            const v = parseInt(this.getAttribute('data-value'));
+            document.querySelectorAll('.product-star-btn').forEach(b => {
+                const bv = parseInt(b.getAttribute('data-value'));
+                b.classList.toggle('text-yellow-300', bv <= v);
+                b.classList.toggle('text-gray-300',   bv >  v);
+            });
+        });
+        btn.addEventListener('mouseleave', function() {
+            const selected = parseInt(document.getElementById('product-rating-input').value || 0);
+            document.querySelectorAll('.product-star-btn').forEach(b => {
+                const bv = parseInt(b.getAttribute('data-value'));
+                b.classList.toggle('text-yellow-400', bv <= selected);
+                b.classList.toggle('text-gray-300',   bv >  selected);
+            });
+        });
+    });
+
+    // Validate star selection before submit
+    const reviewForm = document.getElementById('product-review-form');
+    if (reviewForm) {
+        reviewForm.addEventListener('submit', function(e) {
+            if (!document.getElementById('product-rating-input').value) {
+                e.preventDefault();
+                alert('Please select a star rating.');
+            }
+        });
+    }
+});
+
+// ── Image preview for product review form
+function previewProductImages(input) {
+    const preview = document.getElementById('product-img-preview');
+    preview.innerHTML = '';
+    Array.from(input.files).slice(0, 5).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.className = 'w-20 h-20 object-cover rounded-lg border border-gray-200';
+            preview.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+    });
 }
 </script>
 
