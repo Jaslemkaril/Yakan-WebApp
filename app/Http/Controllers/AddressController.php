@@ -107,8 +107,8 @@ class AddressController extends Controller
 
         // Check if request came from checkout
         if ($request->has('from_checkout') || str_contains($request->header('referer', ''), 'checkout')) {
-            return redirect()->route('cart.checkout')
-                ->with('success', 'Address added successfully!');
+            $url = route('cart.checkout');
+            return response("<!DOCTYPE html><html><head><title>Yakan</title><meta http-equiv='refresh' content='0;url={$url}'></head><body style='margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#fff5f5;font-family:sans-serif;gap:16px;'><div style='width:48px;height:48px;border:4px solid #f3d4d4;border-top:4px solid #800000;border-radius:50%;animation:spin 1s linear infinite;'></div><p style='color:#800000;font-size:18px;font-weight:600;'>Saving address...</p><style>@keyframes spin{to{transform:rotate(360deg)}}</style><script>setTimeout(function(){window.location.href='{$url}';},600);</script></body></html>");
         }
 
         $token = $request->input('auth_token') ?? $request->query('auth_token');
@@ -215,8 +215,8 @@ class AddressController extends Controller
 
         // Check if request came from checkout
         if ($request->has('from_checkout') || str_contains($request->header('referer', ''), 'checkout')) {
-            return redirect()->route('cart.checkout')
-                ->with('success', 'Address updated successfully!');
+            $url = route('cart.checkout');
+            return response("<!DOCTYPE html><html><head><title>Yakan</title><meta http-equiv='refresh' content='0;url={$url}'></head><body style='margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#fff5f5;font-family:sans-serif;gap:16px;'><div style='width:48px;height:48px;border:4px solid #f3d4d4;border-top:4px solid #800000;border-radius:50%;animation:spin 1s linear infinite;'></div><p style='color:#800000;font-size:18px;font-weight:600;'>Updating address...</p><style>@keyframes spin{to{transform:rotate(360deg)}}</style><script>setTimeout(function(){window.location.href='{$url}';},600);</script></body></html>");
         }
 
         $token = $request->input('auth_token') ?? $request->query('auth_token');

@@ -1086,11 +1086,17 @@ function openEditAddressModal(addressId, label, fullName, phoneNumber, streetAdd
         }
     }
     populateBarangayDropdown('edit');
-    const brgySel = document.getElementById('editBarangay');
-    for (let i = 0; i < brgySel.options.length; i++) {
-        if (brgySel.options[i].value.toLowerCase() === barangay.toLowerCase()) {
-            brgySel.selectedIndex = i;
-            break;
+    const brgyEl = document.getElementById('editBarangay');
+    if (brgyEl) {
+        if (brgyEl.tagName === 'SELECT') {
+            for (let i = 0; i < brgyEl.options.length; i++) {
+                if (brgyEl.options[i].value.toLowerCase() === barangay.toLowerCase()) {
+                    brgyEl.selectedIndex = i; break;
+                }
+            }
+        } else {
+            // text input — restore saved value (skip 'N/A' legacy)
+            brgyEl.value = (barangay && barangay !== 'N/A') ? barangay : '';
         }
     }
     
@@ -1381,25 +1387,32 @@ function populateCityDropdown(prefix) {
 function populateBarangayDropdown(prefix) {
     const regionSel = document.getElementById(prefix + 'Region');
     const citySel   = document.getElementById(prefix + 'City');
-    const brgySel   = document.getElementById(prefix + 'Barangay');
+    const container = document.getElementById(prefix + 'BarangayContainer');
     const region    = regionSel.value;
     const city      = citySel.value;
-    brgySel.innerHTML = '<option value="">-- Select Barangay --</option>';
+    const cls = 'w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all';
+
     if (region && city && PH_LOCATIONS[region] && PH_LOCATIONS[region].cities[city]) {
         const barangays = PH_LOCATIONS[region].cities[city].barangays;
         if (barangays.length > 0) {
-            barangays.forEach(b => {
-                const opt = document.createElement('option');
-                opt.value = b;
-                opt.textContent = b;
-                brgySel.appendChild(opt);
-            });
+            // Known barangay list — use dropdown
+            const sel = document.createElement('select');
+            sel.id = prefix + 'Barangay'; sel.name = 'barangay'; sel.className = cls;
+            sel.innerHTML = '<option value="">-- Select Barangay --</option>';
+            barangays.forEach(b => sel.appendChild(new Option(b, b)));
+            container.innerHTML = ''; container.appendChild(sel);
         } else {
-            const opt = document.createElement('option');
-            opt.value = 'N/A';
-            opt.textContent = 'N/A (not applicable)';
-            brgySel.appendChild(opt);
+            // No barangay data — use free-text input so user can enter specific location
+            const inp = document.createElement('input');
+            inp.type = 'text'; inp.id = prefix + 'Barangay'; inp.name = 'barangay';
+            inp.placeholder = 'Enter your barangay / district name'; inp.className = cls;
+            container.innerHTML = ''; container.appendChild(inp);
         }
+    } else {
+        const sel = document.createElement('select');
+        sel.id = prefix + 'Barangay'; sel.name = 'barangay'; sel.className = cls;
+        sel.innerHTML = '<option value="">-- Select Barangay --</option>';
+        container.innerHTML = ''; container.appendChild(sel);
     }
 }
 
@@ -1579,9 +1592,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- Barangay -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Barangay</label>
-                    <select id="editBarangay" name="barangay" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
-                        <option value="">-- Select Barangay --</option>
-                    </select>
+                    <div id="editBarangayContainer">
+                        <select id="editBarangay" name="barangay" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
+                            <option value="">-- Select Barangay --</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <!-- Postal Code -->
@@ -1700,9 +1715,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- Barangay -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Barangay</label>
-                    <select id="newBarangay" name="barangay" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
-                        <option value="">-- Select Barangay --</option>
-                    </select>
+                    <div id="newBarangayContainer">
+                        <select id="newBarangay" name="barangay" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
+                            <option value="">-- Select Barangay --</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <!-- Postal Code -->
