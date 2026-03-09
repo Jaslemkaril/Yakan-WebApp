@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\CulturalHeritageController;
 use App\Http\Controllers\Api\SocialAuthController;
+use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\PaymentController;
 
 Route::prefix('v1')->group(function () {
@@ -28,6 +29,7 @@ Route::prefix('v1')->group(function () {
     // ===================== PRODUCTS (Public) =====================
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/products/featured', [ProductController::class, 'featured']);
+    Route::get('/products/{product}/reviews', [ReviewController::class, 'index']);
     Route::get('/products/{id}', [ProductController::class, 'show']);
     Route::get('/products/search', [ProductController::class, 'search']);
 
@@ -45,6 +47,11 @@ Route::prefix('v1')->group(function () {
         // Auth
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user', [AuthController::class, 'user']);
+
+        // Product Reviews (Auth required to post)
+        Route::post('/products/{product}/reviews', [ReviewController::class, 'store']);
+        Route::put('/products/{product}/reviews/{review}', [ReviewController::class, 'update']);
+        Route::delete('/products/{product}/reviews/{review}', [ReviewController::class, 'destroy']);
 
         // Orders (Create - Requires Auth)
         Route::post('/orders', [OrderController::class, 'store']);
