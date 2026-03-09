@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Services\CloudinaryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -75,14 +76,27 @@ class ProfileController extends Controller
         $user = $request->user();
 
         // Delete old avatar if exists
-        if ($user->avatar && strpos($user->avatar, 'storage/') !== false) {
-            $oldPath = str_replace('/storage/', 'public/', $user->avatar);
-            Storage::delete($oldPath);
+        $this->deleteAvatarFile($user->avatar);
+
+        // Store new avatar — prefer Cloudinary (persistent on Railway)
+        $cloudinary = new CloudinaryService();
+        $avatarUrl = null;
+
+        if ($cloudinary->isEnabled()) {
+            $result = $cloudinary->uploadFile($request->file('avatar'), 'avatars');
+            if ($result) {
+                $avatarUrl = $result['url'];
+                Log::info('Avatar uploaded to Cloudinary', ['user_id' => $user->id, 'url' => $avatarUrl]);
+            }
         }
 
-        // Store new avatar
-        $path = $request->file('avatar')->store('avatars', 'public');
-        $user->avatar = Storage::url($path);
+        // Fallback to local storage
+        if (!$avatarUrl) {
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $avatarUrl = Storage::url($path);
+        }
+
+        $user->avatar = $avatarUrl;
         $user->save();
 
         // Preserve auth_token for Railway deployment
@@ -101,11 +115,8 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
-        // Delete avatar from storage
-        if ($user->avatar && strpos($user->avatar, 'storage/') !== false) {
-            $path = str_replace('/storage/', 'public/', $user->avatar);
-            Storage::delete($path);
-        }
+        // Delete avatar from storage (Cloudinary or local)
+        $this->deleteAvatarFile($user->avatar);
 
         // Remove avatar from database
         $user->avatar = null;
@@ -141,6 +152,32 @@ class ProfileController extends Controller
                 'exception' => $e
             ]);
             return back()->with('error', 'Failed to send verification email. Please try again later.');
+        }
+    }
+
+    /**
+     * Delete an avatar file from Cloudinary or local storage.
+     */
+    protected function deleteAvatarFile(?string $avatarUrl): void
+    {
+        if (!$avatarUrl) {
+            return;
+        }
+
+        // Cloudinary URL — extract public_id and delete via API
+        if (str_contains($avatarUrl, 'cloudinary.com')) {
+            // Extract public_id: everything after /upload/ (and optional version), without extension
+            if (preg_match('/\/upload\/(?:v\d+\/)?(.+)\.\w+$/', $avatarUrl, $matches)) {
+                $cloudinary = new CloudinaryService();
+                $cloudinary->delete($matches[1]);
+            }
+            return;
+        }
+
+        // Local storage
+        if (str_contains($avatarUrl, '/storage/')) {
+            $path = str_replace('/storage/', 'public/', $avatarUrl);
+            Storage::delete($path);
         }
     }
 }
