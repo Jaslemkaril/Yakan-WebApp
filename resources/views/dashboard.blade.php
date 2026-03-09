@@ -8,38 +8,6 @@
         <p class="text-xl text-gray-600">Welcome back, {{ isset($user) && $user ? (str_contains($user->name, ' ') ? explode(' ', $user->name)[0] : $user->name) : 'User' }}! Manage your profile and orders.</p>
     </div>
 
-    {{-- Full-Width Search Bar --}}
-    <div class="mb-8 animate-fade-in-up">
-        <div class="w-full relative">
-            <form action="{{ route('search') }}" method="GET" class="relative">
-                <div class="relative">
-                    <input 
-                        type="text" 
-                        name="q" 
-                        placeholder="Search products, orders, or anything..." 
-                        class="w-full px-6 py-4 pl-14 text-lg bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-[#800000] focus:ring-4 focus:ring-[#800000]/10 transition-all duration-300 shadow-sm hover:shadow-md"
-                        id="dashboardSearchInput"
-                    >
-                    <div class="absolute left-4 top-1/2 transform -translate-y-1/2">
-                        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                        </svg>
-                    </div>
-                    <button 
-                        type="submit" 
-                        class="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-2 bg-gradient-to-r from-[#800000] to-[#4b0000] text-white font-semibold rounded-xl hover:from-[#4b0000] hover:to-[#2c0000] transition-all duration-300 shadow-md hover:shadow-lg"
-                    >
-                        Search
-                    </button>
-                </div>
-            </form>
-            
-            {{-- Live Search Dropdown --}}
-            <div id="dashboardLiveSearchResults" class="hidden absolute z-50 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 max-h-96 overflow-y-auto">
-            </div>
-        </div>
-    </div>
-
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div class="lg:col-span-2 space-y-8 animate-fade-in-up">
             {{-- Account Overview --}}

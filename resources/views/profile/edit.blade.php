@@ -41,7 +41,7 @@
                         </svg>
                         Profile Information
                     </h2>
-                    <p class="text-gray-200 text-sm mt-1">Update your account's profile information and email address</p>
+                    <p class="text-gray-200 text-sm mt-1">Update your account's profile information</p>
                 </div>
                 <div class="p-6">
                     @include('profile.partials.update-profile-information-form')

@@ -32,44 +32,14 @@
         </div>
 
         <div>
-            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-            <input 
-                id="email" 
-                name="email" 
-                type="email" 
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed" 
-                value="{{ old('email', $user->email) }}" 
-                required 
-                autocomplete="username"
-                :disabled="!editing"
-            />
-            @error('email')
-                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-            @enderror
-
-            @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
-                <div class="mt-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p class="text-sm text-yellow-800">
-                        {{ __('Your email address is unverified.') }}
-
-                        <button type="submit" form="send-verification" class="underline text-yellow-900 hover:text-yellow-700 font-medium">
-                            {{ __('Click here to re-send the verification email.') }}
-                        </button>
-                    </p>
-
-                    @if (session('status') === 'verification-link-sent')
-                        <p class="mt-2 text-sm text-green-600 font-medium">
-                            {{ __('A new verification link has been sent to your email address.') }}
-                        </p>
-                    @endif
-
-                    @if (session('error'))
-                        <p class="mt-2 text-sm text-red-600 font-medium">
-                            {{ session('error') }}
-                        </p>
-                    @endif
-                </div>
-            @endif
+            <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+            <div class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 flex items-center gap-2">
+                <svg class="w-4 h-4 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+                <span class="text-sm">{{ $user->email }}</span>
+            </div>
+            <p class="mt-1.5 text-xs text-gray-400">Email address cannot be changed.</p>
         </div>
 
         <div class="flex items-center gap-4 pt-4">
