@@ -358,22 +358,38 @@
             border-radius: 999px;
             font-size: 14px;
             font-weight: 500;
-            background: #ffffff;
-            color: #1f2937 !important;
+            background: #ffffff !important;
+            color: #111827 !important;
+            -webkit-text-fill-color: #111827 !important;
+            caret-color: #800000 !important;
             transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
             outline: none;
         }
         .search-input::placeholder { 
-            color: #9ca3af;
+            color: #9ca3af !important;
             font-weight: 400;
         }
         .search-input:focus {
             border-color: #800000;
-            background: #ffffff;
+            background: #ffffff !important;
             color: #111827 !important;
+            -webkit-text-fill-color: #111827 !important;
             box-shadow: 0 0 0 3px rgba(128,0,0,0.10);
         }
         .search-input:focus ~ .search-kbd { opacity: 0; pointer-events: none; }
+
+        /* Expand search bar on focus */
+        .search-bar-container {
+            max-width: 260px;
+            transition: max-width 0.3s ease;
+        }
+        .search-bar-container:focus-within {
+            max-width: 520px;
+        }
+        @media (min-width: 1024px) {
+            .search-bar-container { max-width: 340px; }
+            .search-bar-container:focus-within { max-width: 680px; }
+        }
 
         .search-icon-btn {
             position: absolute;
@@ -705,7 +721,7 @@
                 </div>
 
                 <!-- ── Desktop Search Bar ── -->
-                <div class="hidden md:flex flex-1 max-w-md lg:max-w-xl mx-4 lg:mx-6">
+                <div class="hidden md:flex flex-1 search-bar-container mx-4 lg:mx-6">
                     <form action="{{ route('products.search') }}" method="GET" class="w-full" id="searchForm">
                         <div class="search-wrap">
                             {{-- Submit / search icon --}}
