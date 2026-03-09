@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNotification } from '../context/NotificationContext';
 import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
@@ -70,15 +71,12 @@ const NotificationsScreen = ({ navigation }) => {
 
   const getNotificationIcon = (type) => {
     switch (type) {
-      case 'success':
-        return '✓';
-      case 'error':
-        return '✕';
-      case 'warning':
-        return '⚠';
+      case 'success': return 'check-circle';
+      case 'error':   return 'close-circle';
+      case 'warning': return 'alert-circle';
+      case 'order':   return 'package-variant';
       case 'info':
-      default:
-        return 'ℹ';
+      default:        return 'information-outline';
     }
   };
 
@@ -123,7 +121,7 @@ const NotificationsScreen = ({ navigation }) => {
           { backgroundColor: getNotificationColor(item.type) },
         ]}
       >
-        <Text style={styles.icon}>{getNotificationIcon(item.type)}</Text>
+        <MaterialCommunityIcons name={getNotificationIcon(item.type)} size={20} color='#fff' />
       </View>
 
       <View style={styles.notificationContent}>
@@ -139,7 +137,7 @@ const NotificationsScreen = ({ navigation }) => {
         style={styles.removeButton}
         onPress={() => handleRemoveNotification(item.id)}
       >
-        <Text style={styles.removeIcon}>✕</Text>
+        <MaterialCommunityIcons name='close' size={16} color={theme.textMuted} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -166,7 +164,7 @@ const NotificationsScreen = ({ navigation }) => {
 
       {allNotifications.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🔔</Text>
+          <View style={styles.emptyIconCircle}><MaterialCommunityIcons name='bell-off-outline' size={60} color={theme.textMuted} /></View>
           <Text style={styles.emptyTitle}>No Notifications</Text>
           <Text style={styles.emptyText}>
             You're all caught up! Check back later for updates.
@@ -298,9 +296,15 @@ const getStyles = (theme) => StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  emptyIcon: {
-    fontSize: 80,
+  emptyIconCircle: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: theme.cardBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 20,
+    elevation: 3,
   },
   emptyTitle: {
     fontSize: 22,

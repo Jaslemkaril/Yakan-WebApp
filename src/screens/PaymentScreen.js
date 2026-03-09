@@ -1,5 +1,5 @@
-// src/screens/PaymentScreen.js
-import React, { useState } from 'react';
+﻿// src/screens/PaymentScreen.js
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,16 +20,16 @@ import * as ImagePicker from 'expo-image-picker';
 import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
 
-// Payment account details (customize these for your store)
-const PAYMENT_ACCOUNTS = {
+// Payment account details â€” fetched from API at runtime
+const DEFAULT_PAYMENT_ACCOUNTS = {
   gcash: {
-    number: '0917-123-4567',
-    name: 'Your Store Name',
+    number: '',
+    name: 'Tuwas Yakan',
   },
   bank_transfer: {
     bankName: 'BDO',
-    accountNumber: '1234-5678-9012',
-    accountName: 'Your Store Name',
+    accountNumber: '',
+    accountName: 'Tuwas Yakan',
   },
 };
 
@@ -58,20 +58,46 @@ export default function PaymentScreen({ navigation, route }) {
   const [referenceNumber, setReferenceNumber] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [receiptImage, setReceiptImage] = useState(null);
+  const [paymentAccounts, setPaymentAccounts] = useState(DEFAULT_PAYMENT_ACCOUNTS);
+
+  useEffect(() => {
+    const fetchPaymentInfo = async () => {
+      try {
+        const response = await ApiService.request('GET', '/settings/payment-info');
+        if (response?.success && response?.data) {
+          const d = response.data;
+          setPaymentAccounts({
+            gcash: {
+              number: d.gcash_number || DEFAULT_paymentAccounts.gcash.number,
+              name:   d.gcash_name   || DEFAULT_paymentAccounts.gcash.name,
+            },
+            bank_transfer: {
+              bankName:      d.bank_name         || DEFAULT_paymentAccounts.bank_transfer.bankName,
+              accountNumber: d.bank_account      || DEFAULT_paymentAccounts.bank_transfer.accountNumber,
+              accountName:   d.bank_account_name || DEFAULT_paymentAccounts.bank_transfer.accountName,
+            },
+          });
+        }
+      } catch (e) {
+        // silently use defaults if API unavailable
+      }
+    };
+    fetchPaymentInfo();
+  }, []);
 
   const paymentMethods = [
     {
       id: 'gcash',
       name: 'GCash',
       description: 'Pay securely with GCash mobile wallet',
-      icon: '📱',
+      icon: 'ðŸ“±',
       fee: 0,
     },
     {
       id: 'bank_transfer',
       name: 'Bank Transfer',
       description: 'Direct transfer to our bank account',
-      icon: '🏦',
+      icon: 'ðŸ¦',
       fee: 0,
     },
   ];
@@ -97,7 +123,7 @@ export default function PaymentScreen({ navigation, route }) {
       return;
     }
     
-    // Show payment instructions
+    // Show payment instructions for GCash and Bank Transfer
     setShowPaymentInstructions(true);
   };
 
@@ -146,15 +172,15 @@ export default function PaymentScreen({ navigation, route }) {
         notes: 'Order from mobile app',
       };
 
-      console.log('🔵 Sending order to API:', apiOrderData);
+      console.log('ðŸ”µ Sending order to API:', apiOrderData);
 
       const response = await ApiService.createOrder(apiOrderData);
       
-      console.log('🔵 Order created successfully:', response);
+      console.log('ðŸ”µ Order created successfully:', response);
 
       // Extract backend order ID from various possible response structures
       const backendId = response.data?.data?.id || response.data?.id || response.data?.order?.id;
-      console.log('🔵 Backend order ID:', backendId);
+      console.log('ðŸ”µ Backend order ID:', backendId);
 
       const finalOrderData = {
         ...orderData,
@@ -176,8 +202,8 @@ export default function PaymentScreen({ navigation, route }) {
 
       await updateOrderInStorage(finalOrderData);
       
-      // 🔔 Notify admin via notification service
-      console.log('🔔 Triggering admin notification for new order:', finalOrderData.orderRef);
+      // ðŸ”” Notify admin via notification service
+      console.log('ðŸ”” Triggering admin notification for new order:', finalOrderData.orderRef);
       NotificationService.notifyNewOrder({
         orderId: backendId || finalOrderData.orderRef,
         orderRef: finalOrderData.orderRef,
@@ -196,7 +222,7 @@ export default function PaymentScreen({ navigation, route }) {
         NotificationService.startOrderStatusPolling(
           backendId,
           (updatedOrder) => {
-            console.log('📦 Order status updated:', updatedOrder.status);
+            console.log('ðŸ“¦ Order status updated:', updatedOrder.status);
             // Update local order data when status changes
             updateOrderInStorage({
               ...finalOrderData,
@@ -210,7 +236,7 @@ export default function PaymentScreen({ navigation, route }) {
       clearCart();
       navigation.navigate('OrderDetails', { orderData: finalOrderData });
     } catch (error) {
-      console.error('🔴 Error creating order:', error);
+      console.error('ðŸ”´ Error creating order:', error);
       setIsProcessing(false);
       
       const finalOrderData = {
@@ -222,7 +248,7 @@ export default function PaymentScreen({ navigation, route }) {
       await updateOrderInStorage(finalOrderData);
       
       // Still notify admin even if backend sync failed (order saved locally)
-      console.log('🔔 Local order saved, notifying admin');
+      console.log('ðŸ”” Local order saved, notifying admin');
       NotificationService.notifyNewOrder({
         orderId: finalOrderData.orderRef,
         orderRef: finalOrderData.orderRef,
@@ -264,17 +290,17 @@ export default function PaymentScreen({ navigation, route }) {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setShowPaymentInstructions(false)}>
-            <Text style={styles.backButton}>← Back</Text>
+            <Text style={styles.backButton}>â† Back</Text>
           </TouchableOpacity>
           <Text style={styles.title}>
-            {selectedPaymentMethod === 'gcash' ? 'GCash Payment' : 'Bank Transfer'}
+            {selectedPaymentMethod === 'gcash' ? 'GCash Payment' : selectedPaymentMethod === 'cod' ? 'Cash on Delivery' : 'Bank Transfer'}
           </Text>
           <View style={{ width: 50 }} />
         </View>
 
         {/* Success Banner */}
         <View style={styles.successBanner}>
-          <Text style={styles.successIcon}>✓</Text>
+          <Text style={styles.successIcon}>âœ“</Text>
           <Text style={styles.successText}>Order placed! Complete payment online.</Text>
         </View>
 
@@ -284,11 +310,11 @@ export default function PaymentScreen({ navigation, route }) {
             <View style={styles.instructionsCard}>
               <View style={styles.instructionsHeader}>
                 <Text style={styles.instructionsIcon}>
-                  {selectedPaymentMethod === 'gcash' ? '📱' : '🏦'}
+                  {selectedPaymentMethod === 'gcash' ? 'ðŸ“±' : selectedPaymentMethod === 'cod' ? 'ðŸ’µ' : 'ðŸ¦'}
                 </Text>
                 <View>
                   <Text style={styles.instructionsTitle}>
-                    {selectedPaymentMethod === 'gcash' ? 'GCash Payment Instructions' : 'Bank Transfer Instructions'}
+                    {selectedPaymentMethod === 'gcash' ? 'GCash Payment Instructions' : selectedPaymentMethod === 'cod' ? 'Cash on Delivery' : 'Bank Transfer Instructions'}
                   </Text>
                   <Text style={styles.instructionsSubtitle}>Follow these steps to complete your payment</Text>
                 </View>
@@ -323,14 +349,14 @@ export default function PaymentScreen({ navigation, route }) {
                   {selectedPaymentMethod === 'gcash' ? (
                     <View style={styles.accountBox}>
                       <Text style={styles.accountLabel}>GCash Number</Text>
-                      <Text style={styles.accountNumber}>{PAYMENT_ACCOUNTS.gcash.number}</Text>
-                      <Text style={styles.accountName}>Account Name: {PAYMENT_ACCOUNTS.gcash.name}</Text>
+                      <Text style={styles.accountNumber}>{paymentAccounts.gcash.number}</Text>
+                      <Text style={styles.accountName}>Account Name: {paymentAccounts.gcash.name}</Text>
                     </View>
                   ) : (
                     <View style={styles.accountBox}>
-                      <Text style={styles.accountLabel}>{PAYMENT_ACCOUNTS.bank_transfer.bankName}</Text>
-                      <Text style={styles.accountNumber}>{PAYMENT_ACCOUNTS.bank_transfer.accountNumber}</Text>
-                      <Text style={styles.accountName}>Account Name: {PAYMENT_ACCOUNTS.bank_transfer.accountName}</Text>
+                      <Text style={styles.accountLabel}>{paymentAccounts.bank_transfer.bankName}</Text>
+                      <Text style={styles.accountNumber}>{paymentAccounts.bank_transfer.accountNumber}</Text>
+                      <Text style={styles.accountName}>Account Name: {paymentAccounts.bank_transfer.accountName}</Text>
                     </View>
                   )}
                 </View>
@@ -345,7 +371,7 @@ export default function PaymentScreen({ navigation, route }) {
                   <Text style={styles.stepTitle}>Enter the exact amount</Text>
                   <View style={styles.amountBox}>
                     <Text style={styles.amountLabel}>Amount to Send</Text>
-                    <Text style={styles.amountValue}>₱{finalTotal.toFixed(2)}</Text>
+                    <Text style={styles.amountValue}>â‚±{finalTotal.toFixed(2)}</Text>
                   </View>
                 </View>
               </View>
@@ -378,7 +404,7 @@ export default function PaymentScreen({ navigation, route }) {
                     After sending the payment, click the button below to confirm. Your payment will be verified automatically and your order will start processing immediately!
                   </Text>
                   <TouchableOpacity style={styles.receiptButton} onPress={handlePickReceipt}>
-                    <Text style={styles.receiptButtonText}>📎 Upload receipt image</Text>
+                    <Text style={styles.receiptButtonText}>ðŸ“Ž Upload receipt image</Text>
                   </TouchableOpacity>
                   {receiptImage && (
                     <Text style={styles.receiptPreview}>Attached: {receiptImage.split('/').pop()}</Text>
@@ -409,14 +435,14 @@ export default function PaymentScreen({ navigation, route }) {
                         />
                       ) : (
                         <View style={styles.productImagePlaceholder}>
-                          <Text style={styles.productImagePlaceholderText}>📦</Text>
+                          <Text style={styles.productImagePlaceholderText}>ðŸ“¦</Text>
                         </View>
                       )}
                       <View style={styles.productDetails}>
                         <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
                         <Text style={styles.productQuantity}>Qty: {item.quantity || 1}</Text>
                       </View>
-                      <Text style={styles.productPrice}>₱{((item.price || 0) * (item.quantity || 1)).toFixed(2)}</Text>
+                      <Text style={styles.productPrice}>â‚±{((item.price || 0) * (item.quantity || 1)).toFixed(2)}</Text>
                     </View>
                   );
                 })}
@@ -428,7 +454,7 @@ export default function PaymentScreen({ navigation, route }) {
               <View style={styles.addressSection}>
                 <View style={styles.addressHeader}>
                   <Text style={styles.addressIcon}>
-                    {orderData.deliveryOption === 'pickup' ? '🏪' : '📍'}
+                    {orderData.deliveryOption === 'pickup' ? 'ðŸª' : 'ðŸ“'}
                   </Text>
                   <Text style={styles.addressTitle}>
                     {orderData.deliveryOption === 'pickup' ? 'Pick Up Details' : 'Delivery Address'}
@@ -476,19 +502,19 @@ export default function PaymentScreen({ navigation, route }) {
               
               <View style={styles.orderSummaryRow}>
                 <Text style={styles.orderSummaryLabel}>Subtotal</Text>
-                <Text style={styles.orderSummaryValue}>₱{(orderData.subtotal || 0).toFixed(2)}</Text>
+                <Text style={styles.orderSummaryValue}>â‚±{(orderData.subtotal || 0).toFixed(2)}</Text>
               </View>
               
               <View style={styles.orderSummaryRow}>
                 <Text style={styles.orderSummaryLabel}>Shipping</Text>
-                <Text style={styles.orderSummaryValue}>₱{(orderData.shippingFee || 0).toFixed(2)}</Text>
+                <Text style={styles.orderSummaryValue}>â‚±{(orderData.shippingFee || 0).toFixed(2)}</Text>
               </View>
               
               <View style={styles.orderSummaryDivider} />
               
               <View style={styles.orderSummaryRow}>
                 <Text style={styles.orderSummaryTotalLabel}>Total</Text>
-                <Text style={styles.orderSummaryTotalValue}>₱{finalTotal.toFixed(2)}</Text>
+                <Text style={styles.orderSummaryTotalValue}>â‚±{finalTotal.toFixed(2)}</Text>
               </View>
 
               <View style={styles.orderInfoRow}>
@@ -520,14 +546,14 @@ export default function PaymentScreen({ navigation, route }) {
                   <Text style={styles.quickReferenceLabel}>Send to:</Text>
                   <Text style={styles.quickReferenceValue}>
                     {selectedPaymentMethod === 'gcash' 
-                      ? PAYMENT_ACCOUNTS.gcash.number 
-                      : PAYMENT_ACCOUNTS.bank_transfer.accountNumber}
+                      ? paymentAccounts.gcash.number 
+                      : paymentAccounts.bank_transfer.accountNumber}
                   </Text>
                 </View>
                 
                 <View style={styles.quickReferenceRow}>
                   <Text style={styles.quickReferenceLabel}>Amount:</Text>
-                  <Text style={styles.quickReferenceAmountValue}>₱{finalTotal.toFixed(2)}</Text>
+                  <Text style={styles.quickReferenceAmountValue}>â‚±{finalTotal.toFixed(2)}</Text>
                 </View>
                 
                 <View style={styles.quickReferenceRow}>
@@ -541,7 +567,7 @@ export default function PaymentScreen({ navigation, route }) {
           {/* Notices */}
           <View style={styles.noticeCard}>
             <View style={styles.noticeIconContainer}>
-              <Text style={styles.noticeIcon}>✓</Text>
+              <Text style={styles.noticeIcon}>âœ“</Text>
             </View>
             <View style={styles.noticeContent}>
               <Text style={styles.noticeTitle}>Instant Payment Verification</Text>
@@ -553,12 +579,12 @@ export default function PaymentScreen({ navigation, route }) {
 
           <View style={styles.warningCard}>
             <View style={styles.warningIconContainer}>
-              <Text style={styles.warningIcon}>⚠️</Text>
+              <Text style={styles.warningIcon}>âš ï¸</Text>
             </View>
             <View style={styles.noticeContent}>
               <Text style={styles.warningTitle}>Important Reminder</Text>
               <Text style={styles.noticeDescription}>
-                Please make sure to send the EXACT amount (₱{finalTotal.toFixed(2)}) and include the reference number ({orderData.orderRef}) in your {selectedPaymentMethod === 'gcash' ? 'GCash' : 'bank transfer'} message.
+                Please make sure to send the EXACT amount (â‚±{finalTotal.toFixed(2)}) and include the reference number ({orderData.orderRef}) in your {selectedPaymentMethod === 'gcash' ? 'GCash' : 'bank transfer'} message.
               </Text>
             </View>
           </View>
@@ -580,7 +606,7 @@ export default function PaymentScreen({ navigation, route }) {
               {'\n'}Upload a clear screenshot or photo of your {selectedPaymentMethod === 'gcash' ? 'GCash' : 'bank'} receipt showing the transaction details, amount, and reference number.
             </Text>
             <TouchableOpacity style={styles.receiptButton} onPress={handlePickReceipt}>
-              <Text style={styles.receiptButtonText}>📎 Upload receipt image</Text>
+              <Text style={styles.receiptButtonText}>ðŸ“Ž Upload receipt image</Text>
             </TouchableOpacity>
             {receiptImage && (
               <Text style={styles.receiptPreview}>Attached: {receiptImage.split('/').pop()}</Text>
@@ -601,7 +627,7 @@ export default function PaymentScreen({ navigation, route }) {
               <ActivityIndicator color={colors.white} />
             ) : (
               <Text style={styles.confirmPaymentButtonText}>
-                I have paid via {selectedMethod?.name}
+                {`I have paid via ${selectedMethod?.name}`}
               </Text>
             )}
           </TouchableOpacity>
@@ -633,21 +659,21 @@ export default function PaymentScreen({ navigation, route }) {
         <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Subtotal</Text>
-            <Text style={styles.summaryValue}>₱{(orderData.subtotal || 0).toFixed(2)}</Text>
+            <Text style={styles.summaryValue}>â‚±{(orderData.subtotal || 0).toFixed(2)}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Shipping</Text>
-            <Text style={styles.summaryValue}>₱{(orderData.shippingFee || 0).toFixed(2)}</Text>
+            <Text style={styles.summaryValue}>â‚±{(orderData.shippingFee || 0).toFixed(2)}</Text>
           </View>
           {selectedMethod && selectedMethod.fee > 0 && (
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Payment Fee</Text>
-              <Text style={styles.summaryValue}>₱{selectedMethod.fee.toFixed(2)}</Text>
+              <Text style={styles.summaryValue}>â‚±{selectedMethod.fee.toFixed(2)}</Text>
             </View>
           )}
           <View style={[styles.summaryRow, styles.summaryTotal]}>
             <Text style={styles.summaryTotalLabel}>Total</Text>
-            <Text style={styles.summaryTotalValue}>₱{finalTotal.toFixed(2)}</Text>
+            <Text style={styles.summaryTotalValue}>â‚±{finalTotal.toFixed(2)}</Text>
           </View>
         </View>
 
@@ -675,7 +701,7 @@ export default function PaymentScreen({ navigation, route }) {
 
               {method.fee > 0 && (
                 <View style={styles.methodFee}>
-                  <Text style={styles.feeText}>+₱{method.fee}</Text>
+                  <Text style={styles.feeText}>+â‚±{method.fee}</Text>
                 </View>
               )}
 
@@ -693,7 +719,7 @@ export default function PaymentScreen({ navigation, route }) {
 
         {/* Security Notice */}
         <View style={styles.securityCard}>
-          <Text style={styles.securityIcon}>🔒</Text>
+          <Text style={styles.securityIcon}>ðŸ”’</Text>
           <Text style={styles.securityText}>Your payment information is encrypted and secure</Text>
         </View>
       </ScrollView>
@@ -709,7 +735,7 @@ export default function PaymentScreen({ navigation, route }) {
           disabled={!selectedPaymentMethod}
         >
           <Text style={styles.payButtonText}>
-            Continue to Payment - ₱{finalTotal.toFixed(2)}
+            Continue to Payment - â‚±{finalTotal.toFixed(2)}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1451,3 +1477,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 });
+

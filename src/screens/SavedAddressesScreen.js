@@ -21,24 +21,25 @@ import ApiService from '../services/api';
 import { useCart } from '../context/CartContext';
 
 // Philippine Regions with corresponding shipping fee zones
+// Note: PSGC Cloud API requires 10-digit region codes
 const PHILIPPINE_REGIONS = [
-  { code: '130000000', name: 'NCR – National Capital Region (Metro Manila)', shipping: 200 },
-  { code: '140000000', name: 'CAR – Cordillera Administrative Region', shipping: 200 },
-  { code: '010000000', name: 'Region I – Ilocos Region', shipping: 200 },
-  { code: '020000000', name: 'Region II – Cagayan Valley', shipping: 200 },
-  { code: '030000000', name: 'Region III – Central Luzon', shipping: 200 },
-  { code: '040000000', name: 'Region IV-A – CALABARZON', shipping: 200 },
-  { code: '170000000', name: 'Region IV-B – MIMAROPA', shipping: 200 },
-  { code: '050000000', name: 'Region V – Bicol Region', shipping: 200 },
-  { code: '060000000', name: 'Region VI – Western Visayas', shipping: 180 },
-  { code: '070000000', name: 'Region VII – Central Visayas', shipping: 180 },
-  { code: '080000000', name: 'Region VIII – Eastern Visayas', shipping: 180 },
-  { code: '090000000', name: 'Region IX – Zamboanga Peninsula', shipping: 100 },
-  { code: '100000000', name: 'Region X – Northern Mindanao', shipping: 150 },
-  { code: '110000000', name: 'Region XI – Davao Region', shipping: 150 },
-  { code: '120000000', name: 'Region XII – SOCCSKSARGEN', shipping: 150 },
-  { code: '160000000', name: 'Region XIII – Caraga', shipping: 150 },
-  { code: '190000000', name: 'BARMM – Bangsamoro Region', shipping: 150 },
+  { code: '1300000000', name: 'NCR – National Capital Region (Metro Manila)', shipping: 200, noProvinces: true },
+  { code: '1400000000', name: 'CAR – Cordillera Administrative Region', shipping: 200 },
+  { code: '0100000000', name: 'Region I – Ilocos Region', shipping: 200 },
+  { code: '0200000000', name: 'Region II – Cagayan Valley', shipping: 200 },
+  { code: '0300000000', name: 'Region III – Central Luzon', shipping: 200 },
+  { code: '0400000000', name: 'Region IV-A – CALABARZON', shipping: 200 },
+  { code: '1700000000', name: 'Region IV-B – MIMAROPA', shipping: 200 },
+  { code: '0500000000', name: 'Region V – Bicol Region', shipping: 200 },
+  { code: '0600000000', name: 'Region VI – Western Visayas', shipping: 180 },
+  { code: '0700000000', name: 'Region VII – Central Visayas', shipping: 180 },
+  { code: '0800000000', name: 'Region VIII – Eastern Visayas', shipping: 180 },
+  { code: '0900000000', name: 'Region IX – Zamboanga Peninsula', shipping: 100 },
+  { code: '1000000000', name: 'Region X – Northern Mindanao', shipping: 150 },
+  { code: '1100000000', name: 'Region XI – Davao Region', shipping: 150 },
+  { code: '1200000000', name: 'Region XII – SOCCSKSARGEN', shipping: 150 },
+  { code: '1600000000', name: 'Region XIII – Caraga', shipping: 150 },
+  { code: '1900000000', name: 'BARMM – Bangsamoro Region', shipping: 150, noProvinces: true },
 ];
 
 export default function SavedAddressesScreen({ navigation }) {
@@ -119,15 +120,47 @@ export default function SavedAddressesScreen({ navigation }) {
   };
 
   const fetchProvinces = async (regionCode) => {
+    // Check if this region has no provinces (NCR, BARMM)
+    const selectedRegion = PHILIPPINE_REGIONS.find(r => r.code === regionCode);
+    if (selectedRegion?.noProvinces) {
+      // Skip provinces, fetch cities directly from region
+      setAvailableProvinces([]);
+      await fetchCitiesFromRegion(regionCode);
+      return;
+    }
     setLoadingPicker(true);
     setAvailableProvinces([]);
     try {
       const resp = await fetch(`https://psgc.cloud/api/regions/${regionCode}/provinces`);
       const data = await resp.json();
-      const provinces = Array.isArray(data) ? data.map(p => ({ code: p.code, name: p.name })).sort((a,b) => a.name.localeCompare(b.name)) : [];
+      const provinces = Array.isArray(data) && data.length > 0
+        ? data.map(p => ({ code: p.code, name: p.name })).sort((a, b) => a.name.localeCompare(b.name))
+        : [];
+      if (provinces.length === 0) {
+        // No provinces found — fetch cities from region directly
+        await fetchCitiesFromRegion(regionCode);
+      }
       setAvailableProvinces(provinces);
     } catch {
       setAvailableProvinces([]);
+    } finally {
+      setLoadingPicker(false);
+    }
+  };
+
+  // For regions with no provinces (NCR, BARMM), fetch cities directly
+  const fetchCitiesFromRegion = async (regionCode) => {
+    setLoadingPicker(true);
+    setAvailableCities([]);
+    try {
+      const resp = await fetch(`https://psgc.cloud/api/regions/${regionCode}/cities-municipalities`);
+      const data = await resp.json();
+      const cities = Array.isArray(data)
+        ? data.map(c => ({ code: c.code, name: c.name })).sort((a, b) => a.name.localeCompare(b.name))
+        : [];
+      setAvailableCities(cities);
+    } catch {
+      setAvailableCities([]);
     } finally {
       setLoadingPicker(false);
     }
@@ -537,45 +570,62 @@ export default function SavedAddressesScreen({ navigation }) {
                 <MaterialCommunityIcons name="chevron-down" size={20} color={theme.textMuted} />
               </TouchableOpacity>
 
-              {/* Province Picker */}
-              <Text style={styles.pickerLabel}>Province</Text>
-              <TouchableOpacity
-                style={[styles.pickerButton, !formData.regionCode && styles.pickerDisabled]}
-                onPress={() => {
-                  if (!formData.regionCode) return;
-                  setPickerSearch('');
-                  if (availableProvinces.length === 0) fetchProvinces(formData.regionCode);
-                  setProvincePickerVisible(true);
-                }}
-                activeOpacity={formData.regionCode ? 0.7 : 1}
-              >
-                <Text style={formData.province ? styles.pickerValue : styles.pickerPlaceholder} numberOfLines={1}>
-                  {formData.province || (formData.regionCode ? 'Select Province' : 'Select Region first')}
-                </Text>
-                <MaterialCommunityIcons name="chevron-down" size={20} color={formData.regionCode ? theme.textMuted : theme.borderLight} />
-              </TouchableOpacity>
+              {/* Province Picker — hidden for NCR/BARMM which have no provinces */}
+              {!PHILIPPINE_REGIONS.find(r => r.code === formData.regionCode)?.noProvinces && (
+                <>
+                  <Text style={styles.pickerLabel}>Province</Text>
+                  <TouchableOpacity
+                    style={[styles.pickerButton, !formData.regionCode && styles.pickerDisabled]}
+                    onPress={() => {
+                      if (!formData.regionCode) return;
+                      setPickerSearch('');
+                      if (availableProvinces.length === 0) fetchProvinces(formData.regionCode);
+                      setProvincePickerVisible(true);
+                    }}
+                    activeOpacity={formData.regionCode ? 0.7 : 1}
+                  >
+                    <Text style={formData.province ? styles.pickerValue : styles.pickerPlaceholder} numberOfLines={1}>
+                      {formData.province || (formData.regionCode ? 'Select Province' : 'Select Region first')}
+                    </Text>
+                    <MaterialCommunityIcons name="chevron-down" size={20} color={formData.regionCode ? theme.textMuted : theme.borderLight} />
+                  </TouchableOpacity>
+                </>
+              )}
 
               {/* City/Municipality Picker */}
               <Text style={styles.pickerLabel}>City / Municipality</Text>
-              <TouchableOpacity
-                style={[styles.pickerButton, !formData.province && styles.pickerDisabled]}
-                onPress={() => {
-                  if (!formData.province) return;
-                  setPickerSearch('');
-                  // Find province code from availableProvinces
-                  const prov = availableProvinces.find(p => p.name === formData.province);
-                  if (prov) {
-                    if (availableCities.length === 0) fetchCities(prov.code);
-                    setCityPickerVisible(true);
-                  }
-                }}
-                activeOpacity={formData.province ? 0.7 : 1}
-              >
-                <Text style={formData.city ? styles.pickerValue : styles.pickerPlaceholder} numberOfLines={1}>
-                  {formData.city || (formData.province ? 'Select City / Municipality' : 'Select Province first')}
-                </Text>
-                <MaterialCommunityIcons name="chevron-down" size={20} color={formData.province ? theme.textMuted : theme.borderLight} />
-              </TouchableOpacity>
+              {(() => {
+                const isNoProvince = PHILIPPINE_REGIONS.find(r => r.code === formData.regionCode)?.noProvinces;
+                const canSelectCity = isNoProvince ? !!formData.regionCode : !!formData.province;
+                const cityPlaceholder = isNoProvince
+                  ? (formData.regionCode ? 'Select City / Municipality' : 'Select Region first')
+                  : (formData.province ? 'Select City / Municipality' : 'Select Province first');
+                return (
+                  <TouchableOpacity
+                    style={[styles.pickerButton, !canSelectCity && styles.pickerDisabled]}
+                    onPress={() => {
+                      if (!canSelectCity) return;
+                      setPickerSearch('');
+                      if (isNoProvince) {
+                        if (availableCities.length === 0) fetchCitiesFromRegion(formData.regionCode);
+                        setCityPickerVisible(true);
+                      } else {
+                        const prov = availableProvinces.find(p => p.name === formData.province);
+                        if (prov) {
+                          if (availableCities.length === 0) fetchCities(prov.code);
+                          setCityPickerVisible(true);
+                        }
+                      }
+                    }}
+                    activeOpacity={canSelectCity ? 0.7 : 1}
+                  >
+                    <Text style={formData.city ? styles.pickerValue : styles.pickerPlaceholder} numberOfLines={1}>
+                      {formData.city || cityPlaceholder}
+                    </Text>
+                    <MaterialCommunityIcons name="chevron-down" size={20} color={canSelectCity ? theme.textMuted : theme.borderLight} />
+                  </TouchableOpacity>
+                );
+              })()}
 
               {/* Barangay */}
               <Text style={styles.pickerLabel}>Barangay</Text>

@@ -11,8 +11,12 @@ use App\Http\Controllers\Api\CulturalHeritageController;
 use App\Http\Controllers\Api\SocialAuthController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\Api\SettingsController;
 
 Route::prefix('v1')->group(function () {
+    // ===================== PUBLIC SETTINGS =====================
+    Route::get('/settings/payment-info', [SettingsController::class, 'paymentInfo']);
+
     // ===================== AUTHENTICATION (Public) =====================
     // Rate limited: 5 attempts per minute from the same IP
     Route::middleware('throttle:5,1')->group(function () {

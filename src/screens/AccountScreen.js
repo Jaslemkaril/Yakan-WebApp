@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import ScreenHeader from '../components/ScreenHeader';
@@ -7,7 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import ApiService from '../services/api';
 
 const AccountScreen = ({ navigation }) => {
-  const { isLoggedIn, userInfo, logout, updateUserInfo, setUserInfo } = useCart();
+  const { isLoggedIn, isLoadingAuth, userInfo, logout, updateUserInfo, setUserInfo } = useCart();
   const { theme } = useTheme();
   const styles = getStyles(theme);
   
@@ -85,6 +85,16 @@ const AccountScreen = ({ navigation }) => {
     }
     return name.substring(0, 2).toUpperCase();
   };
+
+  // Show loading state while auth initializes — prevents blank/crash renders
+  if (isLoadingAuth) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ScreenHeader title="Account" navigation={navigation} showBack={false} showHamburger={true} />
+        <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 80 }} />
+      </View>
+    );
+  }
 
   // Show login prompt if not logged in
   if (!isLoggedIn) {
