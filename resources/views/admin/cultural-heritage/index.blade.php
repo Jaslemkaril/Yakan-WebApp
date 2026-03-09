@@ -258,11 +258,14 @@ function deleteHeritage() {
     deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Deleting...';
     
     const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const authToken = new URLSearchParams(window.location.search).get('auth_token');
+    const deleteUrl = `/admin/cultural-heritage/${heritageToDelete}` + (authToken ? `?auth_token=${encodeURIComponent(authToken)}` : '');
     
-    fetch(`/admin/cultural-heritage/${heritageToDelete}`, {
+    fetch(deleteUrl, {
         method: 'DELETE',
         headers: {
             'X-CSRF-TOKEN': token,
+            'X-Auth-Token': authToken || '',
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         }
@@ -302,11 +305,14 @@ function deleteHeritage() {
 
 function toggleStatus(heritageId) {
     const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const authToken = new URLSearchParams(window.location.search).get('auth_token');
+    const toggleUrl = `/admin/cultural-heritage/${heritageId}/toggle-status` + (authToken ? `?auth_token=${encodeURIComponent(authToken)}` : '');
     
-    fetch(`/admin/cultural-heritage/${heritageId}/toggle-status`, {
+    fetch(toggleUrl, {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': token,
+            'X-Auth-Token': authToken || '',
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         }
