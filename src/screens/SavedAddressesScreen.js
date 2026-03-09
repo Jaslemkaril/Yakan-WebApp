@@ -1219,4 +1219,4 @@ const getStyles = (theme) => StyleSheet.create({
   },
   halfInput: {
     flex: 1,
-  },
+  },});
