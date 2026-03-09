@@ -29,12 +29,8 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
-
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
-        }
-
+        // Only update name — email is locked in the UI and cannot be changed
+        $request->user()->name = $request->validated()['name'];
         $request->user()->save();
 
         // Preserve auth_token for Railway deployment
