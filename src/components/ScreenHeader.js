@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Linking, Alert } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
@@ -43,10 +43,26 @@ const ScreenHeader = ({
     { label: 'Wishlist', icon: 'heart', screen: 'Wishlist' },
     { label: 'Cart', icon: 'cart', screen: 'Cart' },
     { label: 'Account', icon: 'account', screen: 'Account' },
-    { label: 'Custom Order', icon: 'pencil-box', screen: 'CustomOrder' },
     { label: 'Cultural Heritage', icon: 'palette', screen: 'CulturalHeritage' },
     { label: 'Settings', icon: 'cog', screen: 'Settings' },
   ];
+
+  const CUSTOM_ORDER_URL = 'https://yakan-webapp-production.up.railway.app';
+
+  const handleCustomOrderPress = () => {
+    setMenuVisible(false);
+    Alert.alert(
+      'Custom Order — Web Only',
+      'Custom orders require uploading reference images, detailed customization forms, and back-and-forth communication with our weavers. These features work best on a full browser, so Custom Order is only available on our website.\n\nTap “Open Website” to continue on your browser.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Open Website',
+          onPress: () => Linking.openURL(CUSTOM_ORDER_URL),
+        },
+      ]
+    );
+  };
 
   return (
     <>
@@ -133,6 +149,26 @@ const ScreenHeader = ({
                   <Text style={[styles.menuItemText, { color: theme.text }]}>{item.label}</Text>
                 </TouchableOpacity>
               ))}
+
+              {/* Custom Order — web-only link */}
+              <TouchableOpacity
+                style={[styles.menuItem, styles.menuItemWeb, { borderBottomColor: isDarkMode ? '#2A2A2A' : '#f5f5f5' }]}
+                onPress={handleCustomOrderPress}
+              >
+                <MaterialCommunityIcons
+                  name="scissors-cutting"
+                  size={24}
+                  color="#8B1A1A"
+                  style={styles.menuItemIcon}
+                />
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={[styles.menuItemText, { color: theme.text }]}>Custom Order</Text>
+                    <MaterialCommunityIcons name="open-in-new" size={14} color="#8B1A1A" />
+                  </View>
+                  <Text style={styles.menuItemSub}>Available on website only</Text>
+                </View>
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
@@ -248,6 +284,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1a1a1a',
+  },
+  menuItemSub: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
+    fontWeight: '400',
+  },
+  menuItemWeb: {
+    backgroundColor: 'rgba(139,26,26,0.04)',
   },
 });
 

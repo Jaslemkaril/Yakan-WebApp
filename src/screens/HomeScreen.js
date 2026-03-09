@@ -16,6 +16,7 @@ import {
   Modal,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Linking } from 'react-native';
 import { useCart } from '../context/CartContext';
 import BottomNav from '../components/BottomNav';
 import ScreenHeader from '../components/ScreenHeader';
@@ -393,6 +394,31 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* CUSTOM ORDER BANNER */}
+        <View style={styles.customOrderBanner}>
+          <View style={styles.customOrderLeft}>
+            <View style={styles.customOrderBadge}>
+              <MaterialCommunityIcons name="scissors-cutting" size={20} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.customOrderTitle}>Want a Custom Order?</Text>
+              <Text style={styles.customOrderDesc}>
+                Design your own Yakan weave — choose patterns, colors, and size. Available on our website.
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.customOrderButton}
+            onPress={() => {
+              Linking.openURL('https://yakan-webapp-production.up.railway.app');
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.customOrderButtonText}>Open Website</Text>
+            <MaterialCommunityIcons name="open-in-new" size={14} color="#8B1A1A" />
+          </TouchableOpacity>
+        </View>
 
         {/* CULTURAL HERITAGE SECTION */}
         <View style={styles.culturalSection}>
@@ -940,5 +966,64 @@ const getStyles = (theme) => StyleSheet.create({
     backgroundColor: theme.borderLight,
     marginVertical: 8,
     marginHorizontal: 16,
+  },
+  // CUSTOM ORDER BANNER
+  customOrderBanner: {
+    marginHorizontal: 20,
+    marginBottom: 25,
+    backgroundColor: theme.cardBackground,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(139,26,26,0.15)',
+    elevation: 3,
+    shadowColor: '#8B1A1A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+  },
+  customOrderLeft: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 12,
+  },
+  customOrderBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#8B1A1A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  customOrderTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 4,
+  },
+  customOrderDesc: {
+    fontSize: 13,
+    color: theme.textSecondary,
+    lineHeight: 18,
+  },
+  customOrderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: '#8B1A1A',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(139,26,26,0.06)',
+  },
+  customOrderButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#8B1A1A',
+    letterSpacing: 0.3,
   },
 });
