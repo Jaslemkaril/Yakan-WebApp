@@ -871,11 +871,17 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update shipping fee display
             const feeDisplay = document.getElementById('shippingFeeDisplay');
             const feeInput   = document.getElementById('shippingFeeInput');
+            const subtotal   = parseFloat('{{ $total }}');
+            const discount   = parseFloat('{{ $discount ?? 0 }}');
+            const totalEl    = document.getElementById('finalTotalDisplay');
+            let activeFee;
             if (this.value === 'pickup') {
+                activeFee = 0;
                 feeDisplay.textContent = 'FREE';
                 feeDisplay.className = 'font-bold text-green-600 text-lg';
                 if (feeInput) feeInput.value = 0;
             } else {
+                activeFee = deliveryShippingFee;
                 if (deliveryShippingFee === 0) {
                     feeDisplay.textContent = 'FREE';
                     feeDisplay.className = 'font-bold text-green-600 text-lg';
@@ -885,6 +891,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 if (feeInput) feeInput.value = deliveryShippingFee;
             }
+            if (totalEl) totalEl.textContent = '₱' + (subtotal + activeFee - discount).toFixed(2);
             
             // Update visual styling for selected option
             const deliveryLabel = document.getElementById('delivery-radio-label');
@@ -1066,23 +1073,40 @@ function openEditAddressModal(addressId, label, fullName, phoneNumber, streetAdd
     document.getElementById('editPostalCode').value = postalCode;
     document.getElementById('editIsDefault').checked = isDefault;
 
-    // Populate cascading selects
-    const regionSel = document.getElementById('editRegion');
+    // Populate cascading selects — detect region from city name in PH_LOCATIONS
+    let detectedRegion = '';
+    for (const r in PH_LOCATIONS) {
+        if (PH_LOCATIONS[r].cities && PH_LOCATIONS[r].cities[city]) {
+            detectedRegion = r; break;
+        }
+    }
+    // If city not found directly, try case-insensitive city match
+    if (!detectedRegion) {
+        for (const r in PH_LOCATIONS) {
+            for (const c in (PH_LOCATIONS[r].cities || {})) {
+                if (c.toLowerCase() === city.toLowerCase()) { detectedRegion = r; break; }
+            }
+            if (detectedRegion) break;
+        }
+    }
     populateRegionDropdown('edit');
-    // Try to match stored region to an option
-    for (let i = 0; i < regionSel.options.length; i++) {
-        if (regionSel.options[i].value.toLowerCase().includes(region.toLowerCase()) ||
-            region.toLowerCase().includes(regionSel.options[i].value.toLowerCase())) {
-            regionSel.selectedIndex = i;
-            break;
+    const regionSel = document.getElementById('editRegion');
+    if (detectedRegion) {
+        regionSel.value = detectedRegion;
+    } else {
+        // Fallback: match by stored region/province string
+        for (let i = 0; i < regionSel.options.length; i++) {
+            const rv = regionSel.options[i].value.toLowerCase();
+            if (rv.includes(region.toLowerCase()) || region.toLowerCase().includes(rv)) {
+                regionSel.selectedIndex = i; break;
+            }
         }
     }
     populateCityDropdown('edit');
     const citySel = document.getElementById('editCity');
     for (let i = 0; i < citySel.options.length; i++) {
         if (citySel.options[i].value.toLowerCase() === city.toLowerCase()) {
-            citySel.selectedIndex = i;
-            break;
+            citySel.selectedIndex = i; break;
         }
     }
     populateBarangayDropdown('edit');
@@ -1125,11 +1149,47 @@ function closeNewAddressModal() {
 function submitEditAddress() {
     const form = document.getElementById('editAddressForm');
     const addressId = document.getElementById('editAddressId').value;
-    
-    // Set form action and submit
-    form.action = `/addresses/${addressId}`;
-    form.method = 'POST';
-    injectAuthAndSubmit(form);
+
+    // Validate required fields
+    const region = document.getElementById('editRegion')?.value;
+    const city   = document.getElementById('editCity')?.value;
+    if (!region || !city) {
+        alert('Please select a Region and City/Municipality.');
+        return;
+    }
+
+    // Build form data
+    const formData = new FormData(form);
+    formData.set('_method', 'PUT');
+
+    // Auth token
+    const authToken = localStorage.getItem('yakan_auth_token') || '';
+    if (authToken) formData.set('auth_token', authToken);
+
+    // Buy-now params
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('buy_now') === '1') {
+        ['buy_now','product_id','quantity'].forEach(k => { if (urlParams.has(k)) formData.set(k, urlParams.get(k)); });
+    }
+
+    // Show loading spinner on button
+    const btn = document.querySelector('#editAddressModal button[onclick="submitEditAddress()"]');
+    const origText = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<svg class="animate-spin w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Saving...'; }
+
+    fetch(`/addresses/${addressId}`, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html,application/json,*/*' }
+    })
+    .then(res => {
+        // Success — reload checkout page to refresh the address display + shipping fee
+        window.location.reload();
+    })
+    .catch(() => {
+        if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+        alert('Failed to save. Please try again.');
+    });
 }
 
 function submitNewAddress() {
