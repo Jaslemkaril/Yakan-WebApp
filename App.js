@@ -1,4 +1,5 @@
 import React from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CartProvider, useCart } from './src/context/CartContext';
@@ -76,24 +77,73 @@ const AuthStackNavigator = () => (
   </Stack.Navigator>
 );
 
-const AppNavigator = ({ isLoggedIn }) => (
-  <Stack.Navigator
-    initialRouteName={isLoggedIn ? 'App' : 'Auth'}
-    screenOptions={{
-      headerShown: false,
-      animation: 'fade',
-      animationDuration: 300,
-    }}
-  >
-    <Stack.Screen name="App" component={AppStack} />
-    <Stack.Screen name="Auth" component={AuthStackNavigator} />
-  </Stack.Navigator>
-);
+const AppNavigator = ({ isLoggedIn, isLoadingAuth }) => {
+  if (isLoadingAuth) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#800020" />
+      </View>
+    );
+  }
+
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        animation: 'fade',
+        animationDuration: 300,
+      }}
+    >
+      {isLoggedIn ? (
+        <Stack.Screen name="App" component={AppStack} />
+      ) : (
+        <Stack.Screen name="Auth" component={AuthStackNavigator} />
+      )}
+    </Stack.Navigator>
+  );
+};
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#800020',
+  },
+});
+
+// Deep-link / URL scheme configuration for React Navigation.
+// Listing the yakanapp:// prefix prevents NavigationContainer from
+// crashing when the OAuth callback deep-link fires (yakanapp://auth-callback).
+// The auth-callback path is intentionally NOT listed so React Navigation
+// ignores it — it is handled directly by WebBrowser.openAuthSessionAsync.
+const linking = {
+  prefixes: ['yakanapp://'],
+  config: {
+    screens: {
+      App: {
+        screens: {
+          Home: 'home',
+          Products: 'products',
+          Cart: 'cart',
+          Orders: 'orders',
+          Account: 'account',
+        },
+      },
+      Auth: {
+        screens: {
+          Login: 'login',
+          Register: 'register',
+        },
+      },
+    },
+  },
+};
 
 function RootNavigator() {
-  const { isLoggedIn } = useCart();
+  const { isLoggedIn, isLoadingAuth } = useCart();
   
-  return <AppNavigator isLoggedIn={isLoggedIn} />;
+  return <AppNavigator isLoggedIn={isLoggedIn} isLoadingAuth={isLoadingAuth} />;
 }
 
 export default function App() {
@@ -104,7 +154,7 @@ export default function App() {
       <ThemeProvider>
         <NotificationProvider>
           <CartProvider>
-            <NavigationContainer>
+            <NavigationContainer linking={linking}>
               <NotificationBar />
               <RootNavigator />
             </NavigationContainer>

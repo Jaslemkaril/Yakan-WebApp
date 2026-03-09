@@ -327,93 +327,6 @@
             </div>
         </div>
 
-        {{-- ===== SHIPPING & LOCATION SECTION (delivery orders only) ===== --}}
-        @if($isDelivery && $adminDeliveryFee == 0)
-        <div class="payment-card p-8 mb-6">
-            <div class="order-summary-header">
-                <div class="order-summary-icon">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    </svg>
-                </div>
-                <div>
-                    <h2 class="text-2xl font-bold text-gray-900">Delivery Location &amp; Shipping Fee</h2>
-                    <p class="text-sm text-gray-500 mt-1">Shipping fee is based on distance from Zamboanga City.</p>
-                </div>
-            </div>
-
-            <!-- Shipping Zone Reference -->
-            <div class="mb-6 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                <div class="bg-green-50 border border-green-200 rounded-lg p-2 text-center">
-                    <div class="font-bold text-green-700">FREE</div>
-                    <div class="text-green-600">Within Zamboanga City</div>
-                </div>
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
-                    <div class="font-bold text-blue-700">₱100</div>
-                    <div class="text-blue-600">Zamboanga Peninsula + BARMM</div>
-                </div>
-                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-2 text-center">
-                    <div class="font-bold text-indigo-700">₱180</div>
-                    <div class="text-indigo-600">Other Mindanao Regions</div>
-                </div>
-                <div class="bg-purple-50 border border-purple-200 rounded-lg p-2 text-center">
-                    <div class="font-bold text-purple-700">₱250</div>
-                    <div class="text-purple-600">Visayas</div>
-                </div>
-                <div class="bg-orange-50 border border-orange-200 rounded-lg p-2 text-center">
-                    <div class="font-bold text-orange-700">₱300</div>
-                    <div class="text-orange-600">NCR + Nearby Luzon</div>
-                </div>
-                <div class="bg-red-50 border border-red-200 rounded-lg p-2 text-center">
-                    <div class="font-bold text-red-700">₱350</div>
-                    <div class="text-red-600">Far Luzon / Remote</div>
-                </div>
-            </div>
-
-            <!-- Region / City Dropdowns -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <!-- Region -->
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Province / Region <span class="text-red-600">*</span></label>
-                    <select id="payRegion" class="dropdown-field" onchange="payPopulateCity(); payCalcShipping()">
-                        <option value="">-- Select Region --</option>
-                    </select>
-                </div>
-                <!-- City -->
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">City / Municipality <span class="text-red-600">*</span></label>
-                    <select id="payCity" class="dropdown-field" onchange="payCalcShipping()">
-                        <option value="">-- Select City --</option>
-                    </select>
-                </div>
-                <!-- Barangay (full width) -->
-                <div class="sm:col-span-2">
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Barangay</label>
-                    <div id="payBarangayContainer">
-                        <select id="payBarangay" class="dropdown-field">
-                            <option value="">-- Select Barangay --</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Live Shipping Fee Display -->
-            <div class="mt-5 p-4 bg-gray-50 rounded-xl border-2 border-gray-200 flex items-center justify-between" id="shippingFeeResult">
-                <div>
-                    <div class="text-sm font-semibold text-gray-700">Calculated Shipping Fee</div>
-                    <div class="text-xs text-gray-500">Based on your selected region</div>
-                </div>
-                <div class="text-2xl font-bold text-[#800000]" id="shippingFeeResultVal">
-                    @if($calcShippingFee === null)—
-                    @elseif($calcShippingFee == 0)FREE
-                    @else₱{{ number_format($calcShippingFee, 2) }}
-                    @endif
-                </div>
-            </div>
-        </div>
-        @endif
-
         {{-- ===== PAYMENT FORM ===== --}}
         <form method="POST" action="{{ route('custom_orders.payment.process', $order->id) }}" id="customPaymentForm" class="payment-card p-8 mb-8">
             @csrf
@@ -487,9 +400,8 @@
     </div>
 </div>
 
-{{-- ===== PH_LOCATIONS + SHIPPING LOGIC SCRIPTS ===== --}}
 <script>
-// Philippine Locations Data — same zones as product checkout
+// (Shipping location selection was moved to Step 4)
 const PH_LOCATIONS = {
     "Zamboanga Peninsula (Region IX)": {
         shippingZone: 0,

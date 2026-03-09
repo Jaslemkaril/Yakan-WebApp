@@ -41,8 +41,8 @@ const ProductsScreen = ({ navigation }) => {
       
       console.log('🔵 Fetching products from API...');
       
-      // Fetch from Laravel API via ngrok
-      const response = await ApiService.getProducts();
+      // Fetch from Laravel API - request up to 100 products
+      const response = await ApiService.getProducts({ per_page: 100 });
       
       console.log('🔵 API Response:', JSON.stringify(response, null, 2));
       
@@ -254,11 +254,23 @@ const ProductsScreen = ({ navigation }) => {
                   <Text style={styles.productDescription} numberOfLines={2}>
                     {product.description}
                   </Text>
+                  {/* Stock indicator */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <View style={{
+                      width: 8, height: 8, borderRadius: 4,
+                      backgroundColor: product.stock > 0 ? '#27AE60' : '#E74C3C',
+                      marginRight: 6,
+                    }} />
+                    <Text style={{ fontSize: 12, color: product.stock > 0 ? '#27AE60' : '#E74C3C', fontWeight: '600' }}>
+                      {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+                    </Text>
+                  </View>
                   <View style={styles.productFooter}>
                     <Text style={styles.productPrice}>₱{product.price.toFixed(2)}</Text>
                     <TouchableOpacity
-                      style={styles.cartButton}
-                      onPress={() => handleAddToCart(product)}
+                      style={[styles.cartButton, product.stock === 0 && { opacity: 0.4 }]}
+                      onPress={() => product.stock > 0 && handleAddToCart(product)}
+                      disabled={product.stock === 0}
                     >
                       <Ionicons name="cart" size={20} color="#fff" />
                     </TouchableOpacity>

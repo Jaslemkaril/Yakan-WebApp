@@ -12,6 +12,7 @@ use App\Models\CouponRedemption;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Services\CloudinaryService;
 
 class CartController extends Controller
 {
@@ -993,13 +994,23 @@ HTML
                 
                 \Log::info('Validation passed');
 
-                // Upload image
-                $path = $request->file('receipt')->store('bank_receipts', 'public');
-                \Log::info('Bank receipt file uploaded', [
-                    'path' => $path,
-                    'order_id' => $orderId,
-                    'full_path' => storage_path('app/public/' . $path)
-                ]);
+                // Upload image — try Cloudinary first for persistent storage on Railway
+                $receiptFile = $request->file('receipt');
+                $cloudinary = new CloudinaryService();
+                $path = null;
+
+                if ($cloudinary->isEnabled()) {
+                    $result = $cloudinary->uploadFile($receiptFile, 'bank_receipts');
+                    if ($result) {
+                        $path = $result['url'];
+                        \Log::info('Bank receipt uploaded to Cloudinary', ['url' => $path, 'order_id' => $orderId]);
+                    }
+                }
+
+                if (!$path) {
+                    $path = $receiptFile->store('bank_receipts', 'public');
+                    \Log::info('Bank receipt uploaded to local storage (fallback)', ['path' => $path, 'order_id' => $orderId]);
+                }
 
                 // Direct DB update to ensure it saves
                 // Automatically set order status to 'processing' and payment_status to 'verified' when receipt is uploaded
@@ -1114,9 +1125,23 @@ HTML
                 abort(403, 'Unauthorized payment submission.');
             }
 
-            // Upload image
-            $path = $request->file('receipt')->store('bank_receipts', 'public');
-            \Log::info('Bank receipt uploaded', ['path' => $path, 'order_id' => $orderId]);
+            // Upload image — try Cloudinary first for persistent storage on Railway
+            $receiptFile = $request->file('receipt');
+            $cloudinary = new CloudinaryService();
+            $path = null;
+
+            if ($cloudinary->isEnabled()) {
+                $result = $cloudinary->uploadFile($receiptFile, 'bank_receipts');
+                if ($result) {
+                    $path = $result['url'];
+                    \Log::info('Bank receipt uploaded to Cloudinary (submitBankPayment)', ['url' => $path, 'order_id' => $orderId]);
+                }
+            }
+
+            if (!$path) {
+                $path = $receiptFile->store('bank_receipts', 'public');
+                \Log::info('Bank receipt uploaded to local storage (submitBankPayment fallback)', ['path' => $path, 'order_id' => $orderId]);
+            }
 
             // Direct DB update
             \DB::table('orders')

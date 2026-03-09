@@ -199,8 +199,8 @@
     <!-- Recent Orders Section -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 bg-gray-50">
         <div class="mb-12">
-            <h2 class="text-4xl font-bold text-gray-900 mb-2">Recently Shipped Orders</h2>
-            <p class="text-lg text-gray-600">Quick links to recent order tracking information</p>
+            <h2 class="text-4xl font-bold text-gray-900 mb-2">Your Recent Orders</h2>
+            <p class="text-lg text-gray-600">Quick links to your orders and tracking information</p>
         </div>
 
         <!-- Success/Error Messages -->
@@ -224,102 +224,174 @@
                 </div>
             </div>
         @endif
+        @if(session('info'))
+            <div class="mb-6 bg-blue-50 border-l-4 border-blue-500 text-blue-700 p-4 rounded-r-lg shadow-sm">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                    </svg>
+                    <strong>{{ session('info') }}</strong>
+                </div>
+            </div>
+        @endif
 
         @if($recentOrders->count() > 0)
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 @foreach($recentOrders as $order)
-                    <div class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden border-l-4 border-[#800000]">
+                    @php
+                        $isCustom  = ($order->_order_type ?? '') === 'custom';
+                        $status    = $order->status;
+                        // Normalise label for display
+                        $statusLabel = match($status) {
+                            'pending_confirmation' => 'Pending Confirmation',
+                            'price_quoted'         => 'Price Quoted',
+                            'in_production'        => 'In Production',
+                            default                => ucfirst($status),
+                        };
+                        // Badge colour per status
+                        $badgeClass = match($status) {
+                            'pending', 'pending_confirmation'          => 'bg-yellow-100 text-yellow-800',
+                            'confirmed', 'approved', 'completed'       => 'bg-green-100 text-green-800',
+                            'processing', 'price_quoted'               => 'bg-blue-100 text-blue-800',
+                            'in_production'                            => 'bg-purple-100 text-purple-800',
+                            'shipped'                                  => 'bg-indigo-100 text-indigo-800',
+                            'delivered'                                => 'bg-teal-100 text-teal-800',
+                            'verification_pending'                     => 'bg-orange-100 text-orange-800',
+                            'cancelled', 'rejected', 'refunded'        => 'bg-red-100 text-red-800',
+                            default                                    => 'bg-gray-100 text-gray-800',
+                        };
+                        // Amount to show
+                        $displayAmount = $isCustom
+                            ? ($order->final_price ?? $order->estimated_price ?? 0)
+                            : ($order->total_amount ?? 0);
+                    @endphp
+                    <div class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden border-l-4 {{ $isCustom ? 'border-purple-500' : 'border-[#800000]' }}">
                         <div class="p-6">
                             <!-- Order Header -->
-                            <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-start justify-between mb-3">
                                 <div>
-                                    <p class="text-sm text-gray-500 font-medium">Order ID</p>
-                                    <p class="text-2xl font-bold text-gray-900">#{{ $order->id }}</p>
+                                    <p class="text-xs text-gray-500 font-medium flex items-center gap-1">
+                                        @if($isCustom)
+                                            <span class="inline-block px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-semibold">🎨 Custom</span>
+                                        @else
+                                            <span class="inline-block px-2 py-0.5 bg-red-50 text-[#800000] rounded text-xs font-semibold">🛒 Order</span>
+                                        @endif
+                                        &nbsp;#{{ $order->id }}
+                                    </p>
                                 </div>
-                                <span class="px-3 py-1 rounded-full text-xs font-semibold
-                                    @if($order->status === 'completed')
-                                        bg-green-100 text-green-800
-                                    @elseif($order->status === 'processing')
-                                        bg-blue-100 text-blue-800
-                                    @elseif($order->status === 'shipped')
-                                        bg-purple-100 text-purple-800
-                                    @else
-                                        bg-gray-100 text-gray-800
-                                    @endif
-                                ">
-                                    {{ ucfirst($order->status) }}
+                                <span class="px-3 py-1 rounded-full text-xs font-semibold {{ $badgeClass }}">
+                                    {{ $statusLabel }}
                                 </span>
                             </div>
 
                             <!-- Customer Info -->
-                            <div class="mb-4">
-                                <p class="text-sm text-gray-500">Customer</p>
-                                <p class="text-gray-900 font-medium">{{ $order->user?->name ?? 'Guest' }}</p>
+                            <div class="mb-3">
+                                <p class="text-xs text-gray-500">Customer</p>
+                                <p class="text-gray-900 font-medium text-sm">{{ $order->user?->name ?? ($order->customer_name ?? 'Guest') }}</p>
                             </div>
 
                             <!-- Order Amount -->
-                            <div class="mb-4">
-                                <p class="text-sm text-gray-500">Total Amount</p>
-                                <p class="text-2xl font-bold text-[#800000]">₱{{ number_format($order->total_amount, 2) }}</p>
+                            <div class="mb-3">
+                                <p class="text-xs text-gray-500">{{ $isCustom ? 'Price' : 'Total Amount' }}</p>
+                                <p class="text-xl font-bold {{ $isCustom ? 'text-purple-700' : 'text-[#800000]' }}">
+                                    @if($displayAmount)
+                                        ₱{{ number_format($displayAmount, 2) }}
+                                    @else
+                                        <span class="text-sm text-gray-400 font-normal">Awaiting quote</span>
+                                    @endif
+                                </p>
                             </div>
 
-                            <!-- Tracking Number -->
-                            <div class="mb-4 p-3 bg-gray-50 rounded">
-                                <p class="text-xs text-gray-500 mb-1">Tracking #</p>
-                                <p class="font-mono text-sm font-bold text-gray-900 break-all">{{ $order->tracking_number }}</p>
-                            </div>
+                            @if(!$isCustom && $order->tracking_number)
+                                <!-- Tracking Number (regular orders only) -->
+                                <div class="mb-3 p-3 bg-gray-50 rounded">
+                                    <p class="text-xs text-gray-500 mb-1">Tracking #</p>
+                                    <p class="font-mono text-sm font-bold text-gray-900 break-all">{{ $order->tracking_number }}</p>
+                                </div>
+                            @elseif($isCustom)
+                                <!-- Production status type indicator -->
+                                <div class="mb-3 p-3 bg-purple-50 rounded">
+                                    <p class="text-xs text-purple-500 mb-1">Order Type</p>
+                                    <p class="text-sm font-semibold text-purple-700">Custom / Made-to-Order</p>
+                                </div>
+                            @endif
 
                             <!-- Order Date -->
-                            <div class="mb-6">
+                            <div class="mb-5">
                                 <p class="text-xs text-gray-500">Ordered on</p>
-                                <p class="text-sm text-gray-900">{{ $order->created_at->format('M d, Y - H:i A') }}</p>
+                                <p class="text-sm text-gray-900">{{ $order->created_at->format('M d, Y - h:i A') }}</p>
                             </div>
 
                             <!-- Action Buttons -->
-                            @if($order->status === 'completed')
-                                <!-- Greyed Order Received Button for Completed Orders -->
-                                <button type="button" 
-                                        class="block w-full text-center px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed font-semibold mb-3" disabled>
-                                    ✓ Order Received
-                                </button>
-                                <!-- View Order Button -->
-                                <a href="{{ route('orders.show', $order->id) }}" 
-                                   class="block w-full text-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-semibold">
-                                    View Order
-                                </a>
-                            @elseif($order->status === 'delivered' && !$order->delivered_at)
-                                <form action="{{ route('orders.confirm-received', $order->id) }}" method="POST" class="mb-3" onsubmit="return confirmOrderReceived(this, {{ $order->id }})">
-                                    @csrf
-                                    <button type="submit" 
-                                            id="confirm-btn-{{ $order->id }}"
-                                            class="block w-full text-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold">
+                            @if($isCustom)
+                                {{-- Custom order buttons --}}
+                                @if($status === 'delivered' && !$order->delivered_at)
+                                    <form action="{{ route('custom_orders.confirm_received', $order->id) }}" method="POST" class="mb-2">
+                                        @csrf
+                                        <button type="submit"
+                                                class="block w-full text-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold text-sm">
+                                            ✓ Confirm Received
+                                        </button>
+                                    </form>
+                                @elseif(in_array($status, ['delivered', 'completed']))
+                                    <button type="button"
+                                            class="block w-full text-center px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-semibold text-sm mb-2" disabled>
                                         ✓ Order Received
                                     </button>
-                                </form>
-                                <!-- Track This Order Button -->
-                                <a href="{{ route('track-order.show', $order->tracking_number) }}" 
-                                   class="block w-full text-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-semibold">
-                                    Track This Order
-                                </a>
-                            @elseif($order->status === 'delivered' && $order->delivered_at)
-                                <button type="button" 
-                                        class="block w-full text-center px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed font-semibold mb-3" disabled>
-                                    ✓ Order Received
-                                </button>
-                                <!-- Track This Order Button -->
-                                <a href="{{ route('track-order.show', $order->tracking_number) }}" 
-                                   class="block w-full text-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-semibold">
-                                    Track This Order
-                                </a>
-                            @elseif($order->tracking_number)
-                                <a href="{{ route('track-order.show', $order->tracking_number) }}" 
-                                   class="block w-full text-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-semibold">
-                                    Track This Order
+                                @endif
+                                <a href="{{ route('custom_orders.show', $order->id) }}"
+                                   class="block w-full text-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold text-sm">
+                                    View Custom Order
                                 </a>
                             @else
-                                <span class="block w-full text-center px-4 py-2 bg-gray-300 text-gray-600 rounded-lg font-semibold">
-                                    No Tracking Yet
-                                </span>
+                                {{-- Regular order buttons --}}
+                                @if(in_array($status, ['completed']))
+                                    <button type="button"
+                                            class="block w-full text-center px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed font-semibold text-sm mb-2" disabled>
+                                        ✓ Order Received
+                                    </button>
+                                    <a href="{{ route('orders.show', $order->id) }}"
+                                       class="block w-full text-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-semibold text-sm">
+                                        View Order
+                                    </a>
+                                @elseif($status === 'delivered' && !$order->delivered_at)
+                                    <form action="{{ route('orders.confirm-received', $order->id) }}" method="POST" class="mb-2"
+                                          onsubmit="return confirmOrderReceived(this, {{ $order->id }})">
+                                        @csrf
+                                        <button type="submit"
+                                                id="confirm-btn-{{ $order->id }}"
+                                                class="block w-full text-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold text-sm">
+                                            ✓ Confirm Received
+                                        </button>
+                                    </form>
+                                    @if($order->tracking_number)
+                                        <a href="{{ route('track-order.show', $order->tracking_number) }}"
+                                           class="block w-full text-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-semibold text-sm">
+                                            Track This Order
+                                        </a>
+                                    @endif
+                                @elseif($status === 'delivered' && $order->delivered_at)
+                                    <button type="button"
+                                            class="block w-full text-center px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed font-semibold text-sm mb-2" disabled>
+                                        ✓ Order Received
+                                    </button>
+                                    @if($order->tracking_number)
+                                        <a href="{{ route('track-order.show', $order->tracking_number) }}"
+                                           class="block w-full text-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-semibold text-sm">
+                                            Track This Order
+                                        </a>
+                                    @endif
+                                @elseif($order->tracking_number)
+                                    <a href="{{ route('track-order.show', $order->tracking_number) }}"
+                                       class="block w-full text-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-semibold text-sm">
+                                        Track This Order
+                                    </a>
+                                @else
+                                    <a href="{{ route('orders.show', $order->id) }}"
+                                       class="block w-full text-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-semibold text-sm">
+                                        View Order Details
+                                    </a>
+                                @endif
                             @endif
                         </div>
                     </div>
@@ -331,7 +403,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m0 0l8 4m-8-4v10l8 4m0-10l8 4m0 0v10l-8 4m0-10l-8 4"/>
                 </svg>
                 <p class="text-gray-500 text-lg">No recent orders yet</p>
-                <p class="text-gray-400 mb-4">Orders will appear here once they are placed and shipped</p>
+                <p class="text-gray-400 mb-4">Your orders will appear here once placed</p>
             </div>
         @endif
     </section>

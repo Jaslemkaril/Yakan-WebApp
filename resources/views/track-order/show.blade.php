@@ -87,12 +87,16 @@
         font-weight: 600;
     }
 
-    .status-pending { background: #fef3c7; color: #92400e; }
-    .status-processing { background: #dbeafe; color: #1e40af; }
-    .status-shipped { background: #e0e7ff; color: #4338ca; }
-    .status-delivered { background: #d1fae5; color: #065f46; }
-    .status-completed { background: #d1fae5; color: #065f46; }
-    .status-cancelled { background: #fee2e2; color: #991b1b; }
+    .status-pending             { background: #fef3c7; color: #92400e; }
+    .status-pending_confirmation{ background: #fef3c7; color: #92400e; }
+    .status-confirmed           { background: #d1fae5; color: #065f46; }
+    .status-processing          { background: #dbeafe; color: #1e40af; }
+    .status-shipped             { background: #e0e7ff; color: #4338ca; }
+    .status-delivered           { background: #ccfbf1; color: #0f766e; }
+    .status-completed           { background: #d1fae5; color: #065f46; }
+    .status-cancelled           { background: #fee2e2; color: #991b1b; }
+    .status-refunded            { background: #f3f4f6; color: #374151; }
+    .status-verification_pending{ background: #ffedd5; color: #9a3412; }
 
     .info-card {
         background: #f9fafb;
@@ -137,8 +141,12 @@
                 <div class="tracking-card p-8">
                     <div class="flex items-center justify-between mb-6">
                         <h2 class="text-2xl font-bold text-gray-900">Current Status</h2>
-                        <span class="status-badge status-{{ strtolower($order->status) }}">
-                            {{ ucfirst($order->status) }}
+                        <span class="status-badge status-{{ str_replace(' ', '_', $order->status) }}">
+                            {{ match($order->status) {
+                                'pending_confirmation' => 'Pending Confirmation',
+                                'verification_pending' => 'Verification Pending',
+                                default => ucfirst($order->status)
+                            } }}
                         </span>
                     </div>
 

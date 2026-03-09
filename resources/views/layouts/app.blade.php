@@ -1154,10 +1154,20 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            // ── Show loading screen when logout form is submitted
+            // ── Show loading screen when logout form is submitted (max 4 s then force-redirect)
             document.querySelectorAll('form[action*="/logout"]').forEach(function(form) {
                 form.addEventListener('submit', function() {
-                    showPageTransitionOverlay('Signing out…');
+                    var ov = document.getElementById('pageTransitionOverlay');
+                    var msgEl = document.getElementById('ptoMessage');
+                    var fill = document.getElementById('ptoFill');
+                    if (ov) {
+                        if (msgEl) msgEl.textContent = 'Signing out\u2026';
+                        // Use a fast 3-second animation for logout
+                        if (fill) { fill.style.animation = 'none'; void fill.offsetHeight; fill.style.animation = 'ptofill 3s ease-out forwards'; }
+                        ov.style.display = 'flex';
+                        // Force redirect to login after 4 s in case server is slow
+                        setTimeout(function() { window.location.href = '/login'; }, 4000);
+                    }
                 });
             });
 

@@ -226,8 +226,10 @@
                             <span class="text-sm font-semibold text-gray-700 block mb-2">Payment Receipt</span>
                             <div class="bg-[#faf5f5] rounded-lg p-3 border border-[#e0b0b0]">
                                 @php
-                                    // All new receipts use public disk (storage/)
-                                    $receiptUrl = asset('storage/' . $order->payment_receipt);
+                                    // Support both Cloudinary URLs and local storage
+                                    $receiptUrl = (str_starts_with($order->payment_receipt, 'http://') || str_starts_with($order->payment_receipt, 'https://'))
+                                        ? $order->payment_receipt
+                                        : asset('storage/' . $order->payment_receipt);
                                 @endphp
                                 <a href="{{ $receiptUrl }}" target="_blank" class="block">
                                     @php
@@ -280,8 +282,10 @@
                         </div>
                         
                         @php
-                            // All new receipts use public disk (storage/)
-                            $receiptUrl = asset('storage/' . $order->payment_receipt);
+                            // Support both Cloudinary URLs and local storage
+                            $receiptUrl = (str_starts_with($order->payment_receipt, 'http://') || str_starts_with($order->payment_receipt, 'https://'))
+                                ? $order->payment_receipt
+                                : asset('storage/' . $order->payment_receipt);
                         @endphp
                         
                         <a href="{{ $receiptUrl }}" target="_blank" class="block">

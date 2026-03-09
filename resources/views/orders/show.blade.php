@@ -243,7 +243,12 @@
                             @php
                                 $hasReceipt = !empty($order->bank_receipt) || !empty($order->payment_proof_path);
                                 $receiptPath = $order->bank_receipt ?: $order->payment_proof_path;
-                                $receiptUrl = $receiptPath ? \Illuminate\Support\Facades\Storage::url($receiptPath) : null;
+                                // Support both Cloudinary URLs and local storage paths
+                                $receiptUrl = $receiptPath
+                                    ? ((str_starts_with($receiptPath, 'http://') || str_starts_with($receiptPath, 'https://'))
+                                        ? $receiptPath
+                                        : \Illuminate\Support\Facades\Storage::url($receiptPath))
+                                    : null;
                                 $isCleared = in_array($effectivePaymentStatus, ['paid', 'verified', 'verification_pending'], true);
                             @endphp
 

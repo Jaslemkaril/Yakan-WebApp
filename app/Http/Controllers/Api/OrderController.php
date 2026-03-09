@@ -187,13 +187,26 @@ class OrderController extends Controller
         ]);
 
         $updateData = [];
+        $cloudinary = new \App\Services\CloudinaryService();
 
         if ($request->hasFile('gcash_receipt')) {
-            $updateData['gcash_receipt'] = $request->file('gcash_receipt')->store('receipts', 'public');
+            $file = $request->file('gcash_receipt');
+            if ($cloudinary->isEnabled()) {
+                $result = $cloudinary->uploadFile($file, 'receipts');
+                $updateData['gcash_receipt'] = $result ? $result['url'] : $file->store('receipts', 'public');
+            } else {
+                $updateData['gcash_receipt'] = $file->store('receipts', 'public');
+            }
         }
 
         if ($request->hasFile('bank_receipt')) {
-            $updateData['bank_receipt'] = $request->file('bank_receipt')->store('receipts', 'public');
+            $file = $request->file('bank_receipt');
+            if ($cloudinary->isEnabled()) {
+                $result = $cloudinary->uploadFile($file, 'receipts');
+                $updateData['bank_receipt'] = $result ? $result['url'] : $file->store('receipts', 'public');
+            } else {
+                $updateData['bank_receipt'] = $file->store('receipts', 'public');
+            }
         }
 
         if (!empty($updateData)) {

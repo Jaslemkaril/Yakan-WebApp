@@ -733,6 +733,55 @@
                                     @endif
                                 </div>
 
+                                <!-- Shipping Zone Reference (delivery only) -->
+                                <div id="shipping-zone-section" class="mt-4">
+                                    <div class="p-4 rounded-xl border-2 border-gray-200" style="background:#f9fafb;">
+                                        <h4 class="text-sm font-bold text-gray-700 mb-3 flex items-center">
+                                            <svg class="w-4 h-4 mr-2 flex-shrink-0" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            </svg>
+                                            Delivery Location &amp; Shipping Fee
+                                            <span class="ml-2 text-xs text-gray-400 font-normal">(from Zamboanga City)</span>
+                                        </h4>
+                                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs mb-4">
+                                            <div class="bg-green-50 border border-green-200 rounded-lg p-2 text-center">
+                                                <div class="font-bold text-green-700">FREE</div>
+                                                <div class="text-green-600">Within Zamboanga City</div>
+                                            </div>
+                                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
+                                                <div class="font-bold text-blue-700">&#8369;100</div>
+                                                <div class="text-blue-600">Zamboanga Peninsula + BARMM</div>
+                                            </div>
+                                            <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-2 text-center">
+                                                <div class="font-bold text-indigo-700">&#8369;180</div>
+                                                <div class="text-indigo-600">Other Mindanao Regions</div>
+                                            </div>
+                                            <div class="bg-purple-50 border border-purple-200 rounded-lg p-2 text-center">
+                                                <div class="font-bold text-purple-700">&#8369;250</div>
+                                                <div class="text-purple-600">Visayas</div>
+                                            </div>
+                                            <div class="bg-orange-50 border border-orange-200 rounded-lg p-2 text-center">
+                                                <div class="font-bold text-orange-700">&#8369;300</div>
+                                                <div class="text-orange-600">NCR + Nearby Luzon</div>
+                                            </div>
+                                            <div class="bg-red-50 border border-red-200 rounded-lg p-2 text-center">
+                                                <div class="font-bold text-red-700">&#8369;350</div>
+                                                <div class="text-red-600">Far Luzon / Remote</div>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center justify-between p-3 bg-white rounded-lg border-2 border-gray-300" id="step4ShippingFeeBox">
+                                            <div>
+                                                <div class="text-sm font-semibold text-gray-700">Estimated Shipping Fee</div>
+                                                <div class="text-xs text-gray-500" id="step4ShippingZoneLabel">Based on your selected address</div>
+                                            </div>
+                                            <div class="text-xl font-bold" style="color:#800000;" id="step4ShippingFeeDisplay">
+                                                @if($shippingFee == 0) FREE @else &#8369;{{ number_format($shippingFee, 2) }} @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- Store Pickup Information -->
                                 <div id="pickup-info-section" class="hidden">
                                     <div class="bg-gradient-to-br from-maroon-50 to-maroon-100 border-2 border-maroon-200 rounded-xl p-6">
@@ -869,6 +918,7 @@ function initDeliveryToggle() {
     const deliveryRadios = document.querySelectorAll('input[name="delivery_type"]');
     const deliverySection = document.getElementById('delivery-address-section');
     const pickupSection = document.getElementById('pickup-info-section');
+    const shippingZoneSection = document.getElementById('shipping-zone-section');
     const deliveryOptionLabel = document.getElementById('delivery-option-label');
     const pickupOptionLabel = document.getElementById('pickup-option-label');
     
@@ -888,6 +938,7 @@ function initDeliveryToggle() {
             // Show delivery fields, hide pickup info
             deliverySection.classList.remove('hidden');
             pickupSection.classList.add('hidden');
+            if (shippingZoneSection) shippingZoneSection.classList.remove('hidden');
             
             // Make delivery fields required
             deliveryFields.forEach(field => {
@@ -904,6 +955,7 @@ function initDeliveryToggle() {
             // Show pickup info, hide delivery fields
             deliverySection.classList.add('hidden');
             pickupSection.classList.remove('hidden');
+            if (shippingZoneSection) shippingZoneSection.classList.add('hidden');
             
             // Remove required from delivery fields
             deliveryFields.forEach(field => {
@@ -918,6 +970,47 @@ function initDeliveryToggle() {
         }
     }
     
+    // Update shipping fee display when address selection changes
+    document.querySelectorAll('input[name="address_id"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            const label = this.closest('label');
+            if (!label) return;
+            const cityEl = label.querySelector('.text-sm.text-gray-600');
+            if (!cityEl) return;
+            const text = (cityEl.textContent || '').toLowerCase();
+            const SHIPPING_ZONES = {
+                0: { label: 'Within Zamboanga City', fee: 0 },
+                1: { label: 'Zamboanga Peninsula + BARMM', fee: 100 },
+                2: { label: 'Other Mindanao Regions', fee: 180 },
+                3: { label: 'Visayas', fee: 250 },
+                4: { label: 'NCR + Nearby Luzon', fee: 300 },
+                5: { label: 'Far Luzon / Remote', fee: 350 }
+            };
+            let zone = 5;
+            if (text.includes('zamboanga city') || text.includes('zamboanga del')) zone = 0;
+            else if (text.includes('barmm') || text.includes('bangsamoro') || text.includes('basilan') || text.includes('sulu') || text.includes('tawi')) zone = 1;
+            else if (text.includes('mindanao') || text.includes('davao') || text.includes('cagayan de oro') || text.includes('iligan') || text.includes('cotabato') || text.includes('caraga') || text.includes('general santos') || text.includes('soccsksargen')) zone = 2;
+            else if (text.includes('visaya') || text.includes('cebu') || text.includes('iloilo') || text.includes('bacolod') || text.includes('tacloban') || text.includes('leyte') || text.includes('samar') || text.includes('bohol') || text.includes('negros')) zone = 3;
+            else if (text.includes('ncr') || text.includes('metro manila') || text.includes('manila') || text.includes('quezon city') || text.includes('makati') || text.includes('calabarzon') || text.includes('central luzon') || text.includes('laguna') || text.includes('cavite') || text.includes('bulacan')) zone = 4;
+            const info = SHIPPING_ZONES[zone];
+            const feeDisplay = document.getElementById('step4ShippingFeeDisplay');
+            const zoneLabel = document.getElementById('step4ShippingZoneLabel');
+            const shippingFeeDisplay = document.getElementById('shippingFeeDisplay');
+            const finalTotalDisplay = document.getElementById('finalTotalDisplay');
+            const priceData = document.getElementById('priceData');
+            if (feeDisplay) feeDisplay.textContent = info.fee === 0 ? 'FREE' : '\u20B1' + info.fee.toFixed(2);
+            if (zoneLabel) zoneLabel.textContent = info.label;
+            if (shippingFeeDisplay) shippingFeeDisplay.textContent = info.fee === 0 ? 'FREE' : '\u20B1' + info.fee.toFixed(2);
+            if (finalTotalDisplay && priceData) {
+                const base = parseFloat(priceData.dataset.basePrice || 0);
+                const fabric = parseFloat(priceData.dataset.fabricCostBase || 0);
+                const addons = parseFloat(priceData.dataset.addonsTotal || 0);
+                const total = base + fabric + info.fee + addons;
+                finalTotalDisplay.textContent = '\u20B1' + total.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+        });
+    });
+
     // Add event listeners
     deliveryRadios.forEach(radio => {
         radio.addEventListener('change', toggleDeliveryPickup);
