@@ -436,14 +436,15 @@ class DashboardController extends Controller
 
             // --- Total Revenue ---
             if (in_array('revenue', $sections)) {
-                $data['totalRevenue'] = (float) (clone $dateQuery)->where('status', 'completed')->sum('total_amount');
+                $completedStatuses = ['completed', 'delivered'];
+                $data['totalRevenue'] = (float) (clone $dateQuery)->whereIn('status', $completedStatuses)->sum('total_amount');
                 $data['totalOrders'] = (clone $dateQuery)->count();
-                $data['completedOrders'] = (clone $dateQuery)->where('status', 'completed')->count();
+                $data['completedOrders'] = (clone $dateQuery)->whereIn('status', $completedStatuses)->count();
                 $data['pendingOrders'] = (clone $dateQuery)->where('status', 'pending')->count();
                 $data['averageOrderValue'] = $data['completedOrders'] > 0 ? $data['totalRevenue'] / $data['completedOrders'] : 0;
 
                 // Monthly revenue for chart (last 12 months)
-                $data['monthlyRevenue'] = Order::where('status', 'completed')
+                $data['monthlyRevenue'] = Order::whereIn('status', $completedStatuses)
                     ->where('created_at', '>=', now()->subMonths(12))
                     ->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, SUM(total_amount) as revenue, COUNT(*) as orders')
                     ->groupBy('year', 'month')
@@ -458,14 +459,14 @@ class DashboardController extends Controller
                     'yearly' => 365,
                     default => 30,
                 };
-                $data['dailyRevenue'] = Order::where('status', 'completed')
+                $data['dailyRevenue'] = Order::whereIn('status', $completedStatuses)
                     ->where('created_at', '>=', now()->subDays($daysRange))
                     ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue, COUNT(*) as orders')
                     ->groupBy('date')
                     ->orderBy('date')
                     ->get();
 
-                // Payment method breakdown
+                // Payment method breakdown (all orders, not just completed)
                 $data['paymentMethods'] = (clone $dateQuery)->selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
                     ->groupBy('payment_method')
                     ->get();
