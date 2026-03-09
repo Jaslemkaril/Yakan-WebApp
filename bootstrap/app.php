@@ -48,6 +48,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin/logout',
             'verify-otp',
             'resend-otp',
+            'password',
             'password/*',
             'forgot-password',
             'reset-password',
