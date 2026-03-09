@@ -52,13 +52,15 @@ class DashboardController extends Controller
             $pendingOrders = (clone $dateQuery)->where('status', 'pending')->count();
             $completedOrders = (clone $dateQuery)->where('status', 'completed')->count();
             $totalUsers = \App\Models\User::count();
-            $totalRevenue = (float) (clone $dateQuery)->where('status', 'completed')->sum('total_amount');
+            // Revenue counts ALL orders (not just 'completed') since orders go through
+            // pending → processing → shipped → delivered before being marked completed
+            $totalRevenue = (float) (clone $dateQuery)->sum('total_amount');
 
             // New analytics
-            $averageOrderValue = $completedOrders > 0 ? $totalRevenue / $completedOrders : 0;
+            $averageOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
             $ordersWithNotes = (clone $dateQuery)->whereNotNull('customer_notes')->where('customer_notes', '!=', '')->count();
             $todayOrders = \App\Models\Order::whereDate('created_at', today())->count();
-            $todayRevenue = (float) \App\Models\Order::whereDate('created_at', today())->where('status', 'completed')->sum('total_amount');
+            $todayRevenue = (float) \App\Models\Order::whereDate('created_at', today())->sum('total_amount');
             $shippedOrders = (clone $dateQuery)->where('status', 'shipped')->count();
             $deliveredOrders = (clone $dateQuery)->where('status', 'delivered')->count();
             
@@ -145,7 +147,6 @@ class DashboardController extends Controller
             }
             
             $allSalesData = \App\Models\Order::where('created_at', '>=', now()->subDays($salesDataRange))
-                ->where('status', 'completed')
                 ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue, COUNT(*) as orders')
                 ->groupBy('date')
                 ->orderBy('date')
@@ -211,10 +212,9 @@ class DashboardController extends Controller
                     ];
                 });
             $totalUsers = \App\Models\User::count();
-            $totalRevenue = (float) \App\Models\Order::where('status', 'completed')->sum('total_amount');
+            $totalRevenue = (float) \App\Models\Order::sum('total_amount');
 
             $series = \App\Models\Order::where('created_at', '>=', $start)
-                ->where('status', 'completed')
                 ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue')
                 ->groupBy('date')
                 ->orderBy('date')
