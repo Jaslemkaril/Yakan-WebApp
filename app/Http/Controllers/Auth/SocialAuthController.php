@@ -144,11 +144,14 @@ HTML);
                 return redirect()->away('yakanapp://auth-callback?error=' . urlencode('Google login is not configured on this server.'));
             }
 
-            // Mark this flow as coming from the mobile app so the callback
-            // knows to return a deep link instead of a web page
-            session(['is_mobile_oauth' => true, 'mobile_oauth_provider' => $provider]);
-
-            return Socialite::driver($provider)->stateless()->redirect();
+            // Pass 'mobile' in the OAuth state parameter so the callback knows
+            // to return a deep link instead of a web page.
+            // This survives the Google round-trip without relying on sessions
+            // (sessions are unreliable on stateless Railway deployments).
+            return Socialite::driver($provider)
+                ->with(['state' => 'mobile'])
+                ->stateless()
+                ->redirect();
 
         } catch (\Exception $e) {
             \Log::error('Mobile OAuth redirect error', ['provider' => $provider, 'error' => $e->getMessage()]);
@@ -281,9 +284,10 @@ HTML);
             ]);
 
             // ── Mobile app: return a deep-link with a Sanctum token ──────────────
-            if (session('is_mobile_oauth')) {
-                session()->forget(['is_mobile_oauth', 'mobile_oauth_provider']);
-
+            // The 'mobile' state is passed from mobileRedirect() through the OAuth
+            // flow and comes back here as the 'state' query parameter.
+            $isMobileOauth = request('state') === 'mobile';
+            if ($isMobileOauth) {
                 // Create a proper Sanctum token (same as /api/v1/login)
                 $sanctumToken = $user->createToken('mobile-oauth')->plainTextToken;
 
