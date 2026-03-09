@@ -115,7 +115,7 @@
 
     .auth-input {
         width: 100%;
-        padding: 14px 16px 14px 48px;
+        padding: 14px 48px 14px 48px;
         border: 2px solid #e5e7eb;
         border-radius: 12px;
         font-size: 16px;
@@ -131,6 +131,31 @@
 
     .auth-input:focus ~ .input-icon {
         color: #dc2626;
+    }
+
+    /* Inner wrapper so the strength bar doesn't affect icon centering */
+    .input-wrapper {
+        position: relative;
+    }
+
+    .toggle-password {
+        position: absolute;
+        right: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        color: #9ca3af;
+        display: flex;
+        align-items: center;
+        line-height: 0;
+        transition: color 0.2s;
+    }
+
+    .toggle-password:hover {
+        color: #6b7280;
     }
 
     .password-strength {
@@ -450,21 +475,31 @@
                             @enderror
 
                             <div class="input-group">
-                                <input 
-                                    id="password" 
-                                    type="password" 
-                                    name="password" 
-                                    class="auth-input" 
-                                    placeholder="Password (min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special)"
-                                    required
-                                    autocomplete="new-password"
-                                    oninput="checkPasswordStrength(this.value)"
-                                >
-                                <label for="password" class="input-icon">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                                    </svg>
-                                </label>
+                                <div class="input-wrapper">
+                                    <input 
+                                        id="password" 
+                                        type="password" 
+                                        name="password" 
+                                        class="auth-input" 
+                                        placeholder="Password (min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special)"
+                                        required
+                                        autocomplete="new-password"
+                                        oninput="checkPasswordStrength(this.value)"
+                                    >
+                                    <label for="password" class="input-icon">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                        </svg>
+                                    </label>
+                                    <button type="button" class="toggle-password" onclick="togglePassword('password', this)" tabindex="-1" aria-label="Toggle password visibility">
+                                        <svg class="eye-open w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                                        </svg>
+                                        <svg class="eye-closed w-5 h-5 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>
+                                        </svg>
+                                    </button>
+                                </div>
                                 <div class="password-strength">
                                     <div id="password-strength-bar" class="password-strength-bar"></div>
                                 </div>
@@ -483,20 +518,30 @@
                             @enderror
 
                             <div class="input-group">
-                                <input 
-                                    id="password_confirmation" 
-                                    type="password" 
-                                    name="password_confirmation" 
-                                    class="auth-input" 
-                                    placeholder="Confirm password"
-                                    required
-                                    autocomplete="new-password"
-                                >
-                                <label for="password_confirmation" class="input-icon">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                                    </svg>
-                                </label>
+                                <div class="input-wrapper">
+                                    <input 
+                                        id="password_confirmation" 
+                                        type="password" 
+                                        name="password_confirmation" 
+                                        class="auth-input" 
+                                        placeholder="Confirm password"
+                                        required
+                                        autocomplete="new-password"
+                                    >
+                                    <label for="password_confirmation" class="input-icon">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                        </svg>
+                                    </label>
+                                    <button type="button" class="toggle-password" onclick="togglePassword('password_confirmation', this)" tabindex="-1" aria-label="Toggle password visibility">
+                                        <svg class="eye-open w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                                        </svg>
+                                        <svg class="eye-closed w-5 h-5 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
 
                             @error('password_confirmation')
@@ -574,6 +619,14 @@
 </div>
 
 <script>
+function togglePassword(fieldId, btn) {
+    const input = document.getElementById(fieldId);
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    btn.querySelector('.eye-open').classList.toggle('hidden', show);
+    btn.querySelector('.eye-closed').classList.toggle('hidden', !show);
+}
+
 let passwordTimeout;
 function checkPasswordStrength(password) {
     clearTimeout(passwordTimeout);
