@@ -698,11 +698,8 @@ class CartController extends Controller
             $regionLower = strtolower($userAddress->province ?? $userAddress->region ?? '');
             $postalCode = $userAddress->postal_code ?? '';
 
-            // Zone 0 — FREE: Zamboanga City
-            if (str_contains($cityLower, 'zamboanga')) {
-                $shippingFee = 0;
-            // Zone 1 — ₱100: Zamboanga Peninsula + BARMM
-            } elseif (str_contains($regionLower, 'zamboanga') || str_contains($regionLower, 'barmm') || str_contains($regionLower, 'bangsamoro') ||
+            // Zone 1 — ₱100: Zamboanga City + Peninsula + BARMM
+            if (str_contains($cityLower, 'zamboanga') || str_contains($regionLower, 'zamboanga') || str_contains($regionLower, 'barmm') || str_contains($regionLower, 'bangsamoro') ||
                       in_array($cityLower, ['dipolog city', 'dapitan city', 'pagadian city', 'isabela city',
                                             'zamboanga del norte', 'zamboanga del sur', 'zamboanga sibugay',
                                             'ipil', 'jolo', 'bongao', 'cotabato city', 'marawi city', 'lamitan city'])) {

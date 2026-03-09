@@ -542,12 +542,9 @@
                                         $region = strtolower($defaultAddress->province ?? $defaultAddress->region ?? '');
                                         $postalCode = $defaultAddress->postal_code ?? '';
 
-                                        // Zone 0 — FREE: Within Zamboanga City
-                                        if (str_contains($city, 'zamboanga')) {
-                                            $shippingFee = 0;
-                                        }
-                                        // Zone 1 — ₱100: Zamboanga Peninsula + BARMM (~150–500 km)
-                                        elseif (str_contains($region, 'zamboanga') ||
+                                        // Zone 1 — ₱100: Zamboanga City + Zamboanga Peninsula + BARMM
+                                        if (str_contains($city, 'zamboanga') ||
+                                                str_contains($region, 'zamboanga') ||
                                                 str_contains($region, 'barmm') || str_contains($region, 'bangsamoro') ||
                                                 in_array($city, ['dipolog city', 'dapitan city', 'pagadian city',
                                                                  'isabela city', 'zamboanga del norte', 'zamboanga del sur',
@@ -979,14 +976,10 @@ function selectAddress(addressId, fullName, phoneNumber, formattedAddress, city,
     const cityLower = city.toLowerCase();
     const regionLower = region.toLowerCase();
     
-    // FREE - Zamboanga City proper
-    if (cityLower.includes('zamboanga')) {
-        shippingFee = 0;
-    }
-    // ₱80 - Zamboanga Peninsula (nearby)
-    else if (regionLower.includes('zamboanga') || 
+    // ₱100 — Zamboanga City + Peninsula + BARMM
+    if (cityLower.includes('zamboanga') || regionLower.includes('zamboanga') ||
              ['isabela', 'dipolog', 'dapitan', 'pagadian'].includes(cityLower)) {
-        shippingFee = 80;
+        shippingFee = 100;
     }
     // ₱120 - Western Mindanao
     else if (['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao'].includes(cityLower) ||
