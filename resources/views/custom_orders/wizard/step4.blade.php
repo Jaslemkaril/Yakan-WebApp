@@ -748,7 +748,8 @@
                                                 <div class="bg-white rounded-lg p-4 border border-maroon-300">
                                                     <p class="font-semibold text-gray-900">Tuwas Yakan Weaving Center</p>
                                                     <p class="text-sm text-gray-700 mt-2">
-                                                        123 Yakan Street, Barangay Tulay<br>
+                                                        Yakan Village, Upper Calarian<br>
+                                                        Labuan-Limpapa Road, National Road<br>
                                                         Zamboanga City, Philippines 7000
                                                     </p>
                                                     <p class="text-xs text-gray-600 mt-3">

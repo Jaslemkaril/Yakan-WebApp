@@ -208,7 +208,7 @@
                                         <svg class="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
                                         </svg>
-                                        <span class="text-gray-800"><strong>Address:</strong> Yakan Village, Brgy. Upper Calarian, Zamboanga City, Philippines 7000</span>
+                                        <span class="text-gray-800"><strong>Address:</strong> Yakan Village, Upper Calarian, Labuan-Limpapa Road, National Road, Zamboanga City, Philippines 7000</span>
                                     </p>
                                     <div class="space-y-3 text-sm">
                                         <div class="flex items-start gap-2 bg-white rounded-lg p-3 border border-red-100">

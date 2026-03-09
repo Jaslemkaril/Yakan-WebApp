@@ -5,10 +5,24 @@
 @push('styles')
 <style>
     .auth-container {
-        background: #800000;
+        background: url('{{ asset("images/jus.jpg") }}') center center / cover no-repeat;
         min-height: 100vh;
         position: relative;
         overflow: hidden;
+    }
+
+    .auth-container::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(100, 0, 0, 0.55);
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    .auth-container > * {
+        position: relative;
+        z-index: 1;
     }
 
     .auth-container::before {
