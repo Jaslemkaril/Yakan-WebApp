@@ -67,6 +67,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'profile',
             'profile/*',
             'admin/*',
+            'reviews',
+            'reviews/*',
         ]);
         
         $middleware->api(prepend: [
