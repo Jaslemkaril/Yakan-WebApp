@@ -9,6 +9,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Services\CloudinaryService;
 
 class ReviewController extends Controller
 {
@@ -80,7 +81,26 @@ class ReviewController extends Controller
             'rating' => 'required|integer|min:1|max:5',
             'title' => 'nullable|string|max:255',
             'comment' => 'nullable|string|max:1000',
+            'images' => 'nullable|array|max:5',
+            'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
+
+        // Upload review images
+        $imageUrls = [];
+        if ($request->hasFile('images')) {
+            $cloudinary = new CloudinaryService();
+            foreach ($request->file('images') as $img) {
+                if ($cloudinary->isEnabled()) {
+                    $result = $cloudinary->uploadFile($img, 'reviews');
+                    if ($result) {
+                        $imageUrls[] = $result['url'];
+                    }
+                } else {
+                    $path = $img->store('reviews', 'public');
+                    $imageUrls[] = asset('storage/' . $path);
+                }
+            }
+        }
 
         // Check if review already exists
         $existingReview = Review::where('order_item_id', $orderItem->id)
@@ -89,7 +109,9 @@ class ReviewController extends Controller
 
         if ($existingReview) {
             // Update existing review
-            $existingReview->update($validated);
+            $existingReview->update(array_merge($validated, [
+                'review_images' => !empty($imageUrls) ? $imageUrls : ($existingReview->review_images ?? []),
+            ]));
             $message = 'Review updated successfully!';
         } else {
             // Create new review
@@ -101,6 +123,7 @@ class ReviewController extends Controller
                 'rating' => $validated['rating'],
                 'title' => $validated['title'],
                 'comment' => $validated['comment'],
+                'review_images' => $imageUrls,
                 'verified_purchase' => true,
             ]);
             $message = 'Review submitted successfully!';
@@ -125,7 +148,26 @@ class ReviewController extends Controller
             'rating' => 'required|integer|min:1|max:5',
             'title' => 'nullable|string|max:255',
             'comment' => 'nullable|string|max:1000',
+            'images' => 'nullable|array|max:5',
+            'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
+
+        // Upload review images
+        $imageUrls = [];
+        if ($request->hasFile('images')) {
+            $cloudinary = new CloudinaryService();
+            foreach ($request->file('images') as $img) {
+                if ($cloudinary->isEnabled()) {
+                    $result = $cloudinary->uploadFile($img, 'reviews');
+                    if ($result) {
+                        $imageUrls[] = $result['url'];
+                    }
+                } else {
+                    $path = $img->store('reviews', 'public');
+                    $imageUrls[] = asset('storage/' . $path);
+                }
+            }
+        }
 
         // Check if review already exists
         $existingReview = Review::where('custom_order_id', $customOrder->id)
@@ -134,7 +176,9 @@ class ReviewController extends Controller
 
         if ($existingReview) {
             // Update existing review
-            $existingReview->update($validated);
+            $existingReview->update(array_merge($validated, [
+                'review_images' => !empty($imageUrls) ? $imageUrls : ($existingReview->review_images ?? []),
+            ]));
             $message = 'Review updated successfully!';
         } else {
             // Create new review
@@ -145,6 +189,7 @@ class ReviewController extends Controller
                 'rating' => $validated['rating'],
                 'title' => $validated['title'],
                 'comment' => $validated['comment'],
+                'review_images' => $imageUrls,
                 'verified_purchase' => true,
             ]);
             $message = 'Review submitted successfully!';

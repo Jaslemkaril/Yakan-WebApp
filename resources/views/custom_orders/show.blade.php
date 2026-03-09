@@ -1477,6 +1477,140 @@
     </div>
 </div>
 
+{{-- ===== REVIEW SECTION ===== --}}
+@if(in_array($order->status, ['delivered', 'completed']) && auth()->check())
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-10 pb-12" id="review-section">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color:#800000;">
+            <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+            </svg>
+        </div>
+        Rate Your Custom Order
+    </h2>
+
+    @php
+        $customReview = \App\Models\Review::where('custom_order_id', $order->id)
+            ->where('user_id', auth()->id())
+            ->first();
+    @endphp
+
+    <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200" style="background-color:#fff5f5;">
+            <p class="font-semibold text-gray-800">Custom Order #{{ $order->id }} — {{ $order->product->name ?? 'Custom Fabric' }}</p>
+            <p class="text-sm text-gray-500">Share your experience with this custom order</p>
+        </div>
+
+        <div class="px-6 py-5">
+            @if($customReview)
+                {{-- Show existing review --}}
+                <div class="space-y-3">
+                    <div class="flex items-center gap-1 flex-wrap">
+                        @for($s = 1; $s <= 5; $s++)
+                            <svg class="w-7 h-7 {{ $s <= $customReview->rating ? 'text-yellow-400' : 'text-gray-300' }}" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                            </svg>
+                        @endfor
+                        <span class="ml-2 text-sm text-gray-600 font-semibold">{{ $customReview->rating }}/5</span>
+                        <span class="ml-auto text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full font-semibold">✓ Review Submitted</span>
+                    </div>
+                    @if($customReview->title)
+                        <p class="font-semibold text-gray-800">"{{ $customReview->title }}"</p>
+                    @endif
+                    @if($customReview->comment)
+                        <p class="text-gray-700 text-sm">{{ $customReview->comment }}</p>
+                    @endif
+                    @if($customReview->review_images && count($customReview->review_images) > 0)
+                        <div class="flex gap-2 flex-wrap mt-2">
+                            @foreach($customReview->review_images as $imgUrl)
+                                <img src="{{ $imgUrl }}" alt="Review photo" class="w-20 h-20 object-cover rounded-lg border border-gray-200">
+                            @endforeach
+                        </div>
+                    @endif
+                    <p class="text-xs text-gray-400">Submitted {{ $customReview->created_at->format('M d, Y') }}</p>
+                </div>
+            @else
+                {{-- Review form --}}
+                <form action="{{ route('reviews.store.custom-order', $order) }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="space-y-4">
+                        {{-- Star Rating --}}
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Rating <span class="text-red-500">*</span></label>
+                            <div class="flex gap-1" id="custom-stars">
+                                @for($s = 1; $s <= 5; $s++)
+                                    <button type="button" data-value="{{ $s }}"
+                                        class="custom-star-btn w-10 h-10 text-gray-300 hover:text-yellow-400 transition-colors"
+                                        onclick="setCustomRating({{ $s }})">
+                                        <svg fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                    </button>
+                                @endfor
+                                <input type="hidden" name="rating" id="custom-rating" value="" required>
+                            </div>
+                        </div>
+
+                        {{-- Title --}}
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Review Title</label>
+                            <input type="text" name="title" maxlength="255" placeholder="Summarize your experience" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent" style="--tw-ring-color:#800000;">
+                        </div>
+
+                        {{-- Comment --}}
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Your Review</label>
+                            <textarea name="comment" rows="3" maxlength="1000" placeholder="Share your experience with this custom order..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent resize-none" style="--tw-ring-color:#800000;"></textarea>
+                        </div>
+
+                        {{-- Photo Upload --}}
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Photos (optional, up to 5)</label>
+                            <input type="file" name="images[]" accept="image/*" multiple
+                                class="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#800000] file:text-white hover:file:bg-[#600000] cursor-pointer"
+                                onchange="previewCustomImages(this)">
+                            <div id="custom-review-preview" class="flex flex-wrap gap-2 mt-2"></div>
+                        </div>
+
+                        <button type="submit" class="text-white font-bold py-2.5 px-6 rounded-lg transition-colors duration-200 shadow" style="background-color:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
+                            Submit Review
+                        </button>
+                    </div>
+                </form>
+            @endif
+        </div>
+    </div>
+</div>
+
+<script>
+function setCustomRating(value) {
+    document.getElementById('custom-rating').value = value;
+    const stars = document.querySelectorAll('#custom-stars .custom-star-btn');
+    stars.forEach(function(btn) {
+        const v = parseInt(btn.getAttribute('data-value'));
+        btn.classList.toggle('text-yellow-400', v <= value);
+        btn.classList.toggle('text-gray-300', v > value);
+    });
+}
+
+function previewCustomImages(input) {
+    const preview = document.getElementById('custom-review-preview');
+    preview.innerHTML = '';
+    const files = Array.from(input.files).slice(0, 5);
+    files.forEach(function(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.className = 'w-20 h-20 object-cover rounded-lg border border-gray-200';
+            preview.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+</script>
+@endif
+
 <style>
 @keyframes fade-in {
     from {
