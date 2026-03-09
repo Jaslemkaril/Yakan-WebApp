@@ -124,15 +124,28 @@ class AddressController extends Controller
     {
         $this->authorize('update', $address);
 
-        // Resolve IDs from stored name strings so the edit form can pre-select dropdowns
-        $province = PhilippineProvince::where('name', $address->province)->first();
-        $city     = $province
-            ? PhilippineCity::where('name', $address->city)->where('province_id', $province->id)->first()
-            : null;
-        $barangay = $city
+        // Resolve IDs by searching city name first (most reliable — city is stored correctly).
+        // Province column may contain the region name (legacy data), so don't rely on it alone.
+        $city     = PhilippineCity::where('name', $address->city)->first();
+        $province = null;
+        $region   = null;
+
+        if ($city) {
+            $province = PhilippineProvince::find($city->province_id);
+            $region   = $province ? PhilippineRegion::find($province->region_id) : null;
+        } else {
+            // Fallback: try exact province name match
+            $province = PhilippineProvince::where('name', $address->province)->first();
+            // Also try partial match (handles stored region names like 'Zamboanga Peninsula (Region IX)')
+            if (!$province) {
+                $province = PhilippineProvince::where('name', 'like', '%' . trim(explode('(', $address->province)[0]) . '%')->first();
+            }
+            $region = $province ? PhilippineRegion::find($province->region_id) : null;
+        }
+
+        $barangay = ($city && $address->barangay)
             ? PhilippineBarangay::where('name', $address->barangay)->where('city_id', $city->id)->first()
             : null;
-        $region = $province ? PhilippineRegion::find($province->region_id) : null;
 
         return view('addresses.edit', compact('address', 'region', 'province', 'city', 'barangay'));
     }
