@@ -306,6 +306,7 @@
         <div style="width:64px;height:64px;border:4px solid rgba(255,255,255,0.3);border-top:4px solid white;border-radius:50%;animation:wlSpin 0.9s linear infinite;margin:0 auto 24px;"></div>
         <p style="font-size:18px;font-weight:600;margin-bottom:8px;" id="wlTitle">Saving order details...</p>
         <p style="font-size:14px;opacity:0.7;" id="wlSubtitle">Please wait a moment</p>
+        <div style="height:3px;background:rgba(255,255,255,0.15);border-radius:2px;overflow:hidden;width:200px;margin:20px auto 0;"><div id="wlProgress" style="height:100%;background:rgba(255,255,255,0.75);border-radius:2px;width:0%;"></div></div>
     </div>
 </div>
 <style>
@@ -318,8 +319,18 @@ function showWizardLoading(title, subtitle) {
     if (title) document.getElementById('wlTitle').textContent = title;
     if (subtitle) document.getElementById('wlSubtitle').textContent = subtitle;
     ov.style.display = 'flex';
+    var prog = document.getElementById('wlProgress');
+    if (prog) { prog.style.transition = 'none'; prog.style.width = '0%'; void prog.offsetHeight; prog.style.transition = 'width 20s cubic-bezier(0.1,0.4,0.2,1)'; prog.style.width = '88%'; }
+    if (window._wlTimer) clearTimeout(window._wlTimer);
+    window._wlTimer = setTimeout(function() {
+        var sub = document.getElementById('wlSubtitle');
+        if (sub && ov.style.display === 'flex') sub.textContent = 'Still processing\u2026 almost there';
+    }, 15000);
 }
-function hideWizardLoading() { document.getElementById('wizardLoadingOverlay').style.display = 'none'; }
+function hideWizardLoading() {
+    document.getElementById('wizardLoadingOverlay').style.display = 'none';
+    if (window._wlTimer) { clearTimeout(window._wlTimer); window._wlTimer = null; }
+}
 function getWizardAuthToken() {
     return new URLSearchParams(window.location.search).get('auth_token') ||
            localStorage.getItem('yakan_auth_token') || '';

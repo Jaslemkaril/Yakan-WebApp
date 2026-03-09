@@ -1198,6 +1198,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div style="width:56px;height:56px;border:4px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:wlSpin 0.8s linear infinite;margin:0 auto 32px;"></div>
         <p id="wlTitle" style="font-size:22px;font-weight:700;margin:0 0 10px;">Submitting your order...</p>
         <p id="wlSubtitle" style="font-size:15px;opacity:0.75;margin:0;">Creating your custom order...</p>
+        <div style="height:3px;background:rgba(255,255,255,0.15);border-radius:2px;overflow:hidden;width:200px;margin:20px auto 0;"><div id="wlProgress" style="height:100%;background:rgba(255,255,255,0.75);border-radius:2px;width:0%;"></div></div>
     </div>
 </div>
 <style>
@@ -1212,11 +1213,19 @@ function showWizardLoading(title, subtitle) {
         document.getElementById('wlSubtitle').textContent = subtitle || 'Please wait a moment';
         overlay.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+        var prog = document.getElementById('wlProgress');
+        if (prog) { prog.style.transition = 'none'; prog.style.width = '0%'; void prog.offsetHeight; prog.style.transition = 'width 20s cubic-bezier(0.1,0.4,0.2,1)'; prog.style.width = '88%'; }
+        if (window._wlTimer) clearTimeout(window._wlTimer);
+        window._wlTimer = setTimeout(function() {
+            var sub = document.getElementById('wlSubtitle');
+            if (sub && overlay.style.display === 'flex') sub.textContent = 'Still processing\u2026 almost there';
+        }, 15000);
     }
 }
 function hideWizardLoading() {
     var overlay = document.getElementById('wizardLoadingOverlay');
     if (overlay) { overlay.style.display = 'none'; document.body.style.overflow = ''; }
+    if (window._wlTimer) { clearTimeout(window._wlTimer); window._wlTimer = null; }
 }
 function getWizardAuthToken() {
     return new URLSearchParams(window.location.search).get('auth_token') ||

@@ -1131,7 +1131,7 @@
     <style>
         @keyframes ptofadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes ptospin{to{transform:rotate(360deg)}}
-        @keyframes ptofill{from{width:0%}to{width:100%}}
+        @keyframes ptofill{0%{width:0%}40%{width:65%}70%{width:80%}85%{width:87%}100%{width:91%}}
     </style>
     <script>
         function showPageTransitionOverlay(msg) {
@@ -1140,9 +1140,16 @@
             var fill = document.getElementById('ptoFill');
             if (ov) {
                 if (msg && msgEl) msgEl.textContent = msg;
-                // Restart progress bar animation
-                if (fill) { fill.style.animation = 'none'; fill.offsetHeight; fill.style.animation = 'ptofill 2.5s ease-out forwards'; }
+                // Restart progress bar — runs for 25 s, never quite reaches 100 %
+                if (fill) { fill.style.animation = 'none'; void fill.offsetHeight; fill.style.animation = 'ptofill 25s ease-out forwards'; }
                 ov.style.display = 'flex';
+                // After 12 s show a "still loading" hint so users know it hasn't frozen
+                if (window._ptoMsgTimer) clearTimeout(window._ptoMsgTimer);
+                window._ptoMsgTimer = setTimeout(function() {
+                    if (ov.style.display === 'flex' && msgEl) {
+                        msgEl.textContent = 'Still loading\u2026 please wait';
+                    }
+                }, 12000);
             }
         }
 

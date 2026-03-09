@@ -654,13 +654,22 @@ function filterUserOrders(status) {
     });
 }
 
+// Reload preserving the auth_token query param (needed for token-based auth users)
+function authReload() {
+    var t = localStorage.getItem('yakan_auth_token');
+    var url = window.location.pathname + window.location.search;
+    if (t && url.indexOf('auth_token') === -1) {
+        url += (url.indexOf('?') >= 0 ? '&' : '?') + 'auth_token=' + encodeURIComponent(t);
+    }
+    window.location.href = url;
+}
+
 function checkForUpdates() {
     const refreshBtn = event.currentTarget || event.target;
     const originalContent = refreshBtn.innerHTML;
     refreshBtn.innerHTML = '<svg class="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Refreshing...';
     refreshBtn.disabled = true;
-    // Simply reload the page to get the latest order statuses
-    location.reload();
+    authReload();
 }
 
 function checkForNotifications() {
@@ -702,7 +711,7 @@ function submitPriceDecision(orderId, decision, reason = '') {
         if (data.success) {
             showNotification(`Price ${decision}ed successfully!`, 'success');
             setTimeout(() => {
-                location.reload();
+                authReload();
             }, 1500);
         } else {
             showNotification(data.message || 'Failed to submit decision', 'error');
@@ -813,7 +822,7 @@ function simulateRealTimeUpdates() {
                 });
                 // Optionally refresh the page or update specific elements
                 if (data.data.page_refresh) {
-                    location.reload();
+                    authReload();
                 }
             }
         })
