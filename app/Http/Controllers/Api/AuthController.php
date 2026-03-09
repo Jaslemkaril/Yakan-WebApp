@@ -112,46 +112,71 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         try {
-            \Log::info('Login attempt', [
-                'email' => $request->email,
-                'headers' => $request->headers->all(),
-                'content_type' => $request->header('Content-Type'),
-                'accept' => $request->header('Accept'),
+            $credentials = $request->validate([
+                'email'    => 'required|email',
+                'password' => 'required|string',
             ]);
 
-            $credentials = $request->validate([
-                'email' => 'required|email',
-                'password' => 'required',
-            ]);
+            $email    = strtolower(trim($credentials['email']));
+            $throttleKey = 'login:' . $email . '|' . $request->ip();
+
+            // Check if this email+IP has been locked out (10 failed attempts = 15 min lock)
+            if (\Cache::has($throttleKey . ':locked')) {
+                $seconds = \Cache::get($throttleKey . ':locked');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Too many failed login attempts. Try again in ' . ceil($seconds / 60) . ' minute(s).',
+                ], 429);
+            }
+
+            $credentials['email'] = $email;
 
             if (Auth::attempt($credentials)) {
-                $user = Auth::user();
+                // Clear failed attempt counter on success
+                \Cache::forget($throttleKey . ':attempts');
+                \Cache::forget($throttleKey . ':locked');
+
+                $user  = Auth::user();
                 $token = $user->createToken('api-token')->plainTextToken;
-                
-                \Log::info('Login successful', ['user_id' => $user->id]);
-                
+
+                \Log::info('API Login successful', ['user_id' => $user->id]);
+
                 return response()->json([
                     'success' => true,
                     'data' => [
                         'user' => [
-                            'id' => $user->id,
+                            'id'         => $user->id,
                             'first_name' => $user->first_name,
-                            'last_name' => $user->last_name,
-                            'name' => $user->first_name . ' ' . $user->last_name,
-                            'email' => $user->email,
-                            'role' => $user->role,
+                            'last_name'  => $user->last_name,
+                            'name'       => trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')),
+                            'email'      => $user->email,
+                            'role'       => $user->role,
                             'created_at' => $user->created_at,
                         ],
-                        'token' => $token
-                    ]
+                        'token' => $token,
+                    ],
                 ]);
             }
 
-            \Log::warning('Login failed - invalid credentials', ['email' => $request->email]);
-            
+            // Track failed attempts
+            $attempts = (int) \Cache::get($throttleKey . ':attempts', 0) + 1;
+            \Cache::put($throttleKey . ':attempts', $attempts, now()->addMinutes(15));
+
+            if ($attempts >= 10) {
+                \Cache::put($throttleKey . ':locked', 900, now()->addMinutes(15)); // 15 min lockout
+                \Log::warning('API account locked after failed attempts', ['email' => $email]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Account temporarily locked after too many failed attempts. Try again in 15 minutes.',
+                ], 429);
+            }
+
+            $remaining = 10 - $attempts;
+            \Log::warning('API Login failed', ['email' => $email, 'attempts' => $attempts]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid credentials'
+                'message' => 'Invalid email or password.' . ($remaining <= 3 ? ' ' . $remaining . ' attempt(s) remaining before lockout.' : ''),
             ], 401);
             
         } catch (\Exception $e) {

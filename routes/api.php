@@ -13,13 +13,17 @@ use App\Http\Controllers\PaymentController;
 
 Route::prefix('v1')->group(function () {
     // ===================== AUTHENTICATION (Public) =====================
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login-guest', [AuthController::class, 'loginGuest']);
-    
+    // Rate limited: 5 attempts per minute from the same IP
+    Route::middleware('throttle:5,1')->group(function () {
+        Route::post('/login', [AuthController::class, 'login']);
+        Route::post('/login-guest', [AuthController::class, 'loginGuest']);
+    });
+    // Register: 3 attempts per 5 minutes
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:3,5');
+
     // Social Authentication
-    Route::post('/auth/google', [SocialAuthController::class, 'googleLogin']);
-    Route::post('/auth/facebook', [SocialAuthController::class, 'facebookLogin']);
+    Route::post('/auth/google', [SocialAuthController::class, 'googleLogin'])->middleware('throttle:5,1');
+    Route::post('/auth/facebook', [SocialAuthController::class, 'facebookLogin'])->middleware('throttle:5,1');
 
     // ===================== PRODUCTS (Public) =====================
     Route::get('/products', [ProductController::class, 'index']);

@@ -239,6 +239,11 @@ class ApiService {
    * Login user
    */
   async login(email, password) {
+    // Clear any stale stored token before attempting a fresh login.
+    // This prevents a ghost-authentication where a previously saved
+    // valid token auto-logs the user in regardless of what they typed.
+    await this.clearToken();
+
     const response = await this.request('POST', API_CONFIG.ENDPOINTS.AUTH.LOGIN, {
       email,
       password,
