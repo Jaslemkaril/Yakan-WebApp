@@ -232,7 +232,7 @@ HTML);
                 ['user_id' => $user->id],
                 [
                     'token' => $token,
-                    'expires_at' => now()->addHours(24),
+                    'expires_at' => now()->addDays(30),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]

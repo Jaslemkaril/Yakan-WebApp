@@ -51,6 +51,11 @@ class TokenAuth
                     
                     // Store token in session for subsequent requests
                     session(['auth_token' => $token]);
+
+                    // Sliding refresh: extend token expiry on each successful use
+                    DB::table('auth_tokens')
+                        ->where('token', $token)
+                        ->update(['expires_at' => now()->addDays(30), 'updated_at' => now()]);
                     
                     \Log::info('TokenAuth: User authenticated', [
                         'user_id' => $user->id,

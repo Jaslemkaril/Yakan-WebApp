@@ -57,7 +57,7 @@ class AuthenticatedSessionController extends Controller
             ['user_id' => $user->id],
             [
                 'token' => $token,
-                'expires_at' => now()->addHours(24),
+                'expires_at' => now()->addDays(30),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]
@@ -74,9 +74,15 @@ class AuthenticatedSessionController extends Controller
         
         \Log::info('User login successful', ['user_id' => $user->id]);
 
+        // Honor intended URL (e.g., the page that triggered auth failure)
+        $intended = $request->input('redirect_to');
+        $baseRedirect = ($intended && str_starts_with($intended, '/') && !str_contains($intended, '//') && !in_array($intended, ['/login', '/logout', '/register', '/login-user']))
+            ? $intended
+            : '/dashboard';
+
         // Return a branded loading page instead of a plain redirect response
         // to avoid the Symfony "Redirecting to..." plain text on Railway.
-        $redirectUrl = json_encode('/dashboard?auth_token=' . $token);
+        $redirectUrl = json_encode($baseRedirect . (str_contains($baseRedirect, '?') ? '&' : '?') . 'auth_token=' . $token);
         $userName = htmlspecialchars($user->name ?? 'there', ENT_QUOTES, 'UTF-8');
 
         return response(<<<HTML

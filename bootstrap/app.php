@@ -98,9 +98,33 @@ return Application::configure(basePath: dirname(__DIR__))
                 }
                 // For regular web requests return a branded loading page that redirects to
                 // the login form, instead of Symfony's plain "Redirecting to [link]" body.
-                $loginUrl = $request->is('admin/*')
-                    ? json_encode(route('admin.login.form'))
-                    : json_encode(route('login.user.form'));
+                // Pass the referring page as `redirect_to` so users return after login.
+                $intended = $request->header('referer', '');
+                // For POST requests the referer is the *form page* — send user back there after login.
+                // For GET requests the current URL is the intended destination.
+                if ($request->isMethod('get')) {
+                    $intended = $request->fullUrl();
+                }
+                // Strip the domain and only keep the path+query, and avoid auth paths
+                $intendedPath = '';
+                try {
+                    $parsedPath = parse_url($intended, PHP_URL_PATH) ?? '';
+                    $parsedQuery = parse_url($intended, PHP_URL_QUERY) ?? '';
+                    $authPaths = ['/login', '/logout', '/register', '/login-user', '/admin/login', '/verify-otp'];
+                    $isAuthPath = array_filter($authPaths, fn($p) => str_starts_with($parsedPath, $p));
+                    if (!$isAuthPath && $parsedPath && $parsedPath !== '/') {
+                        $intendedPath = $parsedPath . ($parsedQuery ? '?' . $parsedQuery : '');
+                    }
+                } catch (\Throwable) {}
+
+                if ($request->is('admin/*')) {
+                    $loginUrl = json_encode(route('admin.login.form'));
+                } else {
+                    $baseLoginUrl = route('login.user.form');
+                    $loginUrl = $intendedPath
+                        ? json_encode($baseLoginUrl . '?redirect_to=' . urlencode($intendedPath))
+                        : json_encode($baseLoginUrl);
+                }
                 return response(<<<HTML
 <!DOCTYPE html>
 <html lang="en">

@@ -416,6 +416,9 @@
                         <!-- Login Form -->
                         <form method="POST" action="{{ route('login.user.submit') }}">
                             @csrf
+                            @if(request('redirect_to'))
+                                <input type="hidden" name="redirect_to" value="{{ request('redirect_to') }}">
+                            @endif
                             
                             <div class="input-group">
                                 <input 
