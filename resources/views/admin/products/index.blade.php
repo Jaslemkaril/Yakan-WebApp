@@ -161,19 +161,19 @@ use Illuminate\Support\Facades\Storage;
                     </div>
                     
                     <!-- Stock Badge -->
-                    @if($product->stock <= 10)
+                    @if($product->available_stock <= 10)
                     <div class="absolute top-2 left-2">
                         <span class="px-2 py-1 text-xs font-semibold rounded-full
-                            @if($product->stock == 0)
+                            @if($product->available_stock == 0)
                                 bg-red-100 text-red-800
                             @else
                                 bg-yellow-100 text-yellow-800
                             @endif
                         ">
-                            @if($product->stock == 0)
+                            @if($product->available_stock == 0)
                                 Out of Stock
                             @else
-                                Low Stock ({{ $product->stock }})
+                                Low Stock ({{ $product->available_stock }})
                             @endif
                         </span>
                     </div>
@@ -187,7 +187,7 @@ use Illuminate\Support\Facades\Storage;
                     <div class="flex items-center justify-between mb-3">
                         <div>
                             <p class="text-lg font-bold text-gray-900">₱{{ number_format($product->price, 2) }}</p>
-                            <p class="text-xs text-gray-500">Stock: {{ $product->stock }}</p>
+                            <p class="text-xs text-gray-500">Stock: {{ $product->available_stock }}</p>
                         </div>
                         <div class="text-right">
                             <div class="text-xs text-gray-500">SKU</div>

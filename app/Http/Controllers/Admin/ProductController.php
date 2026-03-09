@@ -39,30 +39,38 @@ class ProductController extends Controller
             });
         }
 
-        // Stock level filter
+        // Stock level filter — use inventory.quantity when available, fall back to products.stock
         if ($request->filled('stock')) {
+            $query->leftJoin('inventory', 'inventory.product_id', '=', 'products.id')
+                  ->select('products.*');
             switch ($request->stock) {
                 case 'in_stock':
-                    $query->where('stock', '>', 10);
+                    $query->whereRaw('COALESCE(inventory.quantity, products.stock) > 10');
                     break;
                 case 'low_stock':
-                    $query->where('stock', '>', 0)->where('stock', '<=', 10);
+                    $query->whereRaw('COALESCE(inventory.quantity, products.stock) > 0')
+                          ->whereRaw('COALESCE(inventory.quantity, products.stock) <= 10');
                     break;
                 case 'out_of_stock':
-                    $query->where('stock', '<=', 0);
+                    $query->whereRaw('COALESCE(inventory.quantity, products.stock) <= 0');
                     break;
             }
         }
 
-        $products = $query->latest()->paginate(10)->withQueryString();
+        $products = $query->latest('products.created_at')->paginate(10)->withQueryString();
 
         $categories = \App\Models\Category::orderBy('name')->get();
 
         // Counts always come from all products (unfiltered) so stat cards are always accurate
         $allProductsCount  = Product::count();
         $activeCount       = Product::where('status', 'active')->count();
-        $lowStockCount     = Product::where('stock', '>', 0)->where('stock', '<=', 10)->count();
-        $outOfStockCount   = Product::where('stock', '<=', 0)->count();
+        $lowStockCount     = Product::leftJoin('inventory', 'inventory.product_id', '=', 'products.id')
+            ->whereRaw('COALESCE(inventory.quantity, products.stock) > 0')
+            ->whereRaw('COALESCE(inventory.quantity, products.stock) <= 10')
+            ->count('products.id');
+        $outOfStockCount   = Product::leftJoin('inventory', 'inventory.product_id', '=', 'products.id')
+            ->whereRaw('COALESCE(inventory.quantity, products.stock) <= 0')
+            ->count('products.id');
 
         return view('admin.products.index', compact('products', 'categories', 'allProductsCount', 'activeCount', 'lowStockCount', 'outOfStockCount'));
     }

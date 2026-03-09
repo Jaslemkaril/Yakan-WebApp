@@ -115,8 +115,12 @@ class DashboardController extends Controller
 
             $totalProducts = \App\Models\Product::count();
             
-            // Out-of-stock items
-            $outOfStockItems = \App\Models\Product::where('stock', '<=', 0)->with('category')->get();
+            // Out-of-stock items (check inventory.quantity first, fall back to products.stock)
+            $outOfStockItems = \App\Models\Product::leftJoin('inventory', 'inventory.product_id', '=', 'products.id')
+                ->whereRaw('COALESCE(inventory.quantity, products.stock) <= 0')
+                ->with('category', 'inventory')
+                ->select('products.*')
+                ->get();
             $outOfStockCount = $outOfStockItems->count();
 
             // Top products by sold quantity (Best Sellers)
@@ -341,8 +345,12 @@ class DashboardController extends Controller
                 ->get();
 
             $totalProducts = Product::count();
-            $outOfStockCount = Product::where('stock', '<=', 0)->count();
-            $outOfStockItems = Product::where('stock', '<=', 0)->with('category')->get();
+            $outOfStockItems = Product::leftJoin('inventory', 'inventory.product_id', '=', 'products.id')
+                ->whereRaw('COALESCE(inventory.quantity, products.stock) <= 0')
+                ->with('category', 'inventory')
+                ->select('products.*')
+                ->get();
+            $outOfStockCount = $outOfStockItems->count();
 
             return view('admin.analytics.products', compact(
                 'topProducts',
@@ -478,7 +486,9 @@ class DashboardController extends Controller
 
                 $data['productSales'] = $topProductsQuery->get();
                 $data['totalProducts'] = Product::count();
-                $data['outOfStockCount'] = Product::where('stock', '<=', 0)->count();
+                $data['outOfStockCount'] = Product::leftJoin('inventory', 'inventory.product_id', '=', 'products.id')
+                    ->whereRaw('COALESCE(inventory.quantity, products.stock) <= 0')
+                    ->count('products.id');
             }
 
             // --- Transaction History ---

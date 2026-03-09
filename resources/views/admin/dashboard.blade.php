@@ -783,7 +783,7 @@
                                     <p class="text-xs font-semibold text-green-600">
                                         <i class="fas fa-peso-sign mr-1"></i>{{ number_format($item->revenue ?? 0, 2) }}
                                     </p>
-                                    @if($product && $product->stock > 0)
+                                    @if($product && $product->available_stock > 0)
                                         <div class="mt-2">
                                             <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
                                                 <i class="fas fa-check-circle mr-1"></i>In Stock
@@ -855,13 +855,13 @@
                                     <p class="text-xs font-semibold text-orange-600">
                                         <i class="fas fa-peso-sign mr-1"></i>{{ number_format($item->revenue ?? 0, 2) }}
                                     </p>
-                                    @if($product && $product->stock <= 0)
+                                    @if($product && $product->available_stock <= 0)
                                         <div class="mt-2">
                                             <span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
                                                 <i class="fas fa-times-circle mr-1"></i>Out of Stock
                                             </span>
                                         </div>
-                                    @elseif($product && $product->stock < 10)
+                                    @elseif($product && $product->available_stock < 10)
                                         <div class="mt-2">
                                             <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
                                                 <i class="fas fa-exclamation-triangle mr-1"></i>Low Stock
