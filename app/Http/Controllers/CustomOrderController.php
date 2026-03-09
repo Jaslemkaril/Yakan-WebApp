@@ -2039,6 +2039,13 @@ class CustomOrderController extends Controller
             'notes' => 'Please include your order ID (' . $order->id . ') in the payment reference.'
         ];
 
+        $gcashNumber    = \App\Models\SystemSetting::get('gcash_number', '');
+        $gcashName      = \App\Models\SystemSetting::get('gcash_name', 'Tuwas Yakan');
+        $bankName       = \App\Models\SystemSetting::get('bank_name', '');
+        $bankAcctName   = \App\Models\SystemSetting::get('bank_account_name', 'Tuwas Yakan');
+        $bankAcctNumber = \App\Models\SystemSetting::get('bank_account_number', '');
+        $bankBranch     = \App\Models\SystemSetting::get('bank_branch', '');
+
         switch ($order->payment_method) {
             case 'gcash':
                 $instructions = array_merge($baseInstructions, [
@@ -2046,16 +2053,16 @@ class CustomOrderController extends Controller
                     'steps' => [
                         '1. Open your GCash app',
                         '2. Select "Send Money" or "Pay Bills"',
-                        '3. Enter the GCash number: 09123456789',
+                        '3. Enter the GCash number: ' . $gcashNumber,
                         '4. Enter the amount: ₱' . number_format($order->final_price, 2),
                         '5. Save the transaction reference number',
                         '6. Come back to this page to confirm payment'
                     ],
-                    'gcash_number' => '09123456789',
-                    'account_name' => 'Tuwas Yakan'
+                    'gcash_number' => $gcashNumber,
+                    'account_name' => $gcashName,
                 ]);
                 break;
-                
+
             case 'online_banking':
                 // This method is labeled as "Payment Center / E-wallet" in the UI.
                 // Show GCash-style details so the user clearly sees GCash as an option.
@@ -2070,11 +2077,11 @@ class CustomOrderController extends Controller
                         '6. Come back to this page to confirm payment'
                     ],
                     // Reuse the GCash layout in the instructions view so GCash is clearly visible
-                    'gcash_number' => '09123456789',
-                    'account_name' => 'Tuwas Yakan',
+                    'gcash_number' => $gcashNumber,
+                    'account_name' => $gcashName,
                 ]);
                 break;
-                
+
             case 'bank_transfer':
             default:
                 $instructions = array_merge($baseInstructions, [
@@ -2086,11 +2093,10 @@ class CustomOrderController extends Controller
                         '4. Save the deposit slip or transaction reference',
                         '5. Come back to this page to confirm payment'
                     ],
-                    'bank_name' => 'Sample Bank',
-                    'account_name' => 'Tuwas Yakan',
-                    'account_number' => '1234567890',
-                    'branch' => 'Main Branch',
-                    'swift_code' => 'SAMPLEBNKPH'
+                    'bank_name'      => $bankName,
+                    'account_name'   => $bankAcctName,
+                    'account_number' => $bankAcctNumber,
+                    'branch'         => $bankBranch,
                 ]);
                 break;
         }

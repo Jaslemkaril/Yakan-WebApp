@@ -76,15 +76,15 @@
                     <div class="space-y-3">
                         <div class="bg-white rounded-xl p-4">
                             <div class="text-sm text-gray-600 mb-1">Bank Name</div>
-                            <div class="font-bold text-gray-900">BDO Unibank</div>
+                            <div class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('bank_name', '—') }}</div>
                         </div>
                         <div class="bg-white rounded-xl p-4">
                             <div class="text-sm text-gray-600 mb-1">Account Name</div>
-                            <div class="font-bold text-gray-900">Your Company Name</div>
+                            <div class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('bank_account_name', 'Tuwas Yakan') }}</div>
                         </div>
                         <div class="bg-white rounded-xl p-4">
                             <div class="text-sm text-gray-600 mb-1">Account Number</div>
-                            <div class="font-bold text-gray-900 text-xl">1234-5678-9012</div>
+                            <div class="font-bold text-gray-900 text-xl">{{ \App\Models\SystemSetting::get('bank_account_number', '—') }}</div>
                         </div>
                         <div class="bg-white rounded-xl p-4">
                             <div class="text-sm text-gray-600 mb-1">Amount to Transfer</div>

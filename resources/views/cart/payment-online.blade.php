@@ -57,8 +57,8 @@
                                 <h3 class="font-semibold text-gray-900 mb-2">Send Money to this GCash Number</h3>
                                 <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 mt-2 border-2 border-blue-200">
                                     <div class="text-sm text-gray-600 mb-1">GCash Number</div>
-                                    <div class="text-2xl font-bold text-blue-600">0917-123-4567</div>
-                                    <div class="text-sm text-gray-700 mt-2 font-medium">Account Name: Tuwas Yakan</div>
+                                    <div class="text-2xl font-bold text-blue-600">{{ \App\Models\SystemSetting::get('gcash_number', '—') }}</div>
+                                    <div class="text-sm text-gray-700 mt-2 font-medium">Account Name: {{ \App\Models\SystemSetting::get('gcash_name', 'Tuwas Yakan') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -235,7 +235,7 @@
                         <div class="space-y-3">
                             <div>
                                 <span class="text-xs text-blue-700">Send to:</span>
-                                <div class="font-bold text-blue-900 text-lg">0917-123-4567</div>
+                                <div class="font-bold text-blue-900 text-lg">{{ \App\Models\SystemSetting::get('gcash_number', '—') }}</div>
                             </div>
                             <div>
                                 <span class="text-xs text-blue-700">Amount:</span>
