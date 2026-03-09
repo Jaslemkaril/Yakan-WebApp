@@ -985,21 +985,6 @@
             <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Settings</span>
         </a>
     </div>
-
-    <!-- Quick Actions -->
-    <div class="pt-4 mt-4 border-t" style="border-color: rgba(255,255,255,0.1);">
-        <div class="px-4 py-2">
-            <span class="sidebar-text text-xs font-semibold" style="color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.05em;">Quick Actions</span>
-        </div>
-        <a href="{{ route('admin.products.create') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-2 rounded-lg group" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.6);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span class="sidebar-text text-sm font-medium" style="color: rgba(255,255,255,0.8);">Add Product</span>
-        </a>
-        <a href="{{ route('admin.users.create') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-2 rounded-lg group" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.6);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
-            <span class="sidebar-text text-sm font-medium" style="color: rgba(255,255,255,0.8);">Add User</span>
-        </a>
-    </div>
 </nav>
 
             <!-- User Profile & Logout Section -->
