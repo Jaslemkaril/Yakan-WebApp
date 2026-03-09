@@ -3,6 +3,16 @@
 @section('title', 'System Settings')
 
 @section('content')
+<!-- Loading Overlay -->
+<div id="settings-loading" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center" style="background: rgba(90,0,0,0.85); backdrop-filter: blur(4px);">
+    <div class="flex flex-col items-center gap-6">
+        <div class="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+        <div class="text-center">
+            <p class="text-white text-xl font-black tracking-wide">Saving Settings...</p>
+            <p class="text-red-200 text-sm mt-1">Please wait, do not close this page</p>
+        </div>
+    </div>
+</div>
 <div class="min-h-screen bg-gray-50">
     <!-- Page Header -->
     <div class="shadow-lg" style="background: linear-gradient(135deg, #800000 0%, #5a0000 100%);">
@@ -42,8 +52,11 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('admin.settings.update') }}" class="space-y-8">
+        <form method="POST" action="{{ route('admin.settings.update') }}{{ request('auth_token') ? '?auth_token=' . urlencode(request('auth_token')) : '' }}" class="space-y-8" id="settings-form" onsubmit="showSettingsLoading()">
             @csrf
+            @if(request('auth_token'))
+                <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+            @endif
 
             <!-- ======================== GCASH SETTINGS ======================== -->
             <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
@@ -277,5 +290,19 @@
         </form>
     </div>
 </div>
+
+<script>
+function showSettingsLoading() {
+    document.getElementById('settings-loading').classList.remove('hidden');
+    // Safety: hide after 10s in case of error
+    setTimeout(function() {
+        document.getElementById('settings-loading').classList.add('hidden');
+    }, 10000);
+}
+// Hide loading if page already loaded (e.g. after redirect back with errors)
+window.addEventListener('load', function() {
+    document.getElementById('settings-loading').classList.add('hidden');
+});
+</script>
 @endsection
 

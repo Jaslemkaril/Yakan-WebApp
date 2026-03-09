@@ -54,11 +54,14 @@ class SettingsController extends Controller
                 SystemSetting::set($key, $value ?? '');
             }
         } catch (\Exception $e) {
-            return redirect()->route('admin.settings.index')
+            $authToken = $request->input('auth_token') ?? $request->query('auth_token');
+            $redirectUrl = route('admin.settings.index') . ($authToken ? '?auth_token=' . urlencode($authToken) : '');
+            return redirect()->to($redirectUrl)
                 ->with('error', 'Failed to save settings. ' . $e->getMessage());
         }
 
-        return redirect()->route('admin.settings.index')
-            ->with('success', 'Settings saved successfully!');
+        $authToken = $request->input('auth_token') ?? $request->query('auth_token');
+        $redirectUrl = route('admin.settings.index') . ($authToken ? '?auth_token=' . urlencode($authToken) : '');
+        return redirect()->to($redirectUrl)->with('success', 'Settings saved successfully!');
     }
 }
