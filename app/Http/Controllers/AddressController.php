@@ -54,7 +54,7 @@ class AddressController extends Controller
             $rules['region_id']   = 'required|exists:philippine_regions,id';
             $rules['province_id'] = 'required|exists:philippine_provinces,id';
             $rules['city_id']     = 'required|exists:philippine_cities,id';
-            $rules['barangay_id'] = 'required|exists:philippine_barangays,id';
+            $rules['barangay_id'] = 'nullable|exists:philippine_barangays,id';
         } else {
             $rules['region'] = 'required|string|max:255';
             $rules['city']   = 'required|string|max:255';
@@ -66,10 +66,10 @@ class AddressController extends Controller
             $region   = PhilippineRegion::find($validated['region_id']);
             $province = PhilippineProvince::find($validated['province_id']);
             $city     = PhilippineCity::find($validated['city_id']);
-            $barangay = PhilippineBarangay::find($validated['barangay_id']);
+            $barangay = !empty($validated['barangay_id']) ? PhilippineBarangay::find($validated['barangay_id']) : null;
             $cityName     = $city->name;
             $provinceName = $province->name;
-            $barangayName = $barangay->name;
+            $barangayName = $barangay ? $barangay->name : '';
         } else {
             $cityName     = $validated['city'];
             $provinceName = $validated['region'];
@@ -199,7 +199,7 @@ class AddressController extends Controller
             $rules['region_id']   = 'required|exists:philippine_regions,id';
             $rules['province_id'] = 'required|exists:philippine_provinces,id';
             $rules['city_id']     = 'required|exists:philippine_cities,id';
-            $rules['barangay_id'] = 'required|exists:philippine_barangays,id';
+            $rules['barangay_id'] = 'nullable|exists:philippine_barangays,id';
         } else {
             $rules['region'] = 'required|string|max:255';
             $rules['city']   = 'required|string|max:255';
@@ -211,10 +211,10 @@ class AddressController extends Controller
             $region   = PhilippineRegion::find($validated['region_id']);
             $province = PhilippineProvince::find($validated['province_id']);
             $city     = PhilippineCity::find($validated['city_id']);
-            $barangay = PhilippineBarangay::find($validated['barangay_id']);
+            $barangay = !empty($validated['barangay_id']) ? PhilippineBarangay::find($validated['barangay_id']) : null;
             $cityName     = $city->name;
             $provinceName = $province->name;
-            $barangayName = $barangay->name;
+            $barangayName = $barangay ? $barangay->name : '';
         } else {
             $cityName     = $validated['city'];
             $provinceName = $validated['region'];

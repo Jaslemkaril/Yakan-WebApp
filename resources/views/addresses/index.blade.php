@@ -217,9 +217,10 @@
             
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Barangay</label>
-                <select name="barangay_id" id="barangay_id" required disabled class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent bg-gray-100">
+                <select name="barangay_id" id="barangay_id" disabled class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent bg-gray-100">
                     <option value="">-- Select Barangay --</option>
                 </select>
+                <p id="barangay_hint" class="hidden text-xs text-gray-400 mt-1">No barangays listed for this city — you can skip this field.</p>
             </div>
             
             <div class="mb-4">
@@ -564,20 +565,29 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadBarangays(cityId) {
         barangaySelect.disabled = true;
         barangaySelect.classList.add('bg-gray-100');
+        const hint = document.getElementById('barangay_hint');
+        if (hint) hint.classList.add('hidden');
         
         fetch(apiUrl(`/addresses/api/barangays/${cityId}`))
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
-                    data.data.forEach(barangay => {
-                        const option = document.createElement('option');
-                        option.value = barangay.id;
-                        option.textContent = barangay.name;
-                        barangaySelect.appendChild(option);
-                    });
-                    barangaySelect.disabled = false;
-                    barangaySelect.classList.remove('bg-gray-100');
+                    if (data.data.length === 0) {
+                        // No barangays for this city — allow skipping
+                        barangaySelect.innerHTML = '<option value="">-- No barangays available --</option>';
+                        barangaySelect.disabled = true;
+                        if (hint) hint.classList.remove('hidden');
+                    } else {
+                        barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
+                        data.data.forEach(barangay => {
+                            const option = document.createElement('option');
+                            option.value = barangay.id;
+                            option.textContent = barangay.name;
+                            barangaySelect.appendChild(option);
+                        });
+                        barangaySelect.disabled = false;
+                        barangaySelect.classList.remove('bg-gray-100');
+                    }
                 }
             })
             .catch(error => console.error('Error loading barangays:', error));

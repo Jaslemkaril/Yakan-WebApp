@@ -36,9 +36,10 @@
     
     <div class="mb-4">
         <label class="block text-sm font-medium text-gray-700 mb-2">Barangay</label>
-        <select name="barangay_id" id="edit_barangay_id" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
+        <select name="barangay_id" id="edit_barangay_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
             <option value="">-- Select Barangay --</option>
         </select>
+        <p id="edit_barangay_hint" class="hidden text-xs text-gray-400 mt-1">No barangays listed for this city — you can skip this field.</p>
     </div>
     
     <div class="mb-4">
@@ -159,16 +160,24 @@
     // Step 4 – load barangays for selected city
     function loadBarangays(cityId) {
         setLoading(barangaySelect, true);
+        const hint = document.getElementById('edit_barangay_hint');
+        if (hint) hint.classList.add('hidden');
         fetch(apiUrl(`/addresses/api/barangays/${cityId}`))
             .then(r => r.json())
             .then(data => {
                 if (!data.success) return;
-                barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
-                data.data.forEach(b => {
-                    const opt = new Option(b.name, b.id, false, b.id == preselect.barangay_id);
-                    barangaySelect.add(opt);
-                });
-                setLoading(barangaySelect, false);
+                if (data.data.length === 0) {
+                    barangaySelect.innerHTML = '<option value="">-- No barangays available --</option>';
+                    barangaySelect.disabled = true;
+                    if (hint) hint.classList.remove('hidden');
+                } else {
+                    barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
+                    data.data.forEach(b => {
+                        const opt = new Option(b.name, b.id, false, b.id == preselect.barangay_id);
+                        barangaySelect.add(opt);
+                    });
+                    setLoading(barangaySelect, false);
+                }
             })
             .catch(e => { console.error('Error loading barangays:', e); setLoading(barangaySelect, false); });
     }
