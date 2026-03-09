@@ -92,69 +92,53 @@ const CheckoutScreen = ({ navigation }) => {
       const selectedAddr = savedAddresses.find(addr => addr.id === selectedAddressId);
       
       if (!selectedAddr) {
-        setShippingFee(0);
+        setShippingFee(100);
         return;
       }
 
-      // Zone-based shipping calculation (matching web implementation)
-      const cityLower = (selectedAddr.city || '').toLowerCase();
-      const provinceLower = (selectedAddr.province || '').toLowerCase();
-      const postalCode = selectedAddr.postalCode || '';
-      
-      let shippingFee = 0;
-      
-      // FREE - Zamboanga City proper (postal code starts with '7')
-      if (cityLower.includes('zamboanga') && postalCode.startsWith('7')) {
-        shippingFee = 0;
-        console.log('[Checkout] FREE shipping for Zamboanga City proper');
+      // Use stored shipping fee from address if available (set when address was created with region picker)
+      if (selectedAddr.regionShipping) {
+        setShippingFee(selectedAddr.regionShipping);
+        console.log(`[Checkout] Using stored shipping fee: ₱${selectedAddr.regionShipping}`);
+        return;
       }
-      // ₱80 - Zamboanga Peninsula (nearby)
-      else if (provinceLower.includes('zamboanga') || 
-               ['isabela', 'dipolog', 'dapitan', 'pagadian'].includes(cityLower)) {
-        shippingFee = 80;
-        console.log('[Checkout] ₱80 shipping for Zamboanga Peninsula');
+
+      // Region-based shipping fee
+      // Region IX (Zamboanga Peninsula) = ₱100 — where the store is based
+      // Other Mindanao (X,XI,XII,XIII,BARMM) = ₱150
+      // Visayas (VI,VII,VIII) = ₱180
+      // Luzon / NCR / CAR = ₱200
+      const region = (selectedAddr.region || '').toLowerCase();
+      const province = (selectedAddr.province || '').toLowerCase();
+      let fee = 100; // default
+
+      if (region.includes('zamboanga') || region.includes('region ix') || region.includes('ix')) {
+        fee = 100;
+      } else if (
+        region.includes('x ') || region.includes('xi ') || region.includes('xii') ||
+        region.includes('xiii') || region.includes('davao') || region.includes('northern mindanao') ||
+        region.includes('caraga') || region.includes('soccsksargen') || region.includes('barmm') ||
+        region.includes('bangsamoro') ||
+        province.includes('zamboanga') || province.includes('basilan') || province.includes('sulu') || province.includes('tawi')
+      ) {
+        fee = 150;
+      } else if (
+        region.includes('visayas') || region.includes('vi ') || region.includes('vii') || region.includes('viii')
+      ) {
+        fee = 180;
+      } else if (region.length > 0) {
+        // NCR, Luzon, CAR or any region not matching above
+        fee = 200;
+      } else {
+        // No region info — standard flat rate
+        fee = 100;
       }
-      // ₱120 - Western Mindanao
-      else if (['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao'].includes(cityLower) ||
-               provinceLower.includes('barmm') || provinceLower.includes('armm')) {
-        shippingFee = 120;
-        console.log('[Checkout] ₱120 shipping for Western Mindanao');
-      }
-      // ₱150 - Other Mindanao regions
-      else if (provinceLower.includes('mindanao') ||
-               ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'].includes(cityLower)) {
-        shippingFee = 150;
-        console.log('[Checkout] ₱150 shipping for Mindanao');
-      }
-      // ₱180 - Visayas
-      else if (provinceLower.includes('visayas') ||
-               ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'].includes(cityLower)) {
-        shippingFee = 180;
-        console.log('[Checkout] ₱180 shipping for Visayas');
-      }
-      // ₱220 - Metro Manila & nearby
-      else if (cityLower.includes('manila') || provinceLower.includes('ncr') ||
-               ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'].includes(cityLower)) {
-        shippingFee = 220;
-        console.log('[Checkout] ₱220 shipping for Metro Manila');
-      }
-      // ₱250 - Northern Luzon
-      else if (provinceLower.includes('luzon') ||
-               ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'].includes(cityLower)) {
-        shippingFee = 250;
-        console.log('[Checkout] ₱250 shipping for Northern Luzon');
-      }
-      // ₱280 - Remote islands & far areas
-      else {
-        shippingFee = 280;
-        console.log('[Checkout] ₱280 shipping for remote areas');
-      }
-      
-      console.log('[Checkout] Final shipping fee:', shippingFee, 'for', cityLower, provinceLower, postalCode);
-      setShippingFee(shippingFee);
+
+      setShippingFee(fee);
+      console.log(`[Checkout] Shipping fee for region "${selectedAddr.region}": ₱${fee}`);
     } catch (error) {
-      console.log('Error calculating shipping:', error);
-      setShippingFee(50); // Fallback fee
+      console.error('[Checkout] Error calculating shipping fee:', error);
+      setShippingFee(100);
     } finally {
       setCalculatingShipping(false);
     }
@@ -184,6 +168,9 @@ const CheckoutScreen = ({ navigation }) => {
             barangay: addr.barangay,
             city: addr.city,
             province: addr.province,
+            region: addr.region || '',
+            regionCode: addr.region_code || '',
+            regionShipping: addr.shipping_fee || null,
             postalCode: addr.postal_code,
             isDefault: addr.is_default === 1 || addr.is_default === true,
             label: addr.label || 'Home',
@@ -615,10 +602,7 @@ const CheckoutScreen = ({ navigation }) => {
                         )}
                       </View>
                       <Text style={styles.fullAddress}>
-                        {selectedAddress.street}, {selectedAddress.barangay}, {selectedAddress.city}, {selectedAddress.province}, {selectedAddress.postalCode}
-                      </Text>
-                      <Text style={styles.fullAddress}>
-                        {selectedAddress.province}, {selectedAddress.postalCode}
+                        {[selectedAddress.street, selectedAddress.barangay, selectedAddress.city, selectedAddress.province, selectedAddress.region, selectedAddress.postalCode].filter(Boolean).join(', ')}
                       </Text>
                     </View>
                   );
@@ -638,22 +622,7 @@ const CheckoutScreen = ({ navigation }) => {
             {/* Add New Address Button */}
             <TouchableOpacity
               style={styles.addAddressButton}
-              onPress={() => {
-                setIsEditingAddress(false);
-                setAddressForm({
-                  fullName: '',
-                  phoneNumber: '',
-                  region: '',
-                  province: '',
-                  city: '',
-                  barangay: '',
-                  postalCode: '',
-                  street: '',
-                  isDefault: false,
-                  label: 'Home',
-                });
-                setShowAddressForm(true);
-              }}
+              onPress={() => navigation.navigate('SavedAddresses')}
             >
               <Text style={styles.addAddressIcon}>+</Text>
               <Text style={styles.addAddressText}>Add a new address</Text>
@@ -665,16 +634,21 @@ const CheckoutScreen = ({ navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Order Summary</Text>
           {itemsToCheckout.map((item, index) => {
-            const imageUrl = item.image 
-              ? `http://192.168.1.203:8000/uploads/products/${item.image}`
-              : 'https://via.placeholder.com/60';
-            
-            console.log('[Checkout] Product image URL:', imageUrl);
+            // Build image URI properly from the item
+            const itemImage = item.image;
+            let imageSource;
+            if (itemImage && typeof itemImage === 'object' && itemImage.uri) {
+              imageSource = itemImage;
+            } else if (itemImage && typeof itemImage === 'string' && itemImage.startsWith('http')) {
+              imageSource = { uri: itemImage };
+            } else {
+              imageSource = require('../assets/images/Saputangan.jpg');
+            }
             
             return (
               <View key={item.id || index} style={styles.orderItemWithImage}>
                 <Image
-                  source={{ uri: imageUrl }}
+                  source={imageSource}
                   style={styles.orderItemImage}
                   resizeMode="cover"
                 />

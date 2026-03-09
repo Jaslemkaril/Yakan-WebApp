@@ -1,5 +1,6 @@
 // src/screens/HomeScreen.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -14,7 +15,7 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import BottomNav from '../components/BottomNav';
 import ScreenHeader from '../components/ScreenHeader';
@@ -36,11 +37,19 @@ export default function HomeScreen({ navigation }) {
   const { theme } = useTheme();
   const styles = getStyles(theme);
 
-  // Fetch products from API on component mount
+  // Fetch products on first mount
   useEffect(() => {
     fetchProducts();
     fetchFeaturedProducts();
   }, []);
+
+  // Re-fetch products every time HomeScreen comes back into focus (price changes, stock, etc.)
+  useFocusEffect(
+    useCallback(() => {
+      fetchProducts();
+      fetchFeaturedProducts();
+    }, [])
+  );
 
   const fetchFeaturedProducts = async () => {
     try {
@@ -48,15 +57,18 @@ export default function HomeScreen({ navigation }) {
       const response = await ApiService.request('GET', '/products?featured=true&limit=6');
       
       if (!response.success) {
-        console.warn('🏠 Featured products not available, using first 3 products');
+        console.warn('🏠 HomeScreen: Featured products not available, using first 4 products');
         return;
       }
       
-      const productsData = response.data?.data || response.data || [];
+      let productsData = response.data?.data?.data ?? response.data?.data ?? response.data ?? [];
+      if (!Array.isArray(productsData)) productsData = [];
       console.log('🏠 HomeScreen: Fetched', productsData.length, 'featured products');
       
-      const transformedProducts = transformProducts(productsData);
-      setFeaturedProducts(transformedProducts);
+      if (productsData.length > 0) {
+        const transformedProducts = transformProducts(productsData);
+        setFeaturedProducts(transformedProducts);
+      }
     } catch (error) {
       console.error('🏠 HomeScreen: Error fetching featured products:', error);
     }
@@ -87,32 +99,38 @@ export default function HomeScreen({ navigation }) {
       console.log('🏠 HomeScreen: Starting fetchProducts...');
       console.log('🏠 HomeScreen: API Base URL:', API_CONFIG.API_BASE_URL);
       
-      const response = await ApiService.getProducts();
+      const response = await ApiService.getProducts({ per_page: 20 });
       console.log('🏠 HomeScreen: API response received:', response?.success);
       
       if (!response.success) {
         console.warn('🏠 HomeScreen: API returned error:', response.error);
         console.warn('🏠 HomeScreen: Using fallback mock data');
-        // Don't throw - use fallback data instead
         setProducts(getMockProducts());
         return;
       }
       
-      const productsData = response.data?.data || response.data || [];
+      // Handle both paginated ({ data: { data: [...] } }) and flat ({ data: [...] }) responses
+      let productsData = response.data?.data?.data ?? response.data?.data ?? response.data ?? [];
+      if (!Array.isArray(productsData)) productsData = [];
       console.log('🏠 HomeScreen: Fetched', productsData.length, 'products');
       
+      if (productsData.length === 0) {
+        console.warn('🏠 HomeScreen: Empty products array, using fallback mock data');
+        setProducts(getMockProducts());
+        return;
+      }
+
       const transformedProducts = transformProducts(productsData);
       setProducts(transformedProducts);
       
-      // If no featured products yet, use first 3 from all products
+      // If no featured products yet, use first 4 from all products
       if (featuredProducts.length === 0 && transformedProducts.length > 0) {
-        setFeaturedProducts(transformedProducts.slice(0, 3));
+        setFeaturedProducts(transformedProducts.slice(0, 4));
       }
       console.log('🏠 HomeScreen: Products loaded successfully');
     } catch (error) {
       console.error('🏠 HomeScreen: Error fetching products:', error.message);
       console.log('🏠 HomeScreen: Using fallback mock data due to error');
-      // Fallback to mock data
       setProducts(getMockProducts());
     } finally {
       setLoading(false);
@@ -230,10 +248,10 @@ export default function HomeScreen({ navigation }) {
           style={styles.featuredFavoriteButton}
           onPress={() => toggleFavorite(product)}
         >
-          <Ionicons 
+          <MaterialCommunityIcons 
             name={isInWishlist(product.id) ? "heart" : "heart-outline"} 
             size={24} 
-            color={isInWishlist(product.id) ? "#FF6B6B" : "#999"} 
+            color={isInWishlist(product.id) ? "#FF6B6B" : "#aaa"} 
           />
         </TouchableOpacity>
       </View>
@@ -261,10 +279,10 @@ export default function HomeScreen({ navigation }) {
           style={styles.favoriteButton}
           onPress={() => toggleFavorite(product)}
         >
-          <Ionicons 
+          <MaterialCommunityIcons 
             name={isInWishlist(product.id) ? "heart" : "heart-outline"} 
-            size={24} 
-            color={isInWishlist(product.id) ? "#FF6B6B" : "#999"} 
+            size={22} 
+            color={isInWishlist(product.id) ? "#FF6B6B" : "#aaa"} 
           />
         </TouchableOpacity>
       </View>
@@ -274,12 +292,12 @@ export default function HomeScreen({ navigation }) {
           {product.description}
         </Text>
         <View style={styles.productFooter}>
-          <Text style={styles.productPrice}>₱{product.price.toFixed(2)}</Text>
+          <Text style={styles.productPrice}>₱{parseFloat(product.price || 0).toFixed(2)}</Text>
           <TouchableOpacity
             style={styles.cartButton}
             onPress={() => handleAddToCart(product)}
           >
-            <Ionicons name="cart" size={20} color="#fff" />
+            <MaterialCommunityIcons name="cart-plus" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
@@ -364,7 +382,7 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
             </View>
             <View style={styles.productsGrid}>
-              {products.slice(0, 6).map(product => renderProductCard(product))}
+              {products.slice(0, 8).map(product => renderProductCard(product))}
             </View>
             <TouchableOpacity 
               style={styles.viewAllButton}
@@ -801,12 +819,17 @@ const getStyles = (theme) => StyleSheet.create({
     color: theme.text,
   },
   cartButton: {
-    backgroundColor: theme.text,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    backgroundColor: theme.primary,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
   },
   // MENU MODAL STYLES
   menuOverlay: {

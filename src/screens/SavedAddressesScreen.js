@@ -20,6 +20,27 @@ import colors from '../constants/colors';
 import ApiService from '../services/api';
 import { useCart } from '../context/CartContext';
 
+// Philippine Regions with corresponding shipping fee zones
+const PHILIPPINE_REGIONS = [
+  { code: '130000000', name: 'NCR – National Capital Region (Metro Manila)', shipping: 200 },
+  { code: '140000000', name: 'CAR – Cordillera Administrative Region', shipping: 200 },
+  { code: '010000000', name: 'Region I – Ilocos Region', shipping: 200 },
+  { code: '020000000', name: 'Region II – Cagayan Valley', shipping: 200 },
+  { code: '030000000', name: 'Region III – Central Luzon', shipping: 200 },
+  { code: '040000000', name: 'Region IV-A – CALABARZON', shipping: 200 },
+  { code: '170000000', name: 'Region IV-B – MIMAROPA', shipping: 200 },
+  { code: '050000000', name: 'Region V – Bicol Region', shipping: 200 },
+  { code: '060000000', name: 'Region VI – Western Visayas', shipping: 180 },
+  { code: '070000000', name: 'Region VII – Central Visayas', shipping: 180 },
+  { code: '080000000', name: 'Region VIII – Eastern Visayas', shipping: 180 },
+  { code: '090000000', name: 'Region IX – Zamboanga Peninsula', shipping: 100 },
+  { code: '100000000', name: 'Region X – Northern Mindanao', shipping: 150 },
+  { code: '110000000', name: 'Region XI – Davao Region', shipping: 150 },
+  { code: '120000000', name: 'Region XII – SOCCSKSARGEN', shipping: 150 },
+  { code: '160000000', name: 'Region XIII – Caraga', shipping: 150 },
+  { code: '190000000', name: 'BARMM – Bangsamoro Region', shipping: 150 },
+];
+
 export default function SavedAddressesScreen({ navigation }) {
   const { theme } = useTheme();
   const styles = getStyles(theme);
@@ -37,9 +58,21 @@ export default function SavedAddressesScreen({ navigation }) {
     barangay: '',
     city: '',
     province: '',
+    region: '',
+    regionCode: '',
+    regionShipping: 100,
     postal_code: '',
     isDefault: false,
   });
+
+  // Picker states
+  const [regionPickerVisible, setRegionPickerVisible] = useState(false);
+  const [provincePickerVisible, setProvincePickerVisible] = useState(false);
+  const [cityPickerVisible, setCityPickerVisible] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState('');
+  const [availableProvinces, setAvailableProvinces] = useState([]);
+  const [availableCities, setAvailableCities] = useState([]);
+  const [loadingPicker, setLoadingPicker] = useState(false);
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -85,6 +118,36 @@ export default function SavedAddressesScreen({ navigation }) {
     await fetchAddresses();
   };
 
+  const fetchProvinces = async (regionCode) => {
+    setLoadingPicker(true);
+    setAvailableProvinces([]);
+    try {
+      const resp = await fetch(`https://psgc.cloud/api/regions/${regionCode}/provinces`);
+      const data = await resp.json();
+      const provinces = Array.isArray(data) ? data.map(p => ({ code: p.code, name: p.name })).sort((a,b) => a.name.localeCompare(b.name)) : [];
+      setAvailableProvinces(provinces);
+    } catch {
+      setAvailableProvinces([]);
+    } finally {
+      setLoadingPicker(false);
+    }
+  };
+
+  const fetchCities = async (provinceCode) => {
+    setLoadingPicker(true);
+    setAvailableCities([]);
+    try {
+      const resp = await fetch(`https://psgc.cloud/api/provinces/${provinceCode}/cities-municipalities`);
+      const data = await resp.json();
+      const cities = Array.isArray(data) ? data.map(c => ({ code: c.code, name: c.name })).sort((a,b) => a.name.localeCompare(b.name)) : [];
+      setAvailableCities(cities);
+    } catch {
+      setAvailableCities([]);
+    } finally {
+      setLoadingPicker(false);
+    }
+  };
+
   const handleAddAddress = async () => {
     // Validate required fields
     if (!formData.label.trim() || !formData.full_name.trim() || 
@@ -102,6 +165,9 @@ export default function SavedAddressesScreen({ navigation }) {
         barangay: formData.barangay || null,
         city: formData.city,
         province: formData.province || null,
+        region: formData.region || null,
+        region_code: formData.regionCode || null,
+        shipping_fee: formData.regionShipping || 100,
         postal_code: formData.postal_code || null,
         is_default: formData.isDefault ? 1 : 0,
       };
@@ -137,6 +203,9 @@ export default function SavedAddressesScreen({ navigation }) {
         barangay: '',
         city: '',
         province: '',
+        region: '',
+        regionCode: '',
+        regionShipping: 100,
         postal_code: '',
         isDefault: false,
       });
@@ -203,6 +272,9 @@ export default function SavedAddressesScreen({ navigation }) {
       barangay: address.barangay || '',
       city: address.city || '',
       province: address.province || '',
+      region: address.region || '',
+      regionCode: address.region_code || '',
+      regionShipping: address.shipping_fee || 100,
       postal_code: address.postal_code || '',
       isDefault: address.is_default === 1 || address.isDefault === true,
     });
@@ -361,6 +433,9 @@ export default function SavedAddressesScreen({ navigation }) {
             barangay: '',
             city: '',
             province: '',
+            region: '',
+            regionCode: '',
+            regionShipping: 100,
             postal_code: '',
             isDefault: false,
           });
@@ -439,43 +514,95 @@ export default function SavedAddressesScreen({ navigation }) {
               />
 
               <Text style={styles.sectionLabel}>Address Details</Text>
+              
+              {/* Street */}
               <TextInput
                 style={styles.input}
-                placeholder="Street Address *"
+                placeholder="Street, Building, House No. *"
+                placeholderTextColor={theme.textMuted}
                 value={formData.street}
                 onChangeText={(text) => setFormData({ ...formData, street: text })}
               />
 
+              {/* Region Picker */}
+              <Text style={styles.pickerLabel}>Region *</Text>
+              <TouchableOpacity
+                style={[styles.pickerButton, !formData.region && styles.pickerRequired]}
+                onPress={() => { setPickerSearch(''); setRegionPickerVisible(true); }}
+                activeOpacity={0.7}
+              >
+                <Text style={formData.region ? styles.pickerValue : styles.pickerPlaceholder} numberOfLines={1}>
+                  {formData.region || 'Select Region'}
+                </Text>
+                <MaterialCommunityIcons name="chevron-down" size={20} color={theme.textMuted} />
+              </TouchableOpacity>
+
+              {/* Province Picker */}
+              <Text style={styles.pickerLabel}>Province</Text>
+              <TouchableOpacity
+                style={[styles.pickerButton, !formData.regionCode && styles.pickerDisabled]}
+                onPress={() => {
+                  if (!formData.regionCode) return;
+                  setPickerSearch('');
+                  if (availableProvinces.length === 0) fetchProvinces(formData.regionCode);
+                  setProvincePickerVisible(true);
+                }}
+                activeOpacity={formData.regionCode ? 0.7 : 1}
+              >
+                <Text style={formData.province ? styles.pickerValue : styles.pickerPlaceholder} numberOfLines={1}>
+                  {formData.province || (formData.regionCode ? 'Select Province' : 'Select Region first')}
+                </Text>
+                <MaterialCommunityIcons name="chevron-down" size={20} color={formData.regionCode ? theme.textMuted : theme.borderLight} />
+              </TouchableOpacity>
+
+              {/* City/Municipality Picker */}
+              <Text style={styles.pickerLabel}>City / Municipality</Text>
+              <TouchableOpacity
+                style={[styles.pickerButton, !formData.province && styles.pickerDisabled]}
+                onPress={() => {
+                  if (!formData.province) return;
+                  setPickerSearch('');
+                  // Find province code from availableProvinces
+                  const prov = availableProvinces.find(p => p.name === formData.province);
+                  if (prov) {
+                    if (availableCities.length === 0) fetchCities(prov.code);
+                    setCityPickerVisible(true);
+                  }
+                }}
+                activeOpacity={formData.province ? 0.7 : 1}
+              >
+                <Text style={formData.city ? styles.pickerValue : styles.pickerPlaceholder} numberOfLines={1}>
+                  {formData.city || (formData.province ? 'Select City / Municipality' : 'Select Province first')}
+                </Text>
+                <MaterialCommunityIcons name="chevron-down" size={20} color={formData.province ? theme.textMuted : theme.borderLight} />
+              </TouchableOpacity>
+
+              {/* Barangay */}
+              <Text style={styles.pickerLabel}>Barangay</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Barangay (Optional)"
+                placeholder="Enter barangay"
+                placeholderTextColor={theme.textMuted}
                 value={formData.barangay}
                 onChangeText={(text) => setFormData({ ...formData, barangay: text })}
               />
 
-              <View style={styles.row}>
-                <TextInput
-                  style={[styles.input, styles.halfInput]}
-                  placeholder="City *"
-                  value={formData.city}
-                  onChangeText={(text) => setFormData({ ...formData, city: text })}
-                />
-
-                <TextInput
-                  style={[styles.input, styles.halfInput]}
-                  placeholder="Province"
-                  value={formData.province}
-                  onChangeText={(text) => setFormData({ ...formData, province: text })}
-                />
-              </View>
-
+              {/* Postal Code */}
               <TextInput
                 style={styles.input}
                 placeholder="Postal Code"
+                placeholderTextColor={theme.textMuted}
                 value={formData.postal_code}
                 onChangeText={(text) => setFormData({ ...formData, postal_code: text })}
                 keyboardType="number-pad"
               />
+
+              {formData.region ? (
+                <View style={styles.shippingHint}>
+                  <MaterialCommunityIcons name="truck-delivery-outline" size={16} color="#8B1A1A" />
+                  <Text style={styles.shippingHintText}>Shipping fee: ₱{formData.regionShipping} ({formData.region.split('–')[0].trim()})</Text>
+                </View>
+              ) : null}
 
               <TouchableOpacity
                 style={styles.checkboxContainer}
@@ -499,6 +626,139 @@ export default function SavedAddressesScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           </ScrollView>
+        </View>
+      </Modal>
+
+      {/* ── REGION PICKER MODAL ── */}
+      <Modal visible={regionPickerVisible} transparent animationType="slide" onRequestClose={() => setRegionPickerVisible(false)}>
+        <View style={styles.pickerModalOverlay}>
+          <View style={styles.pickerModalContent}>
+            <View style={styles.pickerModalHeader}>
+              <Text style={styles.pickerModalTitle}>Select Region</Text>
+              <TouchableOpacity onPress={() => setRegionPickerVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.pickerSearch}
+              placeholder="Search region..."
+              placeholderTextColor={theme.textMuted}
+              value={pickerSearch}
+              onChangeText={setPickerSearch}
+              autoFocus
+            />
+            <FlatList
+              data={PHILIPPINE_REGIONS.filter(r => r.name.toLowerCase().includes(pickerSearch.toLowerCase()))}
+              keyExtractor={item => item.code}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.pickerItem, formData.region === item.name && styles.pickerItemSelected]}
+                  onPress={() => {
+                    setFormData({ ...formData, region: item.name, regionCode: item.code, regionShipping: item.shipping, province: '', provinceCode: '', city: '', cityCode: '' });
+                    setAvailableProvinces([]);
+                    setAvailableCities([]);
+                    setRegionPickerVisible(false);
+                    // Pre-fetch provinces for this region
+                    fetchProvinces(item.code);
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.pickerItemText, formData.region === item.name && styles.pickerItemTextSelected]}>{item.name}</Text>
+                    <Text style={styles.pickerItemSub}>Shipping: ₱{item.shipping}</Text>
+                  </View>
+                  {formData.region === item.name && <MaterialCommunityIcons name="check" size={20} color="#8B1A1A" />}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── PROVINCE PICKER MODAL ── */}
+      <Modal visible={provincePickerVisible} transparent animationType="slide" onRequestClose={() => setProvincePickerVisible(false)}>
+        <View style={styles.pickerModalOverlay}>
+          <View style={styles.pickerModalContent}>
+            <View style={styles.pickerModalHeader}>
+              <Text style={styles.pickerModalTitle}>Select Province</Text>
+              <TouchableOpacity onPress={() => setProvincePickerVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.pickerSearch}
+              placeholder="Search province..."
+              placeholderTextColor={theme.textMuted}
+              value={pickerSearch}
+              onChangeText={setPickerSearch}
+              autoFocus
+            />
+            {loadingPicker ? (
+              <View style={styles.pickerLoading}><ActivityIndicator size="large" color="#8B1A1A" /></View>
+            ) : (
+              <FlatList
+                data={availableProvinces.filter(p => p.name.toLowerCase().includes(pickerSearch.toLowerCase()))}
+                keyExtractor={item => item.code}
+                ListEmptyComponent={<Text style={styles.pickerEmpty}>No provinces found</Text>}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[styles.pickerItem, formData.province === item.name && styles.pickerItemSelected]}
+                    onPress={() => {
+                      setFormData({ ...formData, province: item.name, provinceCode: item.code, city: '', cityCode: '' });
+                      setAvailableCities([]);
+                      setProvincePickerVisible(false);
+                      fetchCities(item.code);
+                    }}
+                  >
+                    <Text style={[styles.pickerItemText, formData.province === item.name && styles.pickerItemTextSelected]}>{item.name}</Text>
+                    {formData.province === item.name && <MaterialCommunityIcons name="check" size={20} color="#8B1A1A" />}
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── CITY / MUNICIPALITY PICKER MODAL ── */}
+      <Modal visible={cityPickerVisible} transparent animationType="slide" onRequestClose={() => setCityPickerVisible(false)}>
+        <View style={styles.pickerModalOverlay}>
+          <View style={styles.pickerModalContent}>
+            <View style={styles.pickerModalHeader}>
+              <Text style={styles.pickerModalTitle}>Select City / Municipality</Text>
+              <TouchableOpacity onPress={() => setCityPickerVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color={theme.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.pickerSearch}
+              placeholder="Search city or municipality..."
+              placeholderTextColor={theme.textMuted}
+              value={pickerSearch}
+              onChangeText={setPickerSearch}
+              autoFocus
+            />
+            {loadingPicker ? (
+              <View style={styles.pickerLoading}><ActivityIndicator size="large" color="#8B1A1A" /></View>
+            ) : (
+              <FlatList
+                data={availableCities.filter(c => c.name.toLowerCase().includes(pickerSearch.toLowerCase()))}
+                keyExtractor={item => item.code}
+                ListEmptyComponent={<Text style={styles.pickerEmpty}>No cities found</Text>}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[styles.pickerItem, formData.city === item.name && styles.pickerItemSelected]}
+                    onPress={() => {
+                      setFormData({ ...formData, city: item.name, cityCode: item.code });
+                      setCityPickerVisible(false);
+                    }}
+                  >
+                    <Text style={[styles.pickerItemText, formData.city === item.name && styles.pickerItemTextSelected]}>{item.name}</Text>
+                    {formData.city === item.name && <MaterialCommunityIcons name="check" size={20} color="#8B1A1A" />}
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </View>
         </View>
       </Modal>
     </View>
@@ -827,4 +1087,136 @@ const getStyles = (theme) => StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-});
+  // ── PICKER STYLES ──
+  pickerLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.textSecondary,
+    marginBottom: 6,
+    marginTop: 10,
+  },
+  pickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1.5,
+    borderColor: theme.inputBorder,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: theme.inputBg,
+    marginBottom: 4,
+  },
+  pickerRequired: {
+    borderColor: '#8B1A1A',
+    borderStyle: 'dashed',
+  },
+  pickerDisabled: {
+    opacity: 0.45,
+  },
+  pickerValue: {
+    fontSize: 15,
+    color: theme.text,
+    fontWeight: '500',
+    flex: 1,
+  },
+  pickerPlaceholder: {
+    fontSize: 15,
+    color: theme.textMuted,
+    flex: 1,
+  },
+  shippingHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF5F5',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 6,
+    marginBottom: 8,
+    gap: 8,
+  },
+  shippingHintText: {
+    fontSize: 13,
+    color: '#8B1A1A',
+    fontWeight: '600',
+  },
+  pickerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  pickerModalContent: {
+    backgroundColor: theme.cardBackground,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    paddingBottom: 20,
+  },
+  pickerModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.borderLight,
+  },
+  pickerModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.text,
+  },
+  pickerSearch: {
+    margin: 12,
+    borderWidth: 1.5,
+    borderColor: theme.inputBorder,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: theme.text,
+    backgroundColor: theme.inputBg,
+  },
+  pickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.borderLight,
+  },
+  pickerItemSelected: {
+    backgroundColor: '#FFF0F0',
+  },
+  pickerItemText: {
+    fontSize: 15,
+    color: theme.text,
+    fontWeight: '500',
+    flex: 1,
+  },
+  pickerItemTextSelected: {
+    color: '#8B1A1A',
+    fontWeight: '700',
+  },
+  pickerItemSub: {
+    fontSize: 12,
+    color: theme.textMuted,
+    marginTop: 2,
+  },
+  pickerLoading: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  pickerEmpty: {
+    textAlign: 'center',
+    padding: 30,
+    color: theme.textMuted,
+    fontSize: 15,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  halfInput: {
+    flex: 1,
+  },

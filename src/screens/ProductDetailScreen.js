@@ -1,5 +1,5 @@
 // src/screens/ProductDetailScreen.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Image,
   Dimensions,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
@@ -16,6 +17,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
 import colors from '../constants/colors';
 import API_CONFIG from '../config/config';
+import ApiService from '../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -26,8 +28,10 @@ export default function ProductDetailScreen({ route, navigation }) {
   
   // All hooks MUST be called before any conditional return (React Rules of Hooks)
   const [quantity, setQuantity] = useState(1);
-  const { addToCart, isLoggedIn, addToWishlist, removeFromWishlist, isInWishlist } = useCart();
+  const { addToCart, isLoggedIn, addToWishlist, removeFromWishlist, isInWishlist, setCheckoutItems } = useCart();
   const [isFavorite, setIsFavorite] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   // Update isFavorite when product changes
   React.useEffect(() => {
@@ -35,6 +39,26 @@ export default function ProductDetailScreen({ route, navigation }) {
       setIsFavorite(isInWishlist(product.id));
     }
   }, [product?.id, isInWishlist]);
+
+  // Fetch real reviews from backend
+  useEffect(() => {
+    if (!product?.id) return;
+    const loadReviews = async () => {
+      setReviewsLoading(true);
+      try {
+        const res = await ApiService.request('GET', `/products/${product.id}/reviews?per_page=5&sort=newest`);
+        if (res.success) {
+          const data = res.data?.data?.data ?? res.data?.data ?? res.data ?? [];
+          setReviews(Array.isArray(data) ? data : []);
+        }
+      } catch (_) {
+        // fail silently — no reviews shown
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+    loadReviews();
+  }, [product?.id]);
   
   if (!product) {
     return (
@@ -104,10 +128,20 @@ export default function ProductDetailScreen({ route, navigation }) {
     }
     
     try {
-      await addToCart(product, quantity);
-      navigation.navigate('Cart');
+      // Set checkout items directly (bypasses cart), then go straight to Checkout
+      const checkoutItem = {
+        id: product.id,
+        product_id: product.id,
+        name: product.name,
+        price: parseFloat(product.price || 0),
+        quantity: quantity,
+        image: product.image,
+        stock: product.stock,
+      };
+      setCheckoutItems([checkoutItem]);
+      navigation.navigate('Checkout');
     } catch (error) {
-      Alert.alert('Error', 'Failed to add item to cart. Please try again.');
+      Alert.alert('Error', 'Something went wrong. Please try again.');
     }
   };
 
@@ -165,14 +199,32 @@ export default function ProductDetailScreen({ route, navigation }) {
           <Text style={styles.productPrice}>₱{parseFloat(product.price || 0).toFixed(2)}</Text>
           
           {/* Rating */}
-          <View style={styles.ratingContainer}>
-            <MaterialCommunityIcons name="star" size={20} color="#FFB800" />
-            <MaterialCommunityIcons name="star" size={20} color="#FFB800" style={{ marginLeft: 4 }} />
-            <MaterialCommunityIcons name="star" size={20} color="#FFB800" style={{ marginLeft: 4 }} />
-            <MaterialCommunityIcons name="star" size={20} color="#FFB800" style={{ marginLeft: 4 }} />
-            <MaterialCommunityIcons name="star" size={20} color="#FFB800" style={{ marginLeft: 4 }} />
-            <Text style={styles.ratingText}>(4.8) 120 reviews</Text>
-          </View>
+          {(() => {
+            const avgRating = reviews.length
+              ? reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length
+              : null;
+            const displayRating = avgRating !== null ? avgRating : 0;
+            return (
+              <View style={styles.ratingContainer}>
+                {[1, 2, 3, 4, 5].map(star => (
+                  <MaterialCommunityIcons
+                    key={star}
+                    name={displayRating >= star ? 'star' : displayRating >= star - 0.5 ? 'star-half-full' : 'star-outline'}
+                    size={20}
+                    color="#FFB800"
+                    style={star > 1 ? { marginLeft: 4 } : undefined}
+                  />
+                ))}
+                {reviews.length > 0 ? (
+                  <Text style={styles.ratingText}>({displayRating.toFixed(1)}) {reviews.length} review{reviews.length !== 1 ? 's' : ''}</Text>
+                ) : reviewsLoading ? (
+                  <Text style={styles.ratingText}>Loading reviews...</Text>
+                ) : (
+                  <Text style={styles.ratingText}>No reviews yet</Text>
+                )}
+              </View>
+            );
+          })()}
 
           {/* Description */}
           <View style={styles.section}>
@@ -245,6 +297,46 @@ export default function ProductDetailScreen({ route, navigation }) {
                 <Text style={styles.quantityButtonText}>+</Text>
               </TouchableOpacity>
             </View>
+          </View>
+
+          {/* Customer Reviews */}
+          <View style={styles.section}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={styles.sectionTitle}>Customer Reviews</Text>
+              {reviews.length > 0 && (
+                <TouchableOpacity onPress={() => navigation.navigate('Reviews', { productId: product.id, productName: product.name })}>
+                  <Text style={{ color: theme.primary, fontSize: 13, fontWeight: '600' }}>See All →</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {reviewsLoading ? (
+              <ActivityIndicator size="small" color={theme.primary} />
+            ) : reviews.length === 0 ? (
+              <Text style={{ color: theme.textMuted, fontSize: 14 }}>No reviews yet. Be the first to review!</Text>
+            ) : (
+              reviews.slice(0, 3).map((review, idx) => (
+                <View key={review.id || idx} style={{ marginBottom: 14, paddingBottom: 14, borderBottomWidth: idx < Math.min(reviews.length, 3) - 1 ? 1 : 0, borderBottomColor: theme.borderLight }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                    {[1,2,3,4,5].map(s => (
+                      <MaterialCommunityIcons key={s} name={review.rating >= s ? 'star' : 'star-outline'} size={14} color="#FFB800" />
+                    ))}
+                    <Text style={{ marginLeft: 6, fontSize: 13, fontWeight: '600', color: theme.text }}>
+                      {review.user?.name || review.reviewer_name || 'Customer'}
+                    </Text>
+                    {review.is_verified && (
+                      <Text style={{ marginLeft: 6, fontSize: 11, color: '#27AE60' }}>✓ Verified</Text>
+                    )}
+                  </View>
+                  {review.title ? (
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: theme.text, marginBottom: 2 }}>{review.title}</Text>
+                  ) : null}
+                  <Text style={{ fontSize: 13, color: theme.textSecondary, lineHeight: 20 }}>{review.comment}</Text>
+                  <Text style={{ fontSize: 11, color: theme.textMuted, marginTop: 4 }}>
+                    {review.created_at ? new Date(review.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : ''}
+                  </Text>
+                </View>
+              ))
+            )}
           </View>
 
           {/* Total Price */}
