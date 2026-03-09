@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, Alert, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, Alert } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import ScreenHeader from '../components/ScreenHeader';
@@ -11,10 +11,6 @@ const AccountScreen = ({ navigation }) => {
   const { theme } = useTheme();
   const styles = getStyles(theme);
   
-  // Debug logging
-  console.log('[AccountScreen] Render - isLoggedIn:', isLoggedIn);
-  console.log('[AccountScreen] Render - userInfo:', JSON.stringify(userInfo, null, 2));
-  
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editedName, setEditedName] = useState(userInfo?.name || '');
   const [editedEmail, setEditedEmail] = useState(userInfo?.email || '');
@@ -22,41 +18,35 @@ const AccountScreen = ({ navigation }) => {
 
   // Fetch user data when screen loads or when screen comes into focus
   useEffect(() => {
+    let isMounted = true;
     const fetchUserData = async () => {
-      if (isLoggedIn) {
-        try {
-          setIsLoading(true);
-          console.log('[AccountScreen] Fetching user data...');
-          const response = await ApiService.getCurrentUser();
-          console.log('[AccountScreen] API Response:', JSON.stringify(response, null, 2));
-          
-          if (response.success) {
-            const userData = response.data?.user || response.data;
-            console.log('[AccountScreen] Extracted user data:', JSON.stringify(userData, null, 2));
+      if (!isLoggedIn) return;
+      try {
+        setIsLoading(true);
+        const response = await ApiService.getCurrentUser();
+        if (isMounted && response.success) {
+          const userData = response.data?.user || response.data;
+          if (userData) {
             setUserInfo(userData);
-            // Force update the local state
             setEditedName(userData?.name || '');
             setEditedEmail(userData?.email || '');
-          } else {
-            console.error('[AccountScreen] Failed to fetch user:', response.error);
           }
-        } catch (error) {
-          console.error('[AccountScreen] Error fetching user:', error);
-        } finally {
-          setIsLoading(false);
         }
+      } catch (error) {
+        // silently fail — show cached userInfo
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     };
     
     fetchUserData();
     
-    // Also fetch when screen comes into focus
-    const unsubscribe = navigation.addListener('focus', () => {
-      console.log('[AccountScreen] Screen focused, refreshing user data');
-      fetchUserData();
-    });
+    const unsubscribe = navigation.addListener('focus', fetchUserData);
     
-    return unsubscribe;
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, [isLoggedIn, navigation]);
 
   const handleLogout = () => {
@@ -68,10 +58,9 @@ const AccountScreen = ({ navigation }) => {
         {
           text: 'Logout',
           style: 'destructive',
-          onPress: () => {
-            logout();
-            navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
-          },
+          // Just call logout() — CartContext sets isLoggedIn=false, RootNavigator
+          // automatically switches to the Auth stack. No manual reset needed.
+          onPress: () => logout(),
         },
       ]
     );
@@ -99,35 +88,29 @@ const AccountScreen = ({ navigation }) => {
 
   // Show login prompt if not logged in
   if (!isLoggedIn) {
+    // User is not logged in — the RootNavigator should have already shown the
+    // Auth stack, so this is just a safety fallback. We render a simple view
+    // rather than navigating programmatically to avoid navigation state errors.
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <ScreenHeader 
-          title="Account" 
+        <ScreenHeader
+          title="Account"
           navigation={navigation}
           showBack={false}
           showHamburger={true}
         />
-
         <View style={styles.notLoggedInContainer}>
           <View style={styles.notLoggedInContent}>
-            <Text style={styles.lockIcon}></Text>
+            <Text style={styles.lockIcon}>🔒</Text>
             <Text style={styles.notLoggedInTitle}>You're not logged in</Text>
             <Text style={styles.notLoggedInText}>
               Please login to access your account and view your profile
             </Text>
-            
             <TouchableOpacity
               style={styles.loginButton}
-              onPress={() => navigation.navigate('Login')}
+              onPress={() => logout()}
             >
-              <Text style={styles.loginButtonText}>Login</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.registerButton}
-              onPress={() => navigation.navigate('Register')}
-            >
-              <Text style={styles.registerButtonText}>Create Account</Text>
+              <Text style={styles.loginButtonText}>Go to Login</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -190,7 +173,7 @@ const AccountScreen = ({ navigation }) => {
             activeOpacity={0.6}
           >
             <View style={styles.menuItemLeft}>
-              <MaterialCommunityIcons name="package-box-multiple" size={24} color="#8B1A1A" style={styles.menuIcon} />
+              <MaterialCommunityIcons name="package-variant" size={24} color="#8B1A1A" style={styles.menuIcon} />
               <Text style={styles.menuText}>My Orders</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={theme.iconMuted} />
