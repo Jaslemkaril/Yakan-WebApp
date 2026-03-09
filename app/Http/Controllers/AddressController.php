@@ -38,36 +38,55 @@ class AddressController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'label' => 'required|string|max:50',
-            'full_name' => 'required|string|max:255',
-            'phone_number' => 'required|string|max:20',
-            'formatted_address' => 'required|string|max:255',
-            'region_id' => 'required|exists:philippine_regions,id',
-            'province_id' => 'required|exists:philippine_provinces,id',
-            'city_id' => 'required|exists:philippine_cities,id',
-            'barangay_id' => 'required|exists:philippine_barangays,id',
-            'postal_code' => 'required|string|max:10',
-            'is_default' => 'boolean',
-        ]);
+        // Support both ID-based (dedicated address page) and text-based (checkout modals)
+        $useIds = $request->filled('region_id');
 
-        // Get the actual names from the database
-        $region = PhilippineRegion::find($validated['region_id']);
-        $province = PhilippineProvince::find($validated['province_id']);
-        $city = PhilippineCity::find($validated['city_id']);
-        $barangay = PhilippineBarangay::find($validated['barangay_id']);
-        
+        $rules = [
+            'label'             => 'required|string|max:50',
+            'full_name'         => 'required|string|max:255',
+            'phone_number'      => 'required|string|max:20',
+            'formatted_address' => 'required|string|max:255',
+            'postal_code'       => 'required|string|max:10',
+            'is_default'        => 'boolean',
+        ];
+
+        if ($useIds) {
+            $rules['region_id']   = 'required|exists:philippine_regions,id';
+            $rules['province_id'] = 'required|exists:philippine_provinces,id';
+            $rules['city_id']     = 'required|exists:philippine_cities,id';
+            $rules['barangay_id'] = 'required|exists:philippine_barangays,id';
+        } else {
+            $rules['region'] = 'required|string|max:255';
+            $rules['city']   = 'required|string|max:255';
+        }
+
+        $validated = $request->validate($rules);
+
+        if ($useIds) {
+            $region   = PhilippineRegion::find($validated['region_id']);
+            $province = PhilippineProvince::find($validated['province_id']);
+            $city     = PhilippineCity::find($validated['city_id']);
+            $barangay = PhilippineBarangay::find($validated['barangay_id']);
+            $cityName     = $city->name;
+            $provinceName = $province->name;
+            $barangayName = $barangay->name;
+        } else {
+            $cityName     = $validated['city'];
+            $provinceName = $validated['region'];
+            $barangayName = $request->input('barangay', '');
+        }
+
         // Map form fields to database columns
         $addressData = [
-            'label' => $validated['label'],
-            'full_name' => $validated['full_name'],
-            'phone_number' => $validated['phone_number'],
-            'street' => $validated['formatted_address'],
-            'barangay' => $barangay->name,
-            'city' => $city->name,
-            'province' => $province->name,
+            'label'       => $validated['label'],
+            'full_name'   => $validated['full_name'],
+            'phone_number'=> $validated['phone_number'],
+            'street'      => $validated['formatted_address'],
+            'barangay'    => $barangayName,
+            'city'        => $cityName,
+            'province'    => $provinceName,
             'postal_code' => $validated['postal_code'],
-            'user_id' => Auth::id(),
+            'user_id'     => Auth::id(),
         ];
 
         // If this is the first address or marked as default, set it as default
@@ -125,35 +144,54 @@ class AddressController extends Controller
     {
         $this->authorize('update', $address);
 
-        $validated = $request->validate([
-            'label' => 'required|string|max:50',
-            'full_name' => 'required|string|max:255',
-            'phone_number' => 'required|string|max:20',
-            'formatted_address' => 'required|string|max:255',
-            'region_id' => 'required|exists:philippine_regions,id',
-            'province_id' => 'required|exists:philippine_provinces,id',
-            'city_id' => 'required|exists:philippine_cities,id',
-            'barangay_id' => 'required|exists:philippine_barangays,id',
-            'postal_code' => 'required|string|max:10',
-            'is_default' => 'boolean',
-        ]);
+        // Support both ID-based (dedicated address page) and text-based (checkout modals)
+        $useIds = $request->filled('region_id');
 
-        // Get the actual names from the database
-        $region = PhilippineRegion::find($validated['region_id']);
-        $province = PhilippineProvince::find($validated['province_id']);
-        $city = PhilippineCity::find($validated['city_id']);
-        $barangay = PhilippineBarangay::find($validated['barangay_id']);
+        $rules = [
+            'label'             => 'required|string|max:50',
+            'full_name'         => 'required|string|max:255',
+            'phone_number'      => 'required|string|max:20',
+            'formatted_address' => 'required|string|max:255',
+            'postal_code'       => 'required|string|max:10',
+            'is_default'        => 'boolean',
+        ];
+
+        if ($useIds) {
+            $rules['region_id']   = 'required|exists:philippine_regions,id';
+            $rules['province_id'] = 'required|exists:philippine_provinces,id';
+            $rules['city_id']     = 'required|exists:philippine_cities,id';
+            $rules['barangay_id'] = 'required|exists:philippine_barangays,id';
+        } else {
+            $rules['region'] = 'required|string|max:255';
+            $rules['city']   = 'required|string|max:255';
+        }
+
+        $validated = $request->validate($rules);
+
+        if ($useIds) {
+            $region   = PhilippineRegion::find($validated['region_id']);
+            $province = PhilippineProvince::find($validated['province_id']);
+            $city     = PhilippineCity::find($validated['city_id']);
+            $barangay = PhilippineBarangay::find($validated['barangay_id']);
+            $cityName     = $city->name;
+            $provinceName = $province->name;
+            $barangayName = $barangay->name;
+        } else {
+            $cityName     = $validated['city'];
+            $provinceName = $validated['region'];
+            $barangayName = $request->input('barangay', '');
+        }
 
         // Map form fields to database columns
         $addressData = [
-            'label' => $validated['label'],
-            'full_name' => $validated['full_name'],
+            'label'        => $validated['label'],
+            'full_name'    => $validated['full_name'],
             'phone_number' => $validated['phone_number'],
-            'street' => $validated['formatted_address'],
-            'barangay' => $barangay->name,
-            'city' => $city->name,
-            'province' => $province->name,
-            'postal_code' => $validated['postal_code'],
+            'street'       => $validated['formatted_address'],
+            'barangay'     => $barangayName,
+            'city'         => $cityName,
+            'province'     => $provinceName,
+            'postal_code'  => $validated['postal_code'],
         ];
 
         if ($request->boolean('is_default')) {
