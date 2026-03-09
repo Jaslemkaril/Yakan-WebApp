@@ -4,7 +4,7 @@
 
 @section('content')
 <!-- Loading Overlay -->
-<div id="settings-loading" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center" style="background: rgba(90,0,0,0.85); backdrop-filter: blur(4px);">
+<div id="settings-loading" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center" style="background: rgba(90,0,0,0.88); backdrop-filter: blur(4px);">
     <div class="flex flex-col items-center gap-6">
         <div class="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
         <div class="text-center">
@@ -12,6 +12,12 @@
             <p class="text-red-200 text-sm mt-1">Please wait, do not close this page</p>
         </div>
     </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="settings-toast" class="hidden fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl text-white text-sm font-semibold max-w-sm transition-all duration-300">
+    <span id="settings-toast-icon" class="text-xl"></span>
+    <span id="settings-toast-msg"></span>
 </div>
 <div class="min-h-screen bg-gray-50">
     <!-- Page Header -->
@@ -52,7 +58,7 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('admin.settings.update') }}{{ request('auth_token') ? '?auth_token=' . urlencode(request('auth_token')) : '' }}" class="space-y-8" id="settings-form" onsubmit="showSettingsLoading()">
+        <form method="POST" action="{{ route('admin.settings.update') }}{{ request('auth_token') ? '?auth_token=' . urlencode(request('auth_token')) : '' }}" class="space-y-8" id="settings-form">
             @csrf
             @if(request('auth_token'))
                 <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
@@ -292,16 +298,54 @@
 </div>
 
 <script>
-function showSettingsLoading() {
-    document.getElementById('settings-loading').classList.remove('hidden');
-    // Safety: hide after 10s in case of error
-    setTimeout(function() {
-        document.getElementById('settings-loading').classList.add('hidden');
-    }, 10000);
-}
-// Hide loading if page already loaded (e.g. after redirect back with errors)
-window.addEventListener('load', function() {
-    document.getElementById('settings-loading').classList.add('hidden');
+document.getElementById('settings-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const form   = e.target;
+    const loader = document.getElementById('settings-loading');
+    const toast  = document.getElementById('settings-toast');
+
+    // Show loader
+    loader.classList.remove('hidden');
+
+    try {
+        const response = await fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+
+        const data = await response.json();
+
+        // Hide loader
+        loader.classList.add('hidden');
+
+        // Show toast
+        const toastMsg  = document.getElementById('settings-toast-msg');
+        const toastIcon = document.getElementById('settings-toast-icon');
+
+        if (data.success) {
+            toast.style.background = '#166534';
+            toastIcon.textContent  = '✓';
+            toastMsg.textContent   = data.message;
+        } else {
+            toast.style.background = '#991b1b';
+            toastIcon.textContent  = '✕';
+            toastMsg.textContent   = data.message || 'Failed to save settings.';
+        }
+
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 4000);
+
+    } catch (err) {
+        loader.classList.add('hidden');
+        const toast  = document.getElementById('settings-toast');
+        document.getElementById('settings-toast-icon').textContent = '✕';
+        document.getElementById('settings-toast-msg').textContent  = 'Network error. Please try again.';
+        toast.style.background = '#991b1b';
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 4000);
+    }
 });
 </script>
 @endsection
