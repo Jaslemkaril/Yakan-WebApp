@@ -1513,7 +1513,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="overflow-y-auto max-h-[calc(75vh-180px)] p-6">
             <div class="space-y-3">
                 @foreach($addresses as $address)
-                    <div class="border-2 border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-all cursor-pointer" onclick="selectAddress({{ $address->id }}, '{{ addslashes($address->full_name) }}', '{{ $address->phone_number }}', '{{ addslashes($address->formatted_address) }}', '{{ $address->city }}', '{{ $address->region }}', '{{ $address->postal_code }}', {{ $address->is_default ? 'true' : 'false' }})">
+                    <div class="border-2 border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-all cursor-pointer" onclick="selectAddress({{ $address->id }}, '{{ addslashes($address->full_name) }}', '{{ $address->phone_number }}', '{{ addslashes($address->formatted_address) }}', '{{ $address->city }}', '{{ addslashes($address->province ?? '') }}', '{{ $address->postal_code }}', {{ $address->is_default ? 'true' : 'false' }})">
                         <div class="flex items-start gap-3">
                             <!-- Radio Button -->
                             <input type="radio" name="modal_address_selection" value="{{ $address->id }}" class="w-5 h-5 mt-1 flex-shrink-0" style="accent-color: #800000;" {{ ($selectedAddress->id ?? '') == $address->id ? 'checked' : '' }}>

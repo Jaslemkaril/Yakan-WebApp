@@ -30,6 +30,9 @@ class CustomOrder extends Model
         'phone',
         'email',
         'delivery_address',
+        'delivery_city',
+        'delivery_province',
+        'shipping_fee',
         'delivery_type',
         // Product Details (legacy - making nullable)
         'product_type',
@@ -92,6 +95,7 @@ class CustomOrder extends Model
         'patterns' => 'array',
         'estimated_price' => 'decimal:2',
         'final_price' => 'decimal:2',
+        'shipping_fee' => 'decimal:2',
         'fabric_quantity_meters' => 'decimal:2',
         'fabric_weight_gsm' => 'integer',
         'expected_date' => 'date',

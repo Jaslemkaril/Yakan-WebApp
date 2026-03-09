@@ -197,10 +197,14 @@ class CustomOrderController extends Controller
 
             // Get the selected address if delivery type is delivery
             $deliveryAddress = null;
+            $deliveryCity = null;
+            $deliveryProvince = null;
             if ($validated['delivery_type'] === 'delivery' && $validated['address_id']) {
                 $address = auth()->user()->addresses()->find($validated['address_id']);
                 if ($address) {
                     $deliveryAddress = "{$address->street}, {$address->barangay}, {$address->city}, {$address->province} {$address->postal_code}";
+                    $deliveryCity = $address->city;
+                    $deliveryProvince = $address->province;
                 }
             }
 
@@ -212,6 +216,8 @@ class CustomOrderController extends Controller
                 'customer_email' => $validated['customer_email'] ?? null,
                 'customer_phone' => $validated['customer_phone'] ?? null,
                 'delivery_address' => $deliveryAddress,
+                'delivery_city' => $deliveryCity,
+                'delivery_province' => $deliveryProvince,
                 'special_instructions' => $validated['special_instructions'] ?? null,
                 'addons' => $validated['addons'] ?? [],
                 'updated_at' => now()->toISOString(),
@@ -1407,6 +1413,8 @@ class CustomOrderController extends Controller
                 // Contact and delivery info
                 $order->delivery_type = $formDeliveryType ?: ($details['delivery_type'] ?? null);
                 $order->delivery_address = $formDeliveryAddr ?: ($details['delivery_address'] ?? null);
+                $order->delivery_city = $details['delivery_city'] ?? null;
+                $order->delivery_province = $details['delivery_province'] ?? null;
                 $order->phone = $details['customer_phone'] ?? null;
                 $order->email = $details['customer_email'] ?? null;
                 if (!empty($patternsArray)) {
@@ -1472,6 +1480,8 @@ class CustomOrderController extends Controller
                     // Contact and delivery info
                     'delivery_type' => $formDeliveryType ?: ($details['delivery_type'] ?? null),
                     'delivery_address' => $formDeliveryAddr ?: ($details['delivery_address'] ?? null),
+                    'delivery_city' => $details['delivery_city'] ?? null,
+                    'delivery_province' => $details['delivery_province'] ?? null,
                     'phone' => $details['customer_phone'] ?? null,
                     'email' => $details['customer_email'] ?? null,
                 ];
@@ -1896,10 +1906,37 @@ class CustomOrderController extends Controller
 
             $request->validate([
                 'payment_method' => 'required|in:online_banking,gcash,bank_transfer',
+                'shipping_fee'   => 'nullable|numeric|min:0',
+                'delivery_city'  => 'nullable|string|max:255',
+                'delivery_province' => 'nullable|string|max:255',
             ]);
 
             // Save payment method to order
             $order->payment_method = $request->payment_method;
+
+            // Update shipping fee and delivery location if provided
+            $shippingFee = (float) ($request->shipping_fee ?? $order->shipping_fee ?? 0);
+            $order->shipping_fee = $shippingFee;
+            if ($request->filled('delivery_city')) {
+                $order->delivery_city = $request->delivery_city;
+            }
+            if ($request->filled('delivery_province')) {
+                $order->delivery_province = $request->delivery_province;
+            }
+
+            // Add shipping fee to final_price if not already included
+            if ($shippingFee > 0 && $order->final_price) {
+                $breakdownRaw = $order->price_breakdown ?? null;
+                $alreadyIncluded = false;
+                if ($breakdownRaw) {
+                    $decoded = is_array($breakdownRaw) ? $breakdownRaw : json_decode($breakdownRaw, true);
+                    $alreadyIncluded = isset($decoded['breakdown']['delivery_fee']) && (float)$decoded['breakdown']['delivery_fee'] > 0;
+                }
+                if (!$alreadyIncluded) {
+                    $order->final_price = (float) $order->final_price + $shippingFee;
+                }
+            }
+
             $order->save();
             
             // Handle different payment methods
