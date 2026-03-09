@@ -384,14 +384,27 @@ function editAddress(addressId) {
     const token = urlParams.get('auth_token') || sessionStorage.getItem('auth_token') || '';
     const fetchUrl = token ? `/addresses/${addressId}/edit?auth_token=${encodeURIComponent(token)}` : `/addresses/${addressId}/edit`;
 
+    // Show loading state inside the modal
+    const container = document.getElementById('editFormContainer');
+    container.innerHTML = '<div class="p-10 flex flex-col items-center gap-3 text-gray-400"><div class="w-8 h-8 border-4 border-gray-200 border-t-[#8B1A1A] rounded-full animate-spin"></div><span class="text-sm">Loading...</span></div>';
+    document.getElementById('editAddressModal').classList.remove('hidden');
+
     fetch(fetchUrl)
         .then(response => response.text())
         .then(html => {
-            document.getElementById('editFormContainer').innerHTML = html;
+            // Use a temp container so we can extract and re-run scripts
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
 
-            // Inject auth_token into the dynamically loaded form's action URL and as hidden input
+            // Extract and remove script tags before setting innerHTML
+            const scripts = Array.from(temp.querySelectorAll('script'));
+            scripts.forEach(s => s.remove());
+
+            container.innerHTML = temp.innerHTML;
+
+            // Inject auth_token into the form
             if (token) {
-                const form = document.querySelector('#editFormContainer form');
+                const form = container.querySelector('form');
                 if (form) {
                     try {
                         const actionUrl = new URL(form.action, window.location.origin);
@@ -402,17 +415,29 @@ function editAddress(addressId) {
                     } catch(e) {}
                     if (!form.querySelector('input[name="auth_token"]')) {
                         const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = 'auth_token';
-                        input.value = token;
+                        input.type = 'hidden'; input.name = 'auth_token'; input.value = token;
                         form.appendChild(input);
                     }
                 }
             }
 
-            document.getElementById('editAddressModal').classList.remove('hidden');
+            // Re-execute scripts (innerHTML suppresses script execution)
+            scripts.forEach(oldScript => {
+                const newScript = document.createElement('script');
+                if (oldScript.src) {
+                    newScript.src = oldScript.src;
+                } else {
+                    newScript.textContent = oldScript.textContent;
+                }
+                document.body.appendChild(newScript);
+                // Clean up injected script tag immediately after execution
+                document.body.removeChild(newScript);
+            });
         })
-        .catch(err => console.error('Error loading edit form:', err));
+        .catch(err => {
+            console.error('Error loading edit form:', err);
+            container.innerHTML = '<div class="p-8 text-center text-red-500 text-sm">Failed to load form. Please try again.</div>';
+        });
 }
 
 // Cascading dropdown logic
