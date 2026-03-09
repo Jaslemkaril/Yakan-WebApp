@@ -125,6 +125,38 @@ HTML);
     }
 
     /**
+     * Redirect mobile app users to the OAuth provider.
+     * On callback the session flag is detected and a deep-link + Sanctum token
+     * is returned instead of a web page redirect.
+     */
+    public function mobileRedirect($provider)
+    {
+        if (!in_array($provider, ['google', 'facebook'])) {
+            return redirect()->route('login')->with('error', 'Unsupported authentication provider.');
+        }
+
+        try {
+            $clientId     = config('services.' . $provider . '.client_id');
+            $clientSecret = config('services.' . $provider . '.client_secret');
+
+            if (empty($clientId) || empty($clientSecret)) {
+                // Deep-link back with error so mobile app can show a message
+                return redirect()->away('yakanapp://auth-callback?error=' . urlencode('Google login is not configured on this server.'));
+            }
+
+            // Mark this flow as coming from the mobile app so the callback
+            // knows to return a deep link instead of a web page
+            session(['is_mobile_oauth' => true, 'mobile_oauth_provider' => $provider]);
+
+            return Socialite::driver($provider)->stateless()->redirect();
+
+        } catch (\Exception $e) {
+            \Log::error('Mobile OAuth redirect error', ['provider' => $provider, 'error' => $e->getMessage()]);
+            return redirect()->away('yakanapp://auth-callback?error=' . urlencode('Authentication failed. Please try again.'));
+        }
+    }
+
+    /**
      * Handle the callback from the OAuth provider.
      */
     public function callback($provider)
@@ -247,6 +279,31 @@ HTML);
                 'authenticated' => Auth::check(),
                 'session_id' => session()->getId(),
             ]);
+
+            // ── Mobile app: return a deep-link with a Sanctum token ──────────────
+            if (session('is_mobile_oauth')) {
+                session()->forget(['is_mobile_oauth', 'mobile_oauth_provider']);
+
+                // Create a proper Sanctum token (same as /api/v1/login)
+                $sanctumToken = $user->createToken('mobile-oauth')->plainTextToken;
+
+                $deepLink = 'yakanapp://auth-callback?' . http_build_query([
+                    'token'  => $sanctumToken,
+                    'id'     => $user->id,
+                    'name'   => $user->name ?? '',
+                    'email'  => $user->email ?? '',
+                    'role'   => $user->role ?? 'user',
+                    'avatar' => $user->avatar ?? '',
+                ]);
+
+                \Log::info('Mobile OAuth success — returning deep link', [
+                    'user_id' => $user->id,
+                    'provider' => $provider,
+                ]);
+
+                return redirect()->away($deepLink);
+            }
+            // ────────────────────────────────────────────────────────────────────
 
             // Return a branded loading page instead of a plain redirect response.
             // PHP redirect() produces a plain "Redirecting to..." HTML body; using JS

@@ -726,6 +726,8 @@ Route::post('/admin/logout', [AdminLoginController::class, 'logout'])->middlewar
 */
 Route::get('/auth/{provider}', [SocialAuthController::class, 'redirect'])->name('auth.redirect');
 Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])->name('auth.callback');
+// Mobile app OAuth — opens system browser, then redirects back to yakanapp:// deep link
+Route::get('/auth/{provider}/mobile', [SocialAuthController::class, 'mobileRedirect'])->name('auth.mobile.redirect');
 
 // OAuth Sandbox Routes (for testing without real credentials)
 Route::get('/auth/{provider}/sandbox', [SocialAuthController::class, 'sandbox'])->name('auth.social.sandbox');
