@@ -405,14 +405,7 @@ input[type='range']::-moz-range-thumb {
                         </canvas>
                     </div>
                     
-                    <!-- Background Mode Selector -->
-                    <div class="flex items-center gap-2 mt-3 mb-1">
-                        <span class="text-xs font-semibold text-gray-500">BG:</span>
-                        <button type="button" onclick="setCanvasBg('white')" class="bg-mode-btn active" id="bgWhite">White</button>
-                        <button type="button" onclick="setCanvasBg('light')" class="bg-mode-btn" id="bgLight">Light</button>
-                        <button type="button" onclick="setCanvasBg('dark')" class="bg-mode-btn" id="bgDark">Dark</button>
-                        <button type="button" onclick="setCanvasBg('fabric')" class="bg-mode-btn" id="bgFabric">Fabric</button>
-                    </div>
+
                     
                     <!-- Canvas Controls -->
                     <div class="mt-3 space-y-0">
@@ -443,18 +436,7 @@ input[type='range']::-moz-range-thumb {
                             <span id="opacityValue" class="control-value">100%</span>
                         </div>
                         
-                        <!-- Blend Mode Control -->
-                        <div class="control-row">
-                            <label class="control-label">Blend</label>
-                            <select id="blendMode" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 cursor-pointer bg-white focus:border-red-400 focus:ring-1 focus:ring-red-200 outline-none transition-all" onchange="updateCanvasPreview()">
-                                <option value="source-over" selected>Normal</option>
-                                <option value="multiply">Multiply</option>
-                                <option value="overlay">Overlay</option>
-                                <option value="screen">Screen</option>
-                                <option value="darken">Darken</option>
-                                <option value="lighten">Lighten</option>
-                            </select>
-                        </div>
+                        <input type="hidden" id="blendMode" value="source-over">
                     </div>
                     
                     <!-- Color Customization Section -->
@@ -2267,10 +2249,10 @@ function updateCanvasPreview() {
         }
     }
     
-    // Apply color tint overlay if strength > 0
+    // Apply color tint overlay if strength > 0 (source-atop = only paint over drawn pixels)
     if (tintStrength > 0) {
         ctx.filter = 'none';
-        ctx.globalCompositeOperation = 'overlay';
+        ctx.globalCompositeOperation = 'source-atop';
         ctx.globalAlpha = tintStrength / 100;
         ctx.fillStyle = colorTint;
         ctx.fillRect(-width * 2, -height * 2, width * 4, height * 4);
@@ -2315,46 +2297,38 @@ function toggleColorControls() {
     }
 }
 
-// Apply color presets
+// Apply color presets — uses source-atop tinting for accurate literal color
 function applyColorPreset(color) {
     const presets = {
-        'red': { hue: 0, saturation: 100, brightness: 100 },
-        'blue': { hue: 210, saturation: 100, brightness: 100 },
-        'green': { hue: 120, saturation: 100, brightness: 100 },
-        'yellow': { hue: 55, saturation: 100, brightness: 100 },
-        'purple': { hue: 280, saturation: 100, brightness: 100 },
-        'pink': { hue: 330, saturation: 100, brightness: 100 },
-        'orange': { hue: 25, saturation: 100, brightness: 100 },
-        'teal': { hue: 180, saturation: 100, brightness: 100 }
+        'red':    { hex: '#ef4444', tint: 78 },
+        'blue':   { hex: '#3b82f6', tint: 78 },
+        'green':  { hex: '#22c55e', tint: 78 },
+        'yellow': { hex: '#eab308', tint: 78 },
+        'purple': { hex: '#a855f7', tint: 78 },
+        'pink':   { hex: '#ec4899', tint: 78 },
+        'orange': { hex: '#f97316', tint: 78 },
+        'teal':   { hex: '#14b8a6', tint: 78 }
     };
-    
+
     const preset = presets[color];
-    if (preset) {
-        const hueEl = document.getElementById('hueRotation');
-        const saturationEl = document.getElementById('saturation');
-        const brightnessEl = document.getElementById('brightness');
-        
-        if (hueEl) hueEl.value = preset.hue;
-        if (saturationEl) saturationEl.value = preset.saturation;
-        if (brightnessEl) brightnessEl.value = preset.brightness;
-        
-        // Update the display values
-        if (document.getElementById('hueValue')) {
-            document.getElementById('hueValue').textContent = preset.hue + '°';
-        }
-        if (document.getElementById('saturationValue')) {
-            document.getElementById('saturationValue').textContent = preset.saturation + '%';
-        }
-        if (document.getElementById('brightnessValue')) {
-            document.getElementById('brightnessValue').textContent = preset.brightness + '%';
-        }
-        
-        // Apply to canvas
-        updateCanvasPreview();
-        showToast(`✓ Applied ${color} color`);
-    } else {
-        console.error('Color preset not found:', color);
-    }
+    if (!preset) return;
+
+    // Reset hue/sat/brightness so filter doesn't fight the tint
+    const hueEl = document.getElementById('hueRotation');
+    const satEl  = document.getElementById('saturation');
+    const briEl  = document.getElementById('brightness');
+    if (hueEl) { hueEl.value = 0; document.getElementById('hueValue').textContent = '0°'; }
+    if (satEl)  { satEl.value  = 100; document.getElementById('saturationValue').textContent = '100%'; }
+    if (briEl)  { briEl.value  = 100; document.getElementById('brightnessValue').textContent = '100%'; }
+
+    // Apply the actual color via tint
+    const tintEl     = document.getElementById('colorTint');
+    const strengthEl = document.getElementById('tintStrength');
+    if (tintEl)     tintEl.value     = preset.hex;
+    if (strengthEl) strengthEl.value = preset.tint;
+
+    updateCanvasPreview();
+    showToast('✓ Applied ' + color + ' color');
 }
 
 function saveCustomization() {
