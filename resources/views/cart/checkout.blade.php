@@ -719,7 +719,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('CSRF Token:', csrfToken);
         
         fetch(`/cart/update/${itemId}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
