@@ -717,6 +717,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateCartQuantity(itemId, newQuantity) {
         console.log('Updating cart item:', itemId, 'to quantity:', newQuantity);
         console.log('CSRF Token:', csrfToken);
+
+        // For buy_now (URL-based), include product_id so server can find it without a session
+        const bodyPayload = { quantity: newQuantity };
+        if (itemId === 'buy_now') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const pid = urlParams.get('product_id');
+            if (pid) bodyPayload.product_id = pid;
+        }
         
         fetch(`/cart/update/${itemId}`, {
             method: 'PATCH',
@@ -726,7 +734,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 'X-CSRF-TOKEN': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            body: JSON.stringify({ quantity: newQuantity })
+            body: JSON.stringify(bodyPayload)
         })
         .then(response => {
             console.log('Response status:', response.status);
@@ -775,10 +783,13 @@ document.addEventListener('DOMContentLoaded', function() {
             subtotalEl.textContent = `₱${parseFloat(data.cart_total).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         }
         
-        // Update total amount
+        // Update final total (subtotal - discount + current shipping)
         const totalEl = document.querySelector('.order-total');
-        if (totalEl && data.total_amount) {
-            totalEl.textContent = `₱${parseFloat(data.total_amount).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        if (totalEl && data.total_amount !== undefined) {
+            const shippingInput = document.getElementById('shippingFeeInput');
+            const shipping = shippingInput ? parseFloat(shippingInput.value) || 0 : 0;
+            const grandTotal = parseFloat(data.total_amount) + shipping;
+            totalEl.textContent = `₱${grandTotal.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         }
         
         // Update item count

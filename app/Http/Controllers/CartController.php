@@ -358,10 +358,20 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:1',
         ]);
 
-        // Handle Buy Now item (session-based)
-        if ($id === 'buy_now' && session()->has('buy_now_item')) {
-            $buyNowItem = session('buy_now_item');
-            $product = Product::find($buyNowItem['product_id']);
+        // Handle Buy Now item (session-based OR URL-param-based)
+        if ($id === 'buy_now') {
+            // Try session first; fall back to product_id from request body (URL-param buy_now flow)
+            if (session()->has('buy_now_item')) {
+                $productId = session('buy_now_item')['product_id'];
+            } elseif ($request->filled('product_id')) {
+                $productId = $request->input('product_id');
+            } else {
+                if ($request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => 'Cart item not found'], 404);
+                }
+                return redirect()->back()->with('error', 'Cart item not found');
+            }
+            $product = Product::find($productId);
             
             if (!$product) {
                 if ($request->wantsJson()) {
