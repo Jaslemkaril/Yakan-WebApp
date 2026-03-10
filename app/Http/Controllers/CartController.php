@@ -169,53 +169,67 @@ class CartController extends Controller
         $code = strtoupper(trim($request->input('code')));
         $coupon = Coupon::where('code', $code)->first();
 
-        if (!$coupon) {
-            return back()->with('error', 'Coupon not found.');
-        }
+        $fail = function (string $msg) use ($request) {
+            if ($request->expectsJson()) return response()->json(['success' => false, 'message' => $msg], 422);
+            return back()->with('error', $msg);
+        };
 
-        // compute subtotal to validate min spend
-        $cartItems = Cart::with('product.inventory')->where('user_id', Auth::id())->get();
-        $subtotal = $cartItems->sum(fn($item) => $item->product->price * $item->quantity);
+        if (!$coupon) return $fail('Coupon not found.');
+
+        // ── Compute subtotal ──────────────────────────────────────────────────
+        // Support buy-now flow: product_id + quantity passed directly in AJAX body
+        if ($request->boolean('buy_now') && $request->filled('product_id')) {
+            $product  = Product::find($request->input('product_id'));
+            $qty      = max(1, (int) $request->input('quantity', 1));
+            $subtotal = $product ? $product->price * $qty : 0;
+        } elseif (session()->has('buy_now_item')) {
+            $bni      = session('buy_now_item');
+            $product  = Product::find($bni['product_id']);
+            $subtotal = $product ? $product->price * ($bni['quantity'] ?? 1) : 0;
+        } else {
+            $cartItems = Cart::with('product.inventory')->where('user_id', Auth::id())->get();
+            $subtotal  = $cartItems->sum(fn($item) => $item->product->price * $item->quantity);
+        }
 
         // Detailed validation with specific error messages
-        if (!$coupon->active) {
-            return back()->with('error', 'This coupon is not active.');
-        }
-
+        if (!$coupon->active)                                      return $fail('This coupon is not active.');
         $now = now();
-        if ($coupon->starts_at && $now->lt($coupon->starts_at)) {
-            return back()->with('error', 'This coupon is not yet active.');
-        }
-
-        if ($coupon->ends_at && $now->gt($coupon->ends_at)) {
-            return back()->with('error', 'This coupon has expired.');
-        }
-
-        if ($coupon->usage_limit && $coupon->times_redeemed >= $coupon->usage_limit) {
-            return back()->with('error', 'This coupon usage limit has been reached.');
-        }
-
+        if ($coupon->starts_at && $now->lt($coupon->starts_at))   return $fail('This coupon is not yet active.');
+        if ($coupon->ends_at   && $now->gt($coupon->ends_at))     return $fail('This coupon has expired.');
+        if ($coupon->usage_limit && $coupon->times_redeemed >= $coupon->usage_limit)
+                                                                   return $fail('This coupon usage limit has been reached.');
         if ($coupon->usage_limit_per_user) {
             $userRedemptions = $coupon->redemptions()->where('user_id', Auth::id())->count();
-            if ($userRedemptions >= $coupon->usage_limit_per_user) {
-                return back()->with('error', 'You have already used this coupon.');
-            }
+            if ($userRedemptions >= $coupon->usage_limit_per_user) return $fail('You have already used this coupon.');
         }
 
-        if ($coupon->calculateDiscount((float)$subtotal) <= 0) {
-            return back()->with('error', 'Coupon does not apply to your current subtotal (minimum: ₱' . number_format($coupon->min_spend, 2) . ').');
-        }
+        $discountAmount = $coupon->calculateDiscount((float)$subtotal);
+        if ($discountAmount <= 0)
+            return $fail('Coupon does not apply to your current subtotal (minimum: ₱' . number_format($coupon->min_spend, 2) . ').');
 
         session(['coupon_code' => $code]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success'  => true,
+                'message'  => 'Coupon applied successfully!',
+                'discount' => $discountAmount,
+                'code'     => $code,
+            ]);
+        }
+
         return back()->with('success', 'Coupon applied successfully!');
     }
 
     /**
      * Remove applied coupon from session
      */
-    public function removeCoupon()
+    public function removeCoupon(Request $request)
     {
         session()->forget('coupon_code');
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Coupon removed.']);
+        }
         return back()->with('success', 'Coupon removed.');
     }
 

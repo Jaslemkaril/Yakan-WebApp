@@ -75,6 +75,8 @@
     @csrf
     <!-- radios above are bound here via form="checkout-form" -->
     <input type="hidden" name="confirm" value="1" />
+    <input type="hidden" name="coupon_code" id="coupon-code-input" value="{{ $appliedCoupon->code ?? '' }}" />
+    <input type="hidden" name="discount_amount" id="discount-amount-input" value="{{ $discount ?? 0 }}" />
     
     {{-- Pass selected cart items through form to survive session loss on Railway --}}
     @if(session()->has('selected_cart_items'))
@@ -595,12 +597,10 @@
                             </div>
 
                             <!-- Discount Row (if applicable) -->
-                            @if(($discount ?? 0) > 0)
-                            <div class="flex justify-between items-center py-3 border-b border-gray-100 bg-green-50 px-3 rounded-lg">
+                            <div id="discount-row" class="{{ ($discount ?? 0) > 0 ? '' : 'hidden' }} flex justify-between items-center py-3 border-b border-gray-100 bg-green-50 px-3 rounded-lg">
                                 <span class="text-gray-600 font-medium">Discount</span>
-                                <span class="font-bold text-green-600 text-lg">− ₱{{ number_format($discount, 2) }}</span>
+                                <span class="font-bold text-green-600 text-lg" id="discount-amount">− ₱{{ number_format($discount ?? 0, 2) }}</span>
                             </div>
-                            @endif
                             
                             <!-- Total Amount -->
                             <div class="rounded-xl p-4 border-2 mt-4" style="background: linear-gradient(135deg, #fff5f5 0%, #fff5f5 100%); border-color: rgba(128, 0, 0, 0.2);">
@@ -1811,3 +1811,129 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    // ── Coupon AJAX ──────────────────────────────────────────────────────────
+    const csrfToken    = document.querySelector('meta[name="csrf-token"]')?.content
+                          || '{{ csrf_token() }}';
+    const applyBtn     = document.getElementById('apply-coupon-btn');
+    const removeBtn    = document.getElementById('remove-coupon-btn');
+    const couponInput  = document.getElementById('coupon-input');
+    const couponMsg    = document.getElementById('coupon-msg');
+    const appliedInfo  = document.getElementById('coupon-applied-info');
+    const appliedCode  = document.getElementById('coupon-applied-code');
+    const discountRow  = document.getElementById('discount-row');
+    const discountAmt  = document.getElementById('discount-amount');
+    const finalDisplay = document.getElementById('finalTotalDisplay');
+    const hiddenCode   = document.getElementById('coupon-code-input');
+    const hiddenDisc   = document.getElementById('discount-amount-input');
+
+    // Current page query params (for buy-now subtotal)
+    const urlParams = new URLSearchParams(window.location.search);
+    const buyNow    = urlParams.get('buy_now');
+    const productId = urlParams.get('product_id');
+    const quantity  = urlParams.get('quantity') || 1;
+
+    function showMsg(text, type) {
+        couponMsg.className = 'mb-2 text-sm flex items-center gap-2 ' +
+            (type === 'success' ? 'text-green-600' : 'text-red-600');
+        couponMsg.innerHTML = text;
+        couponMsg.classList.remove('hidden');
+        setTimeout(() => couponMsg.classList.add('hidden'), 5000);
+    }
+
+    function recalcTotal(discount) {
+        const subtotalText = document.querySelector('#finalTotalDisplay')?.dataset.subtotal;
+        const shippingFee  = parseFloat(document.getElementById('shippingFeeInput')?.value || 0);
+        const subtotal     = parseFloat(subtotalText || 0);
+        if (isNaN(subtotal)) return;
+        const newTotal = Math.max(0, subtotal + shippingFee - discount);
+        if (finalDisplay) finalDisplay.textContent = '₱' + newTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    if (applyBtn) {
+        applyBtn.addEventListener('click', async function () {
+            const code = couponInput?.value.trim();
+            if (!code) { showMsg('Please enter a coupon code.', 'error'); return; }
+            applyBtn.disabled = true;
+            applyBtn.textContent = 'Applying…';
+            try {
+                const body = { code };
+                if (buyNow)    { body.buy_now = 1; body.product_id = productId; body.quantity = quantity; }
+                const res  = await fetch('{{ route("cart.coupon.apply") }}', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                    body:    JSON.stringify(body),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showMsg('✓ ' + data.message, 'success');
+                    if (hiddenCode) hiddenCode.value = code;
+                    if (hiddenDisc) hiddenDisc.value = data.discount || 0;
+                    if (couponInput) { couponInput.value = code; couponInput.disabled = true; }
+                    if (appliedCode) appliedCode.textContent = code;
+                    if (appliedInfo) appliedInfo.classList.remove('hidden');
+                    // Show discount row
+                    if (discountAmt && data.discount > 0) {
+                        discountAmt.textContent = '− ₱' + parseFloat(data.discount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                        if (discountRow) discountRow.classList.remove('hidden');
+                    }
+                    recalcTotal(parseFloat(data.discount || 0));
+                    // Swap button to Remove
+                    applyBtn.style.display = 'none';
+                    if (!removeBtn) {
+                        const rb = document.createElement('button');
+                        rb.id = 'remove-coupon-btn';
+                        rb.type = 'button';
+                        rb.className = 'bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 font-bold transition-all shadow-md whitespace-nowrap text-sm';
+                        rb.textContent = 'Remove';
+                        applyBtn.parentNode.appendChild(rb);
+                        rb.addEventListener('click', removeCoupon);
+                    }
+                } else {
+                    showMsg(data.message || 'Invalid coupon.', 'error');
+                    applyBtn.disabled = false;
+                    applyBtn.textContent = 'Apply';
+                }
+            } catch (e) {
+                showMsg('Could not apply coupon. Please try again.', 'error');
+                applyBtn.disabled = false;
+                applyBtn.textContent = 'Apply';
+            }
+        });
+    }
+
+    async function removeCoupon() {
+        try {
+            await fetch('{{ route("cart.coupon.remove") }}', {
+                method:  'DELETE',
+                headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            });
+        } catch(e) {}
+        if (couponInput) { couponInput.value = ''; couponInput.disabled = false; }
+        if (appliedInfo) appliedInfo.classList.add('hidden');
+        if (discountRow) discountRow.classList.add('hidden');
+        if (hiddenCode)  hiddenCode.value = '';
+        if (hiddenDisc)  hiddenDisc.value = 0;
+        recalcTotal(0);
+        // Swap back to Apply
+        const rb2 = document.getElementById('remove-coupon-btn');
+        if (rb2) rb2.style.display = 'none';
+        if (applyBtn) { applyBtn.style.display = ''; applyBtn.disabled = false; applyBtn.textContent = 'Apply'; }
+        showMsg('Coupon removed.', 'success');
+    }
+
+    if (removeBtn) removeBtn.addEventListener('click', removeCoupon);
+
+    // Store subtotal in dataset for recalc
+    if (finalDisplay) {
+        const shippingFee = parseFloat(document.getElementById('shippingFeeInput')?.value || 0);
+        const appliedDiscount = parseFloat('{{ $discount ?? 0 }}');
+        const finalVal = parseFloat('{{ $finalTotal ?? 0 }}');
+        finalDisplay.dataset.subtotal = (finalVal - shippingFee + appliedDiscount).toFixed(2);
+    }
+})();
+</script>
+@endpush
