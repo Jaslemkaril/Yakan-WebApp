@@ -240,7 +240,7 @@ const TrackOrderScreen = ({ navigation }) => {
             <MaterialCommunityIcons name='currency-php' size={14} color={theme.textSecondary} />
             <Text style={st.totalLabel}>Total Amount</Text>
           </View>
-          <Text style={st.totalAmount}>\u20B1{(order.total || 0).toFixed(2)}</Text>
+          <Text style={st.totalAmount}>₱{(order.total || 0).toFixed(2)}</Text>
         </View>
 
         {order.status === 'pending_payment' && !order.isCustom && (
