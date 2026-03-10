@@ -352,6 +352,64 @@
         text-decoration: underline;
         transform: translateX(2px);
     }
+
+    .download-app-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #800000 0%, #a82323 100%);
+        color: #fff;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 15px;
+        text-decoration: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 18px rgba(128, 0, 0, 0.35);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .download-app-btn::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+        transform: translateX(-100%);
+        transition: transform 0.5s ease;
+    }
+
+    .download-app-btn:hover::before {
+        transform: translateX(100%);
+    }
+
+    .download-app-btn:hover {
+        background: linear-gradient(135deg, #6b0000 0%, #9a1f1f 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 28px rgba(128, 0, 0, 0.5);
+        color: #fff;
+        text-decoration: none;
+    }
+
+    .download-app-btn:active {
+        transform: translateY(0);
+    }
+
+    .download-app-section {
+        margin-top: 1.75rem;
+        padding-top: 1.25rem;
+        border-top: 1px dashed #f3f4f6;
+        text-align: center;
+    }
+
+    .download-app-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: #9ca3af;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+    }
 </style>
 @endpush
 
@@ -497,6 +555,20 @@
                                     Sign up for free
                                 </a>
                             </p>
+                        </div>
+
+                        <!-- Download Mobile App -->
+                        <div class="download-app-section">
+                            <p class="download-app-label">🔥 Also available on Android</p>
+                            <a href="https://expo.dev/artifacts/eas/P54qzmGJqj5riKy5YehMY.apk"
+                               download
+                               class="download-app-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 16l-4-4m4 4l4-4m-4 4V4M4 20h16" />
+                                </svg>
+                                Download Yakan Mobile App
+                            </a>
+                            <p class="text-xs text-gray-400 mt-2">Free &bull; Android APK &bull; v1.0</p>
                         </div>
                     </div>
                 </div>
