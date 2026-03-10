@@ -74,6 +74,7 @@
 /* Responsive adjustments */
 @media (max-width: 1023px) {
     #floatingPreview {
+        display: none;
         width: 90vw;
         max-width: 400px;
         right: 5vw;
@@ -296,7 +297,7 @@ input[type='range']::-moz-range-thumb {
         </div>
 
         <!-- Floating Live Preview Sidebar -->
-        <div class="fixed right-4 top-20 w-80 bg-white/95 rounded-2xl shadow-2xl border z-50 max-h-[calc(100vh-6rem)] overflow-hidden" id="floatingPreview" style="display: block !important; visibility: visible !important; position: fixed !important; right: 1rem !important; top: 5rem !important; border-color: rgba(128,0,0,0.2); backdrop-filter: blur(12px);">
+        <div class="fixed right-4 top-20 w-80 bg-white/95 rounded-2xl shadow-2xl border z-50 max-h-[calc(100vh-6rem)] overflow-hidden" id="floatingPreview" style="border-color: rgba(128,0,0,0.2); backdrop-filter: blur(12px);">
             <!-- Preview Header -->
             <div class="text-white p-4 relative overflow-hidden" style="background: linear-gradient(135deg, #800000 0%, #a00000 50%, #c02020 100%);">
                 <div class="absolute inset-0 opacity-10">
@@ -532,7 +533,7 @@ input[type='range']::-moz-range-thumb {
         </button>
 
         <!-- Pattern Grid with adjusted spacing for floating sidebar -->
-        <form action="{{ route('custom_orders.store.pattern') }}" method="POST" class="pr-96 lg:pr-0">
+        <form action="{{ route('custom_orders.store.pattern') }}" method="POST" class="pr-0 lg:pr-96">
             @csrf
             <input type="hidden" name="product_id" value="{{ session('wizard.product.id') }}">
             
