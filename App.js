@@ -6,6 +6,7 @@ import { CartProvider, useCart } from './src/context/CartContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import { ThemeProvider } from './src/context/ThemeContext';
 import NotificationBar from './src/components/NotificationBar';
+import GlobalOrderPoller from './src/components/GlobalOrderPoller';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -156,6 +157,7 @@ export default function App() {
           <CartProvider>
             <NavigationContainer linking={linking}>
               <NotificationBar />
+              <GlobalOrderPoller />
               <RootNavigator />
             </NavigationContainer>
           </CartProvider>

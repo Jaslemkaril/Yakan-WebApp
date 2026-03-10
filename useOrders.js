@@ -11,19 +11,14 @@ export const useOrders = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const normalizeStatus = (status) => {
-    const map = {
-      pending: 'pending',
-      pending_payment: 'pending',
-      payment_verified: 'pending',
-      pending_confirmation: 'pending',
-      confirmed: 'processing',
-      processing: 'processing',
-      shipped: 'shipped',
-      delivered: 'delivered',
-      completed: 'completed',
-      cancelled: 'cancelled',
-    };
-    return map[status] || 'pending';
+    // Pass through all known statuses so TrackOrderScreen can display them accurately.
+    // Only fall back to 'pending' for truly unknown values.
+    const known = [
+      'pending', 'pending_payment', 'payment_verified', 'pending_confirmation',
+      'confirmed', 'processing', 'shipped', 'out_for_delivery',
+      'delivered', 'completed', 'cancelled', 'refunded',
+    ];
+    return known.includes(status) ? status : 'pending';
   };
 
   const loadOrders = useCallback(async () => {

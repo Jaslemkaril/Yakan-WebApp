@@ -587,7 +587,7 @@ export default function PaymentScreen({ navigation, route }) {
 
           <View style={styles.warningCard}>
             <View style={styles.warningIconContainer}>
-              <Text style={styles.warningIcon}>âš ï¸</Text>
+              <Text style={styles.warningIcon}>⚠️</Text>
             </View>
             <View style={styles.noticeContent}>
               <Text style={styles.warningTitle}>Important Reminder</Text>

@@ -11,15 +11,13 @@ export const NotificationProvider = ({ children }) => {
     const notification = {
       id,
       message,
-      type, // 'success', 'error', 'info', 'warning'
+      type,        // 'success', 'error', 'info', 'warning'
+      duration,    // stored so NotificationBar can auto-dismiss the toast
       timestamp: new Date(),
       isRead: false,
     };
 
     setNotifications(prev => [notification, ...prev]);
-
-    // Auto-remove after duration (only from toast bar, not from notification list)
-    // Removed auto-remove so notifications persist in the list
 
     return id;
   }, []);

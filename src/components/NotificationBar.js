@@ -23,17 +23,25 @@ const NotificationBar = () => {
     return animatedValues[id];
   };
 
-  // Animate notification in
+  // Animate notification in + auto-dismiss after its duration
   useEffect(() => {
     if (notifications.length > 0) {
       const latestNotif = notifications[0];
       const animValue = getAnimatedValue(latestNotif.id);
-      
+
       Animated.timing(animValue, {
         toValue: 1,
         duration: 300,
         useNativeDriver: true,
       }).start();
+
+      // Auto-dismiss the toast after its duration (default 4 s)
+      const dismissMs = latestNotif.duration || 4000;
+      const timer = setTimeout(() => {
+        removeNotification(latestNotif.id);
+      }, dismissMs);
+
+      return () => clearTimeout(timer);
     }
   }, [notifications]);
 
