@@ -96,37 +96,13 @@
             <form action="{{ route('track-order.search') }}" method="POST" id="trackForm">
                 @csrf
                 
-                <!-- Search Type Selection -->
-                <div class="mb-8">
-                    <label class="block text-sm font-semibold text-gray-700 mb-4">How would you like to track?</label>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="search-option active rounded-xl p-4 text-center" onclick="selectSearchType('tracking_number')">
-                            <input type="radio" name="search_type" value="tracking_number" checked class="hidden">
-                            <div class="option-icon text-4xl mb-2">📦</div>
-                            <div class="font-semibold">Tracking Number</div>
-                            <div class="text-xs mt-1 opacity-75">YAK-XXXXXXXXXX</div>
-                        </div>
-                        
-                        <div class="search-option rounded-xl p-4 text-center" onclick="selectSearchType('order_id')">
-                            <input type="radio" name="search_type" value="order_id" class="hidden">
-                            <div class="option-icon text-4xl mb-2 text-gray-600">🔢</div>
-                            <div class="font-semibold">Order ID</div>
-                            <div class="text-xs mt-1 opacity-75">Order #12345</div>
-                        </div>
-                        
-                        <div class="search-option rounded-xl p-4 text-center" onclick="selectSearchType('email')">
-                            <input type="radio" name="search_type" value="email" class="hidden">
-                            <div class="option-icon text-4xl mb-2 text-gray-600">📧</div>
-                            <div class="font-semibold">Email Address</div>
-                            <div class="text-xs mt-1 opacity-75">your@email.com</div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Hidden search type - always tracking number -->
+                <input type="hidden" name="search_type" value="tracking_number">
 
                 <!-- Search Input -->
                 <div class="mb-6">
-                    <label for="search_value" class="block text-sm font-semibold text-gray-700 mb-2" id="searchLabel">
-                        Enter Tracking Number
+                    <label for="search_value" class="block text-sm font-semibold text-gray-700 mb-2">
+                        Enter Order Reference Number
                     </label>
                     <input type="text" 
                            name="search_value" 
@@ -135,19 +111,6 @@
                            style="--tw-ring-color: rgba(128, 0, 0, 0.2);" onfocus="this.style.borderColor='#800000'"
                            placeholder="YAK-XXXXXXXXXX"
                            required>
-                </div>
-
-                <!-- Email Input (conditional) -->
-                <div class="mb-6 hidden" id="emailField">
-                    <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
-                        Email Address (Optional for Order ID)
-                    </label>
-                    <input type="email" 
-                           name="email" 
-                           id="email" 
-                           class="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:ring-4 transition-all"
-                           style="--tw-ring-color: rgba(128, 0, 0, 0.2);" onfocus="this.style.borderColor='#800000'"
-                           placeholder="your@email.com">
                 </div>
 
                 <!-- Submit Button -->
@@ -159,40 +122,6 @@
                 </button>
             </form>
 
-            <!-- Help Text -->
-            <div class="mt-8 pt-8 border-t border-gray-200">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-                    <div>
-                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <h3 class="font-semibold text-gray-900 mb-1">Where's my tracking number?</h3>
-                        <p class="text-sm text-gray-600">Check your order confirmation email</p>
-                    </div>
-                    
-                    <div>
-                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <h3 class="font-semibold text-gray-900 mb-1">Real-time Updates</h3>
-                        <p class="text-sm text-gray-600">Get live tracking information</p>
-                    </div>
-                    
-                    <div>
-                        <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style="background-color: rgba(128, 0, 0, 0.1);">
-                            <svg class="w-6 h-6" style="color: #800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/>
-                            </svg>
-                        </div>
-                        <h3 class="font-semibold text-gray-900 mb-1">Need Help?</h3>
-                        <p class="text-sm text-gray-600">Contact our support team</p>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
