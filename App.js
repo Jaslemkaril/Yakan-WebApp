@@ -7,6 +7,7 @@ import { NotificationProvider } from './src/context/NotificationContext';
 import { ThemeProvider } from './src/context/ThemeContext';
 import NotificationBar from './src/components/NotificationBar';
 import GlobalOrderPoller from './src/components/GlobalOrderPoller';
+import AutoUpdater from './src/components/AutoUpdater';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -155,6 +156,7 @@ export default function App() {
       <ThemeProvider>
         <NotificationProvider>
           <CartProvider>
+            <AutoUpdater />
             <NavigationContainer linking={linking}>
               <NotificationBar />
               <GlobalOrderPoller />
