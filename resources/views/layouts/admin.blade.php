@@ -1053,25 +1053,6 @@
                         </div>
                     </div>
                     <div class="flex items-center space-x-2 md:space-x-4">
-                        <!-- Search Bar (Desktop) -->
-                        <div class="desktop-search hidden lg:flex items-center">
-                            <div class="relative">
-                                <input type="text" 
-                                       placeholder="Search..." 
-                                       class="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-                            </div>
-                        </div>
-                        
-                        <!-- Mobile Search Button -->
-                        <button class="mobile-search lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                                @click="$refs.mobileSearchModal.show()">
-                            <i class="fas fa-search w-5 h-5"></i>
-                        </button>
-                        
-                        <!-- Notification Bell -->
-                        @include('components.admin-notification-dropdown')
-                        
                         <!-- User Menu (Mobile) -->
                         <div class="md:hidden">
                             <button class="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
@@ -1118,22 +1099,6 @@
                 </div>
             </div>
         </main>
-    </div>
-    
-    <!-- Mobile Search Modal -->
-    <div x-ref="mobileSearchModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden lg:hidden" @click="$event.target === $el && $el.hide()">
-        <div class="bg-white p-4" @click.stop>
-            <div class="flex items-center space-x-3 mb-4">
-                <button @click="$refs.mobileSearchModal.hide()" class="p-2 hover:bg-gray-100 rounded-lg">
-                    <i class="fas fa-times text-gray-600"></i>
-                </button>
-                <h3 class="text-lg font-semibold">Search</h3>
-            </div>
-            <div class="relative">
-                <input type="text" placeholder="Search..." class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-            </div>
-        </div>
     </div>
     
     <!-- Mobile User Menu -->
