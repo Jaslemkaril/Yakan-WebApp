@@ -437,7 +437,7 @@ const CheckoutScreen = ({ navigation }) => {
       status: 'pending_payment',
     };
 
-    await saveOrder(orderData);
+    // Order is saved locally only after payment is confirmed (in PaymentScreen)
     navigation.navigate('Payment', { orderData });
   };
 

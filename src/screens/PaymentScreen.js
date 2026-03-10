@@ -108,7 +108,11 @@ export default function PaymentScreen({ navigation, route }) {
     try {
       const savedOrders = await AsyncStorage.getItem('pendingOrders');
       const orders = savedOrders ? JSON.parse(savedOrders) : [];
-      const updatedOrders = orders.map(o => o.orderRef === updatedOrder.orderRef ? updatedOrder : o);
+      // Upsert: update existing order or add new one
+      const exists = orders.some(o => o.orderRef === updatedOrder.orderRef);
+      const updatedOrders = exists
+        ? orders.map(o => o.orderRef === updatedOrder.orderRef ? updatedOrder : o)
+        : [...orders, updatedOrder];
       await AsyncStorage.setItem('pendingOrders', JSON.stringify(updatedOrders));
     } catch (error) {
       console.error('Failed to update order in local storage:', error);
@@ -159,7 +163,7 @@ export default function PaymentScreen({ navigation, route }) {
         shipping_address: `${orderData.shippingAddress.street}, ${orderData.shippingAddress.city}, ${orderData.shippingAddress.province} ${orderData.shippingAddress.postalCode}`,
         delivery_address: `${orderData.shippingAddress.street}, ${orderData.shippingAddress.city}, ${orderData.shippingAddress.province} ${orderData.shippingAddress.postalCode}`,
         payment_method: selectedPaymentMethod,
-        payment_status: 'paid',
+        payment_status: 'pending',
         payment_reference: referenceNumber || null,
         delivery_type: orderData.deliveryOption || 'deliver', // 'deliver' or 'pickup'
         items: orderData.items.map(item => ({
@@ -301,10 +305,9 @@ export default function PaymentScreen({ navigation, route }) {
           <View style={{ width: 50 }} />
         </View>
 
-        {/* Success Banner */}
-        <View style={styles.successBanner}>
-          <Text style={styles.successIcon}>âœ“</Text>
-          <Text style={styles.successText}>Order placed! Complete payment online.</Text>
+        {/* Instructions Banner */}
+        <View style={styles.instructionsBanner}>
+          <Text style={styles.instructionsBannerText}>Complete your payment below to confirm this order</Text>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -570,7 +573,7 @@ export default function PaymentScreen({ navigation, route }) {
           {/* Notices */}
           <View style={styles.noticeCard}>
             <View style={styles.noticeIconContainer}>
-              <Text style={styles.noticeIcon}>âœ“</Text>
+              <Text style={styles.noticeIcon}>✔</Text>
             </View>
             <View style={styles.noticeContent}>
               <Text style={styles.noticeTitle}>Instant Payment Verification</Text>
@@ -722,7 +725,7 @@ export default function PaymentScreen({ navigation, route }) {
 
         {/* Security Notice */}
         <View style={styles.securityCard}>
-          <Text style={styles.securityIcon}>ðŸ”’</Text>
+          <Text style={styles.securityIcon}>🔒</Text>
           <Text style={styles.securityText}>Your payment information is encrypted and secure</Text>
         </View>
       </ScrollView>
@@ -806,6 +809,21 @@ const styles = StyleSheet.create({
     color: '#2e7d32',
     fontSize: 14,
     fontWeight: '500',
+  },
+
+  // Instructions Banner (neutral, replaces misleading success banner)
+  instructionsBanner: {
+    backgroundColor: '#FFF8E1',
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFE082',
+  },
+  instructionsBannerText: {
+    color: '#795548',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 
   // Instructions Container

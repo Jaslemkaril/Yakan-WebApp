@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal,
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import ScreenHeader from '../components/ScreenHeader';
+import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
 import ApiService from '../services/api';
 
@@ -247,6 +248,9 @@ const AccountScreen = ({ navigation }) => {
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Bottom Navigation */}
+      <BottomNav navigation={navigation} activeRoute="Account" />
 
       {/* Edit Profile Modal */}
       <Modal
