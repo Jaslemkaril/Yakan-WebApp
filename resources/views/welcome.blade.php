@@ -290,6 +290,25 @@
                 </a>
             </div>
 
+            <!-- Mobile App Download -->
+            <div class="mt-6 animate-fade-in-up" style="animation-delay:0.55s">
+                <a href="https://expo.dev/artifacts/eas/P54qzmGJqj5riKy5YehMY.apk" download
+                   class="group inline-flex items-center justify-center gap-3 px-7 py-3.5 rounded-2xl text-sm font-semibold text-white transition-all duration-300 hover:scale-105 hover:brightness-110 shadow-xl"
+                   style="background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 100%); border: 1.5px solid rgba(255,255,255,0.3); backdrop-filter: blur(14px);">
+                    <!-- Android robot icon -->
+                    <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.523 15.341A5.99 5.99 0 0018 13V9a6 6 0 00-12 0v4a5.99 5.99 0 00.477 2.341L5 17h14l-1.477-1.659zM12 2a1 1 0 100-2 1 1 0 000 2zM7.05 3.343a1 1 0 10-1.414 1.414 1 1 0 001.414-1.414zm10.314 1.414a1 1 0 10-1.414-1.414 1 1 0 001.414 1.414zM4 19h16a1 1 0 000-2H4a1 1 0 000 2zm4 2a2 2 0 104 0H8z"/>
+                    </svg>
+                    <span>Download Android App</span>
+                    <!-- Download arrow -->
+                    <svg class="w-4 h-4 group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    <span class="ml-1 px-2 py-0.5 rounded-full text-xs font-bold" style="background:rgba(255,255,255,0.2); letter-spacing:0.04em">APK</span>
+                </a>
+                <p class="mt-2 text-xs text-red-200 opacity-70">Free &middot; Android &middot; v1.0</p>
+            </div>
+
             <!-- Trust pills -->
             <div class="mt-10 flex flex-wrap justify-center gap-3 animate-fade-in-up" style="animation-delay:0.55s">
                 <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm text-red-100" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15)">

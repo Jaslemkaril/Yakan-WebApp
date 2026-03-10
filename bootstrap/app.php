@@ -158,7 +158,7 @@ return Application::configure(basePath: dirname(__DIR__))
         <div class="progress-bar"><div class="progress-fill"></div></div>
         <p class="status">REDIRECTING TO LOGIN</p>
     </div>
-    <script>setTimeout(function(){window.location.href={$loginUrl};},1400);<\/script>
+    <script>window.location.replace({$loginUrl});<\/script>
 </body>
 </html>
 HTML);
