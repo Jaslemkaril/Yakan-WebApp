@@ -311,9 +311,17 @@ input[type='range']::-moz-range-thumb {
                         </svg>
                         <h3 class="font-bold text-base">Live Preview</h3>
                     </div>
-                    <div class="flex items-center space-x-2 bg-white/15 rounded-full px-3 py-1">
-                        <span class="text-xs font-medium">Real-time</span>
-                        <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <div class="flex items-center gap-2">
+                        <div class="flex items-center space-x-2 bg-white/15 rounded-full px-3 py-1">
+                            <span class="text-xs font-medium">Real-time</span>
+                            <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        </div>
+                        <!-- Close button – mobile only -->
+                        <button onclick="toggleMobilePreview()" class="lg:hidden w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors" aria-label="Close preview">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -525,10 +533,15 @@ input[type='range']::-moz-range-thumb {
         </div>
 
         <!-- Mobile Toggle Button -->
-        <button onclick="toggleMobilePreview()" class="lg:hidden fixed bottom-4 right-4 w-14 h-14 text-white rounded-full shadow-lg z-40 flex items-center justify-center" id="mobilePreviewToggle" style="background-color:#800000;">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button onclick="toggleMobilePreview()" class="lg:hidden fixed bottom-4 right-4 w-14 h-14 text-white rounded-full shadow-lg z-40 flex items-center justify-center transition-transform active:scale-95" id="mobilePreviewToggle" style="background-color:#800000;" aria-label="Toggle live preview">
+            <!-- Eye icon (preview closed) -->
+            <svg id="fabIconOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+            <!-- X icon (preview open) -->
+            <svg id="fabIconClose" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
             </svg>
         </button>
 
@@ -1540,17 +1553,21 @@ function showToast(message) {
 }
 
 function toggleMobilePreview() {
-    const floatingPreview = document.getElementById('floatingPreview');
-    const toggle = document.getElementById('mobilePreviewToggle');
-    
-    if (floatingPreview.style.display === 'block') {
-        floatingPreview.style.display = 'none';
-        toggle.classList.remove('bg-red-600');
-        toggle.classList.add('bg-purple-600');
+    const preview   = document.getElementById('floatingPreview');
+    const iconOpen  = document.getElementById('fabIconOpen');
+    const iconClose = document.getElementById('fabIconClose');
+    const isHidden  = preview.style.display === 'none' || preview.style.display === '';
+
+    if (isHidden) {
+        preview.style.display = 'block';
+        if (iconOpen)  iconOpen.classList.add('hidden');
+        if (iconClose) iconClose.classList.remove('hidden');
+        initializeCanvas();
+        if (currentPattern) updateCanvasPreview();
     } else {
-        floatingPreview.style.display = 'block';
-        toggle.classList.remove('bg-purple-600');
-        toggle.classList.add('bg-red-600');
+        preview.style.display = 'none';
+        if (iconOpen)  iconOpen.classList.remove('hidden');
+        if (iconClose) iconClose.classList.add('hidden');
     }
 }
 
@@ -2376,14 +2393,22 @@ function toggleGrid() {
 
 // Mobile preview toggle
 function toggleMobilePreview() {
-    const preview = document.getElementById('floatingPreview');
-    if (preview.style.display === 'none') {
+    const preview   = document.getElementById('floatingPreview');
+    const iconOpen  = document.getElementById('fabIconOpen');
+    const iconClose = document.getElementById('fabIconClose');
+    const isHidden  = preview.style.display === 'none' || preview.style.display === '';
+
+    if (isHidden) {
         preview.style.display = 'block';
+        if (iconOpen)  iconOpen.classList.add('hidden');
+        if (iconClose) iconClose.classList.remove('hidden');
         // Re-initialize canvas now that it is visible and has real dimensions
         initializeCanvas();
         if (currentPattern) updateCanvasPreview();
     } else {
         preview.style.display = 'none';
+        if (iconOpen)  iconOpen.classList.remove('hidden');
+        if (iconClose) iconClose.classList.add('hidden');
     }
 }
 
