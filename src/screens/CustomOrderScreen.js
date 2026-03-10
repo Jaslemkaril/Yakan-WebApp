@@ -13,7 +13,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
 import colors from '../constants/colors';
 
-const WEBSITE_URL = 'https://yakan-webapp-production.up.railway.app/custom-order';
+const WEBSITE_URL = 'https://yakan-webapp-production.up.railway.app/custom-orders';
 
 const CustomOrderScreen = ({ navigation }) => {
   const { theme } = useTheme();
@@ -70,7 +70,7 @@ const CustomOrderScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         <Text style={styles.note}>
-          Opens in your browser at {WEBSITE_URL}
+          Opens your browser — log in with your account to place the order.
         </Text>
       </View>
 
