@@ -106,7 +106,12 @@ export default function ProductDetailScreen({ route, navigation }) {
       ]);
       return;
     }
-    
+
+    if (!product.stock || product.stock <= 0) {
+      Alert.alert('Out of Stock', 'Sorry, this product is currently out of stock.');
+      return;
+    }
+
     try {
       await addToCart(product, quantity);
       Alert.alert('Success', `${product.name} added to cart!`, [
@@ -126,7 +131,12 @@ export default function ProductDetailScreen({ route, navigation }) {
       ]);
       return;
     }
-    
+
+    if (!product.stock || product.stock <= 0) {
+      Alert.alert('Out of Stock', 'Sorry, this product is currently out of stock.');
+      return;
+    }
+
     try {
       // Set checkout items directly (bypasses cart), then go straight to Checkout
       const checkoutItem = {
@@ -197,8 +207,14 @@ export default function ProductDetailScreen({ route, navigation }) {
         <View style={styles.infoContainer}>
           <Text style={styles.productName}>{product.name}</Text>
           <Text style={styles.productPrice}>₱{parseFloat(product.price || 0).toFixed(2)}</Text>
-          
-          {/* Rating */}
+
+          {/* Stock Badge */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: product.stock > 0 ? '#27AE60' : '#E74C3C', marginRight: 6 }} />
+            <Text style={{ fontSize: 13, fontWeight: '600', color: product.stock > 0 ? '#27AE60' : '#E74C3C' }}>
+              {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+            </Text>
+          </View>}
           {(() => {
             const avgRating = reviews.length
               ? reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length
@@ -351,20 +367,22 @@ export default function ProductDetailScreen({ route, navigation }) {
 
       {/* Bottom Action Buttons */}
       <View style={styles.bottomActions}>
-        <TouchableOpacity 
-          style={styles.addToCartButton}
+        <TouchableOpacity
+          style={[styles.addToCartButton, product.stock <= 0 && { opacity: 0.4 }]}
           onPress={handleAddToCart}
+          disabled={product.stock <= 0}
         >
           <MaterialCommunityIcons name="shopping" size={20} color="#8B1A1A" style={{ marginRight: 8 }} />
-          <Text style={styles.addToCartText}>Add to Cart</Text>
+          <Text style={styles.addToCartText}>{product.stock <= 0 ? 'Out of Stock' : 'Add to Cart'}</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.buyNowButton}
+
+        <TouchableOpacity
+          style={[styles.buyNowButton, product.stock <= 0 && { opacity: 0.4 }]}
           onPress={handleBuyNow}
+          disabled={product.stock <= 0}
         >
           <MaterialCommunityIcons name="flash" size={20} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={styles.buyNowText}>Buy Now</Text>
+          <Text style={styles.buyNowText}>{product.stock <= 0 ? 'Unavailable' : 'Buy Now'}</Text>
         </TouchableOpacity>
       </View>
     </View>

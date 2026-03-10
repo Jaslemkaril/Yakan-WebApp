@@ -31,6 +31,7 @@ const DEFAULT_PAYMENT_ACCOUNTS = {
     bankName: 'BDO',
     accountNumber: '',
     accountName: 'Tuwas Yakan',
+    branch: '',
   },
 };
 
@@ -74,9 +75,10 @@ export default function PaymentScreen({ navigation, route }) {
               name:   d.gcash_name   || DEFAULT_PAYMENT_ACCOUNTS.gcash.name,
             },
             bank_transfer: {
-              bankName:      d.bank_name         || DEFAULT_PAYMENT_ACCOUNTS.bank_transfer.bankName,
-              accountNumber: d.bank_account      || DEFAULT_PAYMENT_ACCOUNTS.bank_transfer.accountNumber,
-              accountName:   d.bank_account_name || DEFAULT_PAYMENT_ACCOUNTS.bank_transfer.accountName,
+              bankName:      d.bank_name            || DEFAULT_PAYMENT_ACCOUNTS.bank_transfer.bankName,
+              accountNumber: d.bank_account_number  || DEFAULT_PAYMENT_ACCOUNTS.bank_transfer.accountNumber,
+              accountName:   d.bank_account_name    || DEFAULT_PAYMENT_ACCOUNTS.bank_transfer.accountName,
+              branch:        d.bank_branch          || DEFAULT_PAYMENT_ACCOUNTS.bank_transfer.branch,
             },
           });
         }

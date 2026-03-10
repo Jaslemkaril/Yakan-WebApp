@@ -8,7 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import ApiService from '../services/api';
 
 const AccountScreen = ({ navigation }) => {
-  const { isLoggedIn, isLoadingAuth, userInfo, logout, updateUserInfo, setUserInfo } = useCart();
+  const { isLoggedIn, isLoadingAuth, userInfo, logout, updateUserInfo } = useCart();
   const { theme } = useTheme();
   const styles = getStyles(theme);
   
@@ -20,17 +20,23 @@ const AccountScreen = ({ navigation }) => {
   // Fetch user data when screen loads or when screen comes into focus
   useEffect(() => {
     let isMounted = true;
-    const fetchUserData = async () => {
+    const fetchUserData = async () => {      
       if (!isLoggedIn) return;
       try {
         setIsLoading(true);
         const response = await ApiService.getCurrentUser();
         if (isMounted && response.success) {
-          const userData = response.data?.user || response.data;
-          if (userData) {
-            setUserInfo(userData);
-            setEditedName(userData?.name || '');
-            setEditedEmail(userData?.email || '');
+          // Normalize response the same way CartContext does:
+          // API returns { success, data: { id, name, email, ... } }
+          const userData = response.data?.data || response.data?.user || response.data;
+          if (userData && typeof userData === 'object' && (userData.name || userData.first_name || userData.email)) {
+            // Build consistent name field if missing
+            if (!userData.name && userData.first_name) {
+              userData.name = `${userData.first_name} ${userData.last_name || ''}`.trim();
+            }
+            updateUserInfo(userData);
+            setEditedName(userData.name || '');
+            setEditedEmail(userData.email || '');
           }
         }
       } catch (error) {
