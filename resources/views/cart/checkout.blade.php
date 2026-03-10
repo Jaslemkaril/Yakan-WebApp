@@ -496,40 +496,41 @@
 
                             <!-- Coupon Section -->
                             <div class="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-xl border-2 border-amber-200 shadow-sm">
+                                {{-- AJAX coupon messages --}}
+                                <div id="coupon-msg" class="hidden mb-2 text-sm flex items-center gap-2"></div>
                                 @if(session('success'))
-                                    <div class="text-green-600 text-sm mb-2 flex items-center gap-2">
-                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                        </svg>
-                                        {{ session('success') }}
-                                    </div>
+                                    <div class="text-green-600 text-sm mb-2">{{ session('success') }}</div>
                                 @endif
                                 @if(session('error'))
-                                    <div class="text-red-600 text-sm mb-2 flex items-center gap-2">
-                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                                        </svg>
-                                        {{ session('error') }}
-                                    </div>
+                                    <div class="text-red-600 text-sm mb-2">{{ session('error') }}</div>
                                 @endif
-                                <form action="{{ route('cart.coupon.apply') }}" method="POST" class="flex flex-col sm:flex-row gap-2">
-                                    @csrf
-                                    <input type="text" name="code" placeholder="Enter coupon code" value="{{ $appliedCoupon->code ?? '' }}" class="flex-1 min-w-0 border-2 border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all" @if(!empty($appliedCoupon)) disabled @endif>
+                                <div class="flex flex-col sm:flex-row gap-2">
+                                    <input id="coupon-input" type="text" placeholder="Enter coupon code"
+                                        value="{{ $appliedCoupon->code ?? '' }}"
+                                        class="flex-1 min-w-0 border-2 border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                                        @if(!empty($appliedCoupon)) disabled @endif>
                                     @if(empty($appliedCoupon))
-                                        <button type="submit" class="text-white px-4 py-2 rounded-lg font-bold transition-all shadow-md whitespace-nowrap text-sm" style="background: linear-gradient(135deg, #800000 0%, #600000 100%);" onmouseover="this.style.background='linear-gradient(135deg, #600000 0%, #400000 100%)'" onmouseout="this.style.background='linear-gradient(135deg, #800000 0%, #600000 100%)'">Apply</button>
+                                        <button id="apply-coupon-btn" type="button"
+                                            class="text-white px-4 py-2 rounded-lg font-bold transition-all shadow-md whitespace-nowrap text-sm"
+                                            style="background:linear-gradient(135deg,#800000 0%,#600000 100%);"
+                                            onmouseover="this.style.background='linear-gradient(135deg,#600000 0%,#400000 100%)'"
+                                            onmouseout="this.style.background='linear-gradient(135deg,#800000 0%,#600000 100%)'">
+                                            Apply
+                                        </button>
                                     @else
-                                        <button type="submit" formaction="{{ route('cart.coupon.remove') }}" formmethod="POST" onclick="event.preventDefault(); document.getElementById('remove-coupon-form').submit();" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 font-bold transition-all shadow-md whitespace-nowrap text-sm">Remove</button>
+                                        <button id="remove-coupon-btn" type="button"
+                                            class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 font-bold transition-all shadow-md whitespace-nowrap text-sm">
+                                            Remove
+                                        </button>
                                     @endif
-                                </form>
-                                <form id="remove-coupon-form" action="{{ route('cart.coupon.remove') }}" method="POST" class="hidden">@csrf @method('DELETE')</form>
-                                @if(!empty($appliedCoupon))
-                                    <div class="text-sm text-amber-900 mt-3 flex items-center gap-2 bg-white rounded-lg p-2">
-                                        <svg class="w-4 h-4 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                        </svg>
-                                        <span class="min-w-0"><strong>Coupon:</strong> {{ $appliedCoupon->code }}</span>
-                                    </div>
-                                @endif
+                                </div>
+                                {{-- Applied badge (shown by JS after successful apply) --}}
+                                <div id="coupon-applied-info" class="{{ empty($appliedCoupon) ? 'hidden' : '' }} text-sm text-amber-900 mt-3 flex items-center gap-2 bg-white rounded-lg p-2">
+                                    <svg class="w-4 h-4 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <span class="min-w-0"><strong>Coupon:</strong> <span id="coupon-applied-code">{{ $appliedCoupon->code ?? '' }}</span></span>
+                                </div>
                             </div>
 
                             <!-- Shipping Fee Row -->

@@ -144,8 +144,7 @@ return Application::configure(basePath: dirname(__DIR__))
         h2{color:white;font-size:1.25rem;font-weight:700;margin-bottom:6px;}
         .sub{color:rgba(255,220,220,0.75);font-size:0.875rem;margin-bottom:28px;}
         .progress-bar{height:3px;background:rgba(255,255,255,0.15);border-radius:2px;overflow:hidden;}
-        .progress-fill{height:100%;background:linear-gradient(90deg,rgba(255,255,255,0.4),rgba(255,255,255,0.8));border-radius:2px;animation:fill 1.4s ease-out forwards;}
-        @keyframes fill{from{width:0%}to{width:100%}}
+        .progress-fill{height:100%;width:100%;background:linear-gradient(90deg,rgba(255,255,255,0.4),rgba(255,255,255,0.8));border-radius:2px;}
         .status{color:rgba(255,220,220,0.5);font-size:0.75rem;margin-top:12px;letter-spacing:0.05em;}
     </style>
 </head>
