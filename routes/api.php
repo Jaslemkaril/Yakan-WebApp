@@ -77,6 +77,10 @@ Route::prefix('v1')->group(function () {
         Route::delete('/cart/{id}', [CartController::class, 'destroy']);
         Route::delete('/cart', [CartController::class, 'clear']);
 
+        // Coupon
+        Route::post('/coupon/validate', [CartController::class, 'validateCoupon']);
+        Route::post('/coupon/remove', [CartController::class, 'removeCoupon']);
+
         // Addresses (for mobile app)
         Route::get('/addresses', [\App\Http\Controllers\Api\AddressController::class, 'index']);
         Route::get('/addresses/default', [\App\Http\Controllers\Api\AddressController::class, 'getDefault']);

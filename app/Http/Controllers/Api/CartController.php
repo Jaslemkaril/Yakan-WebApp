@@ -5,11 +5,72 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Cart;
+use App\Models\Coupon;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
 
 class CartController extends Controller
 {
+    /**
+     * Remove coupon (no-op for stateless API — client just discards)
+     */
+    public function removeCoupon()
+    {
+        return response()->json(['success' => true, 'message' => 'Coupon removed.']);
+    }
+
+    /**
+     * Validate a coupon code and return the discount amount.
+     * Accepts optional subtotal directly (for buy-now or pre-calculated carts).
+     */
+    public function validateCoupon(Request $request)
+    {
+        $request->validate(['code' => 'required|string']);
+
+        $code   = strtoupper(trim($request->input('code')));
+        $coupon = Coupon::where('code', $code)->first();
+
+        if (!$coupon) {
+            return response()->json(['success' => false, 'message' => 'Coupon not found.'], 422);
+        }
+
+        // Compute subtotal
+        if ($request->filled('subtotal')) {
+            $subtotal = (float) $request->input('subtotal');
+        } else {
+            $cartItems = Cart::with('product')->where('user_id', Auth::id())->get();
+            $subtotal  = $cartItems->sum(fn($i) => $i->product->price * $i->quantity);
+        }
+
+        $now = now();
+        if (!$coupon->active)                                       return response()->json(['success'=>false,'message'=>'This coupon is not active.'], 422);
+        if ($coupon->starts_at && $now->lt($coupon->starts_at))    return response()->json(['success'=>false,'message'=>'This coupon is not yet active.'], 422);
+        if ($coupon->ends_at   && $now->gt($coupon->ends_at))      return response()->json(['success'=>false,'message'=>'This coupon has expired.'], 422);
+        if ($coupon->usage_limit && $coupon->times_redeemed >= $coupon->usage_limit)
+                                                                    return response()->json(['success'=>false,'message'=>'Coupon usage limit reached.'], 422);
+        if ($coupon->usage_limit_per_user) {
+            $used = $coupon->redemptions()->where('user_id', Auth::id())->count();
+            if ($used >= $coupon->usage_limit_per_user)             return response()->json(['success'=>false,'message'=>'You have already used this coupon.'], 422);
+        }
+
+        $discountAmount = $coupon->calculateDiscount((float) $subtotal);
+        if ($discountAmount <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Coupon does not meet the minimum spend (₱' . number_format($coupon->min_spend, 2) . ').',
+            ], 422);
+        }
+
+        return response()->json([
+            'success'     => true,
+            'message'     => 'Coupon applied!',
+            'code'        => $code,
+            'discount'    => $discountAmount,
+            'description' => $coupon->description ?? ('₱' . number_format($discountAmount, 2) . ' off'),
+            'type'        => $coupon->type ?? 'fixed',
+        ]);
+    }
+
     /**
      * Get user's cart items
      */

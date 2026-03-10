@@ -51,6 +51,8 @@ const CheckoutScreen = ({ navigation }) => {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponError, setCouponError] = useState('');
+  const [couponSuccess, setCouponSuccess] = useState('');
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
   
   const [addressForm, setAddressForm] = useState({
     fullName: '',
@@ -288,6 +290,7 @@ const CheckoutScreen = ({ navigation }) => {
     setAppliedCoupon(null);
     setCouponCode('');
     setCouponError('');
+    setCouponSuccess('');
   };
 
   const saveOrder = async (orderData) => {
@@ -681,6 +684,54 @@ const CheckoutScreen = ({ navigation }) => {
               {deliveryOption === 'pickup' ? 'Free' : `₱${shippingFee.toFixed(2)}`}
             </Text>
           </View>
+
+          {/* Coupon Section */}
+          <View style={styles.couponSection}>
+            <View style={styles.couponRow}>
+              <MaterialCommunityIcons name="tag-outline" size={18} color="#8B1A1A" style={{ marginRight: 6 }} />
+              <TextInput
+                style={styles.couponInput}
+                placeholder="Enter coupon code"
+                placeholderTextColor={theme.textMuted}
+                value={couponCode}
+                onChangeText={t => { setCouponCode(t); setCouponError(''); setCouponSuccess(''); }}
+                autoCapitalize="characters"
+                editable={!appliedCoupon}
+              />
+              {appliedCoupon ? (
+                <TouchableOpacity style={styles.couponRemoveBtn} onPress={handleRemoveCoupon}>
+                  <Text style={styles.couponRemoveBtnText}>Remove</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.couponApplyBtn, applyingCoupon && { opacity: 0.6 }]}
+                  onPress={handleApplyCoupon}
+                  disabled={applyingCoupon}
+                >
+                  {applyingCoupon
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <Text style={styles.couponApplyBtnText}>Apply</Text>}
+                </TouchableOpacity>
+              )}
+            </View>
+            {!!couponError   && <Text style={styles.couponErrorText}>{couponError}</Text>}
+            {!!couponSuccess && <Text style={styles.couponSuccessText}>{couponSuccess}</Text>}
+            {appliedCoupon && (
+              <View style={styles.couponAppliedBadge}>
+                <MaterialCommunityIcons name="check-circle" size={14} color="#16A34A" />
+                <Text style={styles.couponAppliedText}>
+                  {appliedCoupon.code} — {appliedCoupon.description}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {appliedCoupon && (
+            <View style={styles.orderItem}>
+              <Text style={[styles.orderItemText, { color: '#16A34A' }]}>Discount</Text>
+              <Text style={[styles.orderItemPrice, { color: '#16A34A' }]}>−₱{discount.toFixed(2)}</Text>
+            </View>
+          )}
 
           <View style={styles.divider} />
 
@@ -1184,6 +1235,86 @@ const getStyles = (theme) => StyleSheet.create({
     height: 1,
     backgroundColor: theme.border,
     marginVertical: 15,
+  },
+  couponSection: {
+    backgroundColor: theme.cardBackground || '#FFF9F0',
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#FDE68A',
+    padding: 12,
+    marginVertical: 8,
+  },
+  couponRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  couponInput: {
+    flex: 1,
+    height: 38,
+    borderWidth: 1.5,
+    borderColor: '#FCD34D',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    fontSize: 13,
+    color: theme.text,
+    backgroundColor: theme.background,
+    marginRight: 6,
+    letterSpacing: 1,
+  },
+  couponApplyBtn: {
+    backgroundColor: '#8B1A1A',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 8,
+    minWidth: 64,
+    alignItems: 'center',
+  },
+  couponApplyBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  couponRemoveBtn: {
+    backgroundColor: '#6B7280',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 8,
+    minWidth: 64,
+    alignItems: 'center',
+  },
+  couponRemoveBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  couponErrorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 24,
+  },
+  couponSuccessText: {
+    color: '#16A34A',
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 24,
+    fontWeight: '600',
+  },
+  couponAppliedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginTop: 8,
+    gap: 4,
+  },
+  couponAppliedText: {
+    color: '#16A34A',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   totalText: {
     fontSize: 18,
