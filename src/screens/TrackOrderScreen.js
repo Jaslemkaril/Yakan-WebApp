@@ -7,6 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useOrders } from '../../useOrders';
 import ScreenHeader from '../components/ScreenHeader';
+import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
 
 const ORDER_STATUSES = {
@@ -31,6 +32,78 @@ const getProgressIndex = (s) => {
   const i = PROGRESS_STAGES.indexOf(s);
   return i === -1 ? 0 : i;
 };
+
+// ─── Static Delivery Route Map (sample visual) ──────────────────────────────
+const DeliveryMapCard = ({ status, orderRef }) => {
+  const isMoving    = ['shipped', 'out_for_delivery'].includes(status);
+  const isDelivered = status === 'delivered';
+  const accentColor = isDelivered ? '#4CAF50' : isMoving ? '#FF5722' : '#800020';
+  return (
+    <View style={mSt.wrapper}>
+      <View style={mSt.mapBg}>
+        {[55, 120, 180].map(y => <View key={'h'+y} style={[mSt.roadH, { top: y }]} />)}
+        {[58, 130, 202].map(x => <View key={'v'+x} style={[mSt.roadV, { left: x }]} />)}
+        {[[8,8,40,37],[72,8,48,37],[144,8,52,37],[8,68,40,40],[72,68,48,40],[144,68,52,40],[8,130,40,38],[72,130,48,38],[144,130,52,38],[8,183,40,26],[72,183,48,26],[144,183,52,26]]
+          .map(([l,t,w,h],i) => <View key={i} style={[mSt.block,{left:l,top:t,width:w,height:h}]} />)}
+        {[0,1,2,3,4,5,6,7,8].map(i => (
+          <View key={'d'+i} style={[mSt.dash,{top:132-i*12,left:20+i*20},isMoving&&mSt.dashActive,isDelivered&&mSt.dashDone]} />
+        ))}
+        <View style={[mSt.pinWrap, { bottom: 28, left: 8 }]}>
+          <View style={[mSt.pin, { backgroundColor: '#800020' }]}>
+            <MaterialCommunityIcons name="store" size={13} color="#fff" />
+          </View>
+          <View style={[mSt.pinTail, { borderTopColor: '#800020' }]} />
+          <Text style={mSt.pinLbl}>Store</Text>
+        </View>
+        <View style={[mSt.pinWrap, { top: 8, right: 16 }]}>
+          <View style={[mSt.pin, { backgroundColor: accentColor }]}>
+            <MaterialCommunityIcons name={isDelivered ? 'home-check' : 'home-map-marker'} size={13} color="#fff" />
+          </View>
+          <View style={[mSt.pinTail, { borderTopColor: accentColor }]} />
+          <Text style={mSt.pinLbl}>You</Text>
+        </View>
+        {isMoving && (
+          <View style={[mSt.riderDot, { top: 62, left: 108 }]}>
+            <MaterialCommunityIcons name="moped" size={13} color="#fff" />
+          </View>
+        )}
+        <View style={mSt.badge}>
+          <MaterialCommunityIcons name="map-marker-path" size={11} color="#800020" style={{marginRight:3}} />
+          <Text style={mSt.badgeTxt}>Sample Route Map</Text>
+        </View>
+      </View>
+      <View style={[mSt.strip, { backgroundColor: accentColor }]}>
+        <MaterialCommunityIcons
+          name={isDelivered ? 'package-variant-closed-check' : isMoving ? 'moped-outline' : 'map-marker-path'}
+          size={14} color="#fff" style={{ marginRight: 6 }}
+        />
+        <Text style={mSt.stripTxt}>
+          {isDelivered ? 'Order Delivered Successfully!' : isMoving ? `Your order is on the way \u2022 ${orderRef}` : `Tracking \u2022 ${orderRef}`}
+        </Text>
+      </View>
+    </View>
+  );
+};
+const mSt = StyleSheet.create({
+  wrapper:  { borderRadius: 14, overflow: 'hidden', marginBottom: 14, elevation: 3, shadowColor: '#000', shadowOffset: {width:0,height:2}, shadowOpacity: 0.1, shadowRadius: 6 },
+  mapBg:    { height: 215, backgroundColor: '#E9EEF4', position: 'relative', overflow: 'hidden' },
+  roadH:    { position: 'absolute', left: 0, right: 0, height: 10, backgroundColor: '#CDD5DF' },
+  roadV:    { position: 'absolute', top: 0, bottom: 0, width: 10, backgroundColor: '#CDD5DF' },
+  block:    { position: 'absolute', backgroundColor: '#BEC8D4', borderRadius: 4 },
+  dash:     { position: 'absolute', width: 14, height: 4, borderRadius: 2, backgroundColor: '#AAAAAA', opacity: 0.6 },
+  dashActive: { backgroundColor: '#FF5722', opacity: 1 },
+  dashDone:   { backgroundColor: '#4CAF50', opacity: 1 },
+  pinWrap:  { position: 'absolute', alignItems: 'center' },
+  pin:      { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', elevation: 4 },
+  pinTail:  { width: 0, height: 0, borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 7, borderLeftColor: 'transparent', borderRightColor: 'transparent' },
+  pinLbl:   { fontSize: 9, fontWeight: '700', color: '#444', marginTop: 2 },
+  riderDot: { position: 'absolute', width: 26, height: 26, borderRadius: 13, backgroundColor: '#FF5722', justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#FF5722', shadowOffset: {width:0,height:2}, shadowOpacity: 0.5, shadowRadius: 4 },
+  badge:    { position: 'absolute', top: 8, left: 8, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.88)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  badgeTxt: { fontSize: 10, color: '#800020', fontWeight: '700' },
+  strip:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10 },
+  stripTxt: { color: '#fff', fontSize: 12, fontWeight: '700', flex: 1 },
+});
+// ────────────────────────────────────────────────────────────────────────────
 
 const TrackOrderScreen = ({ navigation }) => {
   const { theme } = useTheme();
@@ -128,6 +201,12 @@ const TrackOrderScreen = ({ navigation }) => {
         </View>
 
         {renderProgressBar(order.status)}
+
+        {/* Delivery map for shipped/out_for_delivery/delivered orders */}
+        {['shipped','out_for_delivery','delivered'].includes(order.status) && (
+          <DeliveryMapCard status={order.status} orderRef={order.orderRef} />
+        )}
+
         <View style={st.divider} />
 
         <View style={st.itemsContainer}>
@@ -201,6 +280,7 @@ const TrackOrderScreen = ({ navigation }) => {
         <ActivityIndicator size='large' color={theme.primary} />
         <Text style={st.loadingText}>Loading orders...</Text>
       </View>
+      <BottomNav navigation={navigation} activeRoute='TrackOrders' />
     </View>
   );
 
@@ -223,26 +303,25 @@ const TrackOrderScreen = ({ navigation }) => {
         <ScrollView style={st.scrollView} contentContainerStyle={st.scrollContent} showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} tintColor={theme.primary} />}>
           <View style={st.summaryRow}>
-            <View style={st.summaryCard}>
-              <MaterialCommunityIcons name='package-variant' size={22} color={theme.primary} />
-              <Text style={st.summaryCount}>{orders.length}</Text>
-              <Text style={st.summaryLabel}>Total</Text>
-            </View>
-            <View style={st.summaryCard}>
-              <MaterialCommunityIcons name='truck-delivery-outline' size={22} color='#2196F3' />
-              <Text style={[st.summaryCount, { color: '#2196F3' }]}>{orders.filter(o => ['shipped','out_for_delivery'].includes(o.status)).length}</Text>
-              <Text style={st.summaryLabel}>In Transit</Text>
-            </View>
-            <View style={st.summaryCard}>
-              <MaterialCommunityIcons name='package-variant-closed-check' size={22} color='#4CAF50' />
-              <Text style={[st.summaryCount, { color: '#4CAF50' }]}>{orders.filter(o => o.status === 'delivered').length}</Text>
-              <Text style={st.summaryLabel}>Delivered</Text>
-            </View>
+            {[
+              { icon: 'package-variant',              color: theme.primary, count: orders.length,                                                                                                         label: 'Total' },
+              { icon: 'truck-delivery-outline',        color: '#FF5722',     count: orders.filter(o => ['shipped','out_for_delivery'].includes(o.status)).length,                                         label: 'In Transit' },
+              { icon: 'package-variant-closed-check', color: '#4CAF50',     count: orders.filter(o => o.status === 'delivered').length,                                                                   label: 'Delivered' },
+              { icon: 'clock-outline',                 color: '#FF9800',     count: orders.filter(o => ['pending','pending_payment','confirmed','processing'].includes(o.status)).length,                  label: 'Pending' },
+            ].map((s, i) => (
+              <View key={i} style={[st.summaryCard, { borderTopColor: s.color, borderTopWidth: 3 }]}>
+                <MaterialCommunityIcons name={s.icon} size={20} color={s.color} />
+                <Text style={[st.summaryCount, { color: s.color }]}>{s.count}</Text>
+                <Text style={st.summaryLabel}>{s.label}</Text>
+              </View>
+            ))}
           </View>
           {orders.map((o, i) => renderOrder(o, i))}
           <View style={{ height: 30 }} />
         </ScrollView>
       )}
+
+      <BottomNav navigation={navigation} activeRoute='TrackOrders' />
     </View>
   );
 };

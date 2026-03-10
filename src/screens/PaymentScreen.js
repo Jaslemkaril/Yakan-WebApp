@@ -21,16 +21,16 @@ import * as ImagePicker from 'expo-image-picker';
 import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
 
-// Payment account details â€” fetched from API at runtime
+// Payment account details — fetched from API at runtime, these are fallback defaults
 const DEFAULT_PAYMENT_ACCOUNTS = {
   gcash: {
-    number: '',
-    name: 'Tuwas Yakan',
+    number: '0956-739-0720',
+    name: 'Oliver Hamja',
   },
   bank_transfer: {
     bankName: 'BDO',
-    accountNumber: '',
-    accountName: 'Tuwas Yakan',
+    accountNumber: '2129-169-586',
+    accountName: 'Oliver O. Hamja',
     branch: '',
   },
 };
