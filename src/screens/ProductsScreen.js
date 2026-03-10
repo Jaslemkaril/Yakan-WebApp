@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
+import { useFocusEffect } from '@react-navigation/native';
 import ApiService from '../services/api';
 import API_CONFIG from '../config/config';
 import BottomNav from '../components/BottomNav';
@@ -30,10 +31,13 @@ const ProductsScreen = ({ navigation }) => {
   const { theme } = useTheme();
   const styles = getStyles(theme);
 
-  // Fetch products from API
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  // Fetch products when screen mounts or comes back into focus
+  // (useFocusEffect covers initial load + navigation-back scenarios)
+  useFocusEffect(
+    useCallback(() => {
+      fetchProducts();
+    }, [])
+  );
 
   const fetchProducts = async () => {
     try {
@@ -51,15 +55,21 @@ const ProductsScreen = ({ navigation }) => {
         throw new Error(response.error || 'Failed to fetch products');
       }
       
-      // Handle triple-nested response: response.data.data.data
-      // ApiService wraps in {success, data}, Laravel wraps in {data: {data: []}}
-      const apiData = response.data?.data || response.data || {};
-      console.log('🔵 API Data:', JSON.stringify(apiData, null, 2));
+      // API returns: { success, data: [...], count }
+      // ApiService wraps this in { success, data: { success, data: [...], count } }
+      const apiData = response.data;
       
-      const productsData = Array.isArray(apiData.data) ? apiData.data :  // Laravel pagination
-                          Array.isArray(apiData) ? apiData : [];
+      // Handle both flat array and nested pagination responses
+      let productsData = [];
+      if (Array.isArray(apiData?.data)) {
+        // Nested: { data: { data: [...] } } (pagination format)
+        productsData = apiData.data;
+      } else if (Array.isArray(apiData)) {
+        // Flat: { data: [...] }
+        productsData = apiData;
+      }
       
-      console.log('🔵 Products Array Length:', productsData.length);
+      console.log('🔵 Products count from API:', productsData.length);
       
       // Transform API data to match app structure
       const transformedProducts = productsData.map(product => {

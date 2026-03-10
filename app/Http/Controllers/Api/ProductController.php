@@ -17,10 +17,10 @@ class ProductController extends Controller
         try {
             $cacheKey = 'products:' . md5(json_encode($request->all()));
             
-            $products = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 3600), function () use ($request) {
+            $products = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 300), function () use ($request) {
                 $query = Product::select([
                     'id', 'name', 'description', 'price', 'stock', 'category_id', 'image', 'status', 'sku', 'created_at'
-                ])->with('category:id,name,slug')->active()->where('stock', '>', 0);
+                ])->with('category:id,name,slug')->active(); // show all active products; out-of-stock handled in app
                 
                 if ($request->has('category')) {
                     $query->where('category_id', $request->category);

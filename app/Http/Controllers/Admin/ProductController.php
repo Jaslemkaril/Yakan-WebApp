@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Services\CloudinaryService;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 
 class ProductController extends Controller
 {
@@ -191,6 +192,9 @@ class ProductController extends Controller
             $redirectUrl .= '?auth_token=' . $authToken;
         }
         
+        // Clear product API cache so mobile app sees the new product immediately
+        Cache::flush();
+
         return redirect($redirectUrl)->with('success', 'Product created successfully with ' . count($allImages) . ' image(s).');
     }
 
@@ -372,6 +376,9 @@ class ProductController extends Controller
             $redirectUrl .= '?auth_token=' . $authToken;
         }
 
+        // Clear product API cache so mobile app reflects the update immediately
+        Cache::flush();
+
         return redirect($redirectUrl)->with('success', $message . '.');
     }
 
@@ -410,6 +417,9 @@ class ProductController extends Controller
                     'message' => "Product '{$productName}' has been deleted successfully."
                 ]);
             }
+
+            // Clear product API cache so mobile app no longer shows the deleted product
+            Cache::flush();
 
             return redirect($redirectUrl)
                            ->with('success', "Product '{$productName}' deleted successfully.");
