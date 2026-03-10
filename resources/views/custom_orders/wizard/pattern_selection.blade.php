@@ -1802,8 +1802,11 @@ function initializeCanvas() {
     // Set high DPI for crisp rendering
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
+    // Fallback to explicit dims when canvas is inside a hidden panel (getBoundingClientRect returns 0)
+    const cssWidth = rect.width > 0 ? rect.width : 400;
+    const cssHeight = rect.height > 0 ? rect.height : 350;
+    canvas.width = cssWidth * dpr;
+    canvas.height = cssHeight * dpr;
     ctx.scale(dpr, dpr);
     
     // Draw initial fabric
@@ -2376,6 +2379,9 @@ function toggleMobilePreview() {
     const preview = document.getElementById('floatingPreview');
     if (preview.style.display === 'none') {
         preview.style.display = 'block';
+        // Re-initialize canvas now that it is visible and has real dimensions
+        initializeCanvas();
+        if (currentPattern) updateCanvasPreview();
     } else {
         preview.style.display = 'none';
     }
