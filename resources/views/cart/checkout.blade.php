@@ -1405,7 +1405,7 @@ const PH_LOCATIONS = {
 
 // Shipping fees per zone (distance from Zamboanga City)
 const SHIPPING_ZONES = {
-    0: 0,    // Within Zamboanga City — FREE
+    0: 100,  // Within Zamboanga City
     1: 100,  // Zamboanga Peninsula + BARMM (~150-500 km)
     2: 180,  // Other Mindanao regions (~500-900 km)
     3: 250,  // Visayas (~700-1200 km)

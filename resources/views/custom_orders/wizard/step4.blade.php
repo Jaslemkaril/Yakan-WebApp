@@ -745,9 +745,9 @@
                                             <span class="ml-2 text-xs text-gray-400 font-normal">(from Zamboanga City)</span>
                                         </h4>
                                         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs mb-4">
-                                            <div class="bg-green-50 border border-green-200 rounded-lg p-2 text-center">
-                                                <div class="font-bold text-green-700">FREE</div>
-                                                <div class="text-green-600">Within Zamboanga City</div>
+                                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
+                                                <div class="font-bold text-blue-700">&#8369;100</div>
+                                                <div class="text-blue-600">Within Zamboanga City</div>
                                             </div>
                                             <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
                                                 <div class="font-bold text-blue-700">&#8369;100</div>
@@ -776,7 +776,7 @@
                                                 <div class="text-xs text-gray-500" id="step4ShippingZoneLabel">Based on your selected address</div>
                                             </div>
                                             <div class="text-xl font-bold" style="color:#800000;" id="step4ShippingFeeDisplay">
-                                                @if($shippingFee == 0) FREE @else &#8369;{{ number_format($shippingFee, 2) }} @endif
+                                                &#8369;{{ number_format($shippingFee, 2) }}
                                             </div>
                                         </div>
                                     </div>
@@ -979,7 +979,7 @@ function initDeliveryToggle() {
             if (!cityEl) return;
             const text = (cityEl.textContent || '').toLowerCase();
             const SHIPPING_ZONES = {
-                0: { label: 'Within Zamboanga City', fee: 0 },
+                0: { label: 'Within Zamboanga City', fee: 100 },
                 1: { label: 'Zamboanga Peninsula + BARMM', fee: 100 },
                 2: { label: 'Other Mindanao Regions', fee: 180 },
                 3: { label: 'Visayas', fee: 250 },
@@ -998,9 +998,9 @@ function initDeliveryToggle() {
             const shippingFeeDisplay = document.getElementById('shippingFeeDisplay');
             const finalTotalDisplay = document.getElementById('finalTotalDisplay');
             const priceData = document.getElementById('priceData');
-            if (feeDisplay) feeDisplay.textContent = info.fee === 0 ? 'FREE' : '\u20B1' + info.fee.toFixed(2);
+            if (feeDisplay) feeDisplay.textContent = '₱' + info.fee.toFixed(2);
             if (zoneLabel) zoneLabel.textContent = info.label;
-            if (shippingFeeDisplay) shippingFeeDisplay.textContent = info.fee === 0 ? 'FREE' : '\u20B1' + info.fee.toFixed(2);
+            if (shippingFeeDisplay) shippingFeeDisplay.textContent = '₱' + info.fee.toFixed(2);
             if (finalTotalDisplay && priceData) {
                 const base = parseFloat(priceData.dataset.basePrice || 0);
                 const fabric = parseFloat(priceData.dataset.fabricCostBase || 0);
