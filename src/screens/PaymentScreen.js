@@ -12,6 +12,7 @@ import {
   Image,
 } from 'react-native';
 import { useCart } from '../context/CartContext';
+import { useNotification } from '../context/NotificationContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 import NotificationService from '../services/notificationService';
@@ -35,6 +36,7 @@ const DEFAULT_PAYMENT_ACCOUNTS = {
 
 export default function PaymentScreen({ navigation, route }) {
   const { theme } = useTheme();
+  const { notifyOrderCreated } = useNotification();
   const { orderData } = route.params || {};
   
   if (!orderData) {
@@ -234,6 +236,7 @@ export default function PaymentScreen({ navigation, route }) {
 
       setIsProcessing(false);
       clearCart();
+      notifyOrderCreated(orderData.orderRef);
       navigation.navigate('OrderDetails', { orderData: finalOrderData });
     } catch (error) {
       console.error('ðŸ”´ Error creating order:', error);
@@ -290,7 +293,7 @@ export default function PaymentScreen({ navigation, route }) {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setShowPaymentInstructions(false)}>
-            <Text style={styles.backButton}>â† Back</Text>
+            <Text style={styles.backButton}>← Back</Text>
           </TouchableOpacity>
           <Text style={styles.title}>
             {selectedPaymentMethod === 'gcash' ? 'GCash Payment' : selectedPaymentMethod === 'cod' ? 'Cash on Delivery' : 'Bank Transfer'}

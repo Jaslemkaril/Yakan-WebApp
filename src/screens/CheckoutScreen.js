@@ -438,7 +438,6 @@ const CheckoutScreen = ({ navigation }) => {
     };
 
     await saveOrder(orderData);
-    notifyOrderCreated(orderRef);
     navigation.navigate('Payment', { orderData });
   };
 
