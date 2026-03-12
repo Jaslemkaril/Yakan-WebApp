@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CustomOrder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AdminCustomOrderController extends Controller
 {
@@ -1233,7 +1234,19 @@ class AdminCustomOrderController extends Controller
     public function indexEnhanced(Request $request)
     {
         try {
+            // For batch orders, only surface the primary (lowest id) row per batch
+            $batchPrimaryIds = CustomOrder::select(\DB::raw('MIN(id) as primary_id'))
+                ->whereNotNull('batch_order_number')
+                ->where('batch_order_number', '!=', '')
+                ->groupBy('batch_order_number')
+                ->pluck('primary_id');
+
             $query = CustomOrder::with(['user', 'product'])
+                ->where(function ($q) use ($batchPrimaryIds) {
+                    $q->whereNull('batch_order_number')
+                      ->orWhere('batch_order_number', '')
+                      ->orWhereIn('id', $batchPrimaryIds);
+                })
                 ->orderBy('created_at', 'desc');
 
             // Advanced filtering
@@ -1312,6 +1325,17 @@ class AdminCustomOrderController extends Controller
 
             $perPage = $request->get('per_page', 20);
             $orders = $query->paginate($perPage);
+
+            // Build a map: batch_order_number => count of items in that batch
+            $batchNumbers = $orders->pluck('batch_order_number')->filter()->unique()->values();
+            $batchCountMap = [];
+            if ($batchNumbers->isNotEmpty()) {
+                $batchCountMap = CustomOrder::select('batch_order_number', \DB::raw('COUNT(*) as cnt'))
+                    ->whereIn('batch_order_number', $batchNumbers)
+                    ->groupBy('batch_order_number')
+                    ->pluck('cnt', 'batch_order_number')
+                    ->toArray();
+            }
             
             // Calculate statistics
             $totalOrders = CustomOrder::count();
@@ -1321,7 +1345,7 @@ class AdminCustomOrderController extends Controller
             
             $stats = compact('totalOrders', 'todayOrders', 'pendingCount', 'totalRevenue');
             
-            return view('admin.custom_orders.index_enhanced', compact('orders', 'stats'));
+            return view('admin.custom_orders.index_enhanced', compact('orders', 'stats', 'batchCountMap'));
             
         } catch (\Exception $e) {
             \Log::error('Enhanced Custom Orders Index Error: ' . $e->getMessage());

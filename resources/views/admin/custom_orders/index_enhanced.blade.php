@@ -284,9 +284,23 @@
                 </thead>
                 <tbody class="divide-y divide-gray-50" id="ordersTableBody">
                     @foreach($orders as $order)
-                    <tr class="order-row" id="row-{{ $order->id }}">
+                    @php
+                        $batchCount = !empty($order->batch_order_number) ? ($batchCountMap[$order->batch_order_number] ?? 1) : 1;
+                        $isBatchPrimary = $batchCount > 1;
+                    @endphp
+                    <tr class="order-row{{ $isBatchPrimary ? ' bg-amber-50' : '' }}" id="row-{{ $order->id }}">
                         <td class="px-5 py-3.5">
-                            <span class="font-bold text-gray-900">#{{ $order->id }}</span>
+                            @if($isBatchPrimary)
+                                <div class="flex items-center gap-1 mb-0.5">
+                                    <span class="font-bold text-gray-900">#{{ $order->id }}</span>
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-200 text-amber-800">
+                                        BATCH &times;{{ $batchCount }}
+                                    </span>
+                                </div>
+                                <div class="text-[10px] text-amber-700 font-mono truncate max-w-[120px]">{{ $order->batch_order_number }}</div>
+                            @else
+                                <span class="font-bold text-gray-900">#{{ $order->id }}</span>
+                            @endif
                             <div class="mt-0.5">
                                 @if($order->delivery_type === 'pickup')
                                     <span class="inline-flex items-center text-[10px] text-gray-500 gap-0.5">
