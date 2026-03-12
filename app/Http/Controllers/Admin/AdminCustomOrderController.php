@@ -1234,12 +1234,45 @@ class AdminCustomOrderController extends Controller
     public function indexEnhanced(Request $request)
     {
         try {
-            // For batch orders, only surface the primary (lowest id) row per batch
+            // For named batch orders, only surface the primary (lowest id) row per batch
             $batchPrimaryIds = CustomOrder::select(\DB::raw('MIN(id) as primary_id'))
                 ->whereNotNull('batch_order_number')
                 ->where('batch_order_number', '!=', '')
                 ->groupBy('batch_order_number')
                 ->pluck('primary_id');
+
+            // Detect "implicit batches": same user_id + same minute, no batch_order_number set
+            $implicitGroups = \DB::table('custom_orders')
+                ->select(
+                    'user_id',
+                    \DB::raw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') as minute_key"),
+                    \DB::raw('MIN(id) as primary_id'),
+                    \DB::raw('COUNT(*) as cnt')
+                )
+                ->where(function ($q) {
+                    $q->whereNull('batch_order_number')->orWhere('batch_order_number', '');
+                })
+                ->whereNotNull('user_id')
+                ->groupBy('user_id', \DB::raw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i')"))
+                ->havingRaw('cnt > 1')
+                ->get();
+
+            // Build a map of primary_id => count for implicit batches (for badge display)
+            $implicitCountMap = $implicitGroups->pluck('cnt', 'primary_id')->toArray();
+
+            // Collect IDs of non-primary members of implicit batches (to exclude from list)
+            $implicitExcludeIds = collect();
+            foreach ($implicitGroups as $group) {
+                $memberIds = \DB::table('custom_orders')
+                    ->where('user_id', $group->user_id)
+                    ->whereRaw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') = ?", [$group->minute_key])
+                    ->where(function ($q) {
+                        $q->whereNull('batch_order_number')->orWhere('batch_order_number', '');
+                    })
+                    ->where('id', '!=', $group->primary_id)
+                    ->pluck('id');
+                $implicitExcludeIds = $implicitExcludeIds->merge($memberIds);
+            }
 
             $query = CustomOrder::with(['user', 'product'])
                 ->where(function ($q) use ($batchPrimaryIds) {
@@ -1247,6 +1280,7 @@ class AdminCustomOrderController extends Controller
                       ->orWhere('batch_order_number', '')
                       ->orWhereIn('id', $batchPrimaryIds);
                 })
+                ->when($implicitExcludeIds->isNotEmpty(), fn($q) => $q->whereNotIn('id', $implicitExcludeIds))
                 ->orderBy('created_at', 'desc');
 
             // Advanced filtering
@@ -1345,7 +1379,7 @@ class AdminCustomOrderController extends Controller
             
             $stats = compact('totalOrders', 'todayOrders', 'pendingCount', 'totalRevenue');
             
-            return view('admin.custom_orders.index_enhanced', compact('orders', 'stats', 'batchCountMap'));
+            return view('admin.custom_orders.index_enhanced', compact('orders', 'stats', 'batchCountMap', 'implicitCountMap'));
             
         } catch (\Exception $e) {
             \Log::error('Enhanced Custom Orders Index Error: ' . $e->getMessage());

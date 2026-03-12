@@ -285,8 +285,11 @@
                 <tbody class="divide-y divide-gray-50" id="ordersTableBody">
                     @foreach($orders as $order)
                     @php
-                        $batchCount = !empty($order->batch_order_number) ? ($batchCountMap[$order->batch_order_number] ?? 1) : 1;
-                        $isBatchPrimary = $batchCount > 1;
+                        $batchCount = !empty($order->batch_order_number)
+                            ? ($batchCountMap[$order->batch_order_number] ?? 1)
+                            : ($implicitCountMap[$order->id] ?? 1);
+                        $isBatchPrimary  = $batchCount > 1;
+                        $isImplicitBatch = $isBatchPrimary && empty($order->batch_order_number);
                     @endphp
                     <tr class="order-row{{ $isBatchPrimary ? ' bg-amber-50' : '' }}" id="row-{{ $order->id }}">
                         <td class="px-5 py-3.5">
@@ -297,7 +300,11 @@
                                         BATCH &times;{{ $batchCount }}
                                     </span>
                                 </div>
+                                @if(!$isImplicitBatch)
                                 <div class="text-[10px] text-amber-700 font-mono truncate max-w-[120px]">{{ $order->batch_order_number }}</div>
+                                @else
+                                <div class="text-[10px] text-amber-700 italic">Same-time order</div>
+                                @endif
                             @else
                                 <span class="font-bold text-gray-900">#{{ $order->id }}</span>
                             @endif
