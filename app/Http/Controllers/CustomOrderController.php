@@ -1451,7 +1451,11 @@ class CustomOrderController extends Controller
             unset($wizardData['__batch_items']);
 
             // One batch_order_number ties every item in this submission together.
-            $batchOrderNumber = 'CO-' . date('Ymd') . '-' . strtoupper(\Illuminate\Support\Str::random(5));
+            // Check if the column exists first (safe for Railway deployments where migration may be pending).
+            $batchColumnExists = \Schema::hasColumn('custom_orders', 'batch_order_number');
+            $batchOrderNumber  = $batchColumnExists
+                ? 'CO-' . date('Ymd') . '-' . strtoupper(\Illuminate\Support\Str::random(5))
+                : null;
 
             $isProductFlow = isset($wizardData['product']);
             $isFabricFlow = isset($wizardData['fabric']);
@@ -1912,10 +1916,13 @@ class CustomOrderController extends Controller
                 'errors' => $e->errors(),
                 'request_data' => $request->all()
             ]);
-            
-            // Re-throw so Laravel handles it with proper error display
-            throw $e;
-            
+
+            $isAjax = $request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest';
+            if ($isAjax) {
+                return response()->json(['success' => false, 'message' => 'Validation failed.', 'errors' => $e->errors()], 422);
+            }
+            return redirect()->back()->withErrors($e->errors())->withInput();
+
         } catch (\Exception $e) {
             \Log::error('Error completing wizard:', [
                 'error_message' => $e->getMessage(),
@@ -1926,6 +1933,13 @@ class CustomOrderController extends Controller
                 'request_data' => $request->all()
             ]);
 
+            $isAjax = $request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest';
+            if ($isAjax) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create your order. Please try again. (' . $e->getMessage() . ')'
+                ], 500);
+            }
             return redirect()->back()
                 ->withInput()
                 ->withErrors(['error' => 'Failed to create your order. Please try again.']);
