@@ -10,6 +10,7 @@ class CustomOrder extends Model
     use HasFactory;
 
     protected $fillable = [
+        'batch_order_number',
         'user_id',
         'chat_id',
         'product_id',

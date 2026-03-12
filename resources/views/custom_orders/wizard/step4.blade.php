@@ -608,6 +608,56 @@
 
                 <!-- Enhanced Submit Actions -->
                 <div class="space-y-4">
+
+                    {{-- Batch Items Card: shows items already queued to this order --}}
+                    @php $batchItems = $batchItems ?? []; @endphp
+                    @if(count($batchItems) > 0)
+                    <div class="bg-white rounded-2xl shadow-xl border-2 p-6" style="border-color:#1d4ed8;">
+                        <div class="flex items-center mb-3">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center mr-3 flex-shrink-0" style="background-color:#dbeafe;">
+                                <svg class="w-5 h-5" style="color:#1d4ed8;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900">
+                                    Items Already in This Order
+                                    <span class="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full text-white" style="background-color:#1d4ed8;">{{ count($batchItems) }}</span>
+                                </h3>
+                                <p class="text-xs text-gray-500">These will be submitted together under one order number.</p>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            @foreach($batchItems as $bIdx => $bItem)
+                            <div class="flex items-center justify-between rounded-xl px-4 py-3" style="background-color:#eff6ff; border:1px solid #bfdbfe;">
+                                <div class="flex items-center min-w-0">
+                                    <div class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center mr-3 flex-shrink-0" style="background-color:#1d4ed8;">{{ $bIdx + 1 }}</div>
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-semibold text-gray-900 truncate">{{ $bItem['summary'] ?? 'Custom Item ' . ($bIdx + 1) }}</p>
+                                        <p class="text-xs text-gray-500">Added {{ $bItem['added_at'] ?? '' }}</p>
+                                    </div>
+                                </div>
+                                <form method="POST" action="{{ route('custom_orders.remove.batch.item', $bIdx) }}" class="ml-3 flex-shrink-0" onsubmit="return confirm('Remove this item from your order batch?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    @if(request('auth_token'))<input type="hidden" name="auth_token" value="{{ request('auth_token') }}">@endif
+                                    <button type="submit" class="p-1 rounded-lg hover:bg-red-100 transition-colors" title="Remove item">
+                                        <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </form>
+                            </div>
+                            @endforeach
+                        </div>
+                        <div class="mt-3 pt-3 border-t" style="border-color:#bfdbfe;">
+                            <p class="text-sm font-semibold" style="color:#1e40af;">
+                                Total items to submit: {{ count($batchItems) + 1 }}
+                                <span class="font-normal" style="color:#3b82f6;">({{ count($batchItems) }} queued + this one)</span>
+                            </p>
+                        </div>
+                    </div>
+                    @endif
                     <form method="POST" action="{{ route('custom_orders.complete.wizard') }}" id="submitOrderForm">
                         @csrf
                         <input type="hidden" name="auth_token" id="step4AuthToken" value="{{ request('auth_token') }}">
@@ -826,12 +876,30 @@
                                 </div>
                             </div>
                         </div>
+
+                        {{-- Add Another Custom Item button --}}
+                        <button type="button" id="addAnotherBtn"
+                            class="group w-full px-8 py-3 text-white rounded-xl font-bold transition-all duration-300 shadow-md hover:shadow-xl transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 mb-3"
+                            style="background-color:#1d4ed8;"
+                            onclick="submitAddToBatch()">
+                            <span class="flex items-center justify-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Add Another Custom Item to This Order
+                            </span>
+                        </button>
+
                         <button type="submit" id="submitBtn" class="group relative w-full px-8 py-4 text-white rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2" style="background-color:#8b3a56 !important;" onmouseover="this.style.backgroundColor='#7a3350 !important'" onmouseout="this.style.backgroundColor='#8b3a56 !important'">
                             <span class="flex items-center justify-center" id="submitBtnText">
                                 <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7"/>
                                 </svg>
-                                Submit Custom Order
+                                @if(count($batchItems) > 0)
+                                    Submit All {{ count($batchItems) + 1 }} Items
+                                @else
+                                    Submit Custom Order
+                                @endif
                             </span>
                             <div class="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300" style="background-color:#8b3a56;"></div>
                         </button>
@@ -889,6 +957,53 @@
                         if (urlToken) document.getElementById('step4AuthToken').value = urlToken;
                         submitWizardForm('submitOrderForm', 'Submitting your order...', 'Creating your custom order...');
                     });
+
+                    /**
+                     * submitAddToBatch — validates the current item and posts it to the
+                     * addToBatch endpoint so it gets queued, then the wizard resets for
+                     * the user to configure the next item.
+                     */
+                    function submitAddToBatch() {
+                        const form = document.getElementById('submitOrderForm');
+                        const deliveryType = document.querySelector('input[name="delivery_type"]:checked')?.value;
+                        const quantity = document.getElementById('quantity').value;
+
+                        if (!deliveryType) {
+                            alert('Please select a delivery option (Delivery or Pickup)');
+                            return;
+                        }
+                        if (deliveryType === 'delivery') {
+                            const selectedAddress = document.querySelector('input[name="address_id"]:checked');
+                            const hasUserAddresses = {{ $userAddresses->count() > 0 ? 'true' : 'false' }};
+                            if (hasUserAddresses && !selectedAddress) {
+                                alert('Please select a delivery address from your saved addresses');
+                                return;
+                            }
+                            if (!hasUserAddresses) {
+                                const house    = document.getElementById('delivery_house')?.value?.trim();
+                                const street   = document.getElementById('delivery_street')?.value?.trim();
+                                const barangay = document.getElementById('delivery_barangay')?.value?.trim();
+                                const city     = document.getElementById('delivery_city')?.value?.trim();
+                                const province = document.getElementById('delivery_province')?.value?.trim();
+                                if (!house || !street || !barangay || !city || !province) {
+                                    alert('Please fill in all required delivery address fields');
+                                    return;
+                                }
+                            }
+                        }
+                        if (!quantity || quantity < 1) {
+                            alert('Please enter a valid quantity (minimum 1)');
+                            return;
+                        }
+
+                        // Inject auth_token if present in URL
+                        var urlToken = new URLSearchParams(window.location.search).get('auth_token');
+                        if (urlToken) document.getElementById('step4AuthToken').value = urlToken;
+
+                        // Change form target and submit normally (non-AJAX so we get the full redirect)
+                        form.action = '{{ route("custom_orders.add.to.batch") }}';
+                        form.submit();
+                    }
                     </script>
                     
                     <button type="button" onclick="window.history.back()" class="group block w-full text-center px-8 py-3 bg-white border-2 text-maroon-700 rounded-xl font-bold hover:bg-maroon-50 transition-all duration-300 transform hover:scale-105" style="border-color:#8b3a56;">

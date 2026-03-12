@@ -1027,6 +1027,7 @@ class CustomOrderController extends Controller
                     'patternFeeSimple' => $patternFeeSimple,
                     'patternFeeMedium' => $patternFeeMedium,
                     'patternFeeComplex' => $patternFeeComplex,
+                    'batchItems' => $wizardData['__batch_items'] ?? [],
                 ]);
             }
 
@@ -1063,6 +1064,7 @@ class CustomOrderController extends Controller
                 'patternFeeSimple' => $patternFeeSimple,
                 'patternFeeMedium' => $patternFeeMedium,
                 'patternFeeComplex' => $patternFeeComplex,
+                'batchItems' => $wizardData['__batch_items'] ?? [],
             ]);
         } catch (\Exception $e) {
             \Log::error('createStep4 error', [
@@ -1082,7 +1084,335 @@ class CustomOrderController extends Controller
         }
     }
 
-    
+    /**
+     * Save the current wizard item to the batch and restart the wizard for a new item.
+     * This allows users to include multiple custom order items under one order number.
+     */
+    public function addToBatch(Request $request)
+    {
+        try {
+            $request->validate([
+                'quantity'         => 'required|integer|min:1',
+                'specifications'   => 'nullable|string|max:1000',
+                'delivery_type'    => 'required|in:delivery,pickup',
+                'address_id'       => 'required_if:delivery_type,delivery|nullable|integer|exists:user_addresses,id',
+                'delivery_zip'     => 'nullable|string|max:20',
+                'delivery_landmark'=> 'nullable|string|max:255',
+            ]);
+
+            $wizardData = $this->getWizardData();
+
+            if (!$wizardData || (!isset($wizardData['fabric']) && !isset($wizardData['product']))) {
+                return redirect()->back()->with('error', 'Session expired. Please start your custom order again.');
+            }
+
+            // Build a human-readable summary for the batch list display
+            $fabricTypeName = '—';
+            if (isset($wizardData['fabric']['type'])) {
+                $ft = \App\Models\FabricType::find($wizardData['fabric']['type']);
+                $fabricTypeName = $ft ? $ft->name : $wizardData['fabric']['type'];
+            }
+            $patternName = '—';
+            if (!empty($wizardData['pattern']['selected_ids'])) {
+                $p = \App\Models\YakanPattern::find($wizardData['pattern']['selected_ids'][0]);
+                $patternName = $p ? $p->name : '—';
+            } elseif (!empty($wizardData['pattern']['name'])) {
+                $patternName = $wizardData['pattern']['name'];
+            }
+            $qty   = (int) $request->input('quantity', 1);
+            $meters = $wizardData['fabric']['quantity_meters'] ?? null;
+            $summary = "Fabric: {$fabricTypeName}, Pattern: {$patternName}, Qty: {$qty}" . ($meters ? ", {$meters}m" : '');
+
+            // Pull only the current wizard item data (exclude any existing batch_items key)
+            $currentItemWizardData = array_filter(
+                $wizardData,
+                fn($k) => $k !== '__batch_items',
+                ARRAY_FILTER_USE_KEY
+            );
+
+            // Resolve the delivery address string to store with the item
+            $resolvedDeliveryAddress = null;
+            $resolvedDeliveryCity    = null;
+            $resolvedDeliveryProvince= null;
+            if ($request->input('delivery_type') === 'delivery') {
+                $addrId = $request->input('address_id');
+                if ($addrId) {
+                    $addr = auth()->user()->addresses()->find($addrId);
+                    if ($addr) {
+                        $resolvedDeliveryAddress  = implode(', ', array_filter([
+                            $addr->house_number,
+                            $addr->street_name,
+                            $addr->barangay,
+                            $addr->city,
+                            $addr->province,
+                            $addr->zip_code ? 'ZIP ' . $addr->zip_code : null,
+                            $addr->landmark ? 'Landmark: ' . $addr->landmark : null,
+                        ]));
+                        $resolvedDeliveryCity     = $addr->city;
+                        $resolvedDeliveryProvince = $addr->province ?? $addr->region ?? null;
+                    }
+                } else {
+                    // Manual entry fields
+                    $resolvedDeliveryAddress = implode(', ', array_filter([
+                        $request->input('delivery_house'),
+                        $request->input('delivery_street'),
+                        $request->input('delivery_barangay'),
+                        $request->input('delivery_city'),
+                        $request->input('delivery_province'),
+                        $request->input('delivery_zip') ? 'ZIP ' . $request->input('delivery_zip') : null,
+                        $request->input('delivery_landmark') ? 'Landmark: ' . $request->input('delivery_landmark') : null,
+                    ]));
+                    $resolvedDeliveryCity     = $request->input('delivery_city');
+                    $resolvedDeliveryProvince = $request->input('delivery_province');
+                }
+            }
+
+            $batchItem = [
+                'wizard_data' => $currentItemWizardData,
+                'form_data'   => [
+                    'quantity'                => $qty,
+                    'delivery_type'           => $request->input('delivery_type'),
+                    'address_id'              => $request->input('address_id'),
+                    'specifications'          => $request->input('specifications'),
+                    'delivery_house'          => $request->input('delivery_house'),
+                    'delivery_street'         => $request->input('delivery_street'),
+                    'delivery_barangay'       => $request->input('delivery_barangay'),
+                    'delivery_city'           => $request->input('delivery_city'),
+                    'delivery_province'       => $request->input('delivery_province'),
+                    'delivery_zip'            => $request->input('delivery_zip'),
+                    'delivery_landmark'       => $request->input('delivery_landmark'),
+                    'resolved_delivery_address' => $resolvedDeliveryAddress,
+                    'resolved_delivery_city'    => $resolvedDeliveryCity,
+                    'resolved_delivery_province'=> $resolvedDeliveryProvince,
+                ],
+                'summary'   => $summary,
+                'added_at'  => now()->format('Y-m-d H:i:s'),
+            ];
+
+            // Append to existing batch items and save; then reset per-item wizard data
+            $existingBatchItems   = $wizardData['__batch_items'] ?? [];
+            $existingBatchItems[] = $batchItem;
+
+            $this->saveWizardData(['__batch_items' => $existingBatchItems]);
+
+            $itemCount = count($existingBatchItems);
+            $token = $request->input('auth_token') ?? $request->query('auth_token') ?? session('auth_token');
+            $url   = route('custom_orders.create.step1') . ($token ? '?auth_token=' . urlencode($token) : '');
+
+            return redirect($url)->with(
+                'success',
+                "Item {$itemCount} added to your order! Customize another item below, or go back to Review to submit all items together."
+            );
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            \Log::error('addToBatch error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Unable to add item to batch. Please try again.');
+        }
+    }
+
+    /**
+     * Remove a specific item from the current wizard batch by index.
+     */
+    public function removeBatchItem(Request $request, int $index)
+    {
+        $wizardData = $this->getWizardData();
+        $batchItems = $wizardData['__batch_items'] ?? [];
+
+        if (isset($batchItems[$index])) {
+            array_splice($batchItems, $index, 1);
+            $wizardData['__batch_items'] = $batchItems;
+            $this->saveWizardData($wizardData);
+        }
+
+        $token = $request->input('auth_token') ?? $request->query('auth_token') ?? session('auth_token');
+        $url   = route('custom_orders.create.step4') . ($token ? '?auth_token=' . urlencode($token) : '');
+        return redirect($url)->with('success', 'Item removed from your batch.');
+    }
+
+    /**
+     * Create a single CustomOrder from pre-saved batch item data (wizard_data + form_data).
+     * Called during completeWizard to materialise previously queued batch items.
+     */
+    private function createOrderFromSavedData(array $wizardData, array $formData, int $userId, string $batchOrderNumber): CustomOrder
+    {
+        $isProductFlow = isset($wizardData['product']);
+        $details       = $wizardData['details'] ?? [];
+        $formQuantity  = (int) ($formData['quantity'] ?? 1);
+
+        // ----- Price calculation (mirrors completeWizard logic) -----
+        $basePrice  = 0;
+        $patternFee = 0;
+        $fabricCost = 0;
+        $shippingFee = 100;
+
+        if ($isProductFlow) {
+            $product = \App\Models\Product::find($wizardData['product']['id'] ?? null);
+            if ($product) {
+                $basePrice = $product->price;
+            }
+        } else {
+            // Pattern fee
+            $patternIds = [];
+            if (!empty($wizardData['pattern']['selected_ids'])) {
+                $patternIds = $wizardData['pattern']['selected_ids'];
+            } elseif (!empty($wizardData['pattern']['id'])) {
+                $patternIds = [$wizardData['pattern']['id']];
+            }
+            if (!empty($patternIds)) {
+                $patterns = \App\Models\YakanPattern::whereIn('id', $patternIds)->get();
+                foreach ($patterns as $p) {
+                    $patternFee += ($p->pattern_price ?? 0);
+                }
+            }
+            // Fabric cost
+            if (isset($wizardData['fabric']['quantity_meters']) && !empty($patternIds)) {
+                $meters = (float) $wizardData['fabric']['quantity_meters'];
+                $pp = \App\Models\YakanPattern::find($patternIds[0]);
+                $fabricCost = $meters * ($pp ? ($pp->price_per_meter ?? 0) : 0);
+            }
+            // Shipping fee based on resolved city
+            $deliveryCity = $formData['resolved_delivery_city'] ?? null;
+            $deliveryProvince = $formData['resolved_delivery_province'] ?? null;
+            if ($deliveryCity) {
+                $city     = strtolower($deliveryCity);
+                $province = strtolower($deliveryProvince ?? '');
+                if (str_contains($city, 'zamboanga') && !str_contains($province, 'del norte') && !str_contains($province, 'del sur') && !str_contains($province, 'sibugay')) {
+                    $shippingFee = 0;
+                } elseif (str_contains($province, 'zamboanga') || in_array($city, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
+                    $shippingFee = 100;
+                } elseif (in_array($city, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) || str_contains($province, 'barmm') || str_contains($province, 'armm')) {
+                    $shippingFee = 120;
+                } elseif (str_contains($province, 'mindanao') || in_array($city, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan'])) {
+                    $shippingFee = 150;
+                } elseif (str_contains($province, 'visayas') || in_array($city, ['cebu', 'iloilo', 'bacolod', 'tacloban'])) {
+                    $shippingFee = 180;
+                } elseif (str_contains($city, 'manila') || str_contains($province, 'ncr') || in_array($city, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan'])) {
+                    $shippingFee = 220;
+                } else {
+                    $shippingFee = 280;
+                }
+            }
+            $basePrice = ($patternFee + $fabricCost) * $formQuantity + $shippingFee;
+        }
+
+        // ----- Design / pattern data (mirrors completeWizard logic) -----
+        $imagePath       = null;
+        $patternsArray   = [];
+        $designMetadata  = null;
+        $designMethod    = 'pattern';
+        $customizationSettings = $wizardData['pattern']['customization_settings'] ?? null;
+
+        if (isset($wizardData['design']) && $wizardData['design']) {
+            $imagePath       = $this->saveDesignImage($wizardData['design']['image']);
+            $designMetadata  = $this->sanitizeDesignMetadata($wizardData['design']['metadata'] ?? []);
+            $patternsArray   = $this->extractPatternsFromMetadata($designMetadata);
+            $designMethod    = 'visual';
+        } elseif (isset($wizardData['pattern'])) {
+            $patternIds = $wizardData['pattern']['selected_ids'] ?? ($wizardData['pattern']['id'] ? [$wizardData['pattern']['id']] : []);
+            $patternsArray = $patternIds;
+            $patternId   = $patternIds[0] ?? null;
+            $patternName = null;
+            if ($patternId) {
+                $pm = \App\Models\YakanPattern::find($patternId);
+                if ($pm) {
+                    $patternName = $pm->name;
+                    if (isset($wizardData['pattern']['preview_image_path'])) {
+                        $imagePath = $wizardData['pattern']['preview_image_path'];
+                    } elseif (isset($wizardData['pattern']['preview_image'])) {
+                        $imagePath = $wizardData['pattern']['preview_image'];
+                    }
+                }
+            }
+            $designMetadata = [
+                'pattern_id'              => $patternId,
+                'pattern_name'            => $patternName,
+                'colors'                  => $wizardData['colors'] ?? [],
+                'pattern_data'            => $wizardData['pattern_data'] ?? [],
+                'customization_settings'  => $customizationSettings,
+            ];
+            $designMethod = 'pattern';
+        }
+
+        // ----- Delivery address -----
+        $formDeliveryType = $formData['delivery_type'] ?? 'delivery';
+        $formDeliveryAddr = $formData['resolved_delivery_address'] ?? null;
+        $formDeliveryCity = $formData['resolved_delivery_city'] ?? ($details['delivery_city'] ?? null);
+        $formDeliveryProv = $formData['resolved_delivery_province'] ?? ($details['delivery_province'] ?? null);
+
+        // ----- Build order -----
+        if ($isProductFlow) {
+            $order = new CustomOrder();
+            $order->batch_order_number = $batchOrderNumber;
+            $order->user_id            = $userId;
+            $order->product_id         = $wizardData['product']['id'] ?? null;
+            $order->specifications     = $formData['specifications'] ?? ($details['description'] ?? null);
+            $order->quantity           = max(1, $formQuantity);
+            $order->status             = 'pending';
+            $order->payment_status     = 'pending';
+            $order->estimated_price    = $basePrice;
+            $order->delivery_type      = $formDeliveryType;
+            $order->delivery_address   = $formDeliveryAddr ?: ($details['delivery_address'] ?? null);
+            $order->delivery_city      = $formDeliveryCity;
+            $order->delivery_province  = $formDeliveryProv;
+            $order->phone              = $details['customer_phone'] ?? null;
+            $order->email              = $details['customer_email'] ?? null;
+            if (!empty($patternsArray)) $order->patterns = $patternsArray;
+            if ($imagePath)             $order->design_upload = $imagePath;
+            if ($customizationSettings) $order->customization_settings = $customizationSettings;
+            $order->save();
+        } else {
+            $specifications = $formData['specifications'] ?? '';
+            if (empty($specifications)) {
+                $fabricTypeId   = $wizardData['fabric']['type'] ?? null;
+                $fabricTypeName = 'N/A';
+                if ($fabricTypeId) {
+                    $ft = \App\Models\FabricType::find($fabricTypeId);
+                    $fabricTypeName = $ft ? $ft->name : $fabricTypeId;
+                }
+                $intendedUseId   = $wizardData['fabric']['intended_use'] ?? null;
+                $intendedUseName = 'N/A';
+                if ($intendedUseId) {
+                    $iu = \App\Models\IntendedUse::find($intendedUseId);
+                    $intendedUseName = $iu ? $iu->name : $intendedUseId;
+                }
+                $specifications = "Custom Fabric Order\nFabric Type: {$fabricTypeName}\n"
+                    . "Quantity: " . ($wizardData['fabric']['quantity_meters'] ?? 0) . " meters\n"
+                    . "Intended Use: {$intendedUseName}";
+            }
+            $order = CustomOrder::create([
+                'batch_order_number'     => $batchOrderNumber,
+                'user_id'                => $userId,
+                'product_id'             => null,
+                'specifications'         => $specifications,
+                'patterns'               => $patternsArray ?: null,
+                'quantity'               => max(1, $formQuantity),
+                'estimated_price'        => $basePrice,
+                'final_price'            => $basePrice,
+                'status'                 => 'pending',
+                'payment_status'         => 'pending',
+                'design_upload'          => $imagePath,
+                'design_method'          => $designMethod,
+                'design_metadata'        => $designMetadata,
+                'customization_settings' => $customizationSettings,
+                'fabric_type'            => $wizardData['fabric']['type'] ?? null,
+                'fabric_quantity_meters' => $wizardData['fabric']['quantity_meters'] ?? null,
+                'intended_use'           => $wizardData['fabric']['intended_use'] ?? null,
+                'fabric_specifications'  => $wizardData['fabric']['fabric_specifications'] ?? null,
+                'special_requirements'   => $wizardData['fabric']['special_requirements'] ?? null,
+                'delivery_type'          => $formDeliveryType,
+                'delivery_address'       => $formDeliveryAddr ?: ($details['delivery_address'] ?? null),
+                'delivery_city'          => $formDeliveryCity,
+                'delivery_province'      => $formDeliveryProv,
+                'phone'                  => $details['customer_phone'] ?? null,
+                'email'                  => $details['customer_email'] ?? null,
+            ]);
+        }
+
+        return $order;
+    }
+
     /**
      * Complete wizard and create order
      */
@@ -1114,6 +1444,14 @@ class CustomOrderController extends Controller
                 return $this->redirectToRouteWithToken('custom_orders.create.step1')
                     ->with('error', 'Session expired. Please start your custom order again.');
             }
+
+            // Extract previously queued batch items, then strip that key so the rest of
+            // the logic only operates on the current (last) wizard item.
+            $savedBatchItems = $wizardData['__batch_items'] ?? [];
+            unset($wizardData['__batch_items']);
+
+            // One batch_order_number ties every item in this submission together.
+            $batchOrderNumber = 'CO-' . date('Ymd') . '-' . strtoupper(\Illuminate\Support\Str::random(5));
 
             $isProductFlow = isset($wizardData['product']);
             $isFabricFlow = isset($wizardData['fabric']);
@@ -1403,6 +1741,7 @@ class CustomOrderController extends Controller
             if ($isProductFlow) {
                 // Create a product-based custom order (safe property assignment)
                 $order = new CustomOrder();
+                $order->batch_order_number = $batchOrderNumber;
                 $order->user_id = $userId;
                 $order->product_id = $wizardData['product']['id'] ?? null;
                 $order->specifications = $formSpecifications ?? ($details['description'] ?? null);
@@ -1484,6 +1823,7 @@ class CustomOrderController extends Controller
                     'delivery_province' => $details['delivery_province'] ?? null,
                     'phone' => $details['customer_phone'] ?? null,
                     'email' => $details['customer_email'] ?? null,
+                    'batch_order_number' => $batchOrderNumber,
                 ];
                 
                 \Log::info('About to create fabric order', ['orderData' => $orderData]);
@@ -1497,20 +1837,44 @@ class CustomOrderController extends Controller
                 ]);
             }
 
+            // Create orders for all previously queued batch items using the same batch number
+            $allOrders = [$customOrder];
+            foreach ($savedBatchItems as $batchItem) {
+                try {
+                    $bOrder = $this->createOrderFromSavedData(
+                        $batchItem['wizard_data'],
+                        $batchItem['form_data'],
+                        $userId,
+                        $batchOrderNumber
+                    );
+                    $allOrders[] = $bOrder;
+                    \Log::info('Batch item order created', ['order_id' => $bOrder->id, 'batch' => $batchOrderNumber]);
+                } catch (\Exception $batchEx) {
+                    \Log::error('Failed to create batch item order: ' . $batchEx->getMessage());
+                }
+            }
+
             // Clear wizard session and backups
             $this->clearWizardSession($request);
+
+            // Determine notification wording based on item count
+            $orderCount   = count($allOrders);
+            $batchLabel   = $orderCount > 1 ? " (Batch #{$batchOrderNumber}, {$orderCount} items)" : "";
+            $orderIdsText = implode(', #', array_map(fn($o) => $o->id, $allOrders));
 
             // Create notification for user
             \App\Models\Notification::createNotification(
                 $userId,
                 'custom_order',
                 'Custom Order Submitted',
-                "Your custom order #{$customOrder->id} has been submitted successfully and is now pending admin review.",
+                "Your custom order{$batchLabel} has been submitted successfully. Order ID(s): #{$orderIdsText}. Pending admin review.",
                 route('custom_orders.show', $customOrder->id),
                 [
-                    'order_id' => $customOrder->id,
-                    'order_name' => 'Custom Order #' . $customOrder->id,
-                    'estimated_price' => $customOrder->estimated_price
+                    'order_id'         => $customOrder->id,
+                    'batch_order_number' => $batchOrderNumber,
+                    'order_count'      => $orderCount,
+                    'order_name'       => $orderCount > 1 ? "Batch Order #{$batchOrderNumber}" : 'Custom Order #' . $customOrder->id,
+                    'estimated_price'  => $customOrder->estimated_price
                 ]
             );
 
@@ -1521,13 +1885,15 @@ class CustomOrderController extends Controller
                     $admin->id,
                     'custom_order',
                     'New Custom Order',
-                    "A new custom order #{$customOrder->id} has been submitted by {$customOrder->user->name}.",
+                    "A new custom order{$batchLabel} has been submitted by {$customOrder->user->name}. Order ID(s): #{$orderIdsText}.",
                     url('/admin/custom-orders'),
                     [
-                        'order_id' => $customOrder->id,
-                        'customer_name' => $customOrder->user->name,
-                        'order_name' => 'Custom Order #' . $customOrder->id,
-                        'estimated_price' => $customOrder->estimated_price
+                        'order_id'           => $customOrder->id,
+                        'batch_order_number' => $batchOrderNumber,
+                        'order_count'        => $orderCount,
+                        'customer_name'      => $customOrder->user->name,
+                        'order_name'         => $orderCount > 1 ? "Batch Order #{$batchOrderNumber}" : 'Custom Order #' . $customOrder->id,
+                        'estimated_price'    => $customOrder->estimated_price
                     ]
                 );
             }
@@ -1577,8 +1943,19 @@ class CustomOrderController extends Controller
             $order = CustomOrder::findOrFail($orderId);
             
             \Log::info('Order found, rendering success page', ['order' => $order->id]);
+
+            // Load all orders that belong to the same batch so the success page can show them
+            $batchOrders = collect([$order]);
+            if (!empty($order->batch_order_number)) {
+                $batchOrders = CustomOrder::withoutGlobalScope('withRelations')
+                    ->with(['user:id,name,email', 'product:id,name,price,image', 'fabricType:id,name', 'intendedUse:id,name'])
+                    ->where('batch_order_number', $order->batch_order_number)
+                    ->where('user_id', $order->user_id)
+                    ->orderBy('id')
+                    ->get();
+            }
             
-            return view('custom_orders.success', compact('order'));
+            return view('custom_orders.success', compact('order', 'batchOrders'));
             
         } catch (\Exception $e) {
             \Log::error('Success page error: ' . $e->getMessage());
