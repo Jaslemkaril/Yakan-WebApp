@@ -292,11 +292,18 @@ use Illuminate\Support\Facades\Storage;
             <form id="stockInForm" method="POST">
                 @csrf
                 <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
-                <div class="mb-4">
+                <input type="hidden" name="from_edit" value="0">
+                <div class="mb-3">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Quantity to Add</label>
                     <input type="number" name="quantity" id="stockInQty" min="1" value="1"
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-center text-lg font-semibold"
                            required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Note (optional)</label>
+                    <input type="text" name="note" id="stockInNote"
+                           placeholder="e.g. New delivery batch"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
                 </div>
                 <div class="flex space-x-3">
                     <button type="button" onclick="closeStockInModal()"

@@ -209,12 +209,19 @@ use Illuminate\Support\Facades\Storage;
                 placeholder="0.00" required>
         </div>
 
-        <!-- Stock -->
-        <div>
-            <label class="block font-medium text-gray-700">Stock</label>
-            <input type="number" name="stock" value="{{ old('stock', $product->stock) }}"
-                class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#800000]" min="0"
-                required>
+        <!-- Current Stock (read-only) -->
+        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Current Stock</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ $product->available_stock }} units</p>
+                </div>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                    {{ $product->available_stock === 0 ? 'bg-red-100 text-red-800' : ($product->available_stock <= 10 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800') }}">
+                    {{ $product->stock_status }}
+                </span>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">Use the <strong>Stock In</strong> button on the products list to add stock.</p>
         </div>
 
         <!-- Description -->
@@ -496,5 +503,78 @@ use Illuminate\Support\Facades\Storage;
         </div>
     </form>
 </div>
+
+{{-- ===== Stock History Panel (outside the edit form) ===== --}}
+<div class="max-w-3xl mx-auto mt-6 bg-white shadow rounded-lg p-6">
+    <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+        <i class="fas fa-boxes mr-2 text-[#800000]"></i>Stock History — {{ $product->name }}
+    </h2>
+
+    {{-- Quick Stock In form --}}
+    <form action="{{ route('admin.products.stockIn', $product->id) }}" method="POST" class="mb-6">
+        @csrf
+        <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+        <input type="hidden" name="from_edit" value="1">
+        <div class="flex gap-3 items-end">
+            <div class="flex-1">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Qty to Add</label>
+                <input type="number" name="quantity" min="1" value="1" required
+                       class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <div class="flex-2 w-full" style="flex:2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Note (optional)</label>
+                <input type="text" name="note" placeholder="e.g. New delivery batch"
+                       class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <button type="submit"
+                    class="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium whitespace-nowrap">
+                <i class="fas fa-plus mr-1"></i>Stock In
+            </button>
+        </div>
+    </form>
+
+    {{-- Summary cards --}}
+    <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+            <p class="text-xs text-blue-600 font-semibold uppercase tracking-wide">Today</p>
+            <p class="text-2xl font-bold text-blue-800">+{{ $today }}</p>
+        </div>
+        <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+            <p class="text-xs text-purple-600 font-semibold uppercase tracking-wide">This Month</p>
+            <p class="text-2xl font-bold text-purple-800">+{{ $thisMonth }}</p>
+        </div>
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+            <p class="text-xs text-green-600 font-semibold uppercase tracking-wide">This Year</p>
+            <p class="text-2xl font-bold text-green-800">+{{ $thisYear }}</p>
+        </div>
+    </div>
+
+    {{-- Recent log entries --}}
+    @if($recentLogs->isEmpty())
+        <p class="text-gray-500 text-sm text-center py-4">No stock additions recorded yet.</p>
+    @else
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="bg-gray-50 text-left">
+                    <th class="px-3 py-2 text-gray-600 font-semibold">Date &amp; Time</th>
+                    <th class="px-3 py-2 text-gray-600 font-semibold">Qty Added</th>
+                    <th class="px-3 py-2 text-gray-600 font-semibold">Added By</th>
+                    <th class="px-3 py-2 text-gray-600 font-semibold">Note</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                @foreach($recentLogs as $log)
+                <tr class="hover:bg-gray-50">
+                    <td class="px-3 py-2 text-gray-700">{{ $log->created_at->format('M d, Y g:i A') }}</td>
+                    <td class="px-3 py-2 font-bold text-green-700">+{{ $log->quantity }}</td>
+                    <td class="px-3 py-2 text-gray-600">{{ $log->creator?->name ?? '—' }}</td>
+                    <td class="px-3 py-2 text-gray-500">{{ $log->note ?? '—' }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+</div>
+
 </div>
 @endsection

@@ -212,10 +212,23 @@ class ProductController extends Controller
      */
     public function edit(string $id)
     {
-        $product = Product::with('inventory')->findOrFail($id);
-        $categories = Category::all();
-        return view('admin.products.edit', compact('product', 'categories'));
+        $product = Product::with('category')->findOrFail($id);
+        $categories = \App\Models\Category::orderBy('name')->get();
+
+        // Stock logs grouped for display
+        $stockLogs = \App\Models\StockLog::where('product_id', $product->id)
+            ->orderBy('created_at', 'desc')
+            ->take(100)
+            ->get();
+
+        $today       = $stockLogs->filter(fn($l) => $l->created_at->isToday())->sum('quantity');
+        $thisMonth   = $stockLogs->filter(fn($l) => $l->created_at->isSameMonth(now()))->sum('quantity');
+        $thisYear    = $stockLogs->filter(fn($l) => $l->created_at->isSameYear(now()))->sum('quantity');
+        $recentLogs  = $stockLogs->take(15);
+
+        return view('admin.products.edit', compact('product', 'categories', 'stockLogs', 'today', 'thisMonth', 'thisYear', 'recentLogs'));
     }
+
 
     /**
      * Update the specified product.
@@ -224,11 +237,10 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
-        // Validate input
+        // Validate input (stock is managed via Stock In button, not this form)
         $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric',
-            'stock' => 'required|integer|min:0',
             'description' => 'nullable|string',
             'images' => 'nullable|array',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
@@ -336,11 +348,10 @@ class ProductController extends Controller
         $sizes = $request->available_sizes ? json_decode($request->available_sizes, true) : null;
         $colors = $request->available_colors ? json_decode($request->available_colors, true) : null;
 
-        // Update product
+        // Update product (stock managed via Stock In, not edit form)
         $product->update([
             'name' => $request->name,
             'price' => $request->price,
-            'stock' => $request->stock,
             'description' => $request->description,
             'status' => $request->status,
             'category_id' => $request->category_id,
@@ -390,16 +401,31 @@ class ProductController extends Controller
         $request->validate(['quantity' => 'required|integer|min:1']);
 
         $qty = (int) $request->input('quantity');
+        $note = $request->input('note');
         $authToken = $request->input('auth_token') ?? $request->query('auth_token');
-        $redirectUrl = $authToken
-            ? route('admin.products.index') . '?auth_token=' . urlencode($authToken)
-            : route('admin.products.index');
+
+        // Determine redirect back to edit page or product list
+        $fromEdit = $request->boolean('from_edit');
+        if ($fromEdit) {
+            $base = route('admin.products.edit', $product->id);
+        } else {
+            $base = route('admin.products.index');
+        }
+        $redirectUrl = $authToken ? $base . '?auth_token=' . urlencode($authToken) : $base;
 
         if ($product->inventory) {
             $product->inventory->increment('quantity', $qty);
         } else {
             $product->increment('stock', $qty);
         }
+
+        // Log the stock addition
+        \App\Models\StockLog::create([
+            'product_id' => $product->id,
+            'quantity'   => $qty,
+            'note'       => $note,
+            'created_by' => auth()->id(),
+        ]);
 
         Cache::flush();
 
