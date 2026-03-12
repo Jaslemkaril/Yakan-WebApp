@@ -1235,7 +1235,7 @@ class CustomOrderController extends Controller
      * Create a single CustomOrder from pre-saved batch item data (wizard_data + form_data).
      * Called during completeWizard to materialise previously queued batch items.
      */
-    private function createOrderFromSavedData(array $wizardData, array $formData, int $userId, string $batchOrderNumber): CustomOrder
+    private function createOrderFromSavedData(array $wizardData, array $formData, int $userId, ?string $batchOrderNumber): CustomOrder
     {
         $batchColumnExists = \Schema::hasColumn('custom_orders', 'batch_order_number');
         $isProductFlow = isset($wizardData['product']);
