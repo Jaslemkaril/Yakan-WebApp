@@ -1128,6 +1128,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::resource('patterns', \App\Http\Controllers\Admin\PatternController::class);
     Route::post('/products/{product}/toggle-status', [AdminProductController::class, 'toggleStatus'])->name('products.toggleStatus');
     Route::post('/products/bulk-delete', [AdminProductController::class, 'bulkDelete'])->name('products.bulkDelete');
+    Route::post('/products/{product}/stock-in', [AdminProductController::class, 'stockIn'])->name('products.stockIn');
 
     // System Settings
     Route::get('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings.index');

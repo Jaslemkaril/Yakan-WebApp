@@ -383,6 +383,30 @@ class ProductController extends Controller
     }
 
     /**
+     * Add stock to the specified product.
+     */
+    public function stockIn(Request $request, Product $product)
+    {
+        $request->validate(['quantity' => 'required|integer|min:1']);
+
+        $qty = (int) $request->input('quantity');
+        $authToken = $request->input('auth_token') ?? $request->query('auth_token');
+        $redirectUrl = $authToken
+            ? route('admin.products.index') . '?auth_token=' . urlencode($authToken)
+            : route('admin.products.index');
+
+        if ($product->inventory) {
+            $product->inventory->increment('quantity', $qty);
+        } else {
+            $product->increment('stock', $qty);
+        }
+
+        Cache::flush();
+
+        return redirect($redirectUrl)->with('success', "Added {$qty} unit(s) to \u201c{$product->name}\u201d. New stock: {$product->fresh()->available_stock}.");
+    }
+
+    /**
      * Remove the specified product.
      */
     public function destroy(string $id)

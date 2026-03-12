@@ -195,7 +195,7 @@ use Illuminate\Support\Facades\Storage;
                         </div>
                     </div>
                     
-                    <div class="flex space-x-2">
+                    <div class="flex space-x-2 mb-2">
                         <a href="{{ route('admin.products.show', $product->id) }}" 
                            class="flex-1 text-center px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors text-sm">
                             <i class="fas fa-eye mr-1"></i>View
@@ -210,6 +210,11 @@ use Illuminate\Support\Facades\Storage;
                             <i class="fas fa-trash mr-1"></i>Delete
                         </button>
                     </div>
+                    <button type="button"
+                            onclick="openStockIn({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->available_stock }})"
+                            class="w-full px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm font-medium">
+                        <i class="fas fa-plus-circle mr-1"></i>Stock In
+                    </button>
                 </div>
             </div>
             @empty
@@ -270,6 +275,40 @@ use Illuminate\Support\Facades\Storage;
             <button onclick="closeToast()" class="ml-auto flex-shrink-0">
                 <i class="fas fa-times text-gray-400 hover:text-gray-600"></i>
             </button>
+        </div>
+    </div>
+</div>
+
+<!-- Stock In Modal -->
+<div id="stockInModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4">
+        <div class="p-6">
+            <div class="flex items-center justify-center w-16 h-16 mx-auto bg-green-100 rounded-full mb-4">
+                <i class="fas fa-plus-circle text-green-600 text-3xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 text-center mb-1">Stock In</h3>
+            <p class="text-gray-500 text-center text-sm mb-1">Product: <strong id="stockInProductName" class="text-gray-900"></strong></p>
+            <p class="text-gray-500 text-center text-sm mb-5">Current stock: <strong id="stockInCurrentQty" class="text-gray-900"></strong></p>
+            <form id="stockInForm" method="POST">
+                @csrf
+                <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Quantity to Add</label>
+                    <input type="number" name="quantity" id="stockInQty" min="1" value="1"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-center text-lg font-semibold"
+                           required>
+                </div>
+                <div class="flex space-x-3">
+                    <button type="button" onclick="closeStockInModal()"
+                            class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
+                        <i class="fas fa-plus mr-1"></i>Add Stock
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -470,6 +509,23 @@ document.getElementById('deleteModal').addEventListener('click', function(e) {
     if (e.target === this) {
         closeDeleteModal();
     }
+});
+
+// ---- Stock In ----
+function openStockIn(productId, productName, currentStock) {
+    document.getElementById('stockInProductName').textContent = productName;
+    document.getElementById('stockInCurrentQty').textContent = currentStock;
+    document.getElementById('stockInQty').value = 1;
+    document.getElementById('stockInForm').action = '/admin/products/' + productId + '/stock-in';
+    document.getElementById('stockInModal').classList.remove('hidden');
+    document.getElementById('stockInQty').focus();
+}
+function closeStockInModal() {
+    document.getElementById('stockInModal').classList.add('hidden');
+}
+document.addEventListener('DOMContentLoaded', function() {
+    var m = document.getElementById('stockInModal');
+    if (m) m.addEventListener('click', function(e) { if (e.target === this) closeStockInModal(); });
 });
 </script>
 @endpush
