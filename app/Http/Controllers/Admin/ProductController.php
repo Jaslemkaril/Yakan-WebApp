@@ -215,16 +215,24 @@ class ProductController extends Controller
         $product = Product::with('category')->findOrFail($id);
         $categories = \App\Models\Category::orderBy('name')->get();
 
-        // Stock logs grouped for display
-        $stockLogs = \App\Models\StockLog::where('product_id', $product->id)
-            ->orderBy('created_at', 'desc')
-            ->take(100)
-            ->get();
+        // Stock logs grouped for display (guard against missing table during migration)
+        $stockLogs   = collect();
+        $today       = 0;
+        $thisMonth   = 0;
+        $thisYear    = 0;
+        $recentLogs  = collect();
 
-        $today       = $stockLogs->filter(fn($l) => $l->created_at->isToday())->sum('quantity');
-        $thisMonth   = $stockLogs->filter(fn($l) => $l->created_at->isSameMonth(now()))->sum('quantity');
-        $thisYear    = $stockLogs->filter(fn($l) => $l->created_at->isSameYear(now()))->sum('quantity');
-        $recentLogs  = $stockLogs->take(15);
+        if (\Schema::hasTable('stock_logs')) {
+            $stockLogs  = \App\Models\StockLog::where('product_id', $product->id)
+                ->orderBy('created_at', 'desc')
+                ->take(100)
+                ->get();
+
+            $today      = $stockLogs->filter(fn($l) => $l->created_at->isToday())->sum('quantity');
+            $thisMonth  = $stockLogs->filter(fn($l) => $l->created_at->isSameMonth(now()))->sum('quantity');
+            $thisYear   = $stockLogs->filter(fn($l) => $l->created_at->isSameYear(now()))->sum('quantity');
+            $recentLogs = $stockLogs->take(15);
+        }
 
         return view('admin.products.edit', compact('product', 'categories', 'stockLogs', 'today', 'thisMonth', 'thisYear', 'recentLogs'));
     }
@@ -419,13 +427,15 @@ class ProductController extends Controller
             $product->increment('stock', $qty);
         }
 
-        // Log the stock addition
-        \App\Models\StockLog::create([
-            'product_id' => $product->id,
-            'quantity'   => $qty,
-            'note'       => $note,
-            'created_by' => auth()->id(),
-        ]);
+        // Log the stock addition (guard against missing table during migration)
+        if (\Schema::hasTable('stock_logs')) {
+            \App\Models\StockLog::create([
+                'product_id' => $product->id,
+                'quantity'   => $qty,
+                'note'       => $note,
+                'created_by' => auth()->id(),
+            ]);
+        }
 
         Cache::flush();
 
