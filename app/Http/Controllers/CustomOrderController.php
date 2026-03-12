@@ -1237,6 +1237,7 @@ class CustomOrderController extends Controller
      */
     private function createOrderFromSavedData(array $wizardData, array $formData, int $userId, string $batchOrderNumber): CustomOrder
     {
+        $batchColumnExists = \Schema::hasColumn('custom_orders', 'batch_order_number');
         $isProductFlow = isset($wizardData['product']);
         $details       = $wizardData['details'] ?? [];
         $formQuantity  = (int) ($formData['quantity'] ?? 1);
@@ -1344,7 +1345,7 @@ class CustomOrderController extends Controller
         // ----- Build order -----
         if ($isProductFlow) {
             $order = new CustomOrder();
-            $order->batch_order_number = $batchOrderNumber;
+            if ($batchColumnExists) $order->batch_order_number = $batchOrderNumber;
             $order->user_id            = $userId;
             $order->product_id         = $wizardData['product']['id'] ?? null;
             $order->specifications     = $formData['specifications'] ?? ($details['description'] ?? null);
@@ -1381,8 +1382,7 @@ class CustomOrderController extends Controller
                     . "Quantity: " . ($wizardData['fabric']['quantity_meters'] ?? 0) . " meters\n"
                     . "Intended Use: {$intendedUseName}";
             }
-            $order = CustomOrder::create([
-                'batch_order_number'     => $batchOrderNumber,
+            $order = CustomOrder::create(array_merge([
                 'user_id'                => $userId,
                 'product_id'             => null,
                 'specifications'         => $specifications,
@@ -1407,7 +1407,7 @@ class CustomOrderController extends Controller
                 'delivery_province'      => $formDeliveryProv,
                 'phone'                  => $details['customer_phone'] ?? null,
                 'email'                  => $details['customer_email'] ?? null,
-            ]);
+            ], $batchColumnExists ? ['batch_order_number' => $batchOrderNumber] : []));
         }
 
         return $order;
@@ -1745,7 +1745,7 @@ class CustomOrderController extends Controller
             if ($isProductFlow) {
                 // Create a product-based custom order (safe property assignment)
                 $order = new CustomOrder();
-                $order->batch_order_number = $batchOrderNumber;
+                if ($batchColumnExists) $order->batch_order_number = $batchOrderNumber;
                 $order->user_id = $userId;
                 $order->product_id = $wizardData['product']['id'] ?? null;
                 $order->specifications = $formSpecifications ?? ($details['description'] ?? null);
@@ -1827,8 +1827,8 @@ class CustomOrderController extends Controller
                     'delivery_province' => $details['delivery_province'] ?? null,
                     'phone' => $details['customer_phone'] ?? null,
                     'email' => $details['customer_email'] ?? null,
-                    'batch_order_number' => $batchOrderNumber,
                 ];
+                if ($batchColumnExists) $orderData['batch_order_number'] = $batchOrderNumber;
                 
                 \Log::info('About to create fabric order', ['orderData' => $orderData]);
                 
