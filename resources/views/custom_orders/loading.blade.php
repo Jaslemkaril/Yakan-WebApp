@@ -6,7 +6,7 @@
     <title>Loading Custom Order — Yakan</title>
     <script>
         // Redirect immediately — the loading screen shows during navigation
-        window.location.href = "{{ $redirectUrl }}";
+        window.location.replace(@json($redirectUrl));
     </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
