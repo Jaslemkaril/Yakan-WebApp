@@ -8,6 +8,8 @@
     $batchPaymentTotal = $batchPaymentTotal ?? (float) $batchUnpaidOrders->sum(fn($item) => (float) ($item->final_price ?? $item->estimated_price ?? 0));
     $customOrderEstimatedDays = (int) \App\Models\SystemSetting::get('custom_order_estimated_days', 14);
     $estimatedCompletionDate = $order->created_at ? $order->created_at->copy()->addDays($customOrderEstimatedDays) : null;
+    $showItemDetails = request()->boolean('show_item_details');
+    $authToken = request('auth_token');
 @endphp
 <div class="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-5xl mx-auto">
@@ -27,7 +29,7 @@
         <div class="mb-6 bg-white rounded-lg shadow-sm p-6 border-l-4" style="border-left-color:#800000;">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Order Details</h1>
+                    <h1 class="text-2xl font-bold text-gray-900">Custom Order Details</h1>
                     <p class="text-gray-600">Custom Order #{{ $order->id }}</p>
                     <p class="text-sm font-semibold mt-1" style="color:#800000;">
                         Estimated Turnaround: {{ $customOrderEstimatedDays }} day{{ $customOrderEstimatedDays === 1 ? '' : 's' }}
@@ -199,7 +201,7 @@
                                 <div class="flex items-center">
                                     <div class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center mr-2.5" style="background-color:#800000;">{{ $idx + 1 }}</div>
                                     <div>
-                                        <p class="font-bold text-gray-900 text-sm">Order #{{ $item->id }}</p>
+                                        <p class="font-bold text-gray-900 text-sm">Custom Order ID: CO-{{ str_pad((string) $item->id, 5, '0', STR_PAD_LEFT) }}</p>
                                         <p class="text-xs text-gray-500">{{ $item->created_at->format('M d, Y g:i A') }}</p>
                                     </div>
                                 </div>
@@ -262,8 +264,8 @@
 
                             <div class="mt-2 pt-2 border-t flex items-center justify-between" style="border-color:#f1d2d2;">
                                 <p class="text-xs text-gray-600">Delivery: <span class="font-semibold text-gray-800">{{ ($item->delivery_type ?? 'delivery') === 'pickup' ? 'Store Pickup' : 'Delivery' }}</span></p>
-                                <a href="{{ route('custom_orders.show', $item->id) }}" class="text-xs font-semibold hover:underline" style="color:#800000;">
-                                    View Order Details →
+                                <a href="{{ route('custom_orders.show', $item->id) . '?show_item_details=1' . ($authToken ? '&auth_token=' . urlencode($authToken) : '') }}" class="text-xs font-semibold hover:underline" style="color:#800000;">
+                                    View Custom Order Details →
                                 </a>
                             </div>
                         </div>
@@ -390,7 +392,7 @@
                 
 
                 <!-- Patterns Card -->
-                @if($order->patterns && is_array($order->patterns) && count($order->patterns) > 0)
+                @if((!$isBatchOrder || $showItemDetails) && $order->patterns && is_array($order->patterns) && count($order->patterns) > 0)
                 <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 hover:shadow-2xl transition-shadow duration-300">
                     <div class="px-6 py-4" style="background-color:#800000;">
                         <h2 class="text-xl font-bold text-white flex items-center">
@@ -580,7 +582,7 @@
                 @endif
 
                 <!-- Design Upload Card -->
-                @if($order->design_upload)
+                @if((!$isBatchOrder || $showItemDetails) && $order->design_upload)
                 <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 hover:shadow-2xl transition-shadow duration-300">
                     <div class="px-6 py-4" style="background-color:#800000;">
                         <h2 class="text-xl font-bold text-white flex items-center">
