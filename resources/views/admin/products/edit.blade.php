@@ -510,46 +510,75 @@ use Illuminate\Support\Facades\Storage;
         <i class="fas fa-boxes mr-2 text-[#800000]"></i>Stock History — {{ $product->name }}
     </h2>
 
-    {{-- Quick Stock In form --}}
-    <form action="{{ route('admin.products.stockIn', $product->id) }}" method="POST" class="mb-6">
-        @csrf
-        <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
-        <input type="hidden" name="from_edit" value="1">
-        <div class="flex gap-3 items-end">
-            <div class="flex-1">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Qty to Add</label>
-                <input type="number" name="quantity" min="1" value="1" required
-                       class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <form action="{{ route('admin.products.stockIn', $product->id) }}" method="POST" class="rounded-lg border border-green-200 bg-green-50 p-4">
+            @csrf
+            <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+            <input type="hidden" name="from_edit" value="1">
+            <div class="mb-3">
+                <h4 class="font-semibold text-green-800"><i class="fas fa-plus-circle mr-1"></i>Stock In</h4>
             </div>
-            <div class="flex-2 w-full" style="flex:2">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Note (optional)</label>
-                <input type="text" name="note" placeholder="e.g. New delivery batch"
-                       class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Qty to Add</label>
+                    <input type="number" name="quantity" min="1" value="1" required
+                           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Note (optional)</label>
+                    <input type="text" name="note" placeholder="e.g. New delivery batch"
+                           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                <button type="submit"
+                        class="w-full px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium whitespace-nowrap">
+                    <i class="fas fa-plus mr-1"></i>Add Stock
+                </button>
             </div>
-            <button type="submit"
-                    class="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium whitespace-nowrap">
-                <i class="fas fa-plus mr-1"></i>Stock In
-            </button>
-        </div>
-    </form>
+        </form>
+
+        <form action="{{ route('admin.products.stockOut', $product->id) }}" method="POST" class="rounded-lg border border-red-200 bg-red-50 p-4">
+            @csrf
+            <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+            <input type="hidden" name="from_edit" value="1">
+            <div class="mb-3">
+                <h4 class="font-semibold text-red-800"><i class="fas fa-minus-circle mr-1"></i>Stock Out</h4>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Qty to Remove</label>
+                    <input type="number" name="quantity" min="1" max="{{ $product->available_stock }}" value="1" required
+                           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Note (optional)</label>
+                    <input type="text" name="note" placeholder="e.g. Damaged item, manual adjustment"
+                           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                </div>
+                <button type="submit"
+                        class="w-full px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium whitespace-nowrap">
+                    <i class="fas fa-minus mr-1"></i>Remove Stock
+                </button>
+            </div>
+        </form>
+    </div>
 
     {{-- Summary cards --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
             <p class="text-xs text-blue-600 font-semibold uppercase tracking-wide">Today</p>
-            <p class="text-2xl font-bold text-blue-800">+{{ $today }}</p>
+            <p class="text-2xl font-bold text-blue-800">{{ $today > 0 ? '+' : '' }}{{ $today }}</p>
         </div>
         <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
             <p class="text-xs text-purple-600 font-semibold uppercase tracking-wide">This Week</p>
-            <p class="text-2xl font-bold text-purple-800">+{{ $thisWeek }}</p>
+            <p class="text-2xl font-bold text-purple-800">{{ $thisWeek > 0 ? '+' : '' }}{{ $thisWeek }}</p>
         </div>
         <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
             <p class="text-xs text-green-600 font-semibold uppercase tracking-wide">This Year</p>
-            <p class="text-2xl font-bold text-green-800">+{{ $thisYear }}</p>
+            <p class="text-2xl font-bold text-green-800">{{ $thisYear > 0 ? '+' : '' }}{{ $thisYear }}</p>
         </div>
         <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
             <p class="text-xs text-amber-600 font-semibold uppercase tracking-wide">Overall</p>
-            <p class="text-2xl font-bold text-amber-800">+{{ $overall }}</p>
+            <p class="text-2xl font-bold text-amber-800">{{ $overall > 0 ? '+' : '' }}{{ $overall }}</p>
         </div>
     </div>
 
@@ -561,7 +590,8 @@ use Illuminate\Support\Facades\Storage;
             <thead>
                 <tr class="bg-gray-50 text-left">
                     <th class="px-3 py-2 text-gray-600 font-semibold">Date &amp; Time</th>
-                    <th class="px-3 py-2 text-gray-600 font-semibold">Qty Added</th>
+                    <th class="px-3 py-2 text-gray-600 font-semibold">Movement</th>
+                    <th class="px-3 py-2 text-gray-600 font-semibold">Quantity</th>
                     <th class="px-3 py-2 text-gray-600 font-semibold">Added By</th>
                     <th class="px-3 py-2 text-gray-600 font-semibold">Note</th>
                 </tr>
@@ -570,7 +600,16 @@ use Illuminate\Support\Facades\Storage;
                 @foreach($recentLogs as $log)
                 <tr class="hover:bg-gray-50">
                     <td class="px-3 py-2 text-gray-700">{{ $log->created_at->format('M d, Y g:i A') }}</td>
-                    <td class="px-3 py-2 font-bold text-green-700">+{{ $log->quantity }}</td>
+                    <td class="px-3 py-2">
+                        @if($log->quantity >= 0)
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">Stock In</span>
+                        @else
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">Stock Out</span>
+                        @endif
+                    </td>
+                    <td class="px-3 py-2 font-bold {{ $log->quantity >= 0 ? 'text-green-700' : 'text-red-700' }}">
+                        {{ $log->quantity > 0 ? '+' : '' }}{{ $log->quantity }}
+                    </td>
                     <td class="px-3 py-2 text-gray-600">{{ $log->creator?->name ?? '—' }}</td>
                     <td class="px-3 py-2 text-gray-500">{{ $log->note ?? '—' }}</td>
                 </tr>

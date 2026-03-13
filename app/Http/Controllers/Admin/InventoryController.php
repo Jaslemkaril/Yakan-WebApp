@@ -54,13 +54,19 @@ class InventoryController extends Controller
         $stockInOverall = 0;
 
         if (\Schema::hasTable('stock_logs')) {
-            $stockInToday = \App\Models\StockLog::whereDate('created_at', today())->sum('quantity');
+            $stockInToday = \App\Models\StockLog::where('quantity', '>', 0)
+                ->whereDate('created_at', today())
+                ->sum('quantity');
             $stockInWeek = \App\Models\StockLog::whereBetween('created_at', [
-                now()->copy()->startOfWeek(),
-                now()->copy()->endOfWeek(),
-            ])->sum('quantity');
-            $stockInYear = \App\Models\StockLog::whereYear('created_at', now()->year)->sum('quantity');
-            $stockInOverall = \App\Models\StockLog::sum('quantity');
+                    now()->copy()->startOfWeek(),
+                    now()->copy()->endOfWeek(),
+                ])
+                ->where('quantity', '>', 0)
+                ->sum('quantity');
+            $stockInYear = \App\Models\StockLog::where('quantity', '>', 0)
+                ->whereYear('created_at', now()->year)
+                ->sum('quantity');
+            $stockInOverall = \App\Models\StockLog::where('quantity', '>', 0)->sum('quantity');
         }
 
         return view('admin.inventory.index', compact(
@@ -184,12 +190,58 @@ class InventoryController extends Controller
     {
         $validated = $request->validate([
             'quantity' => 'required|integer|min:1|max:1000',
+            'note' => 'nullable|string|max:255',
         ]);
 
         $inventory->restock($validated['quantity']);
 
+        if (\Schema::hasTable('stock_logs')) {
+            \App\Models\StockLog::create([
+                'product_id' => $inventory->product_id,
+                'quantity' => $validated['quantity'],
+                'note' => $validated['note'] ?? 'Restock from inventory page',
+                'created_by' => auth()->id(),
+            ]);
+        }
+
+        \Cache::flush();
+
         return redirect()->route('admin.inventory.index')
             ->with('success', "Successfully restocked {$validated['quantity']} units.");
+    }
+
+    /**
+     * Deduct stock from inventory.
+     */
+    public function stockOut(Request $request, Inventory $inventory): RedirectResponse
+    {
+        $validated = $request->validate([
+            'quantity' => 'required|integer|min:1|max:1000',
+            'note' => 'nullable|string|max:255',
+        ]);
+
+        if ($validated['quantity'] > $inventory->quantity) {
+            return redirect()->route('admin.inventory.index')
+                ->with('error', "Cannot remove {$validated['quantity']} units. Available stock is only {$inventory->quantity}.");
+        }
+
+        $inventory->quantity -= $validated['quantity'];
+        $inventory->low_stock_alert = $inventory->quantity <= $inventory->min_stock_level;
+        $inventory->save();
+
+        if (\Schema::hasTable('stock_logs')) {
+            \App\Models\StockLog::create([
+                'product_id' => $inventory->product_id,
+                'quantity' => -$validated['quantity'],
+                'note' => $validated['note'] ?? 'Stock out from inventory page',
+                'created_by' => auth()->id(),
+            ]);
+        }
+
+        \Cache::flush();
+
+        return redirect()->route('admin.inventory.index')
+            ->with('success', "Successfully removed {$validated['quantity']} units from stock.");
     }
 
     /**

@@ -224,15 +224,16 @@ class ProductController extends Controller
         $recentLogs  = collect();
 
         if (\Schema::hasTable('stock_logs')) {
-            $stockLogs  = \App\Models\StockLog::where('product_id', $product->id)
+            $stockLogs  = \App\Models\StockLog::with('creator:id,name')
+                ->where('product_id', $product->id)
                 ->orderBy('created_at', 'desc')
                 ->take(100)
                 ->get();
 
-            $today      = $stockLogs->filter(fn($l) => $l->created_at->isToday())->sum('quantity');
-            $thisWeek   = $stockLogs->filter(fn($l) => $l->created_at->isSameWeek(now()))->sum('quantity');
-            $thisYear   = $stockLogs->filter(fn($l) => $l->created_at->isSameYear(now()))->sum('quantity');
-            $overall    = $stockLogs->sum('quantity');
+            $today      = $stockLogs->filter(fn($l) => $l->quantity > 0 && $l->created_at->isToday())->sum('quantity');
+            $thisWeek   = $stockLogs->filter(fn($l) => $l->quantity > 0 && $l->created_at->isSameWeek(now()))->sum('quantity');
+            $thisYear   = $stockLogs->filter(fn($l) => $l->quantity > 0 && $l->created_at->isSameYear(now()))->sum('quantity');
+            $overall    = $stockLogs->filter(fn($l) => $l->quantity > 0)->sum('quantity');
             $recentLogs = $stockLogs->take(15);
         }
 
@@ -442,6 +443,52 @@ class ProductController extends Controller
         Cache::flush();
 
         return redirect($redirectUrl)->with('success', "Added {$qty} unit(s) to \u201c{$product->name}\u201d. New stock: {$product->fresh()->available_stock}.");
+    }
+
+    /**
+     * Remove stock from the specified product.
+     */
+    public function stockOut(Request $request, Product $product)
+    {
+        $request->validate(['quantity' => 'required|integer|min:1']);
+
+        $qty = (int) $request->input('quantity');
+        $note = $request->input('note');
+        $authToken = $request->input('auth_token') ?? $request->query('auth_token');
+
+        // Determine redirect back to edit page or product list
+        $fromEdit = $request->boolean('from_edit');
+        if ($fromEdit) {
+            $base = route('admin.products.edit', $product->id);
+        } else {
+            $base = route('admin.products.index');
+        }
+        $redirectUrl = $authToken ? $base . '?auth_token=' . urlencode($authToken) : $base;
+
+        $currentStock = (int) $product->fresh()->available_stock;
+        if ($qty > $currentStock) {
+            return redirect($redirectUrl)->with('error', "Cannot stock out {$qty} unit(s). Available stock is only {$currentStock}.");
+        }
+
+        if ($product->inventory) {
+            $product->inventory->decrement('quantity', $qty);
+        } else {
+            $product->decrement('stock', $qty);
+        }
+
+        // Log the stock deduction as negative quantity
+        if (\Schema::hasTable('stock_logs')) {
+            \App\Models\StockLog::create([
+                'product_id' => $product->id,
+                'quantity'   => -$qty,
+                'note'       => $note,
+                'created_by' => auth()->id(),
+            ]);
+        }
+
+        Cache::flush();
+
+        return redirect($redirectUrl)->with('success', "Removed {$qty} unit(s) from \u201c{$product->name}\u201d. New stock: {$product->fresh()->available_stock}.");
     }
 
     /**

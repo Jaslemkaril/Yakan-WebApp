@@ -273,9 +273,12 @@
                                         <a href="{{ route('admin.inventory.edit', $inventory) }}" class="text-[#800000] hover:text-[#600000]" title="Edit Inventory">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        @if($inventory->isLowStock())
-                                            <button onclick="restockModal({{ $inventory->id }})" class="text-green-600 hover:text-green-900" title="Restock">
-                                                <i class="fas fa-plus"></i>
+                                        <button onclick="restockModal({{ $inventory->id }}, '{{ addslashes($product->name) }}')" class="text-green-600 hover:text-green-900" title="Stock In">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                        @if($inventory->quantity > 0)
+                                            <button onclick="stockOutModal({{ $inventory->id }}, '{{ addslashes($product->name) }}', {{ $inventory->quantity }})" class="text-red-600 hover:text-red-900" title="Stock Out">
+                                                <i class="fas fa-minus"></i>
                                             </button>
                                         @endif
                                         
@@ -337,19 +340,24 @@
 <div id="restockModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
     <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-xl bg-white">
         <div class="mt-3">
-            <h3 class="text-lg font-medium text-gray-900">Restock Inventory</h3>
+            <h3 class="text-lg font-medium text-gray-900">Stock In Inventory</h3>
+            <p class="text-sm text-gray-500 mt-1" id="restockProductLabel">Product</p>
             <form id="restockForm" method="POST" action="#" class="mt-4 space-y-4">
                 @csrf
                 @method('PATCH')
-                <input type="hidden" name="quantity" id="restockQuantity">
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-2">Quantity to Add</label>
-                    <input type="number" name="restock_amount" min="1" max="1000" required
+                    <input type="number" name="quantity" min="1" max="1000" required
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-maroon-500 focus:border-maroon-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Note (optional)</label>
+                    <input type="text" name="note" placeholder="e.g. New delivery batch"
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-maroon-500 focus:border-maroon-500">
                 </div>
                 <div class="flex gap-3">
                     <button type="submit" class="flex-1 px-4 py-2 bg-maroon-600 hover:bg-maroon-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all">
-                        Restock
+                        Stock In
                     </button>
                     <button type="button" onclick="closeRestockModal()" class="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold rounded-lg transition-all">
                         Cancel
@@ -360,16 +368,71 @@
     </div>
 </div>
 
+<!-- Stock Out Modal -->
+<div id="stockOutModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-xl bg-white">
+        <div class="mt-3">
+            <h3 class="text-lg font-medium text-gray-900">Stock Out Inventory</h3>
+            <p class="text-sm text-gray-500 mt-1" id="stockOutProductLabel">Product</p>
+            <p class="text-sm text-gray-500" id="stockOutAvailableLabel">Available: 0</p>
+            <form id="stockOutForm" method="POST" action="#" class="mt-4 space-y-4">
+                @csrf
+                @method('PATCH')
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Quantity to Remove</label>
+                    <input type="number" name="quantity" id="stockOutQty" min="1" max="1000" required
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Note (optional)</label>
+                    <input type="text" name="note" placeholder="e.g. Damaged item, manual adjustment"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                </div>
+                <div class="flex gap-3">
+                    <button type="submit" class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all">
+                        Stock Out
+                    </button>
+                    <button type="button" onclick="closeStockOutModal()" class="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold rounded-lg transition-all">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
-function restockModal(inventoryId) {
+function restockModal(inventoryId, productName) {
     const modal = document.getElementById('restockModal');
     const form = document.getElementById('restockForm');
+    const label = document.getElementById('restockProductLabel');
     form.action = `/admin/inventory/${inventoryId}/restock`;
+    if (label) label.textContent = `Product: ${productName}`;
     modal.classList.remove('hidden');
 }
 
 function closeRestockModal() {
     document.getElementById('restockModal').classList.add('hidden');
+}
+
+function stockOutModal(inventoryId, productName, availableQty) {
+    const modal = document.getElementById('stockOutModal');
+    const form = document.getElementById('stockOutForm');
+    const qtyInput = document.getElementById('stockOutQty');
+    const productLabel = document.getElementById('stockOutProductLabel');
+    const availableLabel = document.getElementById('stockOutAvailableLabel');
+
+    form.action = `/admin/inventory/${inventoryId}/stock-out`;
+    qtyInput.value = 1;
+    qtyInput.max = Math.max(1, availableQty);
+    if (productLabel) productLabel.textContent = `Product: ${productName}`;
+    if (availableLabel) availableLabel.textContent = `Available: ${availableQty}`;
+
+    modal.classList.remove('hidden');
+}
+
+function closeStockOutModal() {
+    document.getElementById('stockOutModal').classList.add('hidden');
 }
 </script>
 @endsection

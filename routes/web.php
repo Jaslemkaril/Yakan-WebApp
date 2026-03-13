@@ -1129,6 +1129,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::post('/products/{product}/toggle-status', [AdminProductController::class, 'toggleStatus'])->name('products.toggleStatus');
     Route::post('/products/bulk-delete', [AdminProductController::class, 'bulkDelete'])->name('products.bulkDelete');
     Route::post('/products/{product}/stock-in', [AdminProductController::class, 'stockIn'])->name('products.stockIn');
+    Route::post('/products/{product}/stock-out', [AdminProductController::class, 'stockOut'])->name('products.stockOut');
 
     // System Settings
     Route::get('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings.index');
@@ -1198,6 +1199,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         Route::get('/{inventory}/edit', [InventoryController::class, 'edit'])->name('inventory.edit');
         Route::patch('/{inventory}', [InventoryController::class, 'update'])->name('inventory.update');
         Route::patch('/{inventory}/restock', [InventoryController::class, 'restock'])->name('inventory.restock');
+        Route::patch('/{inventory}/stock-out', [InventoryController::class, 'stockOut'])->name('inventory.stockOut');
         Route::delete('/{inventory}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
         Route::get('/low-stock', [InventoryController::class, 'lowStockAlerts'])->name('inventory.low-stock');
         Route::get('/report', [InventoryController::class, 'report'])->name('inventory.report');
