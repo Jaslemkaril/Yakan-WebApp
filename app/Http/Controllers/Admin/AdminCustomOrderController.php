@@ -14,6 +14,47 @@ class AdminCustomOrderController extends Controller
         try {
             $hasBatchColumn = \Schema::hasColumn('custom_orders', 'batch_order_number');
 
+            // Detect implicit same-submission groups (same user + same minute).
+            $implicitGroups = DB::table('custom_orders')
+                ->select(
+                    'user_id',
+                    DB::raw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') as minute_key"),
+                    DB::raw('MIN(id) as primary_id'),
+                    DB::raw('COUNT(*) as cnt')
+                )
+                ->whereNotNull('user_id')
+                ->when($hasBatchColumn, function ($q) {
+                    $q->where(function ($w) {
+                        $w->whereNull('batch_order_number')
+                          ->orWhere('batch_order_number', '');
+                    });
+                })
+                ->groupBy('user_id', DB::raw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i')"))
+                ->havingRaw('cnt > 1')
+                ->get();
+
+            $implicitCountMap = $implicitGroups->pluck('cnt', 'primary_id')->toArray();
+
+            $implicitExcludeIds = collect();
+            foreach ($implicitGroups as $group) {
+                $memberIdsQuery = DB::table('custom_orders')
+                    ->where('user_id', $group->user_id)
+                    ->whereRaw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') = ?", [$group->minute_key]);
+
+                if ($hasBatchColumn) {
+                    $memberIdsQuery->where(function ($w) {
+                        $w->whereNull('batch_order_number')
+                          ->orWhere('batch_order_number', '');
+                    });
+                }
+
+                $memberIds = $memberIdsQuery
+                    ->where('id', '!=', $group->primary_id)
+                    ->pluck('id');
+
+                $implicitExcludeIds = $implicitExcludeIds->merge($memberIds);
+            }
+
             // For named batch orders, only surface the primary (lowest id) row per batch.
             // Secondary siblings will be shown as sub-rows in the view.
             if ($hasBatchColumn) {
@@ -29,9 +70,11 @@ class AdminCustomOrderController extends Controller
                           ->orWhere('batch_order_number', '')
                           ->orWhereIn('id', $batchPrimaryIds);
                     })
+                    ->when($implicitExcludeIds->isNotEmpty(), fn($q) => $q->whereNotIn('id', $implicitExcludeIds))
                     ->orderBy('created_at', 'desc');
             } else {
                 $query = CustomOrder::with(['user', 'product'])
+                    ->when($implicitExcludeIds->isNotEmpty(), fn($q) => $q->whereNotIn('id', $implicitExcludeIds))
                     ->orderBy('created_at', 'desc');
             }
 
@@ -69,9 +112,8 @@ class AdminCustomOrderController extends Controller
 
             $orders = $query->paginate($request->get('per_page', 20))->withQueryString();
 
-            // Build batch count map and sibling map for all named batches on this page.
+            // Build batch count map for all named batches on this page.
             $batchCountMap    = [];
-            $batchSiblingsMap = collect();
             if ($hasBatchColumn) {
                 $batchNumbers = $orders->pluck('batch_order_number')->filter()->unique()->values();
                 if ($batchNumbers->isNotEmpty()) {
@@ -80,17 +122,9 @@ class AdminCustomOrderController extends Controller
                         ->groupBy('batch_order_number')
                         ->pluck('cnt', 'batch_order_number')
                         ->toArray();
-
-                    $primaryIds = $orders->pluck('id')->toArray();
-                    $batchSiblingsMap = CustomOrder::with(['user:id,name,email'])
-                        ->whereIn('batch_order_number', $batchNumbers)
-                        ->whereNotIn('id', $primaryIds)
-                        ->orderBy('id')
-                        ->get()
-                        ->groupBy('batch_order_number');
                 }
             }
-            $implicitCountMap = []; // no implicit grouping needed here
+            $batchSiblingsMap = collect();
 
             // Stats — always from all orders (unfiltered)
             $totalOrders     = CustomOrder::count();
@@ -117,15 +151,36 @@ class AdminCustomOrderController extends Controller
 
         // Load all sibling orders in the same batch so the details view can show them
         $batchOrders = collect();
-        if (!empty($order->batch_order_number) && \Schema::hasColumn('custom_orders', 'batch_order_number')) {
+        $isImplicitBatchGroup = false;
+        $hasBatchColumn = \Schema::hasColumn('custom_orders', 'batch_order_number');
+
+        if ($hasBatchColumn && !empty($order->batch_order_number)) {
             $batchOrders = CustomOrder::with(['user:id,name,email', 'product:id,name,price,image'])
                 ->where('batch_order_number', $order->batch_order_number)
                 ->where('id', '!=', $order->id)
                 ->orderBy('id')
                 ->get();
+        } else {
+            $minuteKey = optional($order->created_at)->format('Y-m-d H:i');
+            if ($minuteKey && !empty($order->user_id)) {
+                $batchOrdersQuery = CustomOrder::with(['user:id,name,email', 'product:id,name,price,image'])
+                    ->where('user_id', $order->user_id)
+                    ->whereRaw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') = ?", [$minuteKey])
+                    ->where('id', '!=', $order->id);
+
+                if ($hasBatchColumn) {
+                    $batchOrdersQuery->where(function ($q) {
+                        $q->whereNull('batch_order_number')
+                          ->orWhere('batch_order_number', '');
+                    });
+                }
+
+                $batchOrders = $batchOrdersQuery->orderBy('id')->get();
+                $isImplicitBatchGroup = $batchOrders->isNotEmpty();
+            }
         }
 
-        return view('admin.custom_orders.details', compact('order', 'batchOrders'));
+        return view('admin.custom_orders.details', compact('order', 'batchOrders', 'isImplicitBatchGroup'));
     }
 
     public function updateStatus(Request $request, CustomOrder $order)

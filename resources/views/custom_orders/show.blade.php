@@ -29,7 +29,11 @@
                     <p class="text-gray-600">Custom Order #{{ $order->id }}</p>
                     @if($isBatchOrder)
                         <p class="text-sm text-blue-700 font-semibold mt-1">
-                            Batch {{ $order->batch_order_number ?? '' }} • {{ $batchOrders->count() }} custom items
+                            @if(!empty($order->batch_order_number))
+                                Batch {{ $order->batch_order_number }} • {{ $batchOrders->count() }} custom items
+                            @else
+                                Same submission • {{ $batchOrders->count() }} custom items
+                            @endif
                         </p>
                     @endif
                 </div>
@@ -157,7 +161,9 @@
         @if($isBatchOrder)
             <div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                    <h2 class="text-sm font-bold text-blue-900">All Items Under This Order Number</h2>
+                    <h2 class="text-sm font-bold text-blue-900">
+                        {{ !empty($order->batch_order_number) ? 'All Items Under This Order Number' : 'All Items From This Submission' }}
+                    </h2>
                     @if($batchPaymentTotal > 0)
                         <span class="text-sm font-semibold text-blue-800">
                             Combined Unpaid Total: ₱{{ number_format($batchPaymentTotal, 2) }}

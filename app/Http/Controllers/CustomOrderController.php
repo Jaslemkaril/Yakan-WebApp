@@ -446,18 +446,37 @@ class CustomOrderController extends Controller
     private function getUserBatchOrders(CustomOrder $order, int $userId, bool $unpaidOnly = false): \Illuminate\Support\Collection
     {
         $query = CustomOrder::where('user_id', $userId);
+        $hasBatchColumn = \Schema::hasColumn('custom_orders', 'batch_order_number');
 
-        if (!empty($order->batch_order_number)) {
+        if ($hasBatchColumn && !empty($order->batch_order_number)) {
             $query->where('batch_order_number', $order->batch_order_number);
         } else {
-            $query->where('id', $order->id);
+            // Fallback grouping for same submission process (same user + same minute)
+            $minuteKey = optional($order->created_at)->format('Y-m-d H:i');
+
+            if ($minuteKey) {
+                $query->whereRaw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') = ?", [$minuteKey]);
+
+                if ($hasBatchColumn) {
+                    $query->where(function ($q) {
+                        $q->whereNull('batch_order_number')
+                          ->orWhere('batch_order_number', '');
+                    });
+                }
+            } else {
+                $query->where('id', $order->id);
+            }
         }
 
         if ($unpaidOnly) {
             $query->where('payment_status', '!=', 'paid');
         }
 
-        return $query->orderBy('id')->get();
+        $orders = $query->orderBy('id')->get();
+
+        return $orders->isNotEmpty()
+            ? $orders
+            : CustomOrder::where('id', $order->id)->get();
     }
 
     /**
@@ -1989,16 +2008,9 @@ class CustomOrderController extends Controller
             
             \Log::info('Order found, rendering success page', ['order' => $order->id]);
 
-            // Load all orders that belong to the same batch so the success page can show them
-            $batchOrders = collect([$order]);
-            if (!empty($order->batch_order_number)) {
-                $batchOrders = CustomOrder::withoutGlobalScope('withRelations')
-                    ->with(['user:id,name,email', 'product:id,name,price,image', 'fabricType:id,name', 'intendedUse:id,name'])
-                    ->where('batch_order_number', $order->batch_order_number)
-                    ->where('user_id', $order->user_id)
-                    ->orderBy('id')
-                    ->get();
-            }
+            // Load all orders in the same submission batch (by batch_order_number or same-minute fallback)
+            $batchOrders = $this->getUserBatchOrders($order, (int) $order->user_id)
+                ->load(['user:id,name,email', 'product:id,name,price,image', 'fabricType:id,name', 'intendedUse:id,name']);
             
             return view('custom_orders.success', compact('order', 'batchOrders'));
             

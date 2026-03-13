@@ -51,8 +51,8 @@
         </div>
     </div>
 
-    {{-- ===== Batch Siblings Panel ===== --}}
-    @if(!empty($order->batch_order_number) && isset($batchOrders) && $batchOrders->count() > 0)
+    {{-- ===== Batch/Submission Siblings Panel ===== --}}
+    @if(isset($batchOrders) && $batchOrders->count() > 0)
     <div class="bg-amber-50 border-2 border-amber-300 rounded-xl p-5 mb-6">
         <div class="flex items-center gap-3 mb-4">
             <div class="w-8 h-8 rounded-lg bg-amber-200 flex items-center justify-center flex-shrink-0">
@@ -62,7 +62,11 @@
             </div>
             <div>
                 <h3 class="font-bold text-amber-900">Batch Order — {{ $batchOrders->count() + 1 }} Items Total</h3>
-                <p class="text-xs text-amber-700 font-mono">Batch #{{ $order->batch_order_number }}</p>
+                @if(!empty($order->batch_order_number))
+                    <p class="text-xs text-amber-700 font-mono">Batch #{{ $order->batch_order_number }}</p>
+                @elseif(!empty($isImplicitBatchGroup))
+                    <p class="text-xs text-amber-700">Grouped from same submission process</p>
+                @endif
             </div>
             <span class="ml-auto inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-200 text-amber-900">
                 BATCH &times;{{ $batchOrders->count() + 1 }}
