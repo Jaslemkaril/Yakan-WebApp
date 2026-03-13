@@ -8,8 +8,6 @@
     $batchPaymentTotal = $batchPaymentTotal ?? (float) $batchUnpaidOrders->sum(fn($item) => (float) ($item->final_price ?? $item->estimated_price ?? 0));
     $customOrderEstimatedDays = (int) \App\Models\SystemSetting::get('custom_order_estimated_days', 14);
     $estimatedCompletionDate = $order->created_at ? $order->created_at->copy()->addDays($customOrderEstimatedDays) : null;
-    $showItemDetails = request()->boolean('show_item_details');
-    $authToken = request('auth_token');
 @endphp
 <div class="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-5xl mx-auto">
@@ -264,9 +262,61 @@
 
                             <div class="mt-2 pt-2 border-t flex items-center justify-between" style="border-color:#f1d2d2;">
                                 <p class="text-xs text-gray-600">Delivery: <span class="font-semibold text-gray-800">{{ ($item->delivery_type ?? 'delivery') === 'pickup' ? 'Store Pickup' : 'Delivery' }}</span></p>
-                                <a href="{{ route('custom_orders.show', $item->id) . '?show_item_details=1' . ($authToken ? '&auth_token=' . urlencode($authToken) : '') }}" class="text-xs font-semibold hover:underline" style="color:#800000;">
+                                <button type="button"
+                                        class="text-xs font-semibold hover:underline"
+                                        style="color:#800000;"
+                                        onclick="document.getElementById('item-details-{{ $item->id }}').classList.toggle('hidden')">
                                     View Custom Order Details →
-                                </a>
+                                </button>
+                            </div>
+
+                            <div id="item-details-{{ $item->id }}" class="hidden mt-3 rounded-lg border p-3" style="border-color:#e0b0b0; background-color:#fff7f7;">
+                                <h4 class="text-sm font-bold mb-2" style="color:#800000;">Traditional Yakan Patterns</h4>
+
+                                @if($itemPatterns->count() > 0)
+                                    @php
+                                        $detailPattern = $itemPatterns->first();
+                                    @endphp
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-20 h-20 rounded-md border bg-white overflow-hidden p-1 flex items-center justify-center" style="border-color:#e0b0b0;">
+                                            @if($detailPattern && $detailPattern->hasSvg())
+                                                @php
+                                                    $detailCustom = $item->customization_settings ?? [];
+                                                    $detailStyle = sprintf(
+                                                        'filter: hue-rotate(%ddeg) saturate(%d%%) brightness(%d%%); opacity: %s; transform: scale(%s) rotate(%ddeg);',
+                                                        $detailCustom['hue'] ?? 0,
+                                                        $detailCustom['saturation'] ?? 100,
+                                                        $detailCustom['brightness'] ?? 100,
+                                                        $detailCustom['opacity'] ?? 1,
+                                                        $detailCustom['scale'] ?? 1,
+                                                        $detailCustom['rotation'] ?? 0
+                                                    );
+                                                @endphp
+                                                <div style="{{ $detailStyle }} transform-origin:center; width:100%; height:100%;">
+                                                    {!! $detailPattern->getSvgContent() !!}
+                                                </div>
+                                            @elseif(!empty($item->design_upload))
+                                                @php
+                                                    $detailDesignPath = $item->design_upload;
+                                                    if (str_starts_with($detailDesignPath, 'http://') || str_starts_with($detailDesignPath, 'https://') || str_starts_with($detailDesignPath, 'data:image')) {
+                                                        $detailDesignUrl = $detailDesignPath;
+                                                    } elseif (str_starts_with($detailDesignPath, 'storage/')) {
+                                                        $detailDesignUrl = asset($detailDesignPath);
+                                                    } else {
+                                                        $detailDesignUrl = asset('storage/' . ltrim($detailDesignPath, '/'));
+                                                    }
+                                                @endphp
+                                                <img src="{{ $detailDesignUrl }}" alt="Custom Order {{ $item->id }} preview" class="w-full h-full object-cover" />
+                                            @endif
+                                        </div>
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-semibold text-gray-900">{{ $itemPatterns->pluck('name')->implode(', ') }}</p>
+                                            <p class="text-xs text-gray-600 mt-1">Custom Order ID: CO-{{ str_pad((string) $item->id, 5, '0', STR_PAD_LEFT) }}</p>
+                                        </div>
+                                    </div>
+                                @else
+                                    <p class="text-xs text-gray-600">No pattern details available for this item.</p>
+                                @endif
                             </div>
                         </div>
                     @endforeach
@@ -392,7 +442,7 @@
                 
 
                 <!-- Patterns Card -->
-                @if((!$isBatchOrder || $showItemDetails) && $order->patterns && is_array($order->patterns) && count($order->patterns) > 0)
+                @if(!$isBatchOrder && $order->patterns && is_array($order->patterns) && count($order->patterns) > 0)
                 <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 hover:shadow-2xl transition-shadow duration-300">
                     <div class="px-6 py-4" style="background-color:#800000;">
                         <h2 class="text-xl font-bold text-white flex items-center">
@@ -582,7 +632,7 @@
                 @endif
 
                 <!-- Design Upload Card -->
-                @if((!$isBatchOrder || $showItemDetails) && $order->design_upload)
+                @if(!$isBatchOrder && $order->design_upload)
                 <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 hover:shadow-2xl transition-shadow duration-300">
                     <div class="px-6 py-4" style="background-color:#800000;">
                         <h2 class="text-xl font-bold text-white flex items-center">
