@@ -447,20 +447,26 @@
                                 <!-- Enhanced Payment Status -->
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @php
+                                        $displayPrice = (float) ($order->final_price ?? $order->estimated_price ?? 0);
                                         $currentBatchMeta = null;
                                         if (!empty($order->batch_order_number) && !empty($batchMeta[$order->batch_order_number])) {
                                             $currentBatchMeta = $batchMeta[$order->batch_order_number];
+                                        } elseif (empty($order->batch_order_number)) {
+                                            $fallbackSignature = optional($order->created_at)->format('Y-m-d H:i');
+                                            if (!empty($fallbackSignature) && !empty($fallbackBatchMeta[$fallbackSignature])) {
+                                                $currentBatchMeta = $fallbackBatchMeta[$fallbackSignature];
+                                            }
                                         }
                                     @endphp
-                                    @if($order->final_price)
+                                    @if($displayPrice > 0)
                                         <div>
                                             @if($currentBatchMeta && ($currentBatchMeta['item_count'] ?? 0) > 1)
                                                 <div class="text-lg font-bold text-gray-900">₱{{ number_format($currentBatchMeta['batch_total'] ?? 0, 0) }}</div>
                                                 <div class="text-xs text-gray-500">
-                                                    Batch total ({{ $currentBatchMeta['item_count'] }} items) • This item: ₱{{ number_format($order->final_price, 0) }}
+                                                    Batch total ({{ $currentBatchMeta['item_count'] }} items) • This item: ₱{{ number_format($displayPrice, 0) }}
                                                 </div>
                                             @else
-                                                <span class="text-lg font-bold text-gray-900">₱{{ number_format($order->final_price, 0) }}</span>
+                                                <span class="text-lg font-bold text-gray-900">₱{{ number_format($displayPrice, 0) }}</span>
                                             @endif
                                             @if($order->payment_status)
                                                 @php
