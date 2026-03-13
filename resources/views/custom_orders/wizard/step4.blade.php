@@ -615,7 +615,16 @@
                         $currentPatternName = isset($selectedPatterns) && $selectedPatterns->count() > 0
                             ? $selectedPatterns->pluck('name')->implode(', ')
                             : ($wizardData['pattern']['name'] ?? '—');
-                        $currentPreview = $previewImage ?? ($wizardData['pattern']['preview_image'] ?? ($wizardData['design']['image'] ?? null));
+                        $currentPatternMedia = null;
+                        if (isset($selectedPatterns) && $selectedPatterns->count() > 0) {
+                            $firstSelectedPattern = $selectedPatterns->first();
+                            if ($firstSelectedPattern) {
+                                $currentPatternMedia = $firstSelectedPattern->media->first()->url ?? null;
+                            }
+                        }
+                        $currentPreview = $currentPatternMedia
+                            ?? $previewImage
+                            ?? ($wizardData['pattern']['preview_image'] ?? ($wizardData['design']['image'] ?? null));
                         $currentQty = (int) old('quantity', 1);
                         $totalSubmissionItems = count($batchItems) + 1;
                     @endphp
@@ -640,11 +649,14 @@
                             @php
                                 $bWizard = $bItem['wizard_data'] ?? [];
                                 $bPatternNames = collect();
+                                $bPreview = null;
                                 if (!empty($bWizard['pattern']['selected_ids']) && is_array($bWizard['pattern']['selected_ids'])) {
-                                    $bPatternNames = \App\Models\YakanPattern::whereIn('id', $bWizard['pattern']['selected_ids'])->pluck('name');
+                                    $bSelectedPatterns = \App\Models\YakanPattern::with('media')->whereIn('id', $bWizard['pattern']['selected_ids'])->get();
+                                    $bPatternNames = $bSelectedPatterns->pluck('name');
+                                    $bPreview = optional($bSelectedPatterns->first()?->media?->first())->url;
                                 }
                                 $bPatternName = $bPatternNames->isNotEmpty() ? $bPatternNames->implode(', ') : ($bWizard['pattern']['name'] ?? '—');
-                                $bPreview = $bWizard['pattern']['preview_image'] ?? ($bWizard['design']['image'] ?? null);
+                                $bPreview = $bPreview ?? ($bWizard['pattern']['preview_image'] ?? ($bWizard['design']['image'] ?? null));
                                 $bFabricTypeName = '—';
                                 if (!empty($bWizard['fabric']['type'])) {
                                     $bFt = \App\Models\FabricType::find($bWizard['fabric']['type']);
