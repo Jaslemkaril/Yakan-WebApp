@@ -273,49 +273,9 @@
                                     @if($order->isFabricOrder())
                                         <!-- Fabric Order Display -->
                                         <div class="text-sm font-medium text-gray-900">Custom Fabric Order</div>
-                                        <div class="text-xs text-red-700 mt-1">
-                                            {{ $order->fabric_type }} • {{ $order->formatted_fabric_quantity }}
-                                        </div>
-                                        <div class="text-xs text-gray-500 mt-1">
-                                            Use: {{ $order->intended_use_label }}
-                                        </div>
-                                        @if($order->patterns && is_array($order->patterns))
-                                            @php
-                                                $patternNames = [];
-                                                foreach ($order->patterns as $pattern) {
-                                                    if (is_string($pattern)) {
-                                                        $patternNames[] = ucfirst($pattern);
-                                                    } elseif (is_array($pattern) && isset($pattern['name'])) {
-                                                        $patternNames[] = ucfirst($pattern['name']);
-                                                    }
-                                                }
-                                            @endphp
-                                            @if(!empty($patternNames))
-                                                <div class="text-xs text-gray-500 mt-1">
-                                                    Patterns: {{ implode(', ', array_slice($patternNames, 0, 2)) }}{{ count($patternNames) > 2 ? '...' : '' }}
-                                                </div>
-                                            @endif
-                                        @endif
                                     @elseif($order->product_id && $order->product && $order->product->name)
                                         <!-- Legacy Product Order Display -->
                                         <div class="text-sm font-medium text-gray-900">{{ $order->product->name }}</div>
-                                        @if($order->patterns && is_array($order->patterns))
-                                            @php
-                                                $patternNames = [];
-                                                foreach ($order->patterns as $pattern) {
-                                                    if (is_string($pattern)) {
-                                                        $patternNames[] = ucfirst($pattern);
-                                                    } elseif (is_array($pattern) && isset($pattern['name'])) {
-                                                        $patternNames[] = ucfirst($pattern['name']);
-                                                    }
-                                                }
-                                            @endphp
-                                            @if(!empty($patternNames))
-                                                <div class="text-xs text-gray-500 mt-1">
-                                                    Patterns: {{ implode(', ', array_slice($patternNames, 0, 2)) }}{{ count($patternNames) > 2 ? '...' : '' }}
-                                                </div>
-                                            @endif
-                                        @endif
                                     @elseif($order->product_id)
                                         @php
                                             $product = \App\Models\Product::find($order->product_id);
@@ -342,21 +302,6 @@
                                         <div class="text-sm font-medium text-gray-900">Custom Product</div>
                                     @endif
                                     
-                                    @if($order->patterns && is_array($order->patterns))
-                                        @php
-                                            $patternCount = count($order->patterns);
-                                        @endphp
-                                        @if($patternCount > 0)
-                                            <div class="flex items-center mt-2">
-                                                <span class="inline-flex items-center px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full">
-                                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
-                                                    </svg>
-                                                    {{ $patternCount }} pattern{{ $patternCount != 1 ? 's' : '' }}
-                                                </span>
-                                            </div>
-                                        @endif
-                                    @endif
                                 </td>
                                 
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -469,7 +414,7 @@
                                             @if($currentBatchMeta && ($currentBatchMeta['item_count'] ?? 0) > 1)
                                                 <div class="text-lg font-bold text-gray-900">₱{{ number_format($currentBatchMeta['batch_total'] ?? 0, 0) }}</div>
                                                 <div class="text-[11px] text-gray-600 font-medium">
-                                                    Total ({{ $currentBatchMeta['item_count'] }} items) • Item: ₱{{ number_format($displayPrice, 0) }}
+                                                    Total ({{ $currentBatchMeta['item_count'] }} items)
                                                 </div>
                                             @else
                                                 <span class="text-lg font-bold text-gray-900">₱{{ number_format($displayPrice, 0) }}</span>
