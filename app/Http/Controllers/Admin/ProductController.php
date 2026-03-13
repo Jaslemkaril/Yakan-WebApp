@@ -218,8 +218,9 @@ class ProductController extends Controller
         // Stock logs grouped for display (guard against missing table during migration)
         $stockLogs   = collect();
         $today       = 0;
-        $thisMonth   = 0;
+        $thisWeek    = 0;
         $thisYear    = 0;
+        $overall     = 0;
         $recentLogs  = collect();
 
         if (\Schema::hasTable('stock_logs')) {
@@ -229,12 +230,13 @@ class ProductController extends Controller
                 ->get();
 
             $today      = $stockLogs->filter(fn($l) => $l->created_at->isToday())->sum('quantity');
-            $thisMonth  = $stockLogs->filter(fn($l) => $l->created_at->isSameMonth(now()))->sum('quantity');
+            $thisWeek   = $stockLogs->filter(fn($l) => $l->created_at->isSameWeek(now()))->sum('quantity');
             $thisYear   = $stockLogs->filter(fn($l) => $l->created_at->isSameYear(now()))->sum('quantity');
+            $overall    = $stockLogs->sum('quantity');
             $recentLogs = $stockLogs->take(15);
         }
 
-        return view('admin.products.edit', compact('product', 'categories', 'stockLogs', 'today', 'thisMonth', 'thisYear', 'recentLogs'));
+        return view('admin.products.edit', compact('product', 'categories', 'stockLogs', 'today', 'thisWeek', 'thisYear', 'overall', 'recentLogs'));
     }
 
 

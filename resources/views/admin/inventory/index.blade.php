@@ -76,6 +76,36 @@
         </div>
     </div>
 
+    <!-- Stock In Record Summary -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+                <i class="fas fa-history mr-2 text-[#800000]"></i>
+                Stock In Records
+            </h2>
+            <span class="text-xs text-gray-500">Auto-calculated from stock logs</span>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                <p class="text-xs text-blue-600 font-semibold uppercase tracking-wide">Today</p>
+                <p class="text-2xl font-bold text-blue-800">+{{ $stockInToday ?? 0 }}</p>
+            </div>
+            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+                <p class="text-xs text-purple-600 font-semibold uppercase tracking-wide">This Week</p>
+                <p class="text-2xl font-bold text-purple-800">+{{ $stockInWeek ?? 0 }}</p>
+            </div>
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                <p class="text-xs text-green-600 font-semibold uppercase tracking-wide">This Year</p>
+                <p class="text-2xl font-bold text-green-800">+{{ $stockInYear ?? 0 }}</p>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+                <p class="text-xs text-amber-600 font-semibold uppercase tracking-wide">Overall</p>
+                <p class="text-2xl font-bold text-amber-800">+{{ $stockInOverall ?? 0 }}</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Filters and Search -->
     <div class="bg-white rounded-lg shadow p-6">
         <form method="GET" action="{{ route('admin.inventory.index') }}" class="space-y-4">

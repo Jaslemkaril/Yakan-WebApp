@@ -534,18 +534,22 @@ use Illuminate\Support\Facades\Storage;
     </form>
 
     {{-- Summary cards --}}
-    <div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
             <p class="text-xs text-blue-600 font-semibold uppercase tracking-wide">Today</p>
             <p class="text-2xl font-bold text-blue-800">+{{ $today }}</p>
         </div>
         <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-            <p class="text-xs text-purple-600 font-semibold uppercase tracking-wide">This Month</p>
-            <p class="text-2xl font-bold text-purple-800">+{{ $thisMonth }}</p>
+            <p class="text-xs text-purple-600 font-semibold uppercase tracking-wide">This Week</p>
+            <p class="text-2xl font-bold text-purple-800">+{{ $thisWeek }}</p>
         </div>
         <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
             <p class="text-xs text-green-600 font-semibold uppercase tracking-wide">This Year</p>
             <p class="text-2xl font-bold text-green-800">+{{ $thisYear }}</p>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+            <p class="text-xs text-amber-600 font-semibold uppercase tracking-wide">Overall</p>
+            <p class="text-2xl font-bold text-amber-800">+{{ $overall }}</p>
         </div>
     </div>
 

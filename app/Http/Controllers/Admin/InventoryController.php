@@ -48,7 +48,31 @@ class InventoryController extends Controller
         $totalProducts = Product::count();
         $totalValue = Inventory::selectRaw('SUM(quantity * selling_price) as total')->value('total') ?? 0;
 
-        return view('admin.inventory.index', compact('products', 'lowStockCount', 'totalProducts', 'totalValue'));
+        $stockInToday = 0;
+        $stockInWeek = 0;
+        $stockInYear = 0;
+        $stockInOverall = 0;
+
+        if (\Schema::hasTable('stock_logs')) {
+            $stockInToday = \App\Models\StockLog::whereDate('created_at', today())->sum('quantity');
+            $stockInWeek = \App\Models\StockLog::whereBetween('created_at', [
+                now()->copy()->startOfWeek(),
+                now()->copy()->endOfWeek(),
+            ])->sum('quantity');
+            $stockInYear = \App\Models\StockLog::whereYear('created_at', now()->year)->sum('quantity');
+            $stockInOverall = \App\Models\StockLog::sum('quantity');
+        }
+
+        return view('admin.inventory.index', compact(
+            'products',
+            'lowStockCount',
+            'totalProducts',
+            'totalValue',
+            'stockInToday',
+            'stockInWeek',
+            'stockInYear',
+            'stockInOverall'
+        ));
     }
 
     /**

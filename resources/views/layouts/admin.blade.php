@@ -291,7 +291,9 @@
         /* Desktop Responsive */
         @media (min-width: 1024px) {
             .sidebar-mobile {
-                position: static;
+                position: sticky;
+                top: 0;
+                height: 100vh;
                 transform: none !important;
             }
             
@@ -422,7 +424,9 @@
         /* Desktop Responsive */
         @media (min-width: 1024px) {
             .sidebar-mobile {
-                position: static;
+                position: sticky;
+                top: 0;
+                height: 100vh;
                 transform: none !important;
             }
             
@@ -862,7 +866,7 @@
     
     <div class="flex min-h-screen">
         <!-- Enhanced Responsive Sidebar -->
-        <aside class="sidebar-mobile w-72 bg-gradient-to-b shadow-2xl border-r flex flex-col fixed md:static inset-y-0 left-0 z-40 transition-all duration-300 ease-in-out" 
+        <aside class="sidebar-mobile w-72 bg-gradient-to-b shadow-2xl border-r flex flex-col fixed md:sticky md:top-0 md:h-screen inset-y-0 md:inset-y-auto left-0 z-40 transition-all duration-300 ease-in-out" 
                style="background: linear-gradient(135deg, #800000 0%, #600000 100%); border-right-color: #600000;" 
                :class="{ 
                    'open': sidebarOpen,

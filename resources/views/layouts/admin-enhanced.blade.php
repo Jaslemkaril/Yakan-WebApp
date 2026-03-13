@@ -166,7 +166,7 @@
 <body class="bg-gray-50">
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <aside class="sidebar w-64 flex-shrink-0" id="sidebar">
+        <aside class="sidebar w-64 flex-shrink-0 sticky top-0 h-screen overflow-y-auto" id="sidebar">
             <div class="p-6">
                 <!-- Logo -->
                 <div class="flex items-center mb-8">
