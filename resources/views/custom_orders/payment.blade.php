@@ -104,6 +104,13 @@
 @php
     $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
     $isDelivery = $deliveryType !== 'pickup';
+    $paymentOrders = $paymentOrders ?? collect([$order]);
+    $isBatchPayment = $isBatchPayment ?? ($paymentOrders->count() > 1);
+    $batchOrderNumber = $order->batch_order_number ?? null;
+    $batchItemsCount = $paymentOrders->count();
+    $batchComputedTotal = isset($paymentTotal)
+        ? (float) $paymentTotal
+        : (float) $paymentOrders->sum(fn($item) => (float) ($item->final_price ?? $item->estimated_price ?? 0));
 
     // Determine shipping fee
     // Priority: stored shipping_fee > calculate from stored city/province > 0 (pickup)
@@ -149,7 +156,7 @@
 
     // Base price (= admin-set final_price before we add shipping)
     // If shipping_fee was already added previously, don't double-count
-    $baseOrderPrice = (float) $order->final_price;
+    $baseOrderPrice = $isBatchPayment ? $batchComputedTotal : (float) $order->final_price;
 @endphp
 
 <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -164,7 +171,13 @@
                     </svg>
                     Complete Payment
                 </h1>
-                <p class="text-lg text-gray-100">Order #{{ $order->id }}</p>
+                <p class="text-lg text-gray-100">
+                    @if($isBatchPayment)
+                        Batch Payment{{ $batchOrderNumber ? ' • ' . $batchOrderNumber : '' }}
+                    @else
+                        Order #{{ $order->id }}
+                    @endif
+                </p>
             </div>
         </div>
 
@@ -195,6 +208,23 @@
                     <span class="font-semibold text-gray-900">{{ $order->user->name ?? auth()->user()->name ?? 'N/A' }}</span>
                 </div>
 
+                @if($isBatchPayment)
+                    <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-semibold text-blue-800">Items Included</span>
+                            <span class="text-xs font-bold text-blue-700">{{ $batchItemsCount }} items</span>
+                        </div>
+                        <div class="space-y-1 max-h-44 overflow-y-auto pr-1">
+                            @foreach($paymentOrders as $item)
+                                <div class="flex justify-between text-xs text-blue-900">
+                                    <span>Order #{{ $item->id }}</span>
+                                    <span>₱{{ number_format($item->final_price ?? $item->estimated_price ?? 0, 2) }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
                 <!-- Delivery Option -->
                 <div class="summary-row">
                     <span class="text-gray-600 font-medium">Delivery Option</span>
@@ -214,7 +244,16 @@
                 @endif
 
                 <!-- Product Details -->
-                @if(method_exists($order, 'isFabricOrder') && $order->isFabricOrder())
+                @if($isBatchPayment)
+                    <div class="summary-row">
+                        <span class="text-gray-600 font-medium">Product</span>
+                        <span class="font-semibold text-gray-900">Multiple Custom Items</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="text-gray-600 font-medium">Total Quantity</span>
+                        <span class="font-semibold text-gray-900">{{ $paymentOrders->sum(fn($item) => (int)($item->quantity ?? 1)) }} units</span>
+                    </div>
+                @elseif(method_exists($order, 'isFabricOrder') && $order->isFabricOrder())
                     <div class="summary-row">
                         <span class="text-gray-600 font-medium">Product</span>
                         <span class="font-semibold text-gray-900">Custom Fabric Order</span>
@@ -293,7 +332,7 @@
                 </div>
 
                 <!-- Shipping Fee row -->
-                @if($isDelivery)
+                @if($isDelivery && !$isBatchPayment)
                     <div class="flex justify-between py-3 border-b border-gray-200 items-center">
                         <span class="text-gray-700 font-medium">Shipping Fee</span>
                         <span class="font-bold text-lg" id="payShippingDisplay">
@@ -308,6 +347,11 @@
                             @endif
                         </span>
                     </div>
+                @elseif($isBatchPayment)
+                    <div class="flex justify-between py-3 border-b border-gray-200 items-center">
+                        <span class="text-gray-700 font-medium">Shipping Fee</span>
+                        <span class="font-semibold text-gray-700">Included in item totals</span>
+                    </div>
                 @endif
 
                 <!-- Grand Total -->
@@ -315,7 +359,9 @@
                     <span class="label">Total Amount</span>
                     <span class="value" id="payGrandTotal">
                         @php
-                            if ($adminDeliveryFee > 0 || !$isDelivery || $calcShippingFee === null) {
+                            if ($isBatchPayment) {
+                                $grandTotal = $baseOrderPrice;
+                            } elseif ($adminDeliveryFee > 0 || !$isDelivery || $calcShippingFee === null) {
                                 $grandTotal = $baseOrderPrice;
                             } else {
                                 $grandTotal = $baseOrderPrice + $calcShippingFee;
@@ -331,7 +377,7 @@
         <form method="POST" action="{{ route('custom_orders.payment.process', $order->id) }}" id="customPaymentForm" class="payment-card p-8 mb-8">
             @csrf
             <!-- Hidden shipping fields -->
-            <input type="hidden" name="shipping_fee"      id="hiddenShippingFee"      value="{{ $calcShippingFee ?? 0 }}">
+            <input type="hidden" name="shipping_fee"      id="hiddenShippingFee"      value="{{ $isBatchPayment ? 0 : ($calcShippingFee ?? 0) }}">
             <input type="hidden" name="delivery_city"     id="hiddenDeliveryCity"     value="{{ $storedCity }}">
             <input type="hidden" name="delivery_province" id="hiddenDeliveryProvince" value="{{ $storedProvince }}">
 

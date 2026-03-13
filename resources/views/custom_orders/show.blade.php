@@ -1,6 +1,12 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $batchOrders = $batchOrders ?? collect([$order]);
+    $isBatchOrder = $isBatchOrder ?? ($batchOrders->count() > 1);
+    $batchUnpaidOrders = $batchOrders->where('payment_status', '!=', 'paid')->values();
+    $batchPaymentTotal = $batchPaymentTotal ?? (float) $batchUnpaidOrders->sum(fn($item) => (float) ($item->final_price ?? $item->estimated_price ?? 0));
+@endphp
 <div class="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-5xl mx-auto">
 
@@ -21,6 +27,11 @@
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Order Details</h1>
                     <p class="text-gray-600">Custom Order #{{ $order->id }}</p>
+                    @if($isBatchOrder)
+                        <p class="text-sm text-blue-700 font-semibold mt-1">
+                            Batch {{ $order->batch_order_number ?? '' }} • {{ $batchOrders->count() }} custom items
+                        </p>
+                    @endif
                 </div>
                 <div class="flex flex-col items-end gap-2">
                     <div class="flex items-center gap-2">
@@ -142,6 +153,35 @@
                 </div>
             </div>
         </div>
+
+        @if($isBatchOrder)
+            <div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                    <h2 class="text-sm font-bold text-blue-900">All Items Under This Order Number</h2>
+                    @if($batchPaymentTotal > 0)
+                        <span class="text-sm font-semibold text-blue-800">
+                            Combined Unpaid Total: ₱{{ number_format($batchPaymentTotal, 2) }}
+                        </span>
+                    @endif
+                </div>
+                <div class="space-y-2 max-h-44 overflow-y-auto pr-1">
+                    @foreach($batchOrders as $item)
+                        <div class="flex items-center justify-between bg-white border border-blue-100 rounded-md px-3 py-2 text-sm">
+                            <div>
+                                <span class="font-semibold text-gray-900">Order #{{ $item->id }}</span>
+                                <span class="ml-2 text-xs text-gray-500">{{ ucfirst(str_replace('_', ' ', $item->status)) }}</span>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-semibold text-gray-900">₱{{ number_format($item->final_price ?? $item->estimated_price ?? 0, 2) }}</div>
+                                <div class="text-xs {{ ($item->payment_status ?? 'pending') === 'paid' ? 'text-green-600' : 'text-amber-600' }}">
+                                    {{ ucfirst($item->payment_status ?? 'pending') }}
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
 
         {{-- Production Delay Alert - MOVED TO TOP for better visibility --}}
         @if($order->is_delayed && $order->delay_reason)

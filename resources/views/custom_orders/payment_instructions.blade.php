@@ -1,6 +1,12 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $paymentOrders = $paymentOrders ?? collect([$order]);
+    $isBatchPayment = $isBatchPayment ?? ($paymentOrders->count() > 1);
+    $batchOrderNumber = $order->batch_order_number ?? null;
+    $displayAmount = (float) ($instructions['amount'] ?? $order->final_price ?? 0);
+@endphp
 <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-6xl mx-auto">
 
@@ -17,7 +23,13 @@
                 <span class="text-blue-600">💳</span>
                 {{ $instructions['title'] ?? 'Payment Instructions' }}
             </h1>
-            <p class="text-gray-600">Complete your payment for Custom Order #{{ $order->id }}</p>
+            <p class="text-gray-600">
+                @if($isBatchPayment)
+                    Complete one payment for {{ $paymentOrders->count() }} custom items{{ $batchOrderNumber ? ' • ' . $batchOrderNumber : '' }}
+                @else
+                    Complete your payment for Custom Order #{{ $order->id }}
+                @endif
+            </p>
         </div>
 
         <div class="grid lg:grid-cols-3 gap-8">
@@ -172,6 +184,20 @@
                     </h2>
 
                     <div class="space-y-3 mb-6 text-sm">
+                        @if($isBatchPayment)
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Batch Items</span>
+                                <span class="font-medium text-gray-900">{{ $paymentOrders->count() }}</span>
+                            </div>
+                            <div class="max-h-36 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1 bg-gray-50">
+                                @foreach($paymentOrders as $item)
+                                    <div class="flex justify-between text-xs text-gray-700">
+                                        <span>Order #{{ $item->id }}</span>
+                                        <span>₱{{ number_format($item->final_price ?? $item->estimated_price ?? 0, 2) }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
                         <div class="flex justify-between">
                             <span class="text-gray-600">Product</span>
                             <span class="font-medium text-gray-900">{{ $order->product->name ?? 'Custom Product' }}</span>
@@ -184,12 +210,13 @@
                             <span class="text-gray-600">Amount</span>
                             <span class="font-medium text-gray-900">₱{{ number_format($order->final_price, 2) }}</span>
                         </div>
+                        @endif
                     </div>
 
                     <div class="border-t border-gray-200 pt-4 mb-6">
                         <div class="flex justify-between items-center">
                             <span class="text-lg font-semibold text-gray-900">Total</span>
-                            <span class="text-2xl font-bold text-blue-600">₱{{ number_format($order->final_price, 2) }}</span>
+                            <span class="text-2xl font-bold text-blue-600">₱{{ number_format($displayAmount, 2) }}</span>
                         </div>
                     </div>
 

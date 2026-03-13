@@ -439,6 +439,37 @@ class CustomOrderController extends Controller
         $this->clearWizardData();
         \Log::info("Wizard data cleared for user", ['user_id' => auth()->id()]);
     }
+
+    /**
+     * Resolve all orders in the same user batch as the provided order.
+     */
+    private function getUserBatchOrders(CustomOrder $order, int $userId, bool $unpaidOnly = false): \Illuminate\Support\Collection
+    {
+        $query = CustomOrder::where('user_id', $userId);
+
+        if (!empty($order->batch_order_number)) {
+            $query->where('batch_order_number', $order->batch_order_number);
+        } else {
+            $query->where('id', $order->id);
+        }
+
+        if ($unpaidOnly) {
+            $query->where('payment_status', '!=', 'paid');
+        }
+
+        return $query->orderBy('id')->get();
+    }
+
+    /**
+     * Sum payable amount across a set of custom orders.
+     */
+    private function calculateOrdersTotal(\Illuminate\Support\Collection $orders): float
+    {
+        return (float) $orders->sum(function (CustomOrder $item) {
+            return (float) ($item->final_price ?? $item->estimated_price ?? 0);
+        });
+    }
+
     /**
      * List custom orders for the logged-in user
      */
@@ -2166,7 +2197,13 @@ class CustomOrderController extends Controller
             }
 
             $order->load('product');
-            return view('custom_orders.show', compact('order'));
+            $batchOrders = $this->getUserBatchOrders($order, Auth::id());
+            $isBatchOrder = $batchOrders->count() > 1;
+            $batchPaymentTotal = $this->calculateOrdersTotal(
+                $batchOrders->where('payment_status', '!=', 'paid')->values()
+            );
+
+            return view('custom_orders.show', compact('order', 'batchOrders', 'isBatchOrder', 'batchPaymentTotal'));
             
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             \Log::error('CustomOrder not found', [
@@ -2237,7 +2274,11 @@ class CustomOrderController extends Controller
                 abort(403, 'Unauthorized');
             }
 
-            if ($order->payment_status === 'paid') {
+            $batchOrders = $this->getUserBatchOrders($order, auth()->id());
+            $isBatchPayment = $batchOrders->count() > 1;
+            $paymentOrders = $batchOrders->where('payment_status', '!=', 'paid')->values();
+
+            if ($paymentOrders->isEmpty()) {
                 \Log::info('showPayment - Order already paid', [
                     'order_id' => $order->id,
                     'payment_status' => $order->payment_status
@@ -2245,13 +2286,19 @@ class CustomOrderController extends Controller
                 return $this->redirectToRouteWithToken('custom_orders.show', $order)->with('info', 'This order is already paid.');
             }
 
-            // Check if order is approved by admin
-            if ($order->status !== 'approved') {
+            $notApproved = $paymentOrders->where('status', '!=', 'approved')->values();
+            if ($notApproved->isNotEmpty()) {
                 \Log::info('showPayment - Order not yet approved', [
                     'order_id' => $order->id,
-                    'status' => $order->status
+                    'status' => $order->status,
+                    'not_approved_count' => $notApproved->count(),
                 ]);
-                return $this->redirectToRouteWithToken('custom_orders.show', $order)->with('info', 'Payment is only available after admin approval. Your order is currently ' . $order->status . '.');
+                if ($isBatchPayment) {
+                    return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                        ->with('info', 'Payment for this batch will be available once all items are approved by admin.');
+                }
+                return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                    ->with('info', 'Payment is only available after admin approval. Your order is currently ' . $order->status . '.');
             }
 
             \Log::info('showPayment - Loading relationships', [
@@ -2262,16 +2309,21 @@ class CustomOrderController extends Controller
 
             // Load related product and user so the payment page can show full summary
             $order->load(['product', 'user']);
+            $paymentOrders->load(['product', 'user', 'fabricType', 'intendedUse']);
+            $paymentTotal = $this->calculateOrdersTotal($paymentOrders);
             
             \Log::info('showPayment - Rendering view', [
                 'order_id' => $order->id,
                 'product_loaded' => isset($order->product),
                 'product_name' => $order->product->name ?? 'NULL',
                 'user_loaded' => isset($order->user),
-                'user_name' => $order->user->name ?? 'NULL'
+                'user_name' => $order->user->name ?? 'NULL',
+                'is_batch_payment' => $isBatchPayment,
+                'batch_items' => $paymentOrders->count(),
+                'payment_total' => $paymentTotal,
             ]);
 
-            return view('custom_orders.payment', compact('order'));
+            return view('custom_orders.payment', compact('order', 'paymentOrders', 'isBatchPayment', 'paymentTotal'));
             
         } catch (\Exception $e) {
             \Log::error('showPayment error', [
@@ -2302,46 +2354,74 @@ class CustomOrderController extends Controller
                 'delivery_province' => 'nullable|string|max:255',
             ]);
 
-            // Save payment method to order
-            $order->payment_method = $request->payment_method;
+            $paymentOrders = $this->getUserBatchOrders($order, Auth::id())
+                ->where('payment_status', '!=', 'paid')
+                ->values();
 
-            // Update shipping fee and delivery location if provided
+            if ($paymentOrders->isEmpty()) {
+                return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                    ->with('info', 'This order is already paid.');
+            }
+
+            $notApproved = $paymentOrders->where('status', '!=', 'approved')->values();
+            if ($notApproved->isNotEmpty()) {
+                return back()->with('error', 'Payment is only available after admin approval of all items in this order.');
+            }
+
+            $isBatchPayment = $paymentOrders->count() > 1;
+            $selectedPaymentMethod = $request->payment_method;
             $shippingFee = (float) ($request->shipping_fee ?? $order->shipping_fee ?? 0);
-            $order->shipping_fee = $shippingFee;
-            if ($request->filled('delivery_city')) {
-                $order->delivery_city = $request->delivery_city;
-            }
-            if ($request->filled('delivery_province')) {
-                $order->delivery_province = $request->delivery_province;
+
+            $generatedTransactionId = null;
+            if ($selectedPaymentMethod === 'gcash') {
+                $generatedTransactionId = 'GCASH_' . strtoupper(uniqid());
+            } elseif ($selectedPaymentMethod === 'online_banking') {
+                $generatedTransactionId = 'BANK_' . strtoupper(uniqid());
             }
 
-            // Add shipping fee to final_price if not already included
-            if ($shippingFee > 0 && $order->final_price) {
-                $breakdownRaw = $order->price_breakdown ?? null;
-                $alreadyIncluded = false;
-                if ($breakdownRaw) {
-                    $decoded = is_array($breakdownRaw) ? $breakdownRaw : json_decode($breakdownRaw, true);
-                    $alreadyIncluded = isset($decoded['breakdown']['delivery_fee']) && (float)$decoded['breakdown']['delivery_fee'] > 0;
+            foreach ($paymentOrders as $paymentOrder) {
+                $paymentOrder->payment_method = $selectedPaymentMethod;
+
+                // Delivery/shipping details are written to the anchor order,
+                // while other batch items reuse their existing delivery data.
+                if ($paymentOrder->id === $order->id) {
+                    $paymentOrder->shipping_fee = $shippingFee;
+                    if ($request->filled('delivery_city')) {
+                        $paymentOrder->delivery_city = $request->delivery_city;
+                    }
+                    if ($request->filled('delivery_province')) {
+                        $paymentOrder->delivery_province = $request->delivery_province;
+                    }
+
+                    // Keep existing single-order behavior for shipping add-on.
+                    if (!$isBatchPayment && $shippingFee > 0 && $paymentOrder->final_price) {
+                        $breakdownRaw = $paymentOrder->price_breakdown ?? null;
+                        $alreadyIncluded = false;
+                        if ($breakdownRaw) {
+                            $decoded = is_array($breakdownRaw) ? $breakdownRaw : json_decode($breakdownRaw, true);
+                            $alreadyIncluded = isset($decoded['breakdown']['delivery_fee']) && (float)$decoded['breakdown']['delivery_fee'] > 0;
+                        }
+                        if (!$alreadyIncluded) {
+                            $paymentOrder->final_price = (float) $paymentOrder->final_price + $shippingFee;
+                        }
+                    }
                 }
-                if (!$alreadyIncluded) {
-                    $order->final_price = (float) $order->final_price + $shippingFee;
+
+                if ($generatedTransactionId) {
+                    $paymentOrder->transaction_id = $generatedTransactionId;
                 }
+
+                $paymentOrder->save();
             }
 
-            $order->save();
+            $order->refresh();
             
             // Handle different payment methods
-            switch ($request->payment_method) {
+            switch ($selectedPaymentMethod) {
                 case 'gcash':
-                    // Generate a simple transaction ID for now
-                    $order->transaction_id = 'GCASH_' . strtoupper(uniqid());
-                    $order->save();
                     return $this->redirectToRouteWithToken('custom_orders.payment.instructions', $order);
                 
                 case 'online_banking':
-                    // Generate a simple transaction ID for now
-                    $order->transaction_id = 'BANK_' . strtoupper(uniqid());
-                    $order->save();
                     return $this->redirectToRouteWithToken('custom_orders.payment.instructions', $order);
                 
                 case 'bank_transfer':
@@ -2390,6 +2470,15 @@ class CustomOrderController extends Controller
             abort(403, 'Unauthorized');
         }
 
+        $paymentOrders = $this->getUserBatchOrders($order, Auth::id())
+            ->where('payment_status', '!=', 'paid')
+            ->values();
+
+        if ($paymentOrders->isEmpty()) {
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                ->with('info', 'This order is already paid.');
+        }
+
         $request->validate([
             'transaction_id' => 'required|string|max:255',
             'receipt' => 'nullable|file|mimes:jpg,jpeg,png,pdf,webp,gif,bmp,heic,heif|max:10240',
@@ -2397,11 +2486,12 @@ class CustomOrderController extends Controller
             'transfer_date' => 'nullable|date',
         ]);
 
+        $storedPath = null;
+
         // Store receipt if uploaded
         if ($request->hasFile('receipt')) {
             $receiptFile = $request->file('receipt');
             $cloudinary = new CloudinaryService();
-            $storedPath = null;
             
             // Try Cloudinary first (persistent storage)
             if ($cloudinary->isEnabled()) {
@@ -2423,28 +2513,39 @@ class CustomOrderController extends Controller
                     'order_id' => $order->id,
                 ]);
             }
-            
-            $order->payment_receipt = $storedPath;
         }
 
-        $order->transaction_id = $request->transaction_id;
-        $order->payment_notes = $request->payment_notes;
-        
-        if ($request->transfer_date) {
-            $order->transfer_date = $request->transfer_date;
+        foreach ($paymentOrders as $paymentOrder) {
+            if ($storedPath) {
+                $paymentOrder->payment_receipt = $storedPath;
+            }
+
+            $paymentOrder->transaction_id = $request->transaction_id;
+            $paymentOrder->payment_notes = $request->payment_notes;
+
+            if ($request->transfer_date) {
+                $paymentOrder->transfer_date = $request->transfer_date;
+            }
+
+            if ($request->hasFile('receipt')) {
+                $paymentOrder->payment_status = 'paid';
+            } else {
+                $paymentOrder->payment_status = 'pending';
+            }
+
+            if (empty($paymentOrder->payment_method) && !empty($order->payment_method)) {
+                $paymentOrder->payment_method = $order->payment_method;
+            }
+
+            $paymentOrder->save();
         }
 
-        // Set payment status to 'paid' when receipt is uploaded
-        // Status remains at 'approved' - admin must manually click 'Start Production'
-        if ($request->hasFile('receipt')) {
-            $order->payment_status = 'paid';
-        } else {
-            $order->payment_status = 'pending';
-        }
-        
-        $order->save();
+        $paidCount = $paymentOrders->count();
+        $successMessage = $paidCount > 1
+            ? "Payment confirmation submitted for {$paidCount} custom items! We will verify your payment shortly."
+            : 'Payment confirmation submitted! We will verify your payment shortly.';
 
-        return $this->redirectToRouteWithToken('custom_orders.show', $order)->with('success', 'Payment confirmation submitted! We will verify your payment shortly.');
+        return $this->redirectToRouteWithToken('custom_orders.show', $order)->with('success', $successMessage);
     }
 
     /**
@@ -2460,11 +2561,30 @@ class CustomOrderController extends Controller
             return $this->redirectToRouteWithToken('custom_orders.payment', $order);
         }
 
+        $paymentOrders = $this->getUserBatchOrders($order, Auth::id())
+            ->where('payment_status', '!=', 'paid')
+            ->values();
+
+        if ($paymentOrders->isEmpty()) {
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                ->with('info', 'This order is already paid.');
+        }
+
+        $isBatchPayment = $paymentOrders->count() > 1;
+        $paymentTotal = $this->calculateOrdersTotal($paymentOrders);
+        $orderIdList = '#' . $paymentOrders->pluck('id')->implode(', #');
+        $referenceCode = $order->transaction_id
+            ?? ($isBatchPayment && !empty($order->batch_order_number)
+                ? 'BATCH-' . $order->batch_order_number
+                : 'REF_' . $order->id);
+
         // Create simple payment instructions based on payment method
         $baseInstructions = [
-            'amount' => $order->final_price,
-            'reference_code' => $order->transaction_id ?? 'REF_' . $order->id,
-            'notes' => 'Please include your order ID (' . $order->id . ') in the payment reference.'
+            'amount' => $paymentTotal,
+            'reference_code' => $referenceCode,
+            'notes' => $isBatchPayment
+                ? 'This single payment covers order IDs: ' . $orderIdList . '. Please include your batch reference in the transfer details.'
+                : 'Please include your order ID (' . $order->id . ') in the payment reference.'
         ];
 
         $gcashNumber    = \App\Models\SystemSetting::get('gcash_number', '');
@@ -2482,7 +2602,7 @@ class CustomOrderController extends Controller
                         '1. Open your GCash app',
                         '2. Select "Send Money" or "Pay Bills"',
                         '3. Enter the GCash number: ' . $gcashNumber,
-                        '4. Enter the amount: ₱' . number_format($order->final_price, 2),
+                        '4. Enter the amount: ₱' . number_format($paymentTotal, 2),
                         '5. Save the transaction reference number',
                         '6. Come back to this page to confirm payment'
                     ],
@@ -2500,7 +2620,7 @@ class CustomOrderController extends Controller
                         '1. Open your preferred payment center or e-wallet app (e.g. GCash)',
                         '2. Choose Send Money / Pay Bills or similar option',
                         '3. Use the GCash or e-wallet details below to send the payment',
-                        '4. Enter the amount: ₱' . number_format($order->final_price, 2),
+                        '4. Enter the amount: ₱' . number_format($paymentTotal, 2),
                         '5. Save the transaction reference number',
                         '6. Come back to this page to confirm payment'
                     ],
@@ -2517,7 +2637,7 @@ class CustomOrderController extends Controller
                     'steps' => [
                         '1. Go to your bank or use online banking',
                         '2. Transfer funds to the account below',
-                        '3. Enter the amount: ₱' . number_format($order->final_price, 2),
+                        '3. Enter the amount: ₱' . number_format($paymentTotal, 2),
                         '4. Save the deposit slip or transaction reference',
                         '5. Come back to this page to confirm payment'
                     ],
@@ -2529,7 +2649,7 @@ class CustomOrderController extends Controller
                 break;
         }
         
-        return view('custom_orders.payment_instructions', compact('order', 'instructions'));
+        return view('custom_orders.payment_instructions', compact('order', 'instructions', 'paymentOrders', 'isBatchPayment', 'paymentTotal'));
     }
 
     /**
