@@ -619,7 +619,16 @@
                         if (isset($selectedPatterns) && $selectedPatterns->count() > 0) {
                             $firstSelectedPattern = $selectedPatterns->first();
                             if ($firstSelectedPattern) {
-                                $currentPatternMedia = $firstSelectedPattern->media->first()->url ?? null;
+                                if (method_exists($firstSelectedPattern, 'hasSvg') && $firstSelectedPattern->hasSvg()) {
+                                    $svg = $firstSelectedPattern->getSvgContent();
+                                    if (!empty($svg)) {
+                                        $currentPatternMedia = 'data:image/svg+xml;base64,' . base64_encode($svg);
+                                    }
+                                }
+
+                                if (empty($currentPatternMedia)) {
+                                    $currentPatternMedia = $firstSelectedPattern->media->first()->url ?? null;
+                                }
                             }
                         }
                         $currentPreview = $currentPatternMedia
@@ -653,7 +662,20 @@
                                 if (!empty($bWizard['pattern']['selected_ids']) && is_array($bWizard['pattern']['selected_ids'])) {
                                     $bSelectedPatterns = \App\Models\YakanPattern::with('media')->whereIn('id', $bWizard['pattern']['selected_ids'])->get();
                                     $bPatternNames = $bSelectedPatterns->pluck('name');
-                                    $bPreview = optional($bSelectedPatterns->first()?->media?->first())->url;
+
+                                    $bFirstPattern = $bSelectedPatterns->first();
+                                    if ($bFirstPattern) {
+                                        if (method_exists($bFirstPattern, 'hasSvg') && $bFirstPattern->hasSvg()) {
+                                            $bSvg = $bFirstPattern->getSvgContent();
+                                            if (!empty($bSvg)) {
+                                                $bPreview = 'data:image/svg+xml;base64,' . base64_encode($bSvg);
+                                            }
+                                        }
+
+                                        if (empty($bPreview)) {
+                                            $bPreview = optional($bFirstPattern->media->first())->url;
+                                        }
+                                    }
                                 }
                                 $bPatternName = $bPatternNames->isNotEmpty() ? $bPatternNames->implode(', ') : ($bWizard['pattern']['name'] ?? '—');
                                 $bPreview = $bPreview ?? ($bWizard['pattern']['preview_image'] ?? ($bWizard['design']['image'] ?? null));
