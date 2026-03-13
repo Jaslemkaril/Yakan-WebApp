@@ -180,10 +180,51 @@
                 </div>
                 <div class="space-y-2 max-h-44 overflow-y-auto pr-1">
                     @foreach($batchOrders as $item)
+                        @php
+                            $itemDesignUrl = null;
+                            $itemPatternModel = null;
+
+                            if (!empty($item->design_upload)) {
+                                $itemDesignPath = $item->design_upload;
+                                if (str_starts_with($itemDesignPath, 'http://') || str_starts_with($itemDesignPath, 'https://') || str_starts_with($itemDesignPath, 'data:image')) {
+                                    $itemDesignUrl = $itemDesignPath;
+                                } elseif (str_starts_with($itemDesignPath, 'storage/')) {
+                                    $itemDesignUrl = asset($itemDesignPath);
+                                } else {
+                                    $itemDesignUrl = asset('storage/' . ltrim($itemDesignPath, '/'));
+                                }
+                            }
+
+                            if (!$itemDesignUrl) {
+                                if (!empty($item->design_metadata) && isset($item->design_metadata['pattern_id'])) {
+                                    $itemPatternModel = \App\Models\YakanPattern::find($item->design_metadata['pattern_id']);
+                                } elseif (!empty($item->patterns) && is_array($item->patterns)) {
+                                    $firstPattern = $item->patterns[0] ?? null;
+                                    if (is_numeric($firstPattern)) {
+                                        $itemPatternModel = \App\Models\YakanPattern::find($firstPattern);
+                                    } elseif (is_string($firstPattern) && $firstPattern !== '') {
+                                        $itemPatternModel = \App\Models\YakanPattern::where('name', $firstPattern)->first();
+                                    }
+                                }
+                            }
+                        @endphp
                         <div class="flex items-center justify-between bg-white border border-blue-100 rounded-md px-3 py-2 text-sm">
-                            <div>
-                                <span class="font-semibold text-gray-900">Order #{{ $item->id }}</span>
-                                <span class="ml-2 text-xs text-gray-500">{{ ucfirst(str_replace('_', ' ', $item->status)) }}</span>
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-10 h-10 rounded-md border border-blue-100 bg-gray-50 overflow-hidden flex items-center justify-center flex-shrink-0">
+                                    @if($itemDesignUrl)
+                                        <img src="{{ $itemDesignUrl }}" alt="Order #{{ $item->id }} preview" class="w-full h-full object-cover" />
+                                    @elseif($itemPatternModel && $itemPatternModel->hasSvg())
+                                        <div class="w-full h-full flex items-center justify-center">
+                                            {!! $itemPatternModel->getSvgContent() !!}
+                                        </div>
+                                    @else
+                                        <span class="text-[10px] text-gray-400">No image</span>
+                                    @endif
+                                </div>
+                                <div class="min-w-0">
+                                    <span class="font-semibold text-gray-900">Order #{{ $item->id }}</span>
+                                    <span class="ml-2 text-xs text-gray-500">{{ ucfirst(str_replace('_', ' ', $item->status)) }}</span>
+                                </div>
                             </div>
                             <div class="text-right">
                                 <div class="font-semibold text-gray-900">₱{{ number_format($item->final_price ?? $item->estimated_price ?? 0, 2) }}</div>
