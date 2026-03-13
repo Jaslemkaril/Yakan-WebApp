@@ -808,6 +808,30 @@
                         </form>
                     </div>
                     @endif
+
+                    {{-- 1.5 Approve Custom Order (Pending only) --}}
+                    @if($order->status === 'pending')
+                    <div class="bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg p-4 border border-emerald-200">
+                        <label class="block text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Approve Custom Order
+                        </label>
+                        <form action="{{ route('admin.custom-orders.approve', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" onsubmit="return confirm('Approve this custom order?');">
+                            @csrf
+                            @if(request('auth_token'))
+                                <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+                            @endif
+                            <button type="submit" class="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span>Approve Custom Order</span>
+                            </button>
+                        </form>
+                    </div>
+                    @endif
                     
                     {{-- 2. Payment Verification (Only shows when payment proof uploaded) --}}
                     @if($order->payment_receipt && $order->payment_status === 'paid' && empty($order->payment_confirmed_at))
