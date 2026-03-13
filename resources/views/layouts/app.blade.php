@@ -1439,16 +1439,25 @@
             return AUTH_PATHS.some(function(p) { return pathname === p || pathname.startsWith(p); });
         }
 
+        // Keep token in URL for wizard pages to survive hard refresh when cookies are unreliable.
+        function shouldKeepTokenInUrl(pathname) {
+            return pathname.startsWith('/custom-orders/create');
+        }
+
         // 1. Capture token from URL (login redirects include ?auth_token=xxx)
         const params = new URLSearchParams(window.location.search);
         const urlToken = params.get('auth_token');
         if (urlToken) {
             localStorage.setItem(STORAGE_KEY, urlToken);
+
             // Clean URL without reloading (remove auth_token from address bar)
-            params.delete('auth_token');
-            const clean = params.toString();
-            const newUrl = window.location.pathname + (clean ? '?' + clean : '') + window.location.hash;
-            window.history.replaceState({}, '', newUrl);
+            // except on custom-order wizard routes where refresh needs token in URL.
+            if (!shouldKeepTokenInUrl(window.location.pathname)) {
+                params.delete('auth_token');
+                const clean = params.toString();
+                const newUrl = window.location.pathname + (clean ? '?' + clean : '') + window.location.hash;
+                window.history.replaceState({}, '', newUrl);
+            }
         }
 
         const token = localStorage.getItem(STORAGE_KEY);
