@@ -254,8 +254,8 @@
                 <!-- Customer -->
                 <div class="summary-row">
                     <span class="text-gray-600 font-medium">Customer</span>
-                    <div class="ml-4 flex-grow">
-                        <img src="{{ asset('images/payment/gcash-logo.svg') }}" alt="GCash" class="payment-brand-logo mb-1">
+                    <span class="font-semibold text-gray-900">{{ $order->user->name ?? 'Customer' }}</span>
+                </div>
 
                 @if($isBatchPayment)
                     <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
@@ -266,8 +266,8 @@
                         <div class="space-y-1 max-h-44 overflow-y-auto pr-1">
                             @foreach($paymentOrders as $item)
                                 <div class="flex justify-between text-xs text-blue-900">
-                    <div class="ml-4 flex-grow">
-                        <img src="{{ asset('images/payment/bank-transfer.svg') }}" alt="Bank Transfer" class="payment-brand-logo mb-1">
+                                    <span>#{{ $item->id }} {{ $item->fabric_type_name ?? ($item->product->name ?? 'Custom item') }}</span>
+                                    <span class="font-semibold">₱{{ number_format((float) ($item->final_price ?? $item->estimated_price ?? 0), 2) }}</span>
                                 </div>
                             @endforeach
                         </div>
@@ -444,7 +444,7 @@
                 <label class="payment-method-option {{ old('payment_method') === 'online_banking' ? 'selected' : '' }}">
                     <input type="radio" name="payment_method" value="online_banking" {{ old('payment_method') === 'online_banking' ? 'checked' : '' }} class="w-5 h-5" style="accent-color:#800000;">
                     <div class="payment-method-content flex-1 ml-4">
-                        <div class="font-bold text-lg">💳 GCash</div>
+                        <img src="{{ asset('images/payment/gcash-logo.svg') }}" alt="GCash" class="payment-brand-logo mb-1">
                         <p class="text-sm text-gray-600 mt-1">Pay using GCash e-wallet — Fast &amp; Secure</p>
                     </div>
                     <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -456,7 +456,7 @@
                 <label class="payment-method-option {{ old('payment_method') === 'bank_transfer' ? 'selected' : '' }}">
                     <input type="radio" name="payment_method" value="bank_transfer" {{ old('payment_method') === 'bank_transfer' ? 'checked' : '' }} class="w-5 h-5" style="accent-color:#800000;">
                     <div class="payment-method-content flex-1 ml-4">
-                        <div class="font-bold text-lg">🏦 Bank Transfer</div>
+                        <img src="{{ asset('images/payment/bank-transfer.svg') }}" alt="Bank Transfer" class="payment-brand-logo mb-1">
                         <p class="text-sm text-gray-600 mt-1">Direct transfer to our bank account — Secure &amp; Reliable</p>
                     </div>
                     <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
