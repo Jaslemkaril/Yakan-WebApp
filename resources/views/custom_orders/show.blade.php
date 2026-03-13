@@ -688,6 +688,8 @@
                 </div>
                 @endif
 
+                <div id="left-action-anchor"></div>
+
             </div>
 
             <!-- Sidebar -->
@@ -1035,7 +1037,7 @@
         </div>
 
         <!-- Action Buttons -->
-        <div class="mt-8 lg:w-2/3 lg:pr-6">
+        <div id="action-buttons-block" class="mt-8 lg:w-2/3 lg:pr-6">
             
             {{-- Pending Status - Waiting for Admin --}}
             @if($order->status === 'pending')
@@ -1524,6 +1526,23 @@
 
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var anchor = document.getElementById('left-action-anchor');
+    var actionBlock = document.getElementById('action-buttons-block');
+
+    if (!anchor || !actionBlock) {
+        return;
+    }
+
+    if (actionBlock.parentElement !== anchor) {
+        actionBlock.classList.remove('lg:w-2/3', 'lg:pr-6');
+        actionBlock.classList.add('w-full', 'mt-6');
+        anchor.appendChild(actionBlock);
+    }
+});
+</script>
 
 {{-- ===== REVIEW SECTION ===== --}}
 @if(in_array($order->status, ['delivered', 'completed']) && auth()->check())
