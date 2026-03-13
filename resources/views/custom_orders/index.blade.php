@@ -144,7 +144,7 @@
             <!-- Orders Table Card -->
             <div class="bg-white shadow-xl rounded-2xl overflow-hidden">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="min-w-[1120px] w-full divide-y divide-gray-200">
                         <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
                             <tr>
                                 <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
@@ -165,7 +165,7 @@
                                 <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                                     Created
                                 </th>
-                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                                     Actions
                                 </th>
                             </tr>
@@ -194,7 +194,7 @@
                                         <div>
                                             <span class="text-sm font-semibold text-gray-900">#{{ $order->id }}</span>
                                             @if($isGroupedSubmission)
-                                                <div class="text-xs font-semibold text-red-700">Grouped submission • {{ $currentBatchMeta['item_count'] }} items</div>
+                                                <div class="mt-1 inline-flex items-center px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[11px] font-semibold">{{ $currentBatchMeta['item_count'] }} items</div>
                                             @endif
                                             @if($order->status === 'price_quoted' && $order->user_notified_at)
                                                 <div class="text-xs text-red-700 font-medium">New Price!</div>
@@ -468,8 +468,8 @@
                                         <div>
                                             @if($currentBatchMeta && ($currentBatchMeta['item_count'] ?? 0) > 1)
                                                 <div class="text-lg font-bold text-gray-900">₱{{ number_format($currentBatchMeta['batch_total'] ?? 0, 0) }}</div>
-                                                <div class="text-xs text-gray-500">
-                                                    Submission total ({{ $currentBatchMeta['item_count'] }} items) • This item: ₱{{ number_format($displayPrice, 0) }}
+                                                <div class="text-[11px] text-gray-600 font-medium">
+                                                    Total ({{ $currentBatchMeta['item_count'] }} items) • Item: ₱{{ number_format($displayPrice, 0) }}
                                                 </div>
                                             @else
                                                 <span class="text-lg font-bold text-gray-900">₱{{ number_format($displayPrice, 0) }}</span>
