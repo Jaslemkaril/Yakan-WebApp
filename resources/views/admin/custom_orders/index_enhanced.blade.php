@@ -315,14 +315,9 @@
                                 <div class="flex items-center gap-1 mb-0.5">
                                     <span class="font-bold text-gray-900">#{{ $order->id }}</span>
                                     <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold" style="background-color:#f5e6e8; color:#800000;">
-                                        BATCH &times;{{ $batchCount }}
+                                        {{ $batchCount }} {{ $batchCount === 1 ? 'item' : 'items' }}
                                     </span>
                                 </div>
-                                @if(!$isImplicitBatch)
-                                <div class="text-[10px] font-mono truncate max-w-[120px]" style="color:#800000;">{{ $order->batch_order_number }}</div>
-                                @else
-                                <div class="text-[10px] italic" style="color:#800000;">Grouped submission</div>
-                                @endif
                             @else
                                 <span class="font-bold text-gray-900">#{{ $order->id }}</span>
                             @endif
@@ -428,7 +423,7 @@
                             @if($currentBatchMeta && ($currentBatchMeta['item_count'] ?? 0) > 1)
                                 <div class="text-lg font-bold text-gray-900">₱{{ number_format($currentBatchMeta['batch_total'] ?? 0, 2) }}</div>
                                 <div class="text-xs text-gray-500">
-                                    Batch total ({{ $currentBatchMeta['item_count'] }} items) • This item: ₱{{ number_format($itemDisplayPrice, 2) }}
+                                    Batch total ({{ $currentBatchMeta['item_count'] }} items)
                                 </div>
                             @else
                                 <span class="font-bold text-gray-900">₱{{ number_format($itemDisplayPrice, 2) }}</span>
