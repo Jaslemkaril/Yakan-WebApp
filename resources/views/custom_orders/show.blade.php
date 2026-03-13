@@ -271,47 +271,69 @@
                             </div>
 
                             <div id="item-details-{{ $item->id }}" class="hidden mt-3 rounded-lg border p-3" style="border-color:#e0b0b0; background-color:#fff7f7;">
-                                <h4 class="text-sm font-bold mb-2" style="color:#800000;">Traditional Yakan Patterns</h4>
+                                <h4 class="text-sm font-bold mb-2" style="color:#800000;">Traditional Yakan Patterns ({{ max(1, $itemPatterns->count()) }})</h4>
 
                                 @if($itemPatterns->count() > 0)
                                     @php
                                         $detailPattern = $itemPatterns->first();
+                                        $detailCustom = $item->customization_settings ?? [];
+                                        $detailStyle = sprintf(
+                                            'filter: hue-rotate(%ddeg) saturate(%d%%) brightness(%d%%); opacity: %s; transform: scale(%s) rotate(%ddeg);',
+                                            $detailCustom['hue'] ?? 0,
+                                            $detailCustom['saturation'] ?? 100,
+                                            $detailCustom['brightness'] ?? 100,
+                                            $detailCustom['opacity'] ?? 1,
+                                            $detailCustom['scale'] ?? 1,
+                                            $detailCustom['rotation'] ?? 0
+                                        );
                                     @endphp
-                                    <div class="flex items-start gap-3">
-                                        <div class="w-20 h-20 rounded-md border bg-white overflow-hidden p-1 flex items-center justify-center" style="border-color:#e0b0b0;">
+
+                                    <div class="rounded-lg border p-2.5" style="border-color:#e0b0b0; background-color:#fff5f5;">
+                                        <p class="text-xs font-semibold text-gray-700 mb-2">Your Customized Pattern Preview - {{ $detailPattern->name ?? 'Pattern' }}</p>
+                                        <div class="bg-white rounded-lg p-2 shadow-inner flex items-center justify-center overflow-hidden" style="min-height: 120px; max-height: 220px;">
                                             @if($detailPattern && $detailPattern->hasSvg())
-                                                @php
-                                                    $detailCustom = $item->customization_settings ?? [];
-                                                    $detailStyle = sprintf(
-                                                        'filter: hue-rotate(%ddeg) saturate(%d%%) brightness(%d%%); opacity: %s; transform: scale(%s) rotate(%ddeg);',
-                                                        $detailCustom['hue'] ?? 0,
-                                                        $detailCustom['saturation'] ?? 100,
-                                                        $detailCustom['brightness'] ?? 100,
-                                                        $detailCustom['opacity'] ?? 1,
-                                                        $detailCustom['scale'] ?? 1,
-                                                        $detailCustom['rotation'] ?? 0
-                                                    );
-                                                @endphp
-                                                <div style="{{ $detailStyle }} transform-origin:center; width:100%; height:100%;">
+                                                <div style="{{ $detailStyle }} transform-origin:center; max-width:100%; max-height:100%;">
                                                     {!! $detailPattern->getSvgContent() !!}
                                                 </div>
-                                            @elseif(!empty($item->design_upload))
+                                            @else
                                                 @php
                                                     $detailDesignPath = $item->design_upload;
-                                                    if (str_starts_with($detailDesignPath, 'http://') || str_starts_with($detailDesignPath, 'https://') || str_starts_with($detailDesignPath, 'data:image')) {
+                                                    if ($detailDesignPath && (str_starts_with($detailDesignPath, 'http://') || str_starts_with($detailDesignPath, 'https://') || str_starts_with($detailDesignPath, 'data:image'))) {
                                                         $detailDesignUrl = $detailDesignPath;
-                                                    } elseif (str_starts_with($detailDesignPath, 'storage/')) {
+                                                    } elseif ($detailDesignPath && str_starts_with($detailDesignPath, 'storage/')) {
                                                         $detailDesignUrl = asset($detailDesignPath);
-                                                    } else {
+                                                    } elseif ($detailDesignPath) {
                                                         $detailDesignUrl = asset('storage/' . ltrim($detailDesignPath, '/'));
+                                                    } else {
+                                                        $detailDesignUrl = null;
                                                     }
                                                 @endphp
-                                                <img src="{{ $detailDesignUrl }}" alt="Custom Order {{ $item->id }} preview" class="w-full h-full object-cover" />
+                                                @if($detailDesignUrl)
+                                                    <img src="{{ $detailDesignUrl }}" alt="Custom Order {{ $item->id }} preview" class="max-w-full max-h-[200px] object-contain" />
+                                                @else
+                                                    <span class="text-xs text-gray-500">No preview available</span>
+                                                @endif
                                             @endif
                                         </div>
-                                        <div class="min-w-0">
-                                            <p class="text-sm font-semibold text-gray-900">{{ $itemPatterns->pluck('name')->implode(', ') }}</p>
-                                            <p class="text-xs text-gray-600 mt-1">Custom Order ID: CO-{{ str_pad((string) $item->id, 5, '0', STR_PAD_LEFT) }}</p>
+
+                                        <div class="mt-2 grid grid-cols-3 gap-2 text-[11px]">
+                                            <div class="bg-white rounded px-2 py-1"><span class="text-gray-500">Scale:</span> <span class="font-semibold text-gray-800">{{ $detailCustom['scale'] ?? 1 }}x</span></div>
+                                            <div class="bg-white rounded px-2 py-1"><span class="text-gray-500">Rotation:</span> <span class="font-semibold text-gray-800">{{ $detailCustom['rotation'] ?? 0 }}°</span></div>
+                                            <div class="bg-white rounded px-2 py-1"><span class="text-gray-500">Opacity:</span> <span class="font-semibold text-gray-800">{{ round(($detailCustom['opacity'] ?? 1) * 100) }}%</span></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-2 rounded-lg border p-2.5 flex items-start justify-between" style="border-color:#e0b0b0; background-color:#fff5f5;">
+                                        <div class="flex items-start gap-2">
+                                            <span class="w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-bold" style="background:#fde2e2; color:#800000;">1</span>
+                                            <div>
+                                                <p class="text-sm font-semibold text-gray-900">{{ $detailPattern->name ?? $itemPatterns->pluck('name')->first() }}</p>
+                                                <p class="text-xs text-gray-600">Traditional Yakan motif</p>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="text-xs text-gray-500">Pattern #1</p>
+                                            <p class="text-xs font-semibold text-amber-600">Selected</p>
                                         </div>
                                     </div>
                                 @else
