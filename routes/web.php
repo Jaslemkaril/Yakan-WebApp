@@ -1193,6 +1193,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     // Inventory Management
     Route::prefix('inventory')->group(function () {
         Route::get('/', [InventoryController::class, 'index'])->name('inventory.index');
+        Route::get('/history', [InventoryController::class, 'history'])->name('inventory.history');
         Route::get('/create', [InventoryController::class, 'create'])->name('inventory.create');
         Route::post('/', [InventoryController::class, 'store'])->name('inventory.store');
         Route::get('/{inventory}', [InventoryController::class, 'show'])->name('inventory.show');

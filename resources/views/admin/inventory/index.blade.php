@@ -15,6 +15,9 @@
                 <p class="text-red-100 text-lg">Monitor and manage your product inventory</p>
             </div>
             <div class="mt-4 md:mt-0 flex space-x-3">
+                <a href="{{ route('admin.inventory.history') }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
+                    <i class="fas fa-history mr-2"></i>Stock History
+                </a>
                 <a href="{{ route('admin.products.create') }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
                     <i class="fas fa-plus mr-2"></i>Create Product
                 </a>

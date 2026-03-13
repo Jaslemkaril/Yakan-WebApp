@@ -245,6 +245,85 @@ class InventoryController extends Controller
     }
 
     /**
+     * Display stock movement history with filters.
+     */
+    public function history(Request $request): View
+    {
+        $products = Product::orderBy('name')->get(['id', 'name']);
+        $users = collect();
+
+        $summaryIn = 0;
+        $summaryOut = 0;
+        $summaryNet = 0;
+
+        $hasStockLogsTable = \Schema::hasTable('stock_logs');
+        if (!$hasStockLogsTable) {
+            $stockLogs = collect();
+            return view('admin.inventory.history', compact(
+                'stockLogs',
+                'products',
+                'users',
+                'summaryIn',
+                'summaryOut',
+                'summaryNet',
+                'hasStockLogsTable'
+            ));
+        }
+
+        $baseQuery = \App\Models\StockLog::with([
+            'product:id,name',
+            'creator:id,name',
+        ])->orderBy('created_at', 'desc');
+
+        if ($request->filled('product_id')) {
+            $baseQuery->where('product_id', (int) $request->product_id);
+        }
+
+        if ($request->filled('movement')) {
+            if ($request->movement === 'in') {
+                $baseQuery->where('quantity', '>', 0);
+            } elseif ($request->movement === 'out') {
+                $baseQuery->where('quantity', '<', 0);
+            }
+        }
+
+        if ($request->filled('date_from')) {
+            $baseQuery->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $baseQuery->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        if ($request->filled('created_by')) {
+            $baseQuery->where('created_by', (int) $request->created_by);
+        }
+
+        $stockLogs = (clone $baseQuery)->paginate(20)->withQueryString();
+
+        $summaryIn = (clone $baseQuery)->where('quantity', '>', 0)->sum('quantity');
+        $summaryOut = abs((clone $baseQuery)->where('quantity', '<', 0)->sum('quantity'));
+        $summaryNet = $summaryIn - $summaryOut;
+
+        $userIds = \App\Models\StockLog::whereNotNull('created_by')
+            ->distinct()
+            ->pluck('created_by');
+        $users = \App\Models\User::whereIn('id', $userIds)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('admin.inventory.history', compact(
+            'stockLogs',
+            'products',
+            'users',
+            'summaryIn',
+            'summaryOut',
+            'summaryNet',
+            'hasStockLogsTable'
+        ));
+    }
+
+    /**
      * Remove the specified inventory record.
      */
     public function destroy(Inventory $inventory): RedirectResponse
