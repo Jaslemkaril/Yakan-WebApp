@@ -691,10 +691,10 @@
             </div>
 
             <!-- Sidebar -->
-            <div class="space-y-6">
+            <div class="space-y-6 lg:sticky lg:top-6 self-start">
                 
                 <!-- Order Summary Card -->
-                <div class="bg-white rounded-2xl shadow-xl overflow-hidden sticky top-6 border border-gray-100">
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
                     <div class="px-6 py-4" style="background-color:#800000;">
                         <h2 class="text-xl font-bold text-white flex items-center">
                             <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center mr-3">
@@ -1035,7 +1035,7 @@
         </div>
 
         <!-- Action Buttons -->
-        <div class="mt-8">
+        <div class="mt-8 lg:w-2/3 lg:pr-6">
             
             {{-- Pending Status - Waiting for Admin --}}
             @if($order->status === 'pending')
