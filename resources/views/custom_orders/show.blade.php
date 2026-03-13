@@ -167,70 +167,104 @@
         </div>
 
         @if($isBatchOrder)
-            <div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                    <h2 class="text-sm font-bold text-blue-900">
+            <div class="mb-6 rounded-xl border-2 p-5" style="border-color:#e0b0b0; background-color:#fff5f5;">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                    <h2 class="text-sm font-bold" style="color:#800000;">
                         {{ !empty($order->batch_order_number) ? 'All Items Under This Order Number' : 'All Items From This Submission' }}
                     </h2>
                     @if($batchPaymentTotal > 0)
-                        <span class="text-sm font-semibold text-blue-800">
+                        <span class="text-sm font-semibold" style="color:#800000;">
                             Combined Unpaid Total: ₱{{ number_format($batchPaymentTotal, 2) }}
                         </span>
                     @endif
                 </div>
-                <div class="space-y-2 max-h-44 overflow-y-auto pr-1">
-                    @foreach($batchOrders as $item)
+
+                <div class="space-y-3">
+                    @foreach($batchOrders as $idx => $item)
                         @php
-                            $itemDesignUrl = null;
-                            $itemPatternModel = null;
-
-                            if (!empty($item->design_upload)) {
-                                $itemDesignPath = $item->design_upload;
-                                if (str_starts_with($itemDesignPath, 'http://') || str_starts_with($itemDesignPath, 'https://') || str_starts_with($itemDesignPath, 'data:image')) {
-                                    $itemDesignUrl = $itemDesignPath;
-                                } elseif (str_starts_with($itemDesignPath, 'storage/')) {
-                                    $itemDesignUrl = asset($itemDesignPath);
-                                } else {
-                                    $itemDesignUrl = asset('storage/' . ltrim($itemDesignPath, '/'));
-                                }
+                            $itemPatterns = collect();
+                            if (!empty($item->design_metadata['pattern_id'])) {
+                                $p = \App\Models\YakanPattern::find($item->design_metadata['pattern_id']);
+                                if ($p) $itemPatterns->push($p);
                             }
-
-                            if (!$itemDesignUrl) {
-                                if (!empty($item->design_metadata) && isset($item->design_metadata['pattern_id'])) {
-                                    $itemPatternModel = \App\Models\YakanPattern::find($item->design_metadata['pattern_id']);
-                                } elseif (!empty($item->patterns) && is_array($item->patterns)) {
-                                    $firstPattern = $item->patterns[0] ?? null;
-                                    if (is_numeric($firstPattern)) {
-                                        $itemPatternModel = \App\Models\YakanPattern::find($firstPattern);
-                                    } elseif (is_string($firstPattern) && $firstPattern !== '') {
-                                        $itemPatternModel = \App\Models\YakanPattern::where('name', $firstPattern)->first();
-                                    }
-                                }
+                            if ($itemPatterns->isEmpty() && !empty($item->patterns) && is_array($item->patterns)) {
+                                $itemPatterns = is_numeric($item->patterns[0] ?? null)
+                                    ? \App\Models\YakanPattern::whereIn('id', $item->patterns)->get()
+                                    : \App\Models\YakanPattern::whereIn('name', $item->patterns)->get();
                             }
                         @endphp
-                        <div class="flex items-center justify-between bg-white border border-blue-100 rounded-md px-3 py-2 text-sm">
-                            <div class="flex items-center gap-3 min-w-0">
-                                <div class="w-10 h-10 rounded-md border border-blue-100 bg-gray-50 overflow-hidden flex items-center justify-center flex-shrink-0">
-                                    @if($itemDesignUrl)
-                                        <img src="{{ $itemDesignUrl }}" alt="Order #{{ $item->id }} preview" class="w-full h-full object-cover" />
-                                    @elseif($itemPatternModel && $itemPatternModel->hasSvg())
-                                        <div class="w-full h-full flex items-center justify-center">
-                                            {!! $itemPatternModel->getSvgContent() !!}
+
+                        <div class="rounded-xl border p-4" style="border-color:#e0b0b0; background-color:#fff;">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex items-center">
+                                    <div class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center mr-2.5" style="background-color:#800000;">{{ $idx + 1 }}</div>
+                                    <div>
+                                        <p class="font-bold text-gray-900 text-sm">Order #{{ $item->id }}</p>
+                                        <p class="text-xs text-gray-500">{{ $item->created_at->format('M d, Y g:i A') }}</p>
+                                    </div>
+                                </div>
+                                <span class="inline-flex px-2 py-1 text-[11px] font-medium rounded-full {{ ($item->payment_status ?? 'pending') === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">
+                                    {{ ucfirst($item->status ?? 'pending') }}
+                                </span>
+                            </div>
+
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                                <div>
+                                    <p class="text-xs text-gray-500 mb-0.5">Pattern</p>
+                                    <p class="font-semibold text-gray-900">{{ $itemPatterns->pluck('name')->implode(', ') ?: 'N/A' }}</p>
+                                    @php $firstPattern = $itemPatterns->first(); @endphp
+                                    @if($firstPattern && $firstPattern->hasSvg())
+                                        @php
+                                            $custom = $item->customization_settings ?? [];
+                                            $itemStyle = sprintf(
+                                                'filter: hue-rotate(%ddeg) saturate(%d%%) brightness(%d%%); opacity: %s; transform: scale(%s) rotate(%ddeg);',
+                                                $custom['hue'] ?? 0,
+                                                $custom['saturation'] ?? 100,
+                                                $custom['brightness'] ?? 100,
+                                                $custom['opacity'] ?? 1,
+                                                $custom['scale'] ?? 1,
+                                                $custom['rotation'] ?? 0
+                                            );
+                                        @endphp
+                                        <div class="mt-2 w-16 h-16 rounded-md border bg-white overflow-hidden p-1" style="border-color:#e0b0b0;">
+                                            <div style="{{ $itemStyle }} transform-origin:center; width:100%; height:100%;">
+                                                {!! $firstPattern->getSvgContent() !!}
+                                            </div>
                                         </div>
-                                    @else
-                                        <span class="text-[10px] text-gray-400">No image</span>
+                                    @elseif(!empty($item->design_upload))
+                                        @php
+                                            $itemDesignPath = $item->design_upload;
+                                            if (str_starts_with($itemDesignPath, 'http://') || str_starts_with($itemDesignPath, 'https://') || str_starts_with($itemDesignPath, 'data:image')) {
+                                                $itemDesignUrl = $itemDesignPath;
+                                            } elseif (str_starts_with($itemDesignPath, 'storage/')) {
+                                                $itemDesignUrl = asset($itemDesignPath);
+                                            } else {
+                                                $itemDesignUrl = asset('storage/' . ltrim($itemDesignPath, '/'));
+                                            }
+                                        @endphp
+                                        <img src="{{ $itemDesignUrl }}" alt="Order #{{ $item->id }} preview" class="mt-2 w-16 h-16 rounded-md border object-cover" style="border-color:#e0b0b0;" />
                                     @endif
                                 </div>
-                                <div class="min-w-0">
-                                    <span class="font-semibold text-gray-900">Order #{{ $item->id }}</span>
-                                    <span class="ml-2 text-xs text-gray-500">{{ ucfirst(str_replace('_', ' ', $item->status)) }}</span>
+
+                                <div>
+                                    <p class="text-xs text-gray-500 mb-0.5">Fabric Type</p>
+                                    <p class="font-semibold text-gray-900">{{ $item->fabric_type_name ?? ($item->fabric_type ?? 'N/A') }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500 mb-0.5">Quantity</p>
+                                    <p class="font-semibold text-gray-900">{{ $item->formatted_fabric_quantity ?? (($item->quantity ?? 1) . ' unit' . (($item->quantity ?? 1) > 1 ? 's' : '')) }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500 mb-0.5">Est. Price</p>
+                                    <p class="font-semibold" style="color:#800000;">₱{{ number_format($item->final_price ?? $item->estimated_price ?? 0, 2) }}</p>
                                 </div>
                             </div>
-                            <div class="text-right">
-                                <div class="font-semibold text-gray-900">₱{{ number_format($item->final_price ?? $item->estimated_price ?? 0, 2) }}</div>
-                                <div class="text-xs {{ ($item->payment_status ?? 'pending') === 'paid' ? 'text-green-600' : 'text-amber-600' }}">
-                                    {{ ucfirst($item->payment_status ?? 'pending') }}
-                                </div>
+
+                            <div class="mt-2 pt-2 border-t flex items-center justify-between" style="border-color:#f1d2d2;">
+                                <p class="text-xs text-gray-600">Delivery: <span class="font-semibold text-gray-800">{{ ($item->delivery_type ?? 'delivery') === 'pickup' ? 'Store Pickup' : 'Delivery' }}</span></p>
+                                <a href="{{ route('custom_orders.show', $item->id) }}" class="text-xs font-semibold hover:underline" style="color:#800000;">
+                                    View Order Details →
+                                </a>
                             </div>
                         </div>
                     @endforeach
