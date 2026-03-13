@@ -294,7 +294,18 @@
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 @forelse($selectedPatterns as $p)
                                     <div class="flex items-center space-x-3 p-3 rounded-lg border" style="background-color:#f5e6e8; border-color:#d9a3b3;">
-                                        @php $thumb = optional($p->media->first())->url; @endphp
+                                        @php
+                                            $thumb = null;
+                                            if (method_exists($p, 'hasSvg') && $p->hasSvg()) {
+                                                $svg = $p->getSvgContent();
+                                                if (!empty($svg)) {
+                                                    $thumb = 'data:image/svg+xml;base64,' . base64_encode($svg);
+                                                }
+                                            }
+                                            if (empty($thumb)) {
+                                                $thumb = optional($p->media->first())->url;
+                                            }
+                                        @endphp
                                         @if($thumb)
                                             <img src="{{ $thumb }}" alt="{{ $p->name }}" class="w-8 h-8 rounded object-cover"/>
                                         @else
