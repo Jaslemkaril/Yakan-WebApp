@@ -500,6 +500,7 @@ class CustomOrderController extends Controller
             ->paginate(10);
 
         $batchMeta = [];
+        $fallbackBatchMeta = [];
         if (\Schema::hasColumn('custom_orders', 'batch_order_number')) {
             $batchNumbers = $orders->getCollection()
                 ->pluck('batch_order_number')
@@ -523,7 +524,40 @@ class CustomOrderController extends Controller
             }
         }
 
-        return view('custom_orders.index', compact('orders', 'batchMeta'));
+        // Fallback: for older rows without batch_order_number, group likely same-submission
+        // items by same minute + same user, then sum their prices.
+        $ordersNeedingFallback = $orders->getCollection()->filter(function ($order) use ($batchMeta) {
+            return empty($order->batch_order_number)
+                && !isset($batchMeta[$order->batch_order_number ?? '']);
+        });
+
+        if ($ordersNeedingFallback->isNotEmpty()) {
+            $candidateOrders = CustomOrder::query()
+                ->where('user_id', Auth::id())
+                ->where(function ($q) {
+                    $q->whereNull('batch_order_number')
+                      ->orWhere('batch_order_number', '');
+                })
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $grouped = $candidateOrders->groupBy(function ($item) {
+                return optional($item->created_at)->format('Y-m-d H:i');
+            });
+
+            foreach ($grouped as $signature => $items) {
+                if (!$signature || $items->count() <= 1) {
+                    continue;
+                }
+
+                $fallbackBatchMeta[$signature] = [
+                    'item_count' => $items->count(),
+                    'batch_total' => (float) $items->sum(fn($x) => (float) ($x->final_price ?? $x->estimated_price ?? 0)),
+                ];
+            }
+        }
+
+        return view('custom_orders.index', compact('orders', 'batchMeta', 'fallbackBatchMeta'));
     }
 
     /**

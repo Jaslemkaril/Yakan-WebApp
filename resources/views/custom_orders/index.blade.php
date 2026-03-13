@@ -173,6 +173,18 @@
 
                         <tbody class="bg-white divide-y divide-gray-200">
                             @foreach($orders as $order)
+                            @php
+                                $currentBatchMeta = null;
+                                if (!empty($order->batch_order_number) && !empty($batchMeta[$order->batch_order_number])) {
+                                    $currentBatchMeta = $batchMeta[$order->batch_order_number];
+                                } elseif (empty($order->batch_order_number)) {
+                                    $fallbackSignature = optional($order->created_at)->format('Y-m-d H:i');
+                                    if (!empty($fallbackSignature) && !empty($fallbackBatchMeta[$fallbackSignature])) {
+                                        $currentBatchMeta = $fallbackBatchMeta[$fallbackSignature];
+                                    }
+                                }
+                                $isGroupedSubmission = ($currentBatchMeta['item_count'] ?? 0) > 1;
+                            @endphp
                             <tr class="hover:bg-red-50 transition-colors duration-150 order-row" data-status="{{ $order->status }}">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
@@ -181,6 +193,9 @@
                                         </div>
                                         <div>
                                             <span class="text-sm font-semibold text-gray-900">#{{ $order->id }}</span>
+                                            @if($isGroupedSubmission)
+                                                <div class="text-xs font-semibold text-red-700">Grouped submission • {{ $currentBatchMeta['item_count'] }} items</div>
+                                            @endif
                                             @if($order->status === 'price_quoted' && $order->user_notified_at)
                                                 <div class="text-xs text-red-700 font-medium">New Price!</div>
                                             @endif
@@ -448,22 +463,13 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @php
                                         $displayPrice = (float) ($order->final_price ?? $order->estimated_price ?? 0);
-                                        $currentBatchMeta = null;
-                                        if (!empty($order->batch_order_number) && !empty($batchMeta[$order->batch_order_number])) {
-                                            $currentBatchMeta = $batchMeta[$order->batch_order_number];
-                                        } elseif (empty($order->batch_order_number)) {
-                                            $fallbackSignature = optional($order->created_at)->format('Y-m-d H:i');
-                                            if (!empty($fallbackSignature) && !empty($fallbackBatchMeta[$fallbackSignature])) {
-                                                $currentBatchMeta = $fallbackBatchMeta[$fallbackSignature];
-                                            }
-                                        }
                                     @endphp
                                     @if($displayPrice > 0)
                                         <div>
                                             @if($currentBatchMeta && ($currentBatchMeta['item_count'] ?? 0) > 1)
                                                 <div class="text-lg font-bold text-gray-900">₱{{ number_format($currentBatchMeta['batch_total'] ?? 0, 0) }}</div>
                                                 <div class="text-xs text-gray-500">
-                                                    Batch total ({{ $currentBatchMeta['item_count'] }} items) • This item: ₱{{ number_format($displayPrice, 0) }}
+                                                    Submission total ({{ $currentBatchMeta['item_count'] }} items) • This item: ₱{{ number_format($displayPrice, 0) }}
                                                 </div>
                                             @else
                                                 <span class="text-lg font-bold text-gray-900">₱{{ number_format($displayPrice, 0) }}</span>
