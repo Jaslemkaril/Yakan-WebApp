@@ -462,10 +462,168 @@
             </div>
         @endif
 
-                
+                @if(!$isBatchOrder)
+                @php
+                    $singlePatterns = collect();
+                    if (!empty($order->design_metadata['pattern_id'])) {
+                        $sp = \App\Models\YakanPattern::find($order->design_metadata['pattern_id']);
+                        if ($sp) {
+                            $singlePatterns->push($sp);
+                        }
+                    }
+                    if ($singlePatterns->isEmpty() && !empty($order->patterns) && is_array($order->patterns)) {
+                        $singlePatterns = is_numeric($order->patterns[0] ?? null)
+                            ? \App\Models\YakanPattern::whereIn('id', $order->patterns)->get()
+                            : \App\Models\YakanPattern::whereIn('name', $order->patterns)->get();
+                    }
+                    $singlePrimaryPattern = $singlePatterns->first();
+                @endphp
+
+                <div class="mb-6 rounded-xl border-2 p-5" style="border-color:#e0b0b0; background-color:#fff5f5;">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center">
+                            <div class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center mr-2.5" style="background-color:#800000;">1</div>
+                            <div>
+                                <p class="font-bold text-gray-900 text-sm">Custom Order ID: CO-{{ str_pad((string) $order->id, 5, '0', STR_PAD_LEFT) }}</p>
+                                <p class="text-xs text-gray-500">{{ $order->created_at->format('M d, Y g:i A') }}</p>
+                            </div>
+                        </div>
+                        <span class="inline-flex px-2 py-1 text-[11px] font-medium rounded-full {{ ($order->payment_status ?? 'pending') === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">
+                            {{ ucfirst($order->status ?? 'pending') }}
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                        <div>
+                            <p class="text-xs text-gray-500 mb-0.5">Pattern</p>
+                            <p class="font-semibold text-gray-900">{{ $singlePatterns->pluck('name')->implode(', ') ?: 'N/A' }}</p>
+                            @if($singlePrimaryPattern && $singlePrimaryPattern->hasSvg())
+                                @php
+                                    $singlePreviewCustom = $order->customization_settings ?? [];
+                                    $singlePreviewStyle = sprintf(
+                                        'filter: hue-rotate(%ddeg) saturate(%d%%) brightness(%d%%); opacity: %s; transform: scale(%s) rotate(%ddeg);',
+                                        $singlePreviewCustom['hue'] ?? 0,
+                                        $singlePreviewCustom['saturation'] ?? 100,
+                                        $singlePreviewCustom['brightness'] ?? 100,
+                                        $singlePreviewCustom['opacity'] ?? 1,
+                                        $singlePreviewCustom['scale'] ?? 1,
+                                        $singlePreviewCustom['rotation'] ?? 0
+                                    );
+                                @endphp
+                                <div class="mt-2 w-16 h-16 rounded-md border bg-white overflow-hidden p-1" style="border-color:#e0b0b0;">
+                                    <div style="{{ $singlePreviewStyle }} transform-origin:center; width:100%; height:100%;">
+                                        {!! $singlePrimaryPattern->getSvgContent() !!}
+                                    </div>
+                                </div>
+                            @elseif(!empty($order->design_upload))
+                                @php
+                                    $singleDesignPath = $order->design_upload;
+                                    if (str_starts_with($singleDesignPath, 'http://') || str_starts_with($singleDesignPath, 'https://') || str_starts_with($singleDesignPath, 'data:image')) {
+                                        $singleDesignUrl = $singleDesignPath;
+                                    } elseif (str_starts_with($singleDesignPath, 'storage/')) {
+                                        $singleDesignUrl = asset($singleDesignPath);
+                                    } else {
+                                        $singleDesignUrl = asset('storage/' . ltrim($singleDesignPath, '/'));
+                                    }
+                                @endphp
+                                <img src="{{ $singleDesignUrl }}" alt="Order #{{ $order->id }} preview" class="mt-2 w-16 h-16 rounded-md border object-cover" style="border-color:#e0b0b0;" />
+                            @endif
+                        </div>
+
+                        <div>
+                            <p class="text-xs text-gray-500 mb-0.5">Fabric Type</p>
+                            <p class="font-semibold text-gray-900">{{ $order->fabric_type_name ?? ($order->fabric_type ?? 'N/A') }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 mb-0.5">Quantity</p>
+                            <p class="font-semibold text-gray-900">{{ $order->formatted_fabric_quantity ?? (($order->quantity ?? 1) . ' unit' . (($order->quantity ?? 1) > 1 ? 's' : '')) }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 mb-0.5">Est. Price</p>
+                            <p class="font-semibold" style="color:#800000;">₱{{ number_format($order->final_price ?? $order->estimated_price ?? 0, 2) }}</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-2 pt-2 border-t" style="border-color:#f1d2d2;">
+                        <p class="text-xs text-gray-600">Delivery: <span class="font-semibold text-gray-800">{{ ($order->delivery_type ?? 'delivery') === 'pickup' ? 'Store Pickup' : 'Delivery' }}</span></p>
+                    </div>
+
+                    <div class="mt-3 rounded-lg border p-3" style="border-color:#e0b0b0; background-color:#fff7f7;">
+                        <h4 class="text-sm font-bold mb-2" style="color:#800000;">Traditional Yakan Patterns ({{ max(1, $singlePatterns->count()) }})</h4>
+
+                        @if($singlePatterns->count() > 0)
+                            @php
+                                $singleDetailPattern = $singlePatterns->first();
+                                $singleDetailCustom = $order->customization_settings ?? [];
+                                $singleDetailStyle = sprintf(
+                                    'filter: hue-rotate(%ddeg) saturate(%d%%) brightness(%d%%); opacity: %s; transform: scale(%s) rotate(%ddeg);',
+                                    $singleDetailCustom['hue'] ?? 0,
+                                    $singleDetailCustom['saturation'] ?? 100,
+                                    $singleDetailCustom['brightness'] ?? 100,
+                                    $singleDetailCustom['opacity'] ?? 1,
+                                    $singleDetailCustom['scale'] ?? 1,
+                                    $singleDetailCustom['rotation'] ?? 0
+                                );
+                            @endphp
+
+                            <div class="rounded-lg border p-2.5" style="border-color:#e0b0b0; background-color:#fff5f5;">
+                                <p class="text-xs font-semibold text-gray-700 mb-2">Your Customized Pattern Preview - {{ $singleDetailPattern->name ?? 'Pattern' }}</p>
+                                <div class="bg-white rounded-lg p-2 shadow-inner flex items-center justify-center overflow-hidden" style="min-height: 120px; max-height: 220px;">
+                                    @if($singleDetailPattern && $singleDetailPattern->hasSvg())
+                                        <div style="{{ $singleDetailStyle }} transform-origin:center; max-width:100%; max-height:100%;">
+                                            {!! $singleDetailPattern->getSvgContent() !!}
+                                        </div>
+                                    @else
+                                        @php
+                                            $singleDetailDesignPath = $order->design_upload;
+                                            if ($singleDetailDesignPath && (str_starts_with($singleDetailDesignPath, 'http://') || str_starts_with($singleDetailDesignPath, 'https://') || str_starts_with($singleDetailDesignPath, 'data:image'))) {
+                                                $singleDetailDesignUrl = $singleDetailDesignPath;
+                                            } elseif ($singleDetailDesignPath && str_starts_with($singleDetailDesignPath, 'storage/')) {
+                                                $singleDetailDesignUrl = asset($singleDetailDesignPath);
+                                            } elseif ($singleDetailDesignPath) {
+                                                $singleDetailDesignUrl = asset('storage/' . ltrim($singleDetailDesignPath, '/'));
+                                            } else {
+                                                $singleDetailDesignUrl = null;
+                                            }
+                                        @endphp
+                                        @if($singleDetailDesignUrl)
+                                            <img src="{{ $singleDetailDesignUrl }}" alt="Custom Order {{ $order->id }} preview" class="max-w-full max-h-[200px] object-contain" />
+                                        @else
+                                            <span class="text-xs text-gray-500">No preview available</span>
+                                        @endif
+                                    @endif
+                                </div>
+
+                                <div class="mt-2 grid grid-cols-3 gap-2 text-[11px]">
+                                    <div class="bg-white rounded px-2 py-1"><span class="text-gray-500">Scale:</span> <span class="font-semibold text-gray-800">{{ $singleDetailCustom['scale'] ?? 1 }}x</span></div>
+                                    <div class="bg-white rounded px-2 py-1"><span class="text-gray-500">Rotation:</span> <span class="font-semibold text-gray-800">{{ $singleDetailCustom['rotation'] ?? 0 }}°</span></div>
+                                    <div class="bg-white rounded px-2 py-1"><span class="text-gray-500">Opacity:</span> <span class="font-semibold text-gray-800">{{ round(($singleDetailCustom['opacity'] ?? 1) * 100) }}%</span></div>
+                                </div>
+                            </div>
+
+                            <div class="mt-2 rounded-lg border p-2.5 flex items-start justify-between" style="border-color:#e0b0b0; background-color:#fff5f5;">
+                                <div class="flex items-start gap-2">
+                                    <span class="w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-bold" style="background:#fde2e2; color:#800000;">1</span>
+                                    <div>
+                                        <p class="text-sm font-semibold text-gray-900">{{ $singleDetailPattern->name ?? $singlePatterns->pluck('name')->first() }}</p>
+                                        <p class="text-xs text-gray-600">Traditional Yakan motif</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-gray-500">Pattern #1</p>
+                                    <p class="text-xs font-semibold text-amber-600">Selected</p>
+                                </div>
+                            </div>
+                        @else
+                            <p class="text-xs text-gray-600">No pattern details available for this item.</p>
+                        @endif
+                    </div>
+                </div>
+                @endif
+
 
                 <!-- Patterns Card -->
-                @if(!$isBatchOrder && $order->patterns && is_array($order->patterns) && count($order->patterns) > 0)
+                @if(false && !$isBatchOrder && $order->patterns && is_array($order->patterns) && count($order->patterns) > 0)
                 <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 hover:shadow-2xl transition-shadow duration-300">
                     <div class="px-6 py-4" style="background-color:#800000;">
                         <h2 class="text-xl font-bold text-white flex items-center">
