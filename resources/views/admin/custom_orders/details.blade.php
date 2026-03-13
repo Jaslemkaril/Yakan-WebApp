@@ -1,6 +1,7 @@
 @extends('layouts.admin')
 
 @section('content')
+@php $batchOrders = $batchOrders ?? collect(); @endphp
 <div class="container mx-auto px-4 py-6">
     {{-- Header --}}
     <div class="flex items-center justify-between mb-6">

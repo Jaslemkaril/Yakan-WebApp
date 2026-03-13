@@ -110,6 +110,21 @@
 @endpush
 
 @section('content')
+@php
+    // Ensure these variables always exist regardless of which controller renders this view
+    $batchCountMap    = $batchCountMap    ?? ($stats['batchCountMap']    ?? []);
+    $implicitCountMap = $implicitCountMap ?? ($stats['implicitCountMap'] ?? []);
+    $batchSiblingsMap = $batchSiblingsMap ?? collect();
+    // Unpack $stats into top-level vars if provided that way
+    if (isset($stats)) {
+        $totalOrders      = $totalOrders      ?? ($stats['totalOrders']      ?? 0);
+        $todayOrders      = $todayOrders      ?? ($stats['todayOrders']      ?? 0);
+        $pendingCount     = $pendingCount     ?? ($stats['pendingCount']     ?? 0);
+        $approvedCount    = $approvedCount    ?? ($stats['approvedCount']    ?? 0);
+        $inProductionCount= $inProductionCount?? ($stats['inProductionCount']?? 0);
+        $totalRevenue     = $totalRevenue     ?? ($stats['totalRevenue']     ?? 0);
+    }
+@endphp
 <div class="max-w-[1400px] mx-auto px-4 py-6">
 
     {{-- ========== HEADER ========== --}}
