@@ -113,9 +113,52 @@
         : (float) $paymentOrders->sum(fn($item) => (float) ($item->final_price ?? $item->estimated_price ?? 0));
 
     // Determine shipping fee
-    // Priority: stored shipping_fee > calculate from stored city/province > 0 (pickup)
+    // Priority: stored shipping_fee > calculate from stored city/province > infer from address > 0 (pickup)
     $storedCity = $order->delivery_city ?? '';
     $storedProvince = $order->delivery_province ?? '';
+    $deliveryAddressRaw = strtolower((string) ($order->delivery_address ?? ''));
+
+    if (!$storedCity && !$storedProvince && $deliveryAddressRaw !== '') {
+        $addressHints = [
+            ['city' => 'Zamboanga City', 'region' => 'Zamboanga Peninsula (Region IX)', 'keywords' => ['zamboanga city']],
+            ['city' => 'Dipolog City', 'region' => 'Zamboanga Peninsula (Region IX)', 'keywords' => ['dipolog']],
+            ['city' => 'Pagadian City', 'region' => 'Zamboanga Peninsula (Region IX)', 'keywords' => ['pagadian']],
+            ['city' => 'Isabela City (Basilan)', 'region' => 'Zamboanga Peninsula (Region IX)', 'keywords' => ['isabela', 'basilan']],
+            ['city' => 'Davao City', 'region' => 'Davao Region (Region XI)', 'keywords' => ['davao']],
+            ['city' => 'Cagayan de Oro City', 'region' => 'Northern Mindanao (Region X)', 'keywords' => ['cagayan de oro', 'cdo']],
+            ['city' => 'General Santos City', 'region' => 'SOCCSKSARGEN (Region XII)', 'keywords' => ['general santos', 'gensan']],
+            ['city' => 'Butuan City', 'region' => 'Caraga (Region XIII)', 'keywords' => ['butuan']],
+            ['city' => 'Iloilo City', 'region' => 'Western Visayas (Region VI)', 'keywords' => ['iloilo']],
+            ['city' => 'Bacolod City', 'region' => 'Western Visayas (Region VI)', 'keywords' => ['bacolod']],
+            ['city' => 'Cebu City', 'region' => 'Central Visayas (Region VII)', 'keywords' => ['cebu']],
+            ['city' => 'Tacloban City', 'region' => 'Eastern Visayas (Region VIII)', 'keywords' => ['tacloban']],
+            ['city' => 'Manila', 'region' => 'NCR (Metro Manila)', 'keywords' => ['manila']],
+            ['city' => 'Quezon City', 'region' => 'NCR (Metro Manila)', 'keywords' => ['quezon city']],
+            ['city' => 'Makati City', 'region' => 'NCR (Metro Manila)', 'keywords' => ['makati']],
+            ['city' => 'Taguig City', 'region' => 'NCR (Metro Manila)', 'keywords' => ['taguig']],
+            ['city' => 'Pasig City', 'region' => 'NCR (Metro Manila)', 'keywords' => ['pasig']],
+            ['city' => 'Calamba City', 'region' => 'CALABARZON (Region IV-A)', 'keywords' => ['calamba']],
+            ['city' => 'Batangas City', 'region' => 'CALABARZON (Region IV-A)', 'keywords' => ['batangas']],
+            ['city' => 'Angeles City', 'region' => 'Central Luzon (Region III)', 'keywords' => ['angeles']],
+            ['city' => 'Baguio City', 'region' => 'CAR (Cordillera)', 'keywords' => ['baguio']],
+            ['city' => 'Legazpi City', 'region' => 'Bicol Region (Region V)', 'keywords' => ['legazpi']],
+        ];
+
+        foreach ($addressHints as $hint) {
+            $matched = false;
+            foreach ($hint['keywords'] as $kw) {
+                if (str_contains($deliveryAddressRaw, $kw)) {
+                    $matched = true;
+                    break;
+                }
+            }
+            if ($matched) {
+                $storedCity = $hint['city'];
+                $storedProvince = $hint['region'];
+                break;
+            }
+        }
+    }
     $storedShippingFee = (float) ($order->shipping_fee ?? 0);
 
     if (!$isDelivery) {
@@ -742,6 +785,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const storedProvince = @json($storedProvince);
     const storedCity     = @json($storedCity);
+    const deliveryAddress = @json($order->delivery_address ?? '');
+
+    function inferLocationFromAddress(addressRaw) {
+        const address = String(addressRaw || '').toLowerCase();
+        if (!address) return null;
+
+        for (const region in PH_LOCATIONS) {
+            const regionLower = region.toLowerCase();
+            const cities = Object.keys(PH_LOCATIONS[region].cities || {});
+            for (const city of cities) {
+                const cityLower = city.toLowerCase();
+                const cityNoParen = cityLower.replace(/\s*\([^)]*\)/g, '').trim();
+                if (address.includes(cityLower) || (cityNoParen && address.includes(cityNoParen))) {
+                    return { region, city };
+                }
+            }
+            if (address.includes(regionLower)) {
+                return { region, city: '' };
+            }
+        }
+
+        return null;
+    }
 
     if (storedProvince) {
         const regionSel = document.getElementById('payRegion');
@@ -758,6 +824,25 @@ document.addEventListener('DOMContentLoaded', function () {
             payPopulateBarangay();
         }
     }
+
+    // Fallback: infer from delivery address when explicit city/province are missing.
+    if (!storedProvince && !storedCity) {
+        const guessed = inferLocationFromAddress(deliveryAddress);
+        if (guessed) {
+            const regionSel = document.getElementById('payRegion');
+            const citySel = document.getElementById('payCity');
+            if (regionSel) {
+                regionSel.value = guessed.region;
+                payPopulateCity();
+            }
+            if (citySel && guessed.city) {
+                citySel.value = guessed.city;
+            }
+            payCalcShipping();
+            payPopulateBarangay();
+        }
+    }
+
     if (storedProvince || storedCity) payCalcShipping();
 });
 </script>
