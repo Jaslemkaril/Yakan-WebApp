@@ -499,7 +499,31 @@ class CustomOrderController extends Controller
             ->orderByDesc('created_at')
             ->paginate(10);
 
-        return view('custom_orders.index', compact('orders'));
+        $batchMeta = [];
+        if (\Schema::hasColumn('custom_orders', 'batch_order_number')) {
+            $batchNumbers = $orders->getCollection()
+                ->pluck('batch_order_number')
+                ->filter()
+                ->unique()
+                ->values();
+
+            if ($batchNumbers->isNotEmpty()) {
+                $batchMeta = CustomOrder::query()
+                    ->where('user_id', Auth::id())
+                    ->whereIn('batch_order_number', $batchNumbers)
+                    ->selectRaw('batch_order_number, COUNT(*) as item_count, SUM(COALESCE(final_price, estimated_price, 0)) as batch_total')
+                    ->groupBy('batch_order_number')
+                    ->get()
+                    ->keyBy('batch_order_number')
+                    ->map(fn($row) => [
+                        'item_count' => (int) $row->item_count,
+                        'batch_total' => (float) $row->batch_total,
+                    ])
+                    ->toArray();
+            }
+        }
+
+        return view('custom_orders.index', compact('orders', 'batchMeta'));
     }
 
     /**

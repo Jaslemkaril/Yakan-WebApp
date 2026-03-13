@@ -446,9 +446,22 @@
 
                                 <!-- Enhanced Payment Status -->
                                 <td class="px-6 py-4 whitespace-nowrap">
+                                    @php
+                                        $currentBatchMeta = null;
+                                        if (!empty($order->batch_order_number) && !empty($batchMeta[$order->batch_order_number])) {
+                                            $currentBatchMeta = $batchMeta[$order->batch_order_number];
+                                        }
+                                    @endphp
                                     @if($order->final_price)
                                         <div>
-                                            <span class="text-lg font-bold text-gray-900">₱{{ number_format($order->final_price, 0) }}</span>
+                                            @if($currentBatchMeta && ($currentBatchMeta['item_count'] ?? 0) > 1)
+                                                <div class="text-lg font-bold text-gray-900">₱{{ number_format($currentBatchMeta['batch_total'] ?? 0, 0) }}</div>
+                                                <div class="text-xs text-gray-500">
+                                                    Batch total ({{ $currentBatchMeta['item_count'] }} items) • This item: ₱{{ number_format($order->final_price, 0) }}
+                                                </div>
+                                            @else
+                                                <span class="text-lg font-bold text-gray-900">₱{{ number_format($order->final_price, 0) }}</span>
+                                            @endif
                                             @if($order->payment_status)
                                                 @php
                                                     $paymentConfig = [
