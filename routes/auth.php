@@ -60,3 +60,8 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
 });
+
+// Fallback for direct GET /logout navigation (e.g. stale links/bookmarks)
+Route::get('logout', function () {
+    return redirect()->route('login.user.form');
+});

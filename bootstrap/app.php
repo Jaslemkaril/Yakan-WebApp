@@ -118,49 +118,15 @@ return Application::configure(basePath: dirname(__DIR__))
                 } catch (\Throwable) {}
 
                 if ($request->is('admin/*')) {
-                    $loginUrl = json_encode(route('admin.login.form'));
+                    $loginUrl = route('admin.login.form');
                 } else {
                     $baseLoginUrl = route('login.user.form');
                     $loginUrl = $intendedPath
-                        ? json_encode($baseLoginUrl . '?redirect_to=' . urlencode($intendedPath))
-                        : json_encode($baseLoginUrl);
+                        ? $baseLoginUrl . '?redirect_to=' . urlencode($intendedPath)
+                        : $baseLoginUrl;
                 }
-                return response(<<<HTML
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Please Log In — Yakan</title>
-    <style>
-        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#6b0000 0%,#8b0000 45%,#3d0000 100%);font-family:'Inter',system-ui,sans-serif;}
-        .card{background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.18);backdrop-filter:blur(20px);border-radius:24px;padding:48px 40px;text-align:center;width:100%;max-width:360px;box-shadow:0 32px 64px rgba(0,0,0,0.35);animation:fadeUp 0.4s ease-out;}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-        .logo{width:56px;height:56px;background:linear-gradient(135deg,#800000,#a00000);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 8px 24px rgba(0,0,0,0.3);}
-        .logo span{color:white;font-weight:800;font-size:26px;}
-        .spinner-ring{width:44px;height:44px;border:3px solid rgba(255,255,255,0.2);border-top-color:rgba(255,255,255,0.85);border-radius:50%;animation:spin 0.75s linear infinite;margin:0 auto 20px;}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        h2{color:white;font-size:1.25rem;font-weight:700;margin-bottom:6px;}
-        .sub{color:rgba(255,220,220,0.75);font-size:0.875rem;margin-bottom:28px;}
-        .progress-bar{height:3px;background:rgba(255,255,255,0.15);border-radius:2px;overflow:hidden;}
-        .progress-fill{height:100%;width:100%;background:linear-gradient(90deg,rgba(255,255,255,0.4),rgba(255,255,255,0.8));border-radius:2px;}
-        .status{color:rgba(255,220,220,0.5);font-size:0.75rem;margin-top:12px;letter-spacing:0.05em;}
-    </style>
-</head>
-<body>
-    <div class="card">
-        <div class="logo"><span>Y</span></div>
-        <div class="spinner-ring"></div>
-        <h2>Please Log In</h2>
-        <p class="sub">Redirecting you to the login page&hellip;</p>
-        <div class="progress-bar"><div class="progress-fill"></div></div>
-        <p class="status">REDIRECTING TO LOGIN</p>
-    </div>
-    <script>window.location.replace({$loginUrl});<\/script>
-</body>
-</html>
-HTML);
+
+                return redirect()->guest($loginUrl);
             }
             if ($e instanceof \Illuminate\Session\TokenMismatchException) {
                 return redirect()->back()->with('error', 'Session expired. Please try again.');
