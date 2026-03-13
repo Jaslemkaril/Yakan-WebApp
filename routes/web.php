@@ -893,11 +893,18 @@ Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->gr
     
     // Redirect /create to fabric selection (step 1) — show loading screen
     Route::get('/create', function(\Illuminate\Http\Request $request) {
-        $token = $request->query('auth_token');
-        $url = route('custom_orders.create.step1');
-        if ($token) {
-            $url .= '?auth_token=' . urlencode($token);
+        $query = ['new_submission' => 1];
+
+        if ($request->filled('auth_token')) {
+            $query['auth_token'] = $request->query('auth_token');
         }
+
+        // Keep optional preselection params when entering from pattern pages.
+        if ($request->filled('pattern_id')) {
+            $query['pattern_id'] = $request->query('pattern_id');
+        }
+
+        $url = route('custom_orders.create.step1') . '?' . http_build_query($query);
         return response()->view('custom_orders.loading', ['redirectUrl' => $url]);
     })->name('create');
     

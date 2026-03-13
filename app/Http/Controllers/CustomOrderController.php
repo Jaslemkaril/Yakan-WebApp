@@ -519,6 +519,14 @@ class CustomOrderController extends Controller
     {
         try {
             \Log::info('createStep1 called', ['user_id' => auth()->id()]);
+
+            // Fresh entrypoint from /custom-orders/create should always start clean.
+            if ($request->boolean('new_submission')) {
+                $this->clearWizardData();
+                \Log::info('Started fresh custom-order submission; cleared previous wizard draft', [
+                    'user_id' => auth()->id(),
+                ]);
+            }
             
             // Test basic database connection
             try {
