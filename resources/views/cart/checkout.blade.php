@@ -352,7 +352,9 @@
                                     <input type="radio" name="payment_method" value="online" required class="w-5 h-5 text-blue-600 focus:ring-blue-500 focus:ring-2" form="checkout-form" onclick="showPaymentDetails('gcash')">
                                     <div class="ml-4 flex-1">
                                         <div class="flex items-center gap-3">
-                                            <div class="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center text-2xl">📱</div>
+                                            <div class="w-32 h-10 bg-white border border-blue-100 rounded-lg flex items-center justify-center px-2">
+                                                <img src="{{ asset('images/payment/gcash-logo.svg') }}" alt="GCash" class="w-full h-full object-contain">
+                                            </div>
                                             <div>
                                                 <div class="font-bold text-gray-900">GCash</div>
                                                 <div class="text-sm text-gray-500">Fast & secure e-wallet payment</div>
@@ -386,7 +388,9 @@
                                     <input type="radio" name="payment_method" value="bank_transfer" class="w-5 h-5 text-green-600 focus:ring-green-500 focus:ring-2" form="checkout-form" onclick="showPaymentDetails('bank')">
                                     <div class="ml-4 flex-1">
                                         <div class="flex items-center gap-3">
-                                            <div class="w-12 h-12 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center text-2xl">🏦</div>
+                                            <div class="w-32 h-10 bg-white border border-green-100 rounded-lg flex items-center justify-center px-2">
+                                                <img src="{{ asset('images/payment/bank-transfer.svg') }}" alt="Bank Transfer" class="w-full h-full object-contain">
+                                            </div>
                                             <div>
                                                 <div class="font-bold text-gray-900">Bank Transfer</div>
                                                 <div class="text-sm text-gray-500">Direct transfer to our bank account</div>
