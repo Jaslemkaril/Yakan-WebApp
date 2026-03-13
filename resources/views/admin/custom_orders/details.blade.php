@@ -818,7 +818,7 @@
                             </svg>
                             Approve Custom Order
                         </label>
-                        <form action="{{ route('admin.custom-orders.approve', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" onsubmit="return confirm('Approve this custom order?');">
+                        <form action="{{ route('admin.custom-orders.approve', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
                             @csrf
                             @if(request('auth_token'))
                                 <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
