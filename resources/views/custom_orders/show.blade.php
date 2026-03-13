@@ -6,6 +6,8 @@
     $isBatchOrder = $isBatchOrder ?? ($batchOrders->count() > 1);
     $batchUnpaidOrders = $batchOrders->where('payment_status', '!=', 'paid')->values();
     $batchPaymentTotal = $batchPaymentTotal ?? (float) $batchUnpaidOrders->sum(fn($item) => (float) ($item->final_price ?? $item->estimated_price ?? 0));
+    $customOrderEstimatedDays = (int) \App\Models\SystemSetting::get('custom_order_estimated_days', 14);
+    $estimatedCompletionDate = $order->created_at ? $order->created_at->copy()->addDays($customOrderEstimatedDays) : null;
 @endphp
 <div class="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-5xl mx-auto">
@@ -27,6 +29,12 @@
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Order Details</h1>
                     <p class="text-gray-600">Custom Order #{{ $order->id }}</p>
+                    <p class="text-sm font-semibold mt-1" style="color:#800000;">
+                        Estimated Turnaround: {{ $customOrderEstimatedDays }} day{{ $customOrderEstimatedDays === 1 ? '' : 's' }}
+                        @if($estimatedCompletionDate)
+                            • Target Date: {{ $estimatedCompletionDate->format('M d, Y') }}
+                        @endif
+                    </p>
                     @if($isBatchOrder)
                         <p class="text-sm text-blue-700 font-semibold mt-1">
                             @if(!empty($order->batch_order_number))

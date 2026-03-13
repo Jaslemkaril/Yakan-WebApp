@@ -1,7 +1,11 @@
 @extends('layouts.admin')
 
 @section('content')
-@php $batchOrders = $batchOrders ?? collect(); @endphp
+@php
+    $batchOrders = $batchOrders ?? collect();
+    $customOrderEstimatedDays = (int) \App\Models\SystemSetting::get('custom_order_estimated_days', 14);
+    $estimatedCompletionDate = $order->created_at ? $order->created_at->copy()->addDays($customOrderEstimatedDays) : null;
+@endphp
 <div class="container mx-auto px-4 py-6">
     {{-- Header --}}
     <div class="flex items-center justify-between mb-6">
@@ -14,6 +18,12 @@
             </a>
             <h1 class="text-3xl font-bold text-gray-900">Order #{{ $order->id }} - Details</h1>
             <p class="text-gray-600 mt-1">Created {{ $order->created_at->format('M d, Y \a\t h:i A') }}</p>
+            <p class="text-sm font-semibold mt-1" style="color:#800000;">
+                Estimated Turnaround: {{ $customOrderEstimatedDays }} day{{ $customOrderEstimatedDays === 1 ? '' : 's' }}
+                @if($estimatedCompletionDate)
+                    • Target Date: {{ $estimatedCompletionDate->format('M d, Y') }}
+                @endif
+            </p>
         </div>
         <div class="flex items-center gap-3">
             {{-- Status Badge --}}

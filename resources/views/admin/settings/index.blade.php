@@ -234,12 +234,31 @@
                     </div>
                     <div>
                         <h2 class="text-lg font-black text-gray-900">Production Timeline</h2>
-                        <p class="text-xs text-gray-500 mt-0.5">Configure quality check duration (shipping times are zone-based from Zamboanga City)</p>
+                        <p class="text-xs text-gray-500 mt-0.5">Set default custom-order estimate (2 weeks standard) and quality check duration</p>
                     </div>
                 </div>
 
                 <div class="p-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Custom Order Estimated Days
+                                <span class="text-red-500 ml-1">*</span>
+                            </label>
+                            <p class="text-xs text-gray-500 mb-3">Default estimate shown to customers and admin for custom orders (standard: 14 days)</p>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </div>
+                                <input type="number" min="1" max="90" name="custom_order_estimated_days"
+                                       value="{{ old('custom_order_estimated_days', $settings['custom_order_estimated_days']) }}" required
+                                       class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all @error('custom_order_estimated_days') border-red-400 @enderror">
+                            </div>
+                            @error('custom_order_estimated_days') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        </div>
+
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 Quality Check Days
@@ -261,7 +280,9 @@
 
                         <div class="bg-orange-50 rounded-xl p-4 border border-orange-200">
                             <p class="text-xs font-bold text-orange-800 mb-2 uppercase tracking-wide">⏱ Timeline Formula</p>
-                            <p class="text-xs font-semibold text-orange-900 mb-3">Delivery = Production Days + Quality Check Days + Shipping Days</p>
+                            <p class="text-xs font-semibold text-orange-900 mb-3">Target = Order Date + Estimated Days (default 14)</p>
+                            <p class="text-xs text-orange-700 font-semibold mb-2">Current default: {{ $settings['custom_order_estimated_days'] }} day{{ (int) $settings['custom_order_estimated_days'] === 1 ? '' : 's' }}</p>
+                            <p class="text-xs font-semibold text-orange-900 mb-3">Detailed timeline still uses: Production Days + Quality Check Days + Shipping Days</p>
                             <p class="text-xs text-orange-700 font-semibold mb-1">Shipping Zones:</p>
                             <ul class="text-xs text-orange-700 space-y-0.5">
                                 <li>• Zamboanga City: 1 day</li>

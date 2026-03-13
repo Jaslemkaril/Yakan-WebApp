@@ -12,6 +12,7 @@ class SettingsController extends Controller
     {
         try {
             $settings = [
+                'custom_order_estimated_days' => SystemSetting::get('custom_order_estimated_days', 14),
                 'quality_check_days'   => SystemSetting::get('quality_check_days', 1),
                 'gcash_name'           => SystemSetting::get('gcash_name', 'Tuwas Yakan'),
                 'gcash_number'         => SystemSetting::get('gcash_number', ''),
@@ -22,6 +23,7 @@ class SettingsController extends Controller
             ];
         } catch (\Exception $e) {
             $settings = [
+                'custom_order_estimated_days' => 14,
                 'quality_check_days'  => 1,
                 'gcash_name'          => 'Tuwas Yakan',
                 'gcash_number'        => '',
@@ -38,6 +40,7 @@ class SettingsController extends Controller
     public function update(Request $request)
     {
         $validated = $request->validate([
+            'custom_order_estimated_days' => 'required|integer|min:1|max:90',
             'quality_check_days'  => 'required|integer|min:1|max:30',
             'gcash_name'          => 'nullable|string|max:255',
             'gcash_number'        => 'nullable|string|max:20',

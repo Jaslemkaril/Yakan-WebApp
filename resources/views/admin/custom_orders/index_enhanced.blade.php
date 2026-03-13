@@ -124,6 +124,7 @@
         $inProductionCount= $inProductionCount?? ($stats['inProductionCount']?? 0);
         $totalRevenue     = $totalRevenue     ?? ($stats['totalRevenue']     ?? 0);
     }
+    $customOrderEstimatedDays = (int) \App\Models\SystemSetting::get('custom_order_estimated_days', 14);
 @endphp
 <div class="max-w-[1400px] mx-auto px-4 py-6">
 
@@ -462,8 +463,16 @@
                         </td>
 
                         <td class="px-4 py-3.5">
+                            @php
+                                $estimatedCompletionDate = $order->created_at->copy()->addDays($customOrderEstimatedDays);
+                                $isFinishedOrder = in_array($order->status, ['completed', 'delivered', 'cancelled', 'rejected']);
+                            @endphp
                             <p class="text-sm text-gray-800">{{ $order->created_at->format('M d, Y') }}</p>
                             <p class="text-[11px] text-gray-400">{{ $order->created_at->format('h:i A') }}</p>
+                            <p class="text-[11px] font-semibold" style="color:#800000;">Est: {{ $customOrderEstimatedDays }} day{{ $customOrderEstimatedDays === 1 ? '' : 's' }}</p>
+                            <p class="text-[10px] {{ $isFinishedOrder ? 'text-gray-400' : 'text-[#800000]' }}">
+                                {{ $isFinishedOrder ? 'Target was' : 'Target:' }} {{ $estimatedCompletionDate->format('M d, Y') }}
+                            </p>
                         </td>
 
                         <td class="px-4 py-3.5">

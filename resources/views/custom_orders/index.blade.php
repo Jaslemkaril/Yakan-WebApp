@@ -33,6 +33,10 @@
         <!-- Notification Area -->
         <div id="notificationArea" class="mb-6"></div>
 
+        @php
+            $customOrderEstimatedDays = (int) \App\Models\SystemSetting::get('custom_order_estimated_days', 14);
+        @endphp
+
         @if($orders->count() > 0)
 
             <!-- Enhanced Stats Cards -->
@@ -486,8 +490,16 @@
                                 </td>
 
                                 <td class="px-6 py-4 whitespace-nowrap">
+                                    @php
+                                        $estimatedCompletionDate = $order->created_at->copy()->addDays($customOrderEstimatedDays);
+                                        $isFinishedOrder = in_array($order->status, ['completed', 'delivered', 'cancelled', 'rejected']);
+                                    @endphp
                                     <div class="text-sm text-gray-900">{{ $order->created_at->format('M d, Y') }}</div>
                                     <div class="text-xs text-gray-500">{{ $order->created_at->format('h:i A') }}</div>
+                                    <div class="text-xs text-[#800000] font-semibold mt-1">Estimated: {{ $customOrderEstimatedDays }} day{{ $customOrderEstimatedDays === 1 ? '' : 's' }}</div>
+                                    <div class="text-xs {{ $isFinishedOrder ? 'text-gray-500' : 'text-[#800000]' }}">
+                                        {{ $isFinishedOrder ? 'Estimated target was' : 'Target date:' }} {{ $estimatedCompletionDate->format('M d, Y') }}
+                                    </div>
                                     @if($order->status === 'pending' && $order->created_at->diffInDays(now()) > 2)
                                         <div class="text-xs text-red-600 font-medium mt-1">
                                             <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
