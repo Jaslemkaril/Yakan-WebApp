@@ -530,7 +530,7 @@
                                             onclick="toggleDropdown({{ $order->id }})">
                                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
                                     </button>
-                                    <div class="status-dropdown-menu" id="dropdown-{{ $order->id }}">
+                                    <div class="status-dropdown-menu hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[180px] z-50 overflow-hidden" id="dropdown-{{ $order->id }}">
                                         <div class="menu-label">Change Status</div>
                                         @foreach([
                                             'approved'             => 'Approved',
@@ -627,21 +627,38 @@ function showToast(msg, type = 'success') {
 
 // ---- Quick status dropdown ----
 function toggleDropdown(id) {
-    document.querySelectorAll('.status-dropdown-menu.open').forEach(el => {
-        if (el.id !== 'dropdown-' + id) el.classList.remove('open');
+    const targetId = 'dropdown-' + id;
+    document.querySelectorAll('.status-dropdown-menu').forEach(el => {
+        if (el.id !== targetId) {
+            el.classList.add('hidden');
+            el.classList.remove('open');
+        }
     });
-    document.getElementById('dropdown-' + id).classList.toggle('open');
+
+    const target = document.getElementById(targetId);
+    if (!target) return;
+
+    const willShow = target.classList.contains('hidden');
+    target.classList.toggle('hidden');
+    target.classList.toggle('open', willShow);
 }
 
 document.addEventListener('click', function(e) {
     if (!e.target.closest('.status-dropdown-wrap')) {
-        document.querySelectorAll('.status-dropdown-menu.open').forEach(el => el.classList.remove('open'));
+        document.querySelectorAll('.status-dropdown-menu').forEach(el => {
+            el.classList.add('hidden');
+            el.classList.remove('open');
+        });
     }
 });
 
 // ---- Quick status update via AJAX ----
 function quickUpdateStatus(orderId, newStatus) {
-    document.getElementById('dropdown-' + orderId)?.classList.remove('open');
+    const dropdown = document.getElementById('dropdown-' + orderId);
+    if (dropdown) {
+        dropdown.classList.add('hidden');
+        dropdown.classList.remove('open');
+    }
 
     const t = getAuthToken();
     const url = `/admin/custom-orders/${orderId}/status` + (t ? '?auth_token=' + encodeURIComponent(t) : '');
