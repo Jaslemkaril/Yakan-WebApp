@@ -132,6 +132,30 @@
             color: white;
             padding: 20px 0;
         }
+
+        /* Sidebar with Yakan Pattern Background */
+        .sidebar-mobile::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('/images/pattern1.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: repeat;
+            opacity: 0.08;
+            pointer-events: none;
+            z-index: 0;
+            border-radius: 0;
+        }
+
+        /* Ensure sidebar content appears above pattern */
+        .sidebar-mobile > * {
+            position: relative;
+            z-index: 1;
+        }
         
         .main-content {
             flex: 1;
