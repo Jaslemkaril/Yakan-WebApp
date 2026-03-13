@@ -254,9 +254,12 @@
                 @foreach($wishlist->items as $item)
                     @php
                         $entity = $item->item;
-                        $itemType = $entity instanceof \App\Models\Product ? 'product' : 'pattern';
                     @endphp
-                    <div class="wishlist-card" id="wishlist-item-{{ $itemType }}-{{ $entity->id }}" data-item-type="{{ $itemType }}" data-item-id="{{ $entity->id }}">
+                    @if($entity)
+                        @php
+                            $itemType = $entity instanceof \App\Models\Product ? 'product' : 'pattern';
+                        @endphp
+                        <div class="wishlist-card" id="wishlist-item-{{ $itemType }}-{{ $entity->id }}" data-item-type="{{ $itemType }}" data-item-id="{{ $entity->id }}">
                         @php
                             // $entity already set above
                         @endphp
@@ -352,6 +355,7 @@
                             </div>
                         @endif
                     </div>
+                    @endif
                 @endforeach
             </div>
         @else
