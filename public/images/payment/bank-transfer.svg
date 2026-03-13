@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="48" viewBox="0 0 160 48" role="img" aria-label="Bank transfer icon">
+  <rect x="0" y="0" width="160" height="48" rx="10" fill="#f3f4f6"/>
+  <g transform="translate(12 9)">
+    <path d="M18 0L0 8h36L18 0z" fill="#7a0f0f"/>
+    <rect x="3" y="10" width="30" height="3" fill="#7a0f0f"/>
+    <rect x="4" y="14" width="4" height="10" fill="#9b1111"/>
+    <rect x="11" y="14" width="4" height="10" fill="#9b1111"/>
+    <rect x="18" y="14" width="4" height="10" fill="#9b1111"/>
+    <rect x="25" y="14" width="4" height="10" fill="#9b1111"/>
+    <rect x="3" y="25" width="30" height="3" fill="#7a0f0f"/>
+  </g>
+  <text x="56" y="20" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#7a0f0f">BANK</text>
+  <text x="56" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#7a0f0f">TRANSFER</text>
+</svg>

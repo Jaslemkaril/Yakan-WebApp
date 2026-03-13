@@ -47,6 +47,12 @@
         background-color: #fef2f2;
         box-shadow: 0 4px 12px rgba(128, 0, 0, 0.15);
     }
+    .payment-brand-logo {
+        width: 120px;
+        height: 36px;
+        object-fit: contain;
+        display: block;
+    }
     .payment-btn {
         background: linear-gradient(135deg, #800000 0%, #600000 100%);
         color: white;
@@ -248,8 +254,8 @@
                 <!-- Customer -->
                 <div class="summary-row">
                     <span class="text-gray-600 font-medium">Customer</span>
-                    <span class="font-semibold text-gray-900">{{ $order->user->name ?? auth()->user()->name ?? 'N/A' }}</span>
-                </div>
+                    <div class="ml-4 flex-grow">
+                        <img src="{{ asset('images/payment/gcash-logo.svg') }}" alt="GCash" class="payment-brand-logo mb-1">
 
                 @if($isBatchPayment)
                     <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
@@ -260,8 +266,8 @@
                         <div class="space-y-1 max-h-44 overflow-y-auto pr-1">
                             @foreach($paymentOrders as $item)
                                 <div class="flex justify-between text-xs text-blue-900">
-                                    <span>Order #{{ $item->id }}</span>
-                                    <span>₱{{ number_format($item->final_price ?? $item->estimated_price ?? 0, 2) }}</span>
+                    <div class="ml-4 flex-grow">
+                        <img src="{{ asset('images/payment/bank-transfer.svg') }}" alt="Bank Transfer" class="payment-brand-logo mb-1">
                                 </div>
                             @endforeach
                         </div>
