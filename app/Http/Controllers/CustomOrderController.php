@@ -494,14 +494,86 @@ class CustomOrderController extends Controller
      */
     public function userIndex()
     {
-        $orders = CustomOrder::with('product')
-            ->where('user_id', Auth::id())
-            ->orderByDesc('created_at')
-            ->paginate(10);
-
         $hasBatchColumn = \Schema::hasColumn('custom_orders', 'batch_order_number');
-        $batchMeta = [];
+
+        // Detect implicit grouped submissions (same user + same minute).
+        $implicitGroupsQuery = \DB::table('custom_orders')
+            ->select(
+                'user_id',
+                \DB::raw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') as minute_key"),
+                \DB::raw('MIN(id) as primary_id'),
+                \DB::raw('COUNT(*) as cnt'),
+                \DB::raw('SUM(COALESCE(final_price, estimated_price, 0)) as batch_total')
+            )
+            ->where('user_id', Auth::id());
+
+        if ($hasBatchColumn) {
+            $implicitGroupsQuery->where(function ($q) {
+                $q->whereNull('batch_order_number')
+                  ->orWhere('batch_order_number', '');
+            });
+        }
+
+        $implicitGroups = $implicitGroupsQuery
+            ->groupBy('user_id', \DB::raw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i')"))
+            ->havingRaw('cnt > 1')
+            ->get();
+
+        $implicitExcludeIds = collect();
         $fallbackBatchMeta = [];
+        foreach ($implicitGroups as $group) {
+            $fallbackBatchMeta[$group->minute_key] = [
+                'item_count' => (int) $group->cnt,
+                'batch_total' => (float) $group->batch_total,
+            ];
+
+            $memberIdsQuery = \DB::table('custom_orders')
+                ->where('user_id', $group->user_id)
+                ->whereRaw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') = ?", [$group->minute_key]);
+
+            if ($hasBatchColumn) {
+                $memberIdsQuery->where(function ($q) {
+                    $q->whereNull('batch_order_number')
+                      ->orWhere('batch_order_number', '');
+                });
+            }
+
+            $memberIds = $memberIdsQuery
+                ->where('id', '!=', $group->primary_id)
+                ->pluck('id');
+
+            $implicitExcludeIds = $implicitExcludeIds->merge($memberIds);
+        }
+
+        // Build base query to surface one row per grouped submission.
+        if ($hasBatchColumn) {
+            $batchPrimaryIds = CustomOrder::query()
+                ->where('user_id', Auth::id())
+                ->whereNotNull('batch_order_number')
+                ->where('batch_order_number', '!=', '')
+                ->selectRaw('MIN(id) as primary_id')
+                ->groupBy('batch_order_number')
+                ->pluck('primary_id');
+
+            $query = CustomOrder::with('product')
+                ->where('user_id', Auth::id())
+                ->where(function ($q) use ($batchPrimaryIds) {
+                    $q->whereNull('batch_order_number')
+                      ->orWhere('batch_order_number', '')
+                      ->orWhereIn('id', $batchPrimaryIds);
+                })
+                ->when($implicitExcludeIds->isNotEmpty(), fn($q) => $q->whereNotIn('id', $implicitExcludeIds))
+                ->orderByDesc('created_at');
+        } else {
+            $query = CustomOrder::with('product')
+                ->where('user_id', Auth::id())
+                ->when($implicitExcludeIds->isNotEmpty(), fn($q) => $q->whereNotIn('id', $implicitExcludeIds))
+                ->orderByDesc('created_at');
+        }
+
+        $orders = $query->paginate(10);
+
+        $batchMeta = [];
         if ($hasBatchColumn) {
             $batchNumbers = $orders->getCollection()
                 ->pluck('batch_order_number')
@@ -522,47 +594,6 @@ class CustomOrderController extends Controller
                         'batch_total' => (float) $row->batch_total,
                     ])
                     ->toArray();
-            }
-        }
-
-        // Fallback: for older rows without batch_order_number, group likely same-submission
-        // items by same minute + same user, then sum their prices.
-        $ordersNeedingFallback = $orders->getCollection()->filter(function ($order) use ($batchMeta, $hasBatchColumn) {
-            if (!$hasBatchColumn) {
-                return true;
-            }
-
-            return empty($order->batch_order_number)
-                && !isset($batchMeta[$order->batch_order_number ?? '']);
-        });
-
-        if ($ordersNeedingFallback->isNotEmpty()) {
-            $candidateOrdersQuery = CustomOrder::query()
-                ->where('user_id', Auth::id())
-                ->orderBy('created_at', 'desc');
-
-            if ($hasBatchColumn) {
-                $candidateOrdersQuery->where(function ($q) {
-                    $q->whereNull('batch_order_number')
-                      ->orWhere('batch_order_number', '');
-                });
-            }
-
-            $candidateOrders = $candidateOrdersQuery->get();
-
-            $grouped = $candidateOrders->groupBy(function ($item) {
-                return optional($item->created_at)->format('Y-m-d H:i');
-            });
-
-            foreach ($grouped as $signature => $items) {
-                if (!$signature || $items->count() <= 1) {
-                    continue;
-                }
-
-                $fallbackBatchMeta[$signature] = [
-                    'item_count' => $items->count(),
-                    'batch_total' => (float) $items->sum(fn($x) => (float) ($x->final_price ?? $x->estimated_price ?? 0)),
-                ];
             }
         }
 
