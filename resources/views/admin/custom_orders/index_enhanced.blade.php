@@ -113,7 +113,9 @@
 @php
     // Ensure these variables always exist regardless of which controller renders this view
     $batchCountMap    = $batchCountMap    ?? ($stats['batchCountMap']    ?? []);
+    $batchMetaMap     = $batchMetaMap     ?? ($stats['batchMetaMap']     ?? []);
     $implicitCountMap = $implicitCountMap ?? ($stats['implicitCountMap'] ?? []);
+    $implicitMetaMap  = $implicitMetaMap  ?? ($stats['implicitMetaMap']  ?? []);
     $batchSiblingsMap = $batchSiblingsMap ?? collect();
     // Unpack $stats into top-level vars if provided that way
     if (isset($stats)) {
@@ -413,7 +415,24 @@
                         </td>
 
                         <td class="px-4 py-3.5">
-                            <span class="font-bold text-gray-900">₱{{ number_format($order->final_price ?? $order->estimated_price ?? 0, 2) }}</span>
+                            @php
+                                $itemDisplayPrice = (float) ($order->final_price ?? $order->estimated_price ?? 0);
+                                $currentBatchMeta = null;
+                                if (!empty($order->batch_order_number) && !empty($batchMetaMap[$order->batch_order_number])) {
+                                    $currentBatchMeta = $batchMetaMap[$order->batch_order_number];
+                                } elseif (!empty($implicitMetaMap[$order->id])) {
+                                    $currentBatchMeta = $implicitMetaMap[$order->id];
+                                }
+                            @endphp
+
+                            @if($currentBatchMeta && ($currentBatchMeta['item_count'] ?? 0) > 1)
+                                <div class="text-lg font-bold text-gray-900">₱{{ number_format($currentBatchMeta['batch_total'] ?? 0, 2) }}</div>
+                                <div class="text-xs text-gray-500">
+                                    Batch total ({{ $currentBatchMeta['item_count'] }} items) • This item: ₱{{ number_format($itemDisplayPrice, 2) }}
+                                </div>
+                            @else
+                                <span class="font-bold text-gray-900">₱{{ number_format($itemDisplayPrice, 2) }}</span>
+                            @endif
                         </td>
 
                         <td class="px-4 py-3.5" id="status-cell-{{ $order->id }}">

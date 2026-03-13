@@ -20,7 +20,8 @@ class AdminCustomOrderController extends Controller
                     'user_id',
                     DB::raw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') as minute_key"),
                     DB::raw('MIN(id) as primary_id'),
-                    DB::raw('COUNT(*) as cnt')
+                    DB::raw('COUNT(*) as cnt'),
+                    DB::raw('SUM(COALESCE(final_price, estimated_price, 0)) as implicit_total')
                 )
                 ->whereNotNull('user_id')
                 ->when($hasBatchColumn, function ($q) {
@@ -34,6 +35,16 @@ class AdminCustomOrderController extends Controller
                 ->get();
 
             $implicitCountMap = $implicitGroups->pluck('cnt', 'primary_id')->toArray();
+            $implicitMetaMap = $implicitGroups
+                ->mapWithKeys(function ($group) {
+                    return [
+                        (int) $group->primary_id => [
+                            'item_count' => (int) $group->cnt,
+                            'batch_total' => (float) $group->implicit_total,
+                        ],
+                    ];
+                })
+                ->toArray();
 
             $implicitExcludeIds = collect();
             foreach ($implicitGroups as $group) {
@@ -112,8 +123,9 @@ class AdminCustomOrderController extends Controller
 
             $orders = $query->paginate($request->get('per_page', 20))->withQueryString();
 
-            // Build batch count map for all named batches on this page.
+            // Build batch metadata map for all named batches on this page.
             $batchCountMap    = [];
+            $batchMetaMap     = [];
             if ($hasBatchColumn) {
                 $batchNumbers = $orders->pluck('batch_order_number')->filter()->unique()->values();
                 if ($batchNumbers->isNotEmpty()) {
@@ -121,6 +133,24 @@ class AdminCustomOrderController extends Controller
                         ->whereIn('batch_order_number', $batchNumbers)
                         ->groupBy('batch_order_number')
                         ->pluck('cnt', 'batch_order_number')
+                        ->toArray();
+
+                    $batchMetaMap = CustomOrder::select(
+                            'batch_order_number',
+                            DB::raw('COUNT(*) as item_count'),
+                            DB::raw('SUM(COALESCE(final_price, estimated_price, 0)) as batch_total')
+                        )
+                        ->whereIn('batch_order_number', $batchNumbers)
+                        ->groupBy('batch_order_number')
+                        ->get()
+                        ->mapWithKeys(function ($row) {
+                            return [
+                                $row->batch_order_number => [
+                                    'item_count' => (int) $row->item_count,
+                                    'batch_total' => (float) $row->batch_total,
+                                ],
+                            ];
+                        })
                         ->toArray();
                 }
             }
@@ -137,7 +167,7 @@ class AdminCustomOrderController extends Controller
             return view('admin.custom_orders.index_enhanced', compact(
                 'orders', 'totalOrders', 'todayOrders', 'pendingCount',
                 'approvedCount', 'inProductionCount', 'totalRevenue',
-                'batchCountMap', 'implicitCountMap', 'batchSiblingsMap'
+                'batchCountMap', 'batchMetaMap', 'implicitCountMap', 'implicitMetaMap', 'batchSiblingsMap'
             ));
         } catch (\Exception $e) {
             \Log::error('Custom Orders Index Error: ' . $e->getMessage());
@@ -1479,8 +1509,9 @@ class AdminCustomOrderController extends Controller
             $perPage = $request->get('per_page', 20);
             $orders = $query->paginate($perPage);
 
-            // Build a map: batch_order_number => count of items in that batch
+            // Build maps for named batches on this page
             $batchCountMap = [];
+            $batchMetaMap = [];
             if ($hasBatchColumn) {
                 $batchNumbers = $orders->pluck('batch_order_number')->filter()->unique()->values();
                 if ($batchNumbers->isNotEmpty()) {
@@ -1488,6 +1519,24 @@ class AdminCustomOrderController extends Controller
                         ->whereIn('batch_order_number', $batchNumbers)
                         ->groupBy('batch_order_number')
                         ->pluck('cnt', 'batch_order_number')
+                        ->toArray();
+
+                    $batchMetaMap = CustomOrder::select(
+                            'batch_order_number',
+                            \DB::raw('COUNT(*) as item_count'),
+                            \DB::raw('SUM(COALESCE(final_price, estimated_price, 0)) as batch_total')
+                        )
+                        ->whereIn('batch_order_number', $batchNumbers)
+                        ->groupBy('batch_order_number')
+                        ->get()
+                        ->mapWithKeys(function ($row) {
+                            return [
+                                $row->batch_order_number => [
+                                    'item_count' => (int) $row->item_count,
+                                    'batch_total' => (float) $row->batch_total,
+                                ],
+                            ];
+                        })
                         ->toArray();
                 }
             }
@@ -1515,7 +1564,7 @@ class AdminCustomOrderController extends Controller
             
             $stats = compact('totalOrders', 'todayOrders', 'pendingCount', 'totalRevenue');
             
-            return view('admin.custom_orders.index_enhanced', compact('orders', 'stats', 'batchCountMap', 'implicitCountMap', 'batchSiblingsMap'));
+            return view('admin.custom_orders.index_enhanced', compact('orders', 'stats', 'batchCountMap', 'batchMetaMap', 'implicitCountMap', 'batchSiblingsMap'));
             
         } catch (\Exception $e) {
             \Log::error('Enhanced Custom Orders Index Error: ' . $e->getMessage());
