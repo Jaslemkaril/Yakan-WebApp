@@ -499,9 +499,10 @@ class CustomOrderController extends Controller
             ->orderByDesc('created_at')
             ->paginate(10);
 
+        $hasBatchColumn = \Schema::hasColumn('custom_orders', 'batch_order_number');
         $batchMeta = [];
         $fallbackBatchMeta = [];
-        if (\Schema::hasColumn('custom_orders', 'batch_order_number')) {
+        if ($hasBatchColumn) {
             $batchNumbers = $orders->getCollection()
                 ->pluck('batch_order_number')
                 ->filter()
@@ -526,20 +527,28 @@ class CustomOrderController extends Controller
 
         // Fallback: for older rows without batch_order_number, group likely same-submission
         // items by same minute + same user, then sum their prices.
-        $ordersNeedingFallback = $orders->getCollection()->filter(function ($order) use ($batchMeta) {
+        $ordersNeedingFallback = $orders->getCollection()->filter(function ($order) use ($batchMeta, $hasBatchColumn) {
+            if (!$hasBatchColumn) {
+                return true;
+            }
+
             return empty($order->batch_order_number)
                 && !isset($batchMeta[$order->batch_order_number ?? '']);
         });
 
         if ($ordersNeedingFallback->isNotEmpty()) {
-            $candidateOrders = CustomOrder::query()
+            $candidateOrdersQuery = CustomOrder::query()
                 ->where('user_id', Auth::id())
-                ->where(function ($q) {
+                ->orderBy('created_at', 'desc');
+
+            if ($hasBatchColumn) {
+                $candidateOrdersQuery->where(function ($q) {
                     $q->whereNull('batch_order_number')
                       ->orWhere('batch_order_number', '');
-                })
-                ->orderBy('created_at', 'desc')
-                ->get();
+                });
+            }
+
+            $candidateOrders = $candidateOrdersQuery->get();
 
             $grouped = $candidateOrders->groupBy(function ($item) {
                 return optional($item->created_at)->format('Y-m-d H:i');
