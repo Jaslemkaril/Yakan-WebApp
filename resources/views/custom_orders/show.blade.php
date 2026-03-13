@@ -166,6 +166,11 @@
             </div>
         </div>
 
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Main Content -->
+            <div class="lg:col-span-2 space-y-6">
+
         @if($isBatchOrder)
             <div class="mb-6 rounded-xl border-2 p-5" style="border-color:#e0b0b0; background-color:#fff5f5;">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -457,10 +462,6 @@
             </div>
         @endif
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <!-- Main Content -->
-            <div class="lg:col-span-2 space-y-6">
                 
 
                 <!-- Patterns Card -->
