@@ -8,14 +8,14 @@
     $isBatch     = $batchOrders->count() > 1;
     $batchNumber = $order->batch_order_number ?? null;
 @endphp
-<div class="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 py-12">
+<div class="min-h-screen bg-gradient-to-br from-red-50 via-white to-rose-50 py-12">
     <div class="container mx-auto px-4">
         <div class="max-w-4xl mx-auto">
             
             <!-- Success Header -->
             <div class="text-center mb-8">
-                <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style="background-color:#f5e6e8;">
+                    <svg class="w-10 h-10" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
                 </div>
@@ -34,7 +34,7 @@
                     @endif
                 </p>
                 @if($isBatch && $batchNumber)
-                <div class="mt-4 inline-flex items-center px-5 py-2 rounded-full text-white font-bold text-sm shadow" style="background-color:#1d4ed8;">
+                <div class="mt-4 inline-flex items-center px-5 py-2 rounded-full text-white font-bold text-sm shadow" style="background-color:#800000;">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
                     </svg>
@@ -45,16 +45,16 @@
 
             @if($isBatch)
             {{-- ====== BATCH: show all order items as a summary list ====== --}}
-            <div class="bg-white rounded-2xl shadow-xl border-2 border-blue-200 p-8 mb-8">
+            <div class="bg-white rounded-2xl shadow-xl border-2 p-8 mb-8" style="border-color:#e0b0b0;">
                 <div class="flex items-center mb-6">
-                    <div class="w-8 h-8 rounded-lg flex items-center justify-center mr-3" style="background-color:#dbeafe;">
-                        <svg class="w-5 h-5" style="color:#1d4ed8;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center mr-3" style="background-color:#f5e6e8;">
+                        <svg class="w-5 h-5" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
                         </svg>
                     </div>
                     <h3 class="text-xl font-bold text-gray-900">
                         All Items in This Order
-                        <span class="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full text-white" style="background-color:#1d4ed8;">{{ $batchOrders->count() }}</span>
+                        <span class="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full text-white" style="background-color:#800000;">{{ $batchOrders->count() }}</span>
                     </h3>
                 </div>
 
@@ -72,10 +72,10 @@
                                 : \App\Models\YakanPattern::whereIn('name', $bOrder->patterns)->get();
                         }
                     @endphp
-                    <div class="rounded-xl border-2 p-5" style="border-color:#bfdbfe; background-color:#f0f7ff;">
+                    <div class="rounded-xl border-2 p-5" style="border-color:#e0b0b0; background-color:#fff5f5;">
                         <div class="flex items-start justify-between mb-3">
                             <div class="flex items-center">
-                                <div class="w-8 h-8 rounded-full text-white text-sm font-bold flex items-center justify-center mr-3 flex-shrink-0" style="background-color:#1d4ed8;">{{ $idx + 1 }}</div>
+                                <div class="w-8 h-8 rounded-full text-white text-sm font-bold flex items-center justify-center mr-3 flex-shrink-0" style="background-color:#800000;">{{ $idx + 1 }}</div>
                                 <div>
                                     <p class="font-bold text-gray-900">Order #{{ $bOrder->id }}</p>
                                     <p class="text-xs text-gray-500">{{ $bOrder->created_at->format('M d, Y g:i A') }}</p>
@@ -90,6 +90,26 @@
                             <div>
                                 <p class="text-xs text-gray-500 mb-0.5">Pattern</p>
                                 <p class="font-semibold text-gray-900">{{ $bPatterns->pluck('name')->implode(', ') }}</p>
+                                @php $firstPattern = $bPatterns->first(); @endphp
+                                @if($firstPattern && $firstPattern->hasSvg())
+                                    @php
+                                        $custom = $bOrder->customization_settings ?? [];
+                                        $style = sprintf(
+                                            'filter: hue-rotate(%ddeg) saturate(%d%%) brightness(%d%%); opacity: %s; transform: scale(%s) rotate(%ddeg);',
+                                            $custom['hue'] ?? 0,
+                                            $custom['saturation'] ?? 100,
+                                            $custom['brightness'] ?? 100,
+                                            $custom['opacity'] ?? 1,
+                                            $custom['scale'] ?? 1,
+                                            $custom['rotation'] ?? 0
+                                        );
+                                    @endphp
+                                    <div class="mt-2 w-20 h-20 rounded-md border bg-white overflow-hidden p-1" style="border-color:#e0b0b0;">
+                                        <div style="{{ $style }} transform-origin:center; width:100%; height:100%;">
+                                            {!! $firstPattern->getSvgContent() !!}
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                             @endif
                             @if($bOrder->isFabricOrder())
@@ -109,7 +129,7 @@
                             @if($bOrder->estimated_price)
                             <div>
                                 <p class="text-xs text-gray-500 mb-0.5">Est. Price</p>
-                                <p class="font-semibold" style="color:#800000;">â‚±{{ number_format($bOrder->estimated_price, 2) }}</p>
+                                <p class="font-semibold" style="color:#800000;">₱{{ number_format($bOrder->estimated_price, 2) }}</p>
                             </div>
                             @endif
                             <div>
@@ -118,13 +138,13 @@
                             </div>
                         </div>
                         @if($bOrder->delivery_address)
-                        <div class="mt-2 pt-2 border-t border-blue-200">
+                        <div class="mt-2 pt-2 border-t" style="border-color:#e0b0b0;">
                             <p class="text-xs text-gray-500">Address: <span class="text-gray-700">{{ $bOrder->delivery_address }}</span></p>
                         </div>
                         @endif
                         <div class="mt-3">
-                            <a href="{{ route('custom_orders.show', $bOrder->id) }}" class="text-xs font-semibold hover:underline" style="color:#1d4ed8;">
-                                View Order Details â†’
+                            <a href="{{ route('custom_orders.show', $bOrder->id) }}" class="text-xs font-semibold hover:underline" style="color:#800000;">
+                                View Order Details →
                             </a>
                         </div>
                     </div>
@@ -133,9 +153,9 @@
 
                 @php $totalEstimated = $batchOrders->sum('estimated_price'); @endphp
                 @if($totalEstimated > 0)
-                <div class="mt-5 pt-4 border-t border-blue-200 flex justify-between items-center">
+                <div class="mt-5 pt-4 border-t flex justify-between items-center" style="border-color:#e0b0b0;">
                     <span class="text-sm font-semibold text-gray-700">Combined Estimated Total:</span>
-                    <span class="text-xl font-bold" style="color:#800000;">â‚±{{ number_format($totalEstimated, 2) }}</span>
+                    <span class="text-xl font-bold" style="color:#800000;">₱{{ number_format($totalEstimated, 2) }}</span>
                 </div>
                 @endif
             </div>

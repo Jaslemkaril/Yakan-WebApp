@@ -306,19 +306,19 @@
                         $isBatchPrimary  = $batchCount > 1;
                         $isImplicitBatch = $isBatchPrimary && empty($order->batch_order_number);
                     @endphp
-                    <tr class="order-row{{ $isBatchPrimary ? ' bg-amber-50' : '' }}" id="row-{{ $order->id }}">
+                    <tr class="order-row{{ $isBatchPrimary ? ' bg-red-50' : '' }}" id="row-{{ $order->id }}">
                         <td class="px-5 py-3.5">
                             @if($isBatchPrimary)
                                 <div class="flex items-center gap-1 mb-0.5">
                                     <span class="font-bold text-gray-900">#{{ $order->id }}</span>
-                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-200 text-amber-800">
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold" style="background-color:#f5e6e8; color:#800000;">
                                         BATCH &times;{{ $batchCount }}
                                     </span>
                                 </div>
                                 @if(!$isImplicitBatch)
-                                <div class="text-[10px] text-amber-700 font-mono truncate max-w-[120px]">{{ $order->batch_order_number }}</div>
+                                <div class="text-[10px] font-mono truncate max-w-[120px]" style="color:#800000;">{{ $order->batch_order_number }}</div>
                                 @else
-                                <div class="text-[10px] text-amber-700 italic">Same-time order</div>
+                                <div class="text-[10px] italic" style="color:#800000;">Grouped submission</div>
                                 @endif
                             @else
                                 <span class="font-bold text-gray-900">#{{ $order->id }}</span>

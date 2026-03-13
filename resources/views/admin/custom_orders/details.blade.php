@@ -53,29 +53,29 @@
 
     {{-- ===== Batch/Submission Siblings Panel ===== --}}
     @if(isset($batchOrders) && $batchOrders->count() > 0)
-    <div class="bg-amber-50 border-2 border-amber-300 rounded-xl p-5 mb-6">
+    <div class="border-2 rounded-xl p-5 mb-6" style="background-color:#fff5f5; border-color:#e0b0b0;">
         <div class="flex items-center gap-3 mb-4">
-            <div class="w-8 h-8 rounded-lg bg-amber-200 flex items-center justify-center flex-shrink-0">
-                <svg class="w-5 h-5 text-amber-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background-color:#f5e6e8;">
+                <svg class="w-5 h-5" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
                 </svg>
             </div>
             <div>
-                <h3 class="font-bold text-amber-900">Batch Order — {{ $batchOrders->count() + 1 }} Items Total</h3>
+                <h3 class="font-bold" style="color:#800000;">Batch Order — {{ $batchOrders->count() + 1 }} Items Total</h3>
                 @if(!empty($order->batch_order_number))
-                    <p class="text-xs text-amber-700 font-mono">Batch #{{ $order->batch_order_number }}</p>
+                    <p class="text-xs font-mono" style="color:#8b3a56;">Batch #{{ $order->batch_order_number }}</p>
                 @elseif(!empty($isImplicitBatchGroup))
-                    <p class="text-xs text-amber-700">Grouped from same submission process</p>
+                    <p class="text-xs" style="color:#8b3a56;">Grouped from same submission process</p>
                 @endif
             </div>
-            <span class="ml-auto inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-200 text-amber-900">
+            <span class="ml-auto inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold" style="background-color:#f5e6e8; color:#800000;">
                 BATCH &times;{{ $batchOrders->count() + 1 }}
             </span>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="text-xs text-amber-800 uppercase tracking-wider border-b border-amber-200">
+                    <tr class="text-xs uppercase tracking-wider border-b" style="color:#8b3a56; border-color:#e0b0b0;">
                         <th class="py-2 pr-4 text-left font-semibold">Order</th>
                         <th class="py-2 px-4 text-left font-semibold">Status</th>
                         <th class="py-2 px-4 text-left font-semibold">Payment</th>
@@ -85,16 +85,16 @@
                 </thead>
                 <tbody>
                     {{-- Current order row (this page's order) --}}
-                    <tr class="border-b border-amber-100 bg-amber-100/50">
-                        <td class="py-2 pr-4 font-bold text-amber-900">#{{ $order->id }} <span class="text-[10px] font-normal text-amber-600">(this)</span></td>
-                        <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-medium">{{ ucfirst(str_replace('_',' ',$order->status)) }}</span></td>
+                    <tr class="border-b" style="border-color:#f1d1d8; background-color:#fdf0f2;">
+                        <td class="py-2 pr-4 font-bold" style="color:#800000;">#{{ $order->id }} <span class="text-[10px] font-normal" style="color:#8b3a56;">(this)</span></td>
+                        <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background-color:#f5e6e8; color:#800000;">{{ ucfirst(str_replace('_',' ',$order->status)) }}</span></td>
                         <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full {{ $order->payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }} font-medium">{{ ucfirst(str_replace('_',' ',$order->payment_status ?? 'unpaid')) }}</span></td>
                         <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($order->final_price ?? $order->estimated_price ?? 0, 2) }}</td>
-                        <td class="py-2 pl-4 text-center text-xs text-amber-600 italic">current</td>
+                        <td class="py-2 pl-4 text-center text-xs italic" style="color:#8b3a56;">current</td>
                     </tr>
                     {{-- Sibling order rows --}}
                     @foreach($batchOrders as $sibling)
-                    <tr class="border-b border-amber-100 last:border-0">
+                    <tr class="border-b last:border-0" style="border-color:#f1d1d8;">
                         <td class="py-2 pr-4 font-semibold text-gray-800">#{{ $sibling->id }}</td>
                         <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-medium">{{ ucfirst(str_replace('_',' ',$sibling->status)) }}</span></td>
                         <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full {{ $sibling->payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }} font-medium">{{ ucfirst(str_replace('_',' ',$sibling->payment_status ?? 'unpaid')) }}</span></td>
@@ -111,8 +111,8 @@
         @php
             $combinedTotal = ($order->final_price ?? $order->estimated_price ?? 0) + $batchOrders->sum(fn($o) => $o->final_price ?? $o->estimated_price ?? 0);
         @endphp
-        <div class="mt-3 pt-3 border-t border-amber-200 flex justify-between items-center">
-            <span class="text-sm font-semibold text-amber-800">Combined Total:</span>
+        <div class="mt-3 pt-3 border-t flex justify-between items-center" style="border-color:#e0b0b0;">
+            <span class="text-sm font-semibold" style="color:#8b3a56;">Combined Total:</span>
             <span class="text-lg font-bold text-[#800000]">₱{{ number_format($combinedTotal, 2) }}</span>
         </div>
     </div>

@@ -609,55 +609,105 @@
                 <!-- Enhanced Submit Actions -->
                 <div class="space-y-4">
 
-                    {{-- Batch Items Card: shows items already queued to this order --}}
-                    @php $batchItems = $batchItems ?? []; @endphp
-                    @if(count($batchItems) > 0)
-                    <div class="bg-white rounded-2xl shadow-xl border-2 p-6" style="border-color:#1d4ed8;">
+                    {{-- All Submission Items Card (queued + current) --}}
+                    @php
+                        $batchItems = $batchItems ?? [];
+                        $currentPatternName = isset($selectedPatterns) && $selectedPatterns->count() > 0
+                            ? $selectedPatterns->pluck('name')->implode(', ')
+                            : ($wizardData['pattern']['name'] ?? '—');
+                        $currentPreview = $previewImage ?? ($wizardData['pattern']['preview_image'] ?? ($wizardData['design']['image'] ?? null));
+                        $currentQty = (int) old('quantity', 1);
+                        $totalSubmissionItems = count($batchItems) + 1;
+                    @endphp
+                    <div class="bg-white rounded-2xl shadow-xl border-2 p-6" style="border-color:#e0b0b0;">
                         <div class="flex items-center mb-3">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center mr-3 flex-shrink-0" style="background-color:#dbeafe;">
-                                <svg class="w-5 h-5" style="color:#1d4ed8;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center mr-3 flex-shrink-0" style="background-color:#f5e6e8;">
+                                <svg class="w-5 h-5" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
                                 </svg>
                             </div>
                             <div>
                                 <h3 class="text-lg font-bold text-gray-900">
-                                    Items Already in This Order
-                                    <span class="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full text-white" style="background-color:#1d4ed8;">{{ count($batchItems) }}</span>
+                                    All Items in This Submission
+                                    <span class="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full text-white" style="background-color:#800000;">{{ $totalSubmissionItems }}</span>
                                 </h3>
-                                <p class="text-xs text-gray-500">These will be submitted together under one order number.</p>
+                                <p class="text-xs text-gray-500">All items below will be submitted together under one order number.</p>
                             </div>
                         </div>
-                        <div class="space-y-2">
+
+                        <div class="space-y-3">
                             @foreach($batchItems as $bIdx => $bItem)
-                            <div class="flex items-center justify-between rounded-xl px-4 py-3" style="background-color:#eff6ff; border:1px solid #bfdbfe;">
-                                <div class="flex items-center min-w-0">
-                                    <div class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center mr-3 flex-shrink-0" style="background-color:#1d4ed8;">{{ $bIdx + 1 }}</div>
-                                    <div class="min-w-0">
-                                        <p class="text-sm font-semibold text-gray-900 truncate">{{ $bItem['summary'] ?? 'Custom Item ' . ($bIdx + 1) }}</p>
-                                        <p class="text-xs text-gray-500">Added {{ $bItem['added_at'] ?? '' }}</p>
+                            @php
+                                $bWizard = $bItem['wizard_data'] ?? [];
+                                $bPatternNames = collect();
+                                if (!empty($bWizard['pattern']['selected_ids']) && is_array($bWizard['pattern']['selected_ids'])) {
+                                    $bPatternNames = \App\Models\YakanPattern::whereIn('id', $bWizard['pattern']['selected_ids'])->pluck('name');
+                                }
+                                $bPatternName = $bPatternNames->isNotEmpty() ? $bPatternNames->implode(', ') : ($bWizard['pattern']['name'] ?? '—');
+                                $bPreview = $bWizard['pattern']['preview_image'] ?? ($bWizard['design']['image'] ?? null);
+                                $bFabricTypeName = '—';
+                                if (!empty($bWizard['fabric']['type'])) {
+                                    $bFt = \App\Models\FabricType::find($bWizard['fabric']['type']);
+                                    $bFabricTypeName = $bFt ? $bFt->name : $bWizard['fabric']['type'];
+                                }
+                                $bMeters = $bWizard['fabric']['quantity_meters'] ?? null;
+                                $bQty = (int) ($bItem['form_data']['quantity'] ?? 1);
+                            @endphp
+                            <div class="rounded-xl px-4 py-3" style="background-color:#fff5f5; border:1px solid #e0b0b0;">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="flex items-start min-w-0">
+                                        <div class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center mr-3 flex-shrink-0" style="background-color:#800000;">{{ $bIdx + 1 }}</div>
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-semibold text-gray-900 truncate">{{ $bItem['summary'] ?? 'Custom Item ' . ($bIdx + 1) }}</p>
+                                            <p class="text-xs text-gray-500">Pattern: <span class="font-semibold text-gray-700">{{ $bPatternName }}</span></p>
+                                            <p class="text-xs text-gray-500">Fabric: <span class="font-semibold text-gray-700">{{ $bFabricTypeName }}</span>{{ $bMeters ? ' • ' . $bMeters . 'm' : '' }} • Qty {{ $bQty }}</p>
+                                            <p class="text-xs text-gray-500">Added {{ $bItem['added_at'] ?? '' }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-2 flex-shrink-0">
+                                        @if(!empty($bPreview))
+                                            <img src="{{ $bPreview }}" alt="Pattern preview" class="w-14 h-14 rounded-md object-cover border" style="border-color:#e0b0b0;">
+                                        @endif
+                                        <form method="POST" action="{{ route('custom_orders.remove.batch.item', $bIdx) }}" onsubmit="return confirm('Remove this item from your order batch?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            @if(request('auth_token'))<input type="hidden" name="auth_token" value="{{ request('auth_token') }}">@endif
+                                            <button type="submit" class="p-1 rounded-lg hover:bg-red-100 transition-colors" title="Remove item">
+                                                <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
-                                <form method="POST" action="{{ route('custom_orders.remove.batch.item', $bIdx) }}" class="ml-3 flex-shrink-0" onsubmit="return confirm('Remove this item from your order batch?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    @if(request('auth_token'))<input type="hidden" name="auth_token" value="{{ request('auth_token') }}">@endif
-                                    <button type="submit" class="p-1 rounded-lg hover:bg-red-100 transition-colors" title="Remove item">
-                                        <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                        </svg>
-                                    </button>
-                                </form>
                             </div>
                             @endforeach
+
+                            {{-- Current item being reviewed --}}
+                            <div class="rounded-xl px-4 py-3 border-2" style="background-color:#fff5f5; border-color:#c88f9f;">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="flex items-start min-w-0">
+                                        <div class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center mr-3 flex-shrink-0" style="background-color:#800000;">{{ count($batchItems) + 1 }}</div>
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-semibold text-gray-900 truncate">Current Item (Ready to submit)</p>
+                                            <p class="text-xs text-gray-500">Pattern: <span class="font-semibold text-gray-700">{{ $currentPatternName }}</span></p>
+                                            <p class="text-xs text-gray-500">Fabric: <span class="font-semibold text-gray-700">{{ $fabricTypeName }}</span>{{ !empty($wizardData['fabric']['quantity_meters']) ? ' • ' . $wizardData['fabric']['quantity_meters'] . 'm' : '' }} • Qty {{ $currentQty }}</p>
+                                        </div>
+                                    </div>
+                                    @if(!empty($currentPreview))
+                                        <img src="{{ $currentPreview }}" alt="Current pattern preview" class="w-14 h-14 rounded-md object-cover border flex-shrink-0" style="border-color:#e0b0b0;">
+                                    @endif
+                                </div>
+                            </div>
                         </div>
-                        <div class="mt-3 pt-3 border-t" style="border-color:#bfdbfe;">
-                            <p class="text-sm font-semibold" style="color:#1e40af;">
-                                Total items to submit: {{ count($batchItems) + 1 }}
-                                <span class="font-normal" style="color:#3b82f6;">({{ count($batchItems) }} queued + this one)</span>
+
+                        <div class="mt-3 pt-3 border-t" style="border-color:#e0b0b0;">
+                            <p class="text-sm font-semibold" style="color:#800000;">
+                                Total items to submit: {{ $totalSubmissionItems }}
+                                <span class="font-normal text-gray-600">({{ count($batchItems) }} queued + current item)</span>
                             </p>
                         </div>
                     </div>
-                    @endif
                     <form method="POST" action="{{ route('custom_orders.complete.wizard') }}" id="submitOrderForm">
                         @csrf
                         <input type="hidden" name="auth_token" id="step4AuthToken" value="{{ request('auth_token') }}">
