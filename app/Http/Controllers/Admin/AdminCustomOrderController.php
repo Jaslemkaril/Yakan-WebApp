@@ -12,7 +12,20 @@ class AdminCustomOrderController extends Controller
     public function index(Request $request)
     {
         try {
+            // For named batch orders, only surface the primary (lowest id) row per batch.
+            // Secondary siblings will be shown as sub-rows in the view.
+            $batchPrimaryIds = CustomOrder::select(DB::raw('MIN(id) as primary_id'))
+                ->whereNotNull('batch_order_number')
+                ->where('batch_order_number', '!=', '')
+                ->groupBy('batch_order_number')
+                ->pluck('primary_id');
+
             $query = CustomOrder::with(['user', 'product'])
+                ->where(function ($q) use ($batchPrimaryIds) {
+                    $q->whereNull('batch_order_number')
+                      ->orWhere('batch_order_number', '')
+                      ->orWhereIn('id', $batchPrimaryIds);
+                })
                 ->orderBy('created_at', 'desc');
 
             // Filter by status
@@ -49,17 +62,39 @@ class AdminCustomOrderController extends Controller
 
             $orders = $query->paginate($request->get('per_page', 20))->withQueryString();
 
+            // Build batch count map and sibling map for all named batches on this page.
+            $batchNumbers = $orders->pluck('batch_order_number')->filter()->unique()->values();
+            $batchCountMap   = [];
+            $batchSiblingsMap = collect();
+            if ($batchNumbers->isNotEmpty()) {
+                $batchCountMap = CustomOrder::select('batch_order_number', DB::raw('COUNT(*) as cnt'))
+                    ->whereIn('batch_order_number', $batchNumbers)
+                    ->groupBy('batch_order_number')
+                    ->pluck('cnt', 'batch_order_number')
+                    ->toArray();
+
+                $primaryIds = $orders->pluck('id')->toArray();
+                $batchSiblingsMap = CustomOrder::with(['user:id,name,email'])
+                    ->whereIn('batch_order_number', $batchNumbers)
+                    ->whereNotIn('id', $primaryIds)
+                    ->orderBy('id')
+                    ->get()
+                    ->groupBy('batch_order_number');
+            }
+            $implicitCountMap = []; // no implicit grouping needed here
+
             // Stats — always from all orders (unfiltered)
-            $totalOrders  = CustomOrder::count();
-            $todayOrders  = CustomOrder::whereDate('created_at', today())->count();
-            $pendingCount = CustomOrder::where('status', 'pending')->count();
-            $approvedCount = CustomOrder::where('status', 'approved')->count();
+            $totalOrders     = CustomOrder::count();
+            $todayOrders     = CustomOrder::whereDate('created_at', today())->count();
+            $pendingCount    = CustomOrder::where('status', 'pending')->count();
+            $approvedCount   = CustomOrder::where('status', 'approved')->count();
             $inProductionCount = CustomOrder::where('status', 'in_production')->count();
-            $totalRevenue = CustomOrder::where('payment_status', 'paid')->sum('final_price');
-            
+            $totalRevenue    = CustomOrder::where('payment_status', 'paid')->sum('final_price');
+
             return view('admin.custom_orders.index_enhanced', compact(
                 'orders', 'totalOrders', 'todayOrders', 'pendingCount',
-                'approvedCount', 'inProductionCount', 'totalRevenue'
+                'approvedCount', 'inProductionCount', 'totalRevenue',
+                'batchCountMap', 'implicitCountMap', 'batchSiblingsMap'
             ));
         } catch (\Exception $e) {
             \Log::error('Custom Orders Index Error: ' . $e->getMessage());
@@ -70,7 +105,18 @@ class AdminCustomOrderController extends Controller
     public function show(CustomOrder $order)
     {
         $order->load(['user', 'product']);
-        return view('admin.custom_orders.details', compact('order'));
+
+        // Load all sibling orders in the same batch so the details view can show them
+        $batchOrders = collect();
+        if (!empty($order->batch_order_number)) {
+            $batchOrders = CustomOrder::with(['user:id,name,email', 'product:id,name,price,image'])
+                ->where('batch_order_number', $order->batch_order_number)
+                ->where('id', '!=', $order->id)
+                ->orderBy('id')
+                ->get();
+        }
+
+        return view('admin.custom_orders.details', compact('order', 'batchOrders'));
     }
 
     public function updateStatus(Request $request, CustomOrder $order)
