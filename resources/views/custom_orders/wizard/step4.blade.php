@@ -540,9 +540,10 @@
                         @endif
                         <div class="border-t-2 border-gray-200 pt-4 mt-4">
                             <div class="flex justify-between items-center">
-                                <span class="text-xl font-bold text-gray-900">Final Total</span>
+                                <span class="text-xl font-bold text-gray-900">Estimated Total</span>
                                 <span class="text-2xl font-bold" style="color:#800000;" id="finalTotalDisplay">₱{{ number_format($finalTotal, 2) }}</span>
                             </div>
+                            <p class="text-xs text-gray-500 mt-2">Subject to admin review. Final quoted price may change.</p>
                         </div>
                     </div>
                     
