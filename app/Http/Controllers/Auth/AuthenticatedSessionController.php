@@ -66,6 +66,7 @@ class AuthenticatedSessionController extends Controller
         // Also try session-based auth
         Auth::attempt($credentials, $request->boolean('remember'));
         $request->session()->regenerate();
+        $request->session()->put('auth_token', $token);
         
         // Update last login timestamp
         if ($user) {
@@ -173,11 +174,17 @@ class AuthenticatedSessionController extends Controller
         <p class="status">REDIRECTING</p>
     </div>
     <script>
+        const authToken = "{$token}";
+        try {
+            localStorage.setItem('auth_token', authToken);
+            localStorage.setItem('yakan_auth_token', authToken);
+        } catch (e) {}
         setTimeout(function() { window.location.href = {$redirectUrl}; }, 1200);
     </script>
 </body>
 </html>
-HTML);
+HTML)
+        ->cookie('auth_token', $token, 60 * 24, '/', null, null, true, false, 'Lax');
     }
 
     // Show admin login form

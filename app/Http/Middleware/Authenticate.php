@@ -13,14 +13,16 @@ class Authenticate extends Middleware
      */
     public function handle($request, \Closure $next, ...$guards)
     {
+        $resolvedToken = $request->input('auth_token')
+            ?? $request->query('auth_token')
+            ?? $request->cookie('auth_token')
+            ?? session('auth_token')
+            ?? $request->header('X-Auth-Token')
+            ?? $request->bearerToken();
+
         // Try token authentication if not already authenticated
         if (!Auth::check()) {
-            $token = $request->input('auth_token')
-                ?? $request->query('auth_token')
-                ?? $request->cookie('auth_token')
-                ?? session('auth_token')
-                ?? $request->header('X-Auth-Token')
-                ?? $request->bearerToken();
+            $token = $resolvedToken;
             
             if ($token) {
                 // Validate token
@@ -34,6 +36,7 @@ class Authenticate extends Middleware
                     if ($user) {
                         Auth::login($user, true);
                         session(['auth_token' => $token]);
+                        $resolvedToken = $token;
 
                         // Keep token alive while active to reduce unexpected login redirects.
                         DB::table('auth_tokens')
@@ -46,12 +49,23 @@ class Authenticate extends Middleware
             }
         }
 
+        // If already authenticated but token wasn't present in request/session, hydrate from DB.
+        if (Auth::check() && !$resolvedToken) {
+            $resolvedToken = DB::table('auth_tokens')
+                ->where('user_id', Auth::id())
+                ->where('expires_at', '>', now())
+                ->orderByDesc('updated_at')
+                ->value('token');
+
+            if ($resolvedToken) {
+                session(['auth_token' => $resolvedToken]);
+            }
+        }
+
         $response = parent::handle($request, $next, ...$guards);
 
         // Persist token in cookie for page refreshes where query params may be missing.
-        $tokenForCookie = $request->input('auth_token')
-            ?? $request->query('auth_token')
-            ?? session('auth_token');
+        $tokenForCookie = $resolvedToken ?? session('auth_token');
 
         if ($tokenForCookie && Auth::check()) {
             cookie()->queue(cookie('auth_token', $tokenForCookie, 60 * 24, '/', null, null, true, false, 'Lax'));
