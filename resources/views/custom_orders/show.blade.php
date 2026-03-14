@@ -8,13 +8,14 @@
     $batchPaymentTotal = $batchPaymentTotal ?? (float) $batchUnpaidOrders->sum(fn($item) => (float) ($item->final_price ?? $item->estimated_price ?? 0));
     $customOrderEstimatedDays = (int) \App\Models\SystemSetting::get('custom_order_estimated_days', 14);
     $estimatedCompletionDate = $order->created_at ? $order->created_at->copy()->addDays($customOrderEstimatedDays) : null;
+    $authToken = request('auth_token') ?? session('auth_token') ?? request()->cookie('auth_token');
 @endphp
 <div class="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-5xl mx-auto">
 
         <!-- Back Button -->
         <div class="mb-6">
-            <a href="{{ route('custom_orders.index') }}" 
+                <a href="{{ route('custom_orders.index', ['auth_token' => $authToken]) }}" 
                class="inline-flex items-center px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-200 text-gray-700 hover:text-white hover:border-transparent transition-all duration-200 group" style="hover:background-color:#800000;">
                 <svg class="w-5 h-5 mr-2 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -1461,7 +1462,7 @@
                     </div>
 
                     <div class="space-y-3">
-                        <a href="{{ route('custom_orders.payment', $order) }}" class="inline-flex items-center justify-center text-white font-bold py-5 px-12 rounded-xl transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105 text-lg" style="background: linear-gradient(135deg, #800000 0%, #600000 100%);">
+                        <a href="{{ route('custom_orders.payment', ['custom_order' => $order->id, 'auth_token' => $authToken]) }}" class="inline-flex items-center justify-center text-white font-bold py-5 px-12 rounded-xl transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105 text-lg" style="background: linear-gradient(135deg, #800000 0%, #600000 100%);">
                             <svg class="w-7 h-7 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
                             </svg>
@@ -1574,7 +1575,7 @@
                     </div>
                     @endif
                     <div>
-                        <a href="{{ route('custom_orders.payment', $order) }}" class="inline-flex items-center justify-center text-white font-bold py-4 px-10 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" style="background-color:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
+                        <a href="{{ route('custom_orders.payment', ['custom_order' => $order->id, 'auth_token' => $authToken]) }}" class="inline-flex items-center justify-center text-white font-bold py-4 px-10 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5" style="background-color:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
                             Complete Payment
                         </a>
                     </div>
@@ -1652,7 +1653,7 @@
 
             <!-- Navigation Buttons -->
             <div class="mt-8 flex flex-col sm:flex-row gap-4">
-                <a href="{{ route('custom_orders.index') }}" 
+                     <a href="{{ route('custom_orders.index', ['auth_token' => $authToken]) }}" 
                    class="flex-1 inline-flex items-center justify-center px-6 py-4 bg-white border-2 text-gray-700 font-bold rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200" style="border-color:#c08080;" onmouseover="this.style.backgroundColor='#fff5f5'" onmouseout="this.style.backgroundColor='white'">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>

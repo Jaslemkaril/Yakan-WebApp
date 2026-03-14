@@ -35,6 +35,7 @@
 
         @php
             $customOrderEstimatedDays = (int) \App\Models\SystemSetting::get('custom_order_estimated_days', 14);
+            $authToken = request('auth_token') ?? session('auth_token') ?? request()->cookie('auth_token');
         @endphp
 
         @if($orders->count() > 0)
@@ -483,7 +484,7 @@
                                 <!-- Enhanced Actions -->
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center gap-2">
-                                        <a href="{{ route('custom_orders.show', $order->id) }}"
+                                                     <a href="{{ route('custom_orders.show', ['custom_order' => $order->id, 'auth_token' => $authToken]) }}"
                                            class="inline-flex items-center px-3 py-2 bg-red-700 hover:bg-red-800 text-white text-sm font-medium rounded-lg transition-colors">
                                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -513,7 +514,7 @@
                                         @endif
                                         
                                         @if($order->status === 'approved' && !in_array($order->payment_status, ['paid', 'pending_verification']))
-                                            <a href="{{ route('custom_orders.payment', $order->id) }}"
+                                                          <a href="{{ route('custom_orders.payment', ['custom_order' => $order->id, 'auth_token' => $authToken]) }}"
                                                class="inline-flex items-center px-3 py-2 bg-red-700 hover:bg-red-800 text-white text-sm font-medium rounded-lg transition-colors">
                                                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -638,7 +639,7 @@ function filterUserOrders(status) {
 
 // Reload preserving the auth_token query param (needed for token-based auth users)
 function authReload() {
-    var t = localStorage.getItem('yakan_auth_token');
+    var t = localStorage.getItem('yakan_auth_token') || localStorage.getItem('auth_token');
     var url = window.location.pathname + window.location.search;
     if (t && url.indexOf('auth_token') === -1) {
         url += (url.indexOf('?') >= 0 ? '&' : '?') + 'auth_token=' + encodeURIComponent(t);
