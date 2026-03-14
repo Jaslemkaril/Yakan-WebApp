@@ -118,6 +118,11 @@
         ? (float) $paymentTotal
         : (float) $paymentOrders->sum(fn($item) => (float) ($item->final_price ?? $item->estimated_price ?? 0));
 
+    $gcashLogoPath = public_path('images/payment/gcash-logo.png');
+    $gcashLogoDataUri = file_exists($gcashLogoPath)
+        ? 'data:image/png;base64,' . base64_encode(file_get_contents($gcashLogoPath))
+        : null;
+
     // Determine shipping fee
     // Priority: stored shipping_fee > calculate from stored city/province > infer from address > 0 (pickup)
     $storedCity = $order->delivery_city ?? '';
@@ -448,7 +453,7 @@
                 <label class="payment-method-option {{ old('payment_method') === 'online_banking' ? 'selected' : '' }}">
                     <input type="radio" name="payment_method" value="online_banking" {{ old('payment_method') === 'online_banking' ? 'checked' : '' }} class="w-5 h-5" style="accent-color:#800000;">
                     <div class="payment-method-content flex-1 ml-4">
-                        <img src="{{ asset('images/payment/gcash-logo.png') }}" alt="GCash" class="payment-brand-logo mb-1" style="width:44px; height:44px; border-radius:8px;">
+                        <img src="{{ $gcashLogoDataUri ?? '' }}" alt="GCash" class="payment-brand-logo mb-1" style="width:44px; height:44px; border-radius:8px;">
                         <p class="text-sm text-gray-600 mt-1">Pay using GCash e-wallet — Fast &amp; Secure</p>
                     </div>
                     <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

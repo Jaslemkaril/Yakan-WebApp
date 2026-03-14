@@ -338,6 +338,12 @@
 
                     <!-- Payment Method Card -->
                     <div id="payment-method-section" class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hidden">
+                        @php
+                            $checkoutGcashLogoPath = public_path('images/payment/gcash-logo.png');
+                            $checkoutGcashLogoDataUri = file_exists($checkoutGcashLogoPath)
+                                ? 'data:image/png;base64,' . base64_encode(file_get_contents($checkoutGcashLogoPath))
+                                : null;
+                        @endphp
                         <h2 class="text-xl font-bold text-gray-900 mb-6 pb-4 border-b border-gray-200 flex items-center gap-2">
                             <svg class="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -353,7 +359,7 @@
                                     <div class="ml-4 flex-1">
                                         <div class="flex items-center gap-3">
                                             <div class="w-12 h-12 bg-white border border-blue-100 rounded-lg flex items-center justify-center p-1 overflow-hidden">
-                                                <img src="{{ asset('images/payment/gcash-logo.png') }}" alt="GCash" class="w-full h-full object-contain rounded-md">
+                                                <img src="{{ $checkoutGcashLogoDataUri ?? '' }}" alt="GCash" class="w-full h-full object-contain rounded-md">
                                             </div>
                                             <div>
                                                 <div class="font-bold text-gray-900">GCash</div>
