@@ -448,21 +448,7 @@
                 <label class="payment-method-option {{ old('payment_method') === 'online_banking' ? 'selected' : '' }}">
                     <input type="radio" name="payment_method" value="online_banking" {{ old('payment_method') === 'online_banking' ? 'checked' : '' }} class="w-5 h-5" style="accent-color:#800000;">
                     <div class="payment-method-content flex-1 ml-4">
-                        <div class="payment-brand-logo mb-1" aria-label="GCash">
-                            <svg viewBox="0 0 160 48" class="w-full h-full" role="img" aria-label="GCash">
-                                <defs>
-                                    <linearGradient id="pmGcashGrad" x1="0" y1="0" x2="1" y2="1">
-                                        <stop offset="0" stop-color="#0077ff"/>
-                                        <stop offset="1" stop-color="#005ad1"/>
-                                    </linearGradient>
-                                </defs>
-                                <rect x="0" y="0" width="160" height="48" rx="10" fill="url(#pmGcashGrad)"/>
-                                <circle cx="26" cy="24" r="13" fill="#ffffff"/>
-                                <circle cx="26" cy="24" r="7" fill="#0077ff"/>
-                                <path d="M18 24h16" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.95"/>
-                                <text x="48" y="30" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="800" fill="#ffffff">GCash</text>
-                            </svg>
-                        </div>
+                        <img src="{{ asset('images/payment/gcash-logo.png') }}" alt="GCash" class="payment-brand-logo mb-1" style="width:44px; height:44px; border-radius:8px;">
                         <p class="text-sm text-gray-600 mt-1">Pay using GCash e-wallet — Fast &amp; Secure</p>
                     </div>
                     <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
