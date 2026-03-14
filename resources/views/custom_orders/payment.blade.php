@@ -448,7 +448,21 @@
                 <label class="payment-method-option {{ old('payment_method') === 'online_banking' ? 'selected' : '' }}">
                     <input type="radio" name="payment_method" value="online_banking" {{ old('payment_method') === 'online_banking' ? 'checked' : '' }} class="w-5 h-5" style="accent-color:#800000;">
                     <div class="payment-method-content flex-1 ml-4">
-                        <img src="{{ asset('images/payment/gcash-logo.svg') }}" alt="GCash" class="payment-brand-logo mb-1">
+                        <div class="payment-brand-logo mb-1" aria-label="GCash">
+                            <svg viewBox="0 0 160 48" class="w-full h-full" role="img" aria-label="GCash">
+                                <defs>
+                                    <linearGradient id="pmGcashGrad" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0" stop-color="#0077ff"/>
+                                        <stop offset="1" stop-color="#005ad1"/>
+                                    </linearGradient>
+                                </defs>
+                                <rect x="0" y="0" width="160" height="48" rx="10" fill="url(#pmGcashGrad)"/>
+                                <circle cx="26" cy="24" r="13" fill="#ffffff"/>
+                                <circle cx="26" cy="24" r="7" fill="#0077ff"/>
+                                <path d="M18 24h16" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.95"/>
+                                <text x="48" y="30" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="800" fill="#ffffff">GCash</text>
+                            </svg>
+                        </div>
                         <p class="text-sm text-gray-600 mt-1">Pay using GCash e-wallet — Fast &amp; Secure</p>
                     </div>
                     <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -460,7 +474,22 @@
                 <label class="payment-method-option {{ old('payment_method') === 'bank_transfer' ? 'selected' : '' }}">
                     <input type="radio" name="payment_method" value="bank_transfer" {{ old('payment_method') === 'bank_transfer' ? 'checked' : '' }} class="w-5 h-5" style="accent-color:#800000;">
                     <div class="payment-method-content flex-1 ml-4">
-                        <img src="{{ asset('images/payment/bank-transfer.svg') }}" alt="Bank Transfer" class="payment-brand-logo mb-1">
+                        <div class="payment-brand-logo mb-1" aria-label="Bank Transfer">
+                            <svg viewBox="0 0 160 48" class="w-full h-full" role="img" aria-label="Bank Transfer">
+                                <rect x="0" y="0" width="160" height="48" rx="10" fill="#f3f4f6"/>
+                                <g transform="translate(12 9)">
+                                    <path d="M18 0L0 8h36L18 0z" fill="#7a0f0f"/>
+                                    <rect x="3" y="10" width="30" height="3" fill="#7a0f0f"/>
+                                    <rect x="4" y="14" width="4" height="10" fill="#9b1111"/>
+                                    <rect x="11" y="14" width="4" height="10" fill="#9b1111"/>
+                                    <rect x="18" y="14" width="4" height="10" fill="#9b1111"/>
+                                    <rect x="25" y="14" width="4" height="10" fill="#9b1111"/>
+                                    <rect x="3" y="25" width="30" height="3" fill="#7a0f0f"/>
+                                </g>
+                                <text x="56" y="20" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#7a0f0f">BANK</text>
+                                <text x="56" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#7a0f0f">TRANSFER</text>
+                            </svg>
+                        </div>
                         <p class="text-sm text-gray-600 mt-1">Direct transfer to our bank account — Secure &amp; Reliable</p>
                     </div>
                     <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

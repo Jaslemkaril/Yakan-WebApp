@@ -352,8 +352,20 @@
                                     <input type="radio" name="payment_method" value="online" required class="w-5 h-5 text-blue-600 focus:ring-blue-500 focus:ring-2" form="checkout-form" onclick="showPaymentDetails('gcash')">
                                     <div class="ml-4 flex-1">
                                         <div class="flex items-center gap-3">
-                                            <div class="w-32 h-10 bg-white border border-blue-100 rounded-lg flex items-center justify-center px-2">
-                                                <img src="{{ asset('images/payment/gcash-logo.svg') }}" alt="GCash" class="w-full h-full object-contain">
+                                            <div class="w-32 h-10 bg-white border border-blue-100 rounded-lg flex items-center justify-center px-1 overflow-hidden">
+                                                <svg viewBox="0 0 160 48" class="w-full h-full" role="img" aria-label="GCash">
+                                                    <defs>
+                                                        <linearGradient id="checkoutGcashGrad" x1="0" y1="0" x2="1" y2="1">
+                                                            <stop offset="0" stop-color="#0077ff"/>
+                                                            <stop offset="1" stop-color="#005ad1"/>
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <rect x="0" y="0" width="160" height="48" rx="10" fill="url(#checkoutGcashGrad)"/>
+                                                    <circle cx="26" cy="24" r="13" fill="#ffffff"/>
+                                                    <circle cx="26" cy="24" r="7" fill="#0077ff"/>
+                                                    <path d="M18 24h16" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.95"/>
+                                                    <text x="48" y="30" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="800" fill="#ffffff">GCash</text>
+                                                </svg>
                                             </div>
                                             <div>
                                                 <div class="font-bold text-gray-900">GCash</div>
@@ -388,8 +400,21 @@
                                     <input type="radio" name="payment_method" value="bank_transfer" class="w-5 h-5 text-green-600 focus:ring-green-500 focus:ring-2" form="checkout-form" onclick="showPaymentDetails('bank')">
                                     <div class="ml-4 flex-1">
                                         <div class="flex items-center gap-3">
-                                            <div class="w-32 h-10 bg-white border border-green-100 rounded-lg flex items-center justify-center px-2">
-                                                <img src="{{ asset('images/payment/bank-transfer.svg') }}" alt="Bank Transfer" class="w-full h-full object-contain">
+                                            <div class="w-32 h-10 bg-white border border-green-100 rounded-lg flex items-center justify-center px-1 overflow-hidden">
+                                                <svg viewBox="0 0 160 48" class="w-full h-full" role="img" aria-label="Bank Transfer">
+                                                    <rect x="0" y="0" width="160" height="48" rx="10" fill="#f3f4f6"/>
+                                                    <g transform="translate(12 9)">
+                                                        <path d="M18 0L0 8h36L18 0z" fill="#7a0f0f"/>
+                                                        <rect x="3" y="10" width="30" height="3" fill="#7a0f0f"/>
+                                                        <rect x="4" y="14" width="4" height="10" fill="#9b1111"/>
+                                                        <rect x="11" y="14" width="4" height="10" fill="#9b1111"/>
+                                                        <rect x="18" y="14" width="4" height="10" fill="#9b1111"/>
+                                                        <rect x="25" y="14" width="4" height="10" fill="#9b1111"/>
+                                                        <rect x="3" y="25" width="30" height="3" fill="#7a0f0f"/>
+                                                    </g>
+                                                    <text x="56" y="20" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#7a0f0f">BANK</text>
+                                                    <text x="56" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#7a0f0f">TRANSFER</text>
+                                                </svg>
                                             </div>
                                             <div>
                                                 <div class="font-bold text-gray-900">Bank Transfer</div>
