@@ -66,10 +66,10 @@
                             @endforeach
                         @endif
 
-                        <!-- Payment Details Block (GCash or Bank) -->
+                        <!-- Payment Details Block (Maya or Bank) -->
                         @if(isset($instructions['gcash_number']))
                             <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 mt-2 border-2 border-blue-200">
-                                <div class="text-sm text-gray-600 mb-1">GCash Number</div>
+                                <div class="text-sm text-gray-600 mb-1">Maya Number</div>
                                 <div class="text-2xl font-bold text-blue-600">{{ $instructions['gcash_number'] }}</div>
                                 <div class="text-sm text-gray-700 mt-2 font-medium">Account Name: {{ $instructions['account_name'] }}</div>
                             </div>

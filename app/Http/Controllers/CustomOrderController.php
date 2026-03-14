@@ -2747,11 +2747,11 @@ class CustomOrderController extends Controller
         switch ($order->payment_method) {
             case 'gcash':
                 $instructions = array_merge($baseInstructions, [
-                    'title' => 'GCash Payment Instructions',
+                    'title' => 'Maya Payment Instructions',
                     'steps' => [
-                        '1. Open your GCash app',
+                        '1. Open your Maya app',
                         '2. Select "Send Money" or "Pay Bills"',
-                        '3. Enter the GCash number: ' . $gcashNumber,
+                        '3. Enter the Maya number: ' . $gcashNumber,
                         '4. Enter the amount: ₱' . number_format($paymentTotal, 2),
                         '5. Save the transaction reference number',
                         '6. Come back to this page to confirm payment'
@@ -2763,18 +2763,18 @@ class CustomOrderController extends Controller
 
             case 'online_banking':
                 // This method is labeled as "Payment Center / E-wallet" in the UI.
-                // Show GCash-style details so the user clearly sees GCash as an option.
+                // Show Maya-style details so the user clearly sees Maya as an option.
                 $instructions = array_merge($baseInstructions, [
-                    'title' => 'Payment Center / E-wallet Instructions',
+                    'title' => 'Maya / E-wallet Instructions',
                     'steps' => [
-                        '1. Open your preferred payment center or e-wallet app (e.g. GCash)',
+                        '1. Open Maya or your preferred e-wallet app',
                         '2. Choose Send Money / Pay Bills or similar option',
-                        '3. Use the GCash or e-wallet details below to send the payment',
+                        '3. Use the Maya details below to send the payment',
                         '4. Enter the amount: ₱' . number_format($paymentTotal, 2),
                         '5. Save the transaction reference number',
                         '6. Come back to this page to confirm payment'
                     ],
-                    // Reuse the GCash layout in the instructions view so GCash is clearly visible
+                    // Reuse the e-wallet layout in the instructions view.
                     'gcash_number' => $gcashNumber,
                     'account_name' => $gcashName,
                 ]);
