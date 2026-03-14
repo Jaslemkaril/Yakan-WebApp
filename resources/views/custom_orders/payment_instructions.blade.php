@@ -6,6 +6,32 @@
     $isBatchPayment = $isBatchPayment ?? ($paymentOrders->count() > 1);
     $batchOrderNumber = $order->batch_order_number ?? null;
     $displayAmount = (float) ($instructions['amount'] ?? $order->final_price ?? 0);
+
+    $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
+    $isDelivery = $deliveryType !== 'pickup';
+    $summaryShippingFee = $isDelivery ? (float) ($order->shipping_fee ?? 0) : 0;
+
+    $priceBreakdown = method_exists($order, 'getPriceBreakdown') ? $order->getPriceBreakdown() : null;
+    $adminDeliveryFee = (float) (($priceBreakdown['breakdown']['delivery_fee'] ?? 0));
+
+    $storedQuoted = (float) ($order->final_price ?? 0);
+    $paymentMethodChosen = !empty($order->payment_method);
+    $legacyMergedShipping = !$isBatchPayment
+        && $isDelivery
+        && $adminDeliveryFee <= 0
+        && $summaryShippingFee > 0
+        && $paymentMethodChosen
+        && $storedQuoted >= $summaryShippingFee;
+
+    if ($isBatchPayment) {
+        $summaryQuotedPrice = $displayAmount;
+        $summaryDisplayShipping = 0;
+    } else {
+        $summaryQuotedPrice = $legacyMergedShipping ? max($storedQuoted - $summaryShippingFee, 0) : $storedQuoted;
+        $summaryDisplayShipping = ($isDelivery && $adminDeliveryFee <= 0) ? $summaryShippingFee : 0;
+    }
+
+    $summaryTotal = $summaryQuotedPrice + $summaryDisplayShipping;
 @endphp
 <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-6xl mx-auto">
@@ -36,7 +62,7 @@
             <!-- Left Column: Instructions + Confirm Form -->
             <div class="lg:col-span-2 space-y-6">
 
-                <!-- Instructions Card (GCash / E-wallet style) -->
+                <!-- Instructions Card (Maya / E-wallet style) -->
                 <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
                     <div class="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200">
                         <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -118,7 +144,7 @@
                     </div>
                 </div>
 
-                <!-- Payment Confirmation Form (styled similar to GCash page) -->
+                <!-- Payment Confirmation Form (styled similar to Maya page) -->
                 <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
                     <h2 class="text-xl font-bold text-gray-900 mb-4 pb-4 border-b border-gray-200">
                         Confirm Your Payment
@@ -199,8 +225,20 @@
                             </div>
                         @else
                         <div class="flex justify-between">
-                            <span class="text-gray-600">Product</span>
-                            <span class="font-medium text-gray-900">{{ $order->product->name ?? 'Custom Product' }}</span>
+                            <span class="text-gray-600">Agreed Price</span>
+                            <span class="font-medium text-gray-900">₱{{ number_format($summaryQuotedPrice, 2) }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Shipping Fee</span>
+                            <span class="font-medium text-gray-900">
+                                @if($isBatchPayment)
+                                    Included
+                                @elseif($summaryDisplayShipping > 0)
+                                    ₱{{ number_format($summaryDisplayShipping, 2) }}
+                                @else
+                                    ₱0.00
+                                @endif
+                            </span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-600">Quantity</span>
@@ -208,7 +246,7 @@
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-600">Amount</span>
-                            <span class="font-medium text-gray-900">₱{{ number_format($order->final_price, 2) }}</span>
+                            <span class="text-3xl font-bold text-blue-600">₱{{ number_format($summaryTotal, 2) }}</span>
                         </div>
                         @endif
                     </div>
@@ -243,8 +281,8 @@
                         <div class="flex justify-between">
                             <span>Payment Method:</span>
                             <span class="font-medium text-gray-900">
-                                @if($order->payment_method === 'online_banking')
-                                    Payment Center / E-wallet
+                                @if(in_array($order->payment_method, ['online_banking', 'gcash']))
+                                    Maya
                                 @elseif($order->payment_method === 'bank_transfer')
                                     Bank Transfer
                                 @else
@@ -270,7 +308,7 @@
                             @endif
                             <div>
                                 <span class="text-xs text-blue-700">Amount:</span>
-                                <div class="font-bold text-green-600 text-xl">₱{{ number_format($instructions['amount'] ?? $order->final_price, 2) }}</div>
+                                <div class="font-bold text-green-600 text-xl">₱{{ number_format($summaryTotal, 2) }}</div>
                             </div>
                             <div>
                                 <span class="text-xs text-blue-700">Reference:</span>

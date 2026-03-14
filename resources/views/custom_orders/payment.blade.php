@@ -213,8 +213,30 @@
     $hasBreakdown = !empty($breakdown);
 
     // Base price (= admin-set final_price before we add shipping)
-    // If shipping_fee was already added previously, don't double-count
-    $baseOrderPrice = $isBatchPayment ? $batchComputedTotal : (float) $order->final_price;
+    // Legacy-safe normalization: some existing records have shipping already merged
+    // into final_price after an earlier payment selection.
+    $paymentMethodChosen = !empty($order->payment_method);
+    $singleStoredPrice = (float) ($order->final_price ?? 0);
+    $legacyMergedShipping = !$isBatchPayment
+        && $isDelivery
+        && $adminDeliveryFee <= 0
+        && $calcShippingFee > 0
+        && $paymentMethodChosen
+        && $singleStoredPrice >= $calcShippingFee;
+
+    $quotedOrderPrice = $isBatchPayment
+        ? $batchComputedTotal
+        : ($legacyMergedShipping ? max($singleStoredPrice - $calcShippingFee, 0) : $singleStoredPrice);
+
+    if ($isBatchPayment) {
+        $displayShippingFee = 0;
+    } elseif (!$isDelivery || $adminDeliveryFee > 0) {
+        $displayShippingFee = 0;
+    } else {
+        $displayShippingFee = (float) ($calcShippingFee ?? 0);
+    }
+
+    $grandTotal = $quotedOrderPrice + $displayShippingFee;
 @endphp
 
 <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -386,7 +408,7 @@
                 <!-- Order Price (before shipping) -->
                 <div class="flex justify-between py-3 border-b border-gray-200">
                     <span class="text-gray-700 font-medium">Order Price</span>
-                    <span class="font-bold text-gray-900">₱{{ number_format($baseOrderPrice, 2) }}</span>
+                    <span class="font-bold text-gray-900">₱{{ number_format($quotedOrderPrice, 2) }}</span>
                 </div>
 
                 <!-- Shipping Fee row -->
@@ -401,7 +423,7 @@
                             @elseif($calcShippingFee == 0)
                                 <span class="text-green-600">FREE</span>
                             @else
-                                <span class="text-gray-900">₱{{ number_format($calcShippingFee, 2) }}</span>
+                                <span class="text-gray-900">₱{{ number_format($displayShippingFee, 2) }}</span>
                             @endif
                         </span>
                     </div>
@@ -416,15 +438,6 @@
                 <div class="summary-row total">
                     <span class="label">Total Amount</span>
                     <span class="value" id="payGrandTotal">
-                        @php
-                            if ($isBatchPayment) {
-                                $grandTotal = $baseOrderPrice;
-                            } elseif ($adminDeliveryFee > 0 || !$isDelivery || $calcShippingFee === null) {
-                                $grandTotal = $baseOrderPrice;
-                            } else {
-                                $grandTotal = $baseOrderPrice + $calcShippingFee;
-                            }
-                        @endphp
                         ₱{{ number_format($grandTotal, 2) }}
                     </span>
                 </div>
@@ -702,7 +715,7 @@ const PH_LOCATIONS = {
 };
 
 const SHIPPING_ZONES = { 0: 0, 1: 100, 2: 180, 3: 250, 4: 300, 5: 350 };
-const BASE_ORDER_PRICE = {{ $baseOrderPrice }};
+const BASE_ORDER_PRICE = {{ $quotedOrderPrice }};
 const FALLBACK_SHIPPING_FEE = {{ (float) ($calcShippingFee ?? 0) }};
 
 function payPopulateRegion() {

@@ -504,6 +504,13 @@ class CustomOrderController extends Controller
         $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
         $alreadyIncludedInBase = $deliveryFeeInBreakdown > 0;
 
+        // Legacy safeguard: some single orders previously had shipping added into final_price
+        // during payment method selection. If that happened, recover the quoted base first.
+        $paymentMethodChosen = !empty($order->payment_method);
+        if (!$alreadyIncludedInBase && $paymentMethodChosen && $shipping > 0) {
+            $base = max($base - $shipping, 0);
+        }
+
         return $alreadyIncludedInBase ? $base : ($base + $shipping);
     }
 
@@ -2541,19 +2548,6 @@ class CustomOrderController extends Controller
                     }
                     if ($request->filled('delivery_province')) {
                         $paymentOrder->delivery_province = $request->delivery_province;
-                    }
-
-                    // Keep existing single-order behavior for shipping add-on.
-                    if (!$isBatchPayment && $shippingFee > 0 && $paymentOrder->final_price) {
-                        $breakdownRaw = $paymentOrder->price_breakdown ?? null;
-                        $alreadyIncluded = false;
-                        if ($breakdownRaw) {
-                            $decoded = is_array($breakdownRaw) ? $breakdownRaw : json_decode($breakdownRaw, true);
-                            $alreadyIncluded = isset($decoded['breakdown']['delivery_fee']) && (float)$decoded['breakdown']['delivery_fee'] > 0;
-                        }
-                        if (!$alreadyIncluded) {
-                            $paymentOrder->final_price = (float) $paymentOrder->final_price + $shippingFee;
-                        }
                     }
                 }
 

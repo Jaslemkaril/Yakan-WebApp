@@ -59,9 +59,9 @@
                                 @case('gcash')
                     <div class="space-y-4">
                         <div>
-                            <p class="text-sm text-gray-600 mb-2">Send payment to our GCash account:</p>
+                                <p class="text-sm text-gray-600 mb-2">Send payment to our Maya account:</p>
                             <div class="bg-blue-50 rounded-lg p-4 space-y-2 border border-blue-200">
-                                <p class="font-mono text-sm">GCash Number: <span class="font-bold text-blue-700">{{ \App\Models\SystemSetting::get('gcash_number', '—') }}</span></p>
+                                    <p class="font-mono text-sm">Maya Number: <span class="font-bold text-blue-700">{{ \App\Models\SystemSetting::get('gcash_number', '—') }}</span></p>
                                 <p class="font-mono text-sm">Account Name: <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('gcash_name', 'Tuwas Yakan') }}</span></p>
                             </div>
                         </div>
