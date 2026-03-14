@@ -92,6 +92,46 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->renderable(function (\Throwable $e, $request) {
             // Skip exceptions that Laravel handles well on its own
             if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+                // Fail-safe for token-based custom-orders flow on Railway refresh.
+                // If a valid auth_token exists, re-authenticate and continue instead of bouncing to login.
+                if ($request->is('custom-orders*')) {
+                    try {
+                        $token = $request->input('auth_token')
+                            ?? $request->query('auth_token')
+                            ?? $request->cookie('auth_token')
+                            ?? $request->session()->get('auth_token')
+                            ?? $request->header('X-Auth-Token')
+                            ?? $request->bearerToken();
+
+                        if ($token) {
+                            $authToken = \Illuminate\Support\Facades\DB::table('auth_tokens')
+                                ->where('token', $token)
+                                ->where('expires_at', '>', now())
+                                ->first();
+
+                            if ($authToken) {
+                                $user = \App\Models\User::find($authToken->user_id);
+                                if ($user) {
+                                    \Illuminate\Support\Facades\Auth::login($user, true);
+                                    $request->session()->put('auth_token', $token);
+
+                                    $resumeUrl = $request->fullUrl();
+                                    if (!str_contains($resumeUrl, 'auth_token=')) {
+                                        $resumeUrl = $request->fullUrlWithQuery(['auth_token' => $token]);
+                                    }
+
+                                    return redirect()->to($resumeUrl);
+                                }
+                            }
+                        }
+                    } catch (\Throwable $inner) {
+                        \Log::warning('Auth fail-safe fallback failed', [
+                            'path' => $request->path(),
+                            'error' => $inner->getMessage(),
+                        ]);
+                    }
+                }
+
                 // For AJAX / API requests keep the default 401 JSON response
                 if ($request->expectsJson() || $request->ajax() || $request->wantsJson() || $request->is('api/*')) {
                     return response()->json(['message' => 'Unauthenticated.'], 401);
@@ -104,6 +144,13 @@ return Application::configure(basePath: dirname(__DIR__))
                 // For GET requests the current URL is the intended destination.
                 if ($request->isMethod('get')) {
                     $intended = $request->fullUrl();
+
+                    $fallbackToken = $request->query('auth_token')
+                        ?? $request->cookie('auth_token')
+                        ?? $request->session()->get('auth_token');
+                    if ($fallbackToken && !str_contains($intended, 'auth_token=')) {
+                        $intended .= (str_contains($intended, '?') ? '&' : '?') . 'auth_token=' . urlencode($fallbackToken);
+                    }
                 }
                 // Strip the domain and only keep the path+query, and avoid auth paths
                 $intendedPath = '';
