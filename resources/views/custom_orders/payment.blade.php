@@ -167,6 +167,8 @@
     }
     $storedShippingFee = (float) ($order->shipping_fee ?? 0);
 
+    $defaultDeliveryFee = (float) \App\Models\SystemSetting::get('custom_order_default_shipping_fee', 100);
+
     if (!$isDelivery) {
         $calcShippingFee = 0;
     } elseif ($storedShippingFee > 0) {
@@ -194,7 +196,9 @@
             $calcShippingFee = 350;
         }
     } else {
-        $calcShippingFee = null; // unknown — user must select region
+        // Delivery is selected but location metadata is missing.
+        // Use a default fee so summary always shows a numeric shipping amount.
+        $calcShippingFee = $defaultDeliveryFee;
     }
 
     // Check if admin already included delivery_fee in price breakdown
@@ -679,6 +683,7 @@ const PH_LOCATIONS = {
 
 const SHIPPING_ZONES = { 0: 0, 1: 100, 2: 180, 3: 250, 4: 300, 5: 350 };
 const BASE_ORDER_PRICE = {{ $baseOrderPrice }};
+const FALLBACK_SHIPPING_FEE = {{ (float) ($calcShippingFee ?? 0) }};
 
 function payPopulateRegion() {
     const sel = document.getElementById('payRegion');
@@ -750,6 +755,8 @@ function payCalcShipping() {
     if (region && PH_LOCATIONS[region]) {
         const zone = PH_LOCATIONS[region].shippingZone;
         fee = SHIPPING_ZONES[zone] ?? 350;
+    } else if (FALLBACK_SHIPPING_FEE > 0) {
+        fee = FALLBACK_SHIPPING_FEE;
     }
 
     // Update hidden inputs
@@ -765,8 +772,8 @@ function payCalcShipping() {
     const feeResultVal   = document.getElementById('shippingFeeResultVal');
     const grandTotalEl   = document.getElementById('payGrandTotal');
 
-    let feeText = '— select region below';
-    let feeTextResult = '—';
+    let feeText = '<span class="font-bold text-lg text-gray-900">₱' + (FALLBACK_SHIPPING_FEE || 0).toFixed(2) + '</span>';
+    let feeTextResult = '₱' + (FALLBACK_SHIPPING_FEE || 0).toFixed(2);
     if (fee !== null) {
         feeText      = fee === 0 ? '<span class="text-green-600 font-bold text-lg">FREE</span>' : '<span class="font-bold text-lg text-gray-900">₱' + fee.toFixed(2) + '</span>';
         feeTextResult= fee === 0 ? 'FREE' : '₱' + fee.toFixed(2);
