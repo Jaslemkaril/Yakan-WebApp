@@ -409,6 +409,13 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @php
                                         $displayPrice = (float) ($order->final_price ?? $order->estimated_price ?? 0);
+                                        $displayDeliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
+                                        $displayShippingFee = $displayDeliveryType === 'pickup' ? 0 : (float) ($order->shipping_fee ?? 0);
+                                        $displayHasPaymentMethod = !empty($order->payment_method);
+
+                                        if ($displayShippingFee > 0 && !$displayHasPaymentMethod) {
+                                            $displayPrice += $displayShippingFee;
+                                        }
                                     @endphp
                                     @if($displayPrice > 0)
                                         <div>

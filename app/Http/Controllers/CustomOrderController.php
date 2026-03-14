@@ -480,12 +480,38 @@ class CustomOrderController extends Controller
     }
 
     /**
+     * Compute payable amount for one custom order row in list contexts.
+     *
+     * Rule used to avoid double-counting:
+     * - Before payment method is chosen: add shipping fee (if delivery).
+     * - After payment method is chosen: rely on stored price as-is.
+     */
+    private function calculateOrderPayableTotal(CustomOrder $order): float
+    {
+        $base = (float) ($order->final_price ?? $order->estimated_price ?? 0);
+
+        $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
+        if ($deliveryType === 'pickup') {
+            return $base;
+        }
+
+        $shipping = (float) ($order->shipping_fee ?? 0);
+        if ($shipping <= 0) {
+            return $base;
+        }
+
+        $paymentMethodChosen = !empty($order->payment_method);
+
+        return $paymentMethodChosen ? $base : ($base + $shipping);
+    }
+
+    /**
      * Sum payable amount across a set of custom orders.
      */
     private function calculateOrdersTotal(\Illuminate\Support\Collection $orders): float
     {
         return (float) $orders->sum(function (CustomOrder $item) {
-            return (float) ($item->final_price ?? $item->estimated_price ?? 0);
+            return $this->calculateOrderPayableTotal($item);
         });
     }
 
@@ -502,8 +528,7 @@ class CustomOrderController extends Controller
                 'user_id',
                 \DB::raw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') as minute_key"),
                 \DB::raw('MIN(id) as primary_id'),
-                \DB::raw('COUNT(*) as cnt'),
-                \DB::raw('SUM(COALESCE(final_price, estimated_price, 0)) as batch_total')
+                \DB::raw('COUNT(*) as cnt')
             )
             ->where('user_id', Auth::id());
 
@@ -522,25 +547,28 @@ class CustomOrderController extends Controller
         $implicitExcludeIds = collect();
         $fallbackBatchMeta = [];
         foreach ($implicitGroups as $group) {
-            $fallbackBatchMeta[$group->minute_key] = [
-                'item_count' => (int) $group->cnt,
-                'batch_total' => (float) $group->batch_total,
-            ];
-
-            $memberIdsQuery = \DB::table('custom_orders')
+            $groupOrdersQuery = CustomOrder::query()
                 ->where('user_id', $group->user_id)
                 ->whereRaw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') = ?", [$group->minute_key]);
 
             if ($hasBatchColumn) {
-                $memberIdsQuery->where(function ($q) {
+                $groupOrdersQuery->where(function ($q) {
                     $q->whereNull('batch_order_number')
                       ->orWhere('batch_order_number', '');
                 });
             }
 
-            $memberIds = $memberIdsQuery
-                ->where('id', '!=', $group->primary_id)
-                ->pluck('id');
+            $groupOrders = $groupOrdersQuery->orderBy('id')->get();
+
+            $fallbackBatchMeta[$group->minute_key] = [
+                'item_count' => (int) $group->cnt,
+                'batch_total' => $this->calculateOrdersTotal($groupOrders),
+            ];
+
+            $memberIds = $groupOrders
+                ->pluck('id')
+                ->filter(fn($id) => (int) $id !== (int) $group->primary_id)
+                ->values();
 
             $implicitExcludeIds = $implicitExcludeIds->merge($memberIds);
         }
@@ -582,17 +610,19 @@ class CustomOrderController extends Controller
                 ->values();
 
             if ($batchNumbers->isNotEmpty()) {
-                $batchMeta = CustomOrder::query()
+                $batchRows = CustomOrder::query()
                     ->where('user_id', Auth::id())
                     ->whereIn('batch_order_number', $batchNumbers)
-                    ->selectRaw('batch_order_number, COUNT(*) as item_count, SUM(COALESCE(final_price, estimated_price, 0)) as batch_total')
-                    ->groupBy('batch_order_number')
                     ->get()
-                    ->keyBy('batch_order_number')
-                    ->map(fn($row) => [
-                        'item_count' => (int) $row->item_count,
-                        'batch_total' => (float) $row->batch_total,
-                    ])
+                    ->groupBy('batch_order_number');
+
+                $batchMeta = $batchRows
+                    ->map(function ($rows) {
+                        return [
+                            'item_count' => $rows->count(),
+                            'batch_total' => $this->calculateOrdersTotal($rows),
+                        ];
+                    })
                     ->toArray();
             }
         }
