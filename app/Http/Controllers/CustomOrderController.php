@@ -500,9 +500,11 @@ class CustomOrderController extends Controller
             return $base;
         }
 
-        $paymentMethodChosen = !empty($order->payment_method);
+        $breakdown = $order->getPriceBreakdown();
+        $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
+        $alreadyIncludedInBase = $deliveryFeeInBreakdown > 0;
 
-        return $paymentMethodChosen ? $base : ($base + $shipping);
+        return $alreadyIncludedInBase ? $base : ($base + $shipping);
     }
 
     /**

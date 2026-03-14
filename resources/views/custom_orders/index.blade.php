@@ -411,9 +411,11 @@
                                         $displayPrice = (float) ($order->final_price ?? $order->estimated_price ?? 0);
                                         $displayDeliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
                                         $displayShippingFee = $displayDeliveryType === 'pickup' ? 0 : (float) ($order->shipping_fee ?? 0);
-                                        $displayHasPaymentMethod = !empty($order->payment_method);
+                                        $displayBreakdown = $order->getPriceBreakdown();
+                                        $displayDeliveryFeeInBreakdown = (float) (($displayBreakdown['breakdown']['delivery_fee'] ?? 0));
+                                        $displayShippingAlreadyIncluded = $displayDeliveryFeeInBreakdown > 0;
 
-                                        if ($displayShippingFee > 0 && !$displayHasPaymentMethod) {
+                                        if ($displayShippingFee > 0 && !$displayShippingAlreadyIncluded) {
                                             $displayPrice += $displayShippingFee;
                                         }
                                     @endphp
