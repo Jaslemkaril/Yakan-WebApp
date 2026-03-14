@@ -186,6 +186,21 @@
                     </h2>
 
                     <!-- Order Items -->
+                    @php
+                        $itemsSubtotal = (float) $order->orderItems->sum(function ($item) {
+                            return (float) ($item->price ?? 0) * (int) ($item->quantity ?? 0);
+                        });
+                        $shippingFee = (float) ($order->shipping_fee ?? 0);
+
+                        if ($itemsSubtotal <= 0) {
+                            $itemsSubtotal = max((float) ($order->total_amount ?? 0) - $shippingFee, 0);
+                        }
+
+                        if ($shippingFee <= 0 && ($order->delivery_type ?? 'delivery') !== 'pickup') {
+                            $shippingFee = max((float) ($order->total_amount ?? 0) - $itemsSubtotal, 0);
+                        }
+                    @endphp
+
                     <div class="space-y-3 mb-6">
                         @foreach($order->orderItems as $item)
                             <div class="flex justify-between text-sm">
@@ -193,6 +208,18 @@
                                 <span class="font-medium text-gray-900">₱{{ number_format($item->price * $item->quantity, 2) }}</span>
                             </div>
                         @endforeach
+                    </div>
+
+                    <!-- Price Breakdown -->
+                    <div class="space-y-2 text-sm border-t border-gray-200 pt-4 mb-6">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Subtotal</span>
+                            <span class="font-medium text-gray-900">₱{{ number_format($itemsSubtotal, 2) }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Shipping Fee</span>
+                            <span class="font-medium text-gray-900">₱{{ number_format($shippingFee, 2) }}</span>
+                        </div>
                     </div>
 
                     <!-- Total -->
