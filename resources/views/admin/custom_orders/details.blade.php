@@ -104,92 +104,7 @@
                 BATCH &times;{{ $batchOrders->count() + 1 }}
             </span>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="text-xs uppercase tracking-wider border-b" style="color:#8b3a56; border-color:#e0b0b0;">
-                        <th class="py-2 pr-4 text-left font-semibold">Order</th>
-                        <th class="py-2 px-4 text-left font-semibold">Status</th>
-                        <th class="py-2 px-4 text-left font-semibold">Payment</th>
-                        <th class="py-2 px-4 text-left font-semibold">Quoted</th>
-                        <th class="py-2 px-4 text-left font-semibold">Shipping</th>
-                        <th class="py-2 px-4 text-left font-semibold">Item Total</th>
-                        <th class="py-2 pl-4 text-center font-semibold">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{-- Current order row (this page's order) --}}
-                    @php $currentPriceParts = $getAdminPriceParts($order); @endphp
-                    <tr class="border-b" style="border-color:#f1d1d8; background-color:#fdf0f2;">
-                        <td class="py-2 pr-4 font-bold" style="color:#800000;">#{{ $order->id }} <span class="text-[10px] font-normal" style="color:#8b3a56;">(this)</span></td>
-                        <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background-color:#f5e6e8; color:#800000;">{{ ucfirst(str_replace('_',' ',$order->status)) }}</span></td>
-                        <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full {{ $order->payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }} font-medium">{{ ucfirst(str_replace('_',' ',$order->payment_status ?? 'unpaid')) }}</span></td>
-                        <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($currentPriceParts['quoted'], 2) }}</td>
-                        <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($currentPriceParts['shipping'], 2) }}</td>
-                        <td class="py-2 px-4 font-semibold text-[#800000]">₱{{ number_format($currentPriceParts['total'], 2) }}</td>
-                        <td class="py-2 pl-4 text-left" style="min-width: 240px;">
-                            <div class="space-y-2">
-                                <form action="{{ route('admin.custom-orders.quote_price', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" class="grid grid-cols-3 gap-1">
-                                    @csrf
-                                    <input type="number" name="price" step="0.01" min="0" value="{{ number_format($currentPriceParts['quoted'], 2, '.', '') }}" class="col-span-1 border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Quote">
-                                    <input type="number" name="shipping_fee" step="0.01" min="0" value="{{ number_format($currentPriceParts['shipping'], 2, '.', '') }}" class="col-span-1 border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Ship" {{ (($order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup')) === 'pickup') ? 'readonly' : '' }}>
-                                    <button type="submit" class="col-span-1 text-xs font-semibold text-white rounded px-2 py-1" style="background-color:#800000;">Save</button>
-                                    <input type="hidden" name="notes" value="Item-level quote update from batch panel">
-                                </form>
-                                <div class="grid grid-cols-2 gap-1">
-                                    <form action="{{ route('admin.custom-orders.approve', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
-                                        @csrf
-                                        <button type="submit" class="w-full text-[11px] font-semibold text-white rounded px-2 py-1 bg-green-600 hover:bg-green-700">Approve</button>
-                                    </form>
-                                    <form action="{{ route('admin.custom-orders.reject', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
-                                        @csrf
-                                        <input type="hidden" name="rejection_reason" value="Rejected from batch panel">
-                                        <button type="submit" class="w-full text-[11px] font-semibold text-white rounded px-2 py-1 bg-red-600 hover:bg-red-700">Reject</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    {{-- Sibling order rows --}}
-                    @foreach($batchOrders as $sibling)
-                    @php $siblingPriceParts = $getAdminPriceParts($sibling); @endphp
-                    <tr class="border-b last:border-0" style="border-color:#f1d1d8;">
-                        <td class="py-2 pr-4 font-semibold text-gray-800">#{{ $sibling->id }}</td>
-                        <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-medium">{{ ucfirst(str_replace('_',' ',$sibling->status)) }}</span></td>
-                        <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full {{ $sibling->payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }} font-medium">{{ ucfirst(str_replace('_',' ',$sibling->payment_status ?? 'unpaid')) }}</span></td>
-                        <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($siblingPriceParts['quoted'], 2) }}</td>
-                        <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($siblingPriceParts['shipping'], 2) }}</td>
-                        <td class="py-2 px-4 font-semibold text-[#800000]">₱{{ number_format($siblingPriceParts['total'], 2) }}</td>
-                        <td class="py-2 pl-4 text-left" style="min-width: 240px;">
-                            <div class="space-y-2">
-                                <form action="{{ route('admin.custom-orders.quote_price', $sibling) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" class="grid grid-cols-3 gap-1">
-                                    @csrf
-                                    <input type="number" name="price" step="0.01" min="0" value="{{ number_format($siblingPriceParts['quoted'], 2, '.', '') }}" class="col-span-1 border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Quote">
-                                    <input type="number" name="shipping_fee" step="0.01" min="0" value="{{ number_format($siblingPriceParts['shipping'], 2, '.', '') }}" class="col-span-1 border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Ship" {{ (($sibling->delivery_type ?? ($sibling->delivery_address ? 'delivery' : 'pickup')) === 'pickup') ? 'readonly' : '' }}>
-                                    <button type="submit" class="col-span-1 text-xs font-semibold text-white rounded px-2 py-1" style="background-color:#800000;">Save</button>
-                                    <input type="hidden" name="notes" value="Item-level quote update from batch panel">
-                                </form>
-                                <div class="grid grid-cols-3 gap-1">
-                                    <form action="{{ route('admin.custom-orders.approve', $sibling) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
-                                        @csrf
-                                        <button type="submit" class="w-full text-[11px] font-semibold text-white rounded px-2 py-1 bg-green-600 hover:bg-green-700">Approve</button>
-                                    </form>
-                                    <form action="{{ route('admin.custom-orders.reject', $sibling) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
-                                        @csrf
-                                        <input type="hidden" name="rejection_reason" value="Rejected from batch panel">
-                                        <button type="submit" class="w-full text-[11px] font-semibold text-white rounded px-2 py-1 bg-red-600 hover:bg-red-700">Reject</button>
-                                    </form>
-                                    <a href="{{ route('admin.custom-orders.show', $sibling->id) }}{{ request('auth_token') ? '?auth_token='.request('auth_token') : '' }}"
-                                       class="w-full text-[11px] font-semibold text-[#800000] border border-[#c08080] rounded px-2 py-1 text-center bg-white hover:bg-[#fff5f5]">View</a>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-        <div class="mt-3 grid grid-cols-1 md:grid-cols-4 gap-2 text-xs">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs mb-4">
             <div class="rounded-lg border p-2" style="border-color:#e0b0b0; background-color:#fffafb;">
                 <div style="color:#8b3a56;" class="font-semibold">Items in submission</div>
                 <div class="text-base font-bold text-[#800000]">{{ $batchItems->count() }}</div>
@@ -207,38 +122,62 @@
                 <div class="text-base font-extrabold text-[#800000]">₱{{ number_format($batchGrandTotal, 2) }}</div>
             </div>
         </div>
-        <div class="mt-2 text-xs flex items-center justify-between" style="color:#8b3a56;">
+        <div class="text-xs flex items-center justify-between mb-4" style="color:#8b3a56;">
             <span class="font-semibold">Payment progress</span>
             <span class="font-bold">{{ $batchPaidCount }}/{{ $batchItems->count() }} paid</span>
         </div>
 
-        <div class="mt-3 pt-3 border-t space-y-2" style="border-color:#e0b0b0;">
-            <div class="text-xs font-semibold" style="color:#8b3a56;">Submission-level actions</div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <button type="button" class="batch-action-btn px-3 py-2 rounded-lg text-xs font-bold text-white" style="background-color:#800000;" data-batch-action="approve-all" data-order-ids="{{ $batchItems->pluck('id')->implode(',') }}">
-                    Approve all items
-                </button>
-                <button type="button" class="batch-action-btn px-3 py-2 rounded-lg text-xs font-bold text-[#800000] border" style="border-color:#c08080; background-color:#fff5f5;" data-batch-action="ready-payment" data-order-ids="{{ $batchItems->pluck('id')->implode(',') }}">
-                    Mark all ready for payment
-                </button>
-            </div>
-            <p class="text-[11px]" style="color:#8b3a56;">Request changes: open a specific item and use the reject/order-note tools for that item only.</p>
-        </div>
-
-        <div class="mt-3 pt-3 border-t" style="border-color:#e0b0b0;">
-            <div class="text-xs font-semibold mb-2" style="color:#8b3a56;">Mini audit trail (batch)</div>
-            <div class="space-y-1 max-h-36 overflow-y-auto text-[11px]">
-                @foreach($batchItems as $auditItem)
-                    <div class="rounded border px-2 py-1" style="border-color:#f1d1d8; background-color:#fffafb;">
-                        <span class="font-bold text-[#800000]">#{{ $auditItem->id }}</span>
-                        <span class="text-gray-600">created {{ optional($auditItem->created_at)->format('M d h:i A') ?? '—' }}</span>
-                        <span class="text-gray-600">• quoted {{ optional($auditItem->price_quoted_at)->format('M d h:i A') ?? '—' }}</span>
-                        <span class="text-gray-600">• approved {{ optional($auditItem->approved_at)->format('M d h:i A') ?? '—' }}</span>
-                        <span class="text-gray-600">• paid {{ optional($auditItem->payment_confirmed_at)->format('M d h:i A') ?? '—' }}</span>
-                        <span class="text-gray-600">• updated {{ optional($auditItem->updated_at)->format('M d h:i A') ?? '—' }}</span>
+        <div class="space-y-2">
+            @foreach($batchItems as $item)
+                @php
+                    $itemPrice = $getAdminPriceParts($item);
+                    $itemDeliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+                    $statusPill = ($item->status ?? 'pending');
+                    $payPill = ($item->payment_status ?? 'unpaid');
+                @endphp
+                <details class="rounded-lg border" style="border-color:#e0b0b0; background-color:#fffafb;" {{ $item->id == $order->id ? 'open' : '' }}>
+                    <summary class="cursor-pointer list-none px-3 py-2">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="font-bold text-[#800000] text-sm">#{{ $item->id }} {{ $item->id == $order->id ? '(current)' : '' }}</div>
+                                <div class="text-xs text-gray-600">{{ $item->fabric_type_name ?? ($item->product->name ?? 'Custom item') }}</div>
+                            </div>
+                            <div class="text-[11px] text-right">
+                                <div class="font-semibold text-gray-900">Quoted: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
+                                <div class="text-gray-600">Shipping: ₱{{ number_format($itemPrice['shipping'], 2) }}</div>
+                                <div class="font-bold text-[#800000]">Total: ₱{{ number_format($itemPrice['total'], 2) }}</div>
+                            </div>
+                            <div class="flex flex-col items-end gap-1">
+                                <span class="text-[10px] px-2 py-0.5 rounded-full {{ in_array($statusPill, ['approved','in_production','production_complete','out_for_delivery','delivered','completed']) ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">{{ ucfirst(str_replace('_',' ', $statusPill)) }}</span>
+                                <span class="text-[10px] px-2 py-0.5 rounded-full {{ $payPill === 'paid' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700' }}">{{ ucfirst(str_replace('_',' ', $payPill)) }}</span>
+                            </div>
+                        </div>
+                    </summary>
+                    <div class="px-3 pb-3 pt-1 border-t" style="border-color:#f1d1d8;">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                            <form action="{{ route('admin.custom-orders.quote_price', $item) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" class="md:col-span-2 grid grid-cols-3 gap-2">
+                                @csrf
+                                <input type="number" name="price" step="0.01" min="0" value="{{ number_format($itemPrice['quoted'], 2, '.', '') }}" class="border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Quote">
+                                <input type="number" name="shipping_fee" step="0.01" min="0" value="{{ number_format($itemPrice['shipping'], 2, '.', '') }}" class="border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Shipping" {{ $itemDeliveryType === 'pickup' ? 'readonly' : '' }}>
+                                <button type="submit" class="text-xs font-semibold text-white rounded px-2 py-1" style="background-color:#800000;">Save Quote</button>
+                                <input type="hidden" name="notes" value="Item-level quote update from compact batch panel">
+                            </form>
+                            <div class="grid grid-cols-3 gap-2">
+                                <form action="{{ route('admin.custom-orders.approve', $item) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="w-full text-[11px] font-semibold text-white rounded px-2 py-1 bg-green-600 hover:bg-green-700">Approve</button>
+                                </form>
+                                <form action="{{ route('admin.custom-orders.reject', $item) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
+                                    @csrf
+                                    <input type="hidden" name="rejection_reason" value="Rejected from compact batch panel">
+                                    <button type="submit" class="w-full text-[11px] font-semibold text-white rounded px-2 py-1 bg-red-600 hover:bg-red-700">Reject</button>
+                                </form>
+                                <a href="{{ route('admin.custom-orders.show', $item->id) }}{{ request('auth_token') ? '?auth_token='.request('auth_token') : '' }}" class="w-full text-[11px] font-semibold text-[#800000] border border-[#c08080] rounded px-2 py-1 text-center bg-white hover:bg-[#fff5f5]">View</a>
+                            </div>
+                        </div>
                     </div>
-                @endforeach
-            </div>
+                </details>
+            @endforeach
         </div>
     </div>
     @endif
