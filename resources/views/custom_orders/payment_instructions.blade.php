@@ -15,19 +15,12 @@
     $adminDeliveryFee = (float) (($priceBreakdown['breakdown']['delivery_fee'] ?? 0));
 
     $storedQuoted = (float) ($order->final_price ?? 0);
-    $paymentMethodChosen = !empty($order->payment_method);
-    $legacyMergedShipping = !$isBatchPayment
-        && $isDelivery
-        && $adminDeliveryFee <= 0
-        && $summaryShippingFee > 0
-        && $paymentMethodChosen
-        && $storedQuoted >= $summaryShippingFee;
 
     if ($isBatchPayment) {
         $summaryQuotedPrice = $displayAmount;
         $summaryDisplayShipping = 0;
     } else {
-        $summaryQuotedPrice = $legacyMergedShipping ? max($storedQuoted - $summaryShippingFee, 0) : $storedQuoted;
+        $summaryQuotedPrice = $storedQuoted;
         $summaryDisplayShipping = ($isDelivery && $adminDeliveryFee <= 0) ? $summaryShippingFee : 0;
     }
 

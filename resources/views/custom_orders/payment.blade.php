@@ -213,20 +213,9 @@
     $hasBreakdown = !empty($breakdown);
 
     // Base price (= admin-set final_price before we add shipping)
-    // Legacy-safe normalization: some existing records have shipping already merged
-    // into final_price after an earlier payment selection.
-    $paymentMethodChosen = !empty($order->payment_method);
-    $singleStoredPrice = (float) ($order->final_price ?? 0);
-    $legacyMergedShipping = !$isBatchPayment
-        && $isDelivery
-        && $adminDeliveryFee <= 0
-        && $calcShippingFee > 0
-        && $paymentMethodChosen
-        && $singleStoredPrice >= $calcShippingFee;
-
     $quotedOrderPrice = $isBatchPayment
         ? $batchComputedTotal
-        : ($legacyMergedShipping ? max($singleStoredPrice - $calcShippingFee, 0) : $singleStoredPrice);
+        : (float) ($order->final_price ?? 0);
 
     if ($isBatchPayment) {
         $displayShippingFee = 0;

@@ -504,13 +504,6 @@ class CustomOrderController extends Controller
         $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
         $alreadyIncludedInBase = $deliveryFeeInBreakdown > 0;
 
-        // Legacy safeguard: some single orders previously had shipping added into final_price
-        // during payment method selection. If that happened, recover the quoted base first.
-        $paymentMethodChosen = !empty($order->payment_method);
-        if (!$alreadyIncludedInBase && $paymentMethodChosen && $shipping > 0) {
-            $base = max($base - $shipping, 0);
-        }
-
         return $alreadyIncludedInBase ? $base : ($base + $shipping);
     }
 
