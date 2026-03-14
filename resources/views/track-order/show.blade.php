@@ -268,6 +268,16 @@
             <div class="space-y-6">
                 <!-- Order Summary -->
                 <div class="tracking-card p-6">
+                    @php
+                        $summaryShippingFee = (float) ($order->shipping_fee ?? 0);
+                        if (($order->delivery_type ?? 'delivery') === 'pickup') {
+                            $summaryShippingFee = 0;
+                        }
+
+                        $summarySubtotal = $order->subtotal !== null
+                            ? (float) $order->subtotal
+                            : max(((float) ($order->total_amount ?? 0) - $summaryShippingFee), 0);
+                    @endphp
                     <h3 class="text-lg font-bold text-gray-900 mb-4">Order Summary</h3>
                     <div class="space-y-3">
                         <div class="flex justify-between text-sm">
@@ -291,6 +301,16 @@
                             <span class="font-semibold {{ $order->payment_status === 'paid' ? 'text-green-600' : 'text-yellow-600' }}">
                                 {{ ucfirst($order->payment_status) }}
                             </span>
+                        </div>
+                        <div class="border-t pt-3 mt-3 space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Subtotal</span>
+                                <span class="font-semibold text-gray-900">₱{{ number_format($summarySubtotal, 2) }}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Shipping Fee</span>
+                                <span class="font-semibold text-gray-900">₱{{ number_format($summaryShippingFee, 2) }}</span>
+                            </div>
                         </div>
                         <div class="border-t pt-3 mt-3">
                             <div class="flex justify-between">
