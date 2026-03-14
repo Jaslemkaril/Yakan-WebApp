@@ -5,19 +5,28 @@
     $batchOrders = $batchOrders ?? collect();
     $customOrderEstimatedDays = (int) \App\Models\SystemSetting::get('custom_order_estimated_days', 14);
     $estimatedCompletionDate = $order->created_at ? $order->created_at->copy()->addDays($customOrderEstimatedDays) : null;
-    $calculateAdminDisplayTotal = function ($item) {
-        $base = (float) ($item->final_price ?? $item->estimated_price ?? 0);
+    $getAdminPriceParts = function ($item) {
+        $quoted = (float) ($item->final_price ?? $item->estimated_price ?? 0);
         $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
         if ($deliveryType === 'pickup') {
-            return $base;
+            return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
         }
         $breakdown = method_exists($item, 'getPriceBreakdown') ? ($item->getPriceBreakdown() ?? []) : [];
         $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
         if ($deliveryFeeInBreakdown > 0) {
-            return $base;
+            return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
         }
-        return $base + (float) ($item->shipping_fee ?? 0);
+        $shipping = (float) ($item->shipping_fee ?? 0);
+        return ['quoted' => $quoted, 'shipping' => $shipping, 'total' => $quoted + $shipping];
     };
+
+    $calculateAdminDisplayTotal = fn($item) => ($getAdminPriceParts($item)['total'] ?? 0);
+
+    $batchItems = collect([$order])->merge($batchOrders)->sortBy('id')->values();
+    $batchQuotedSubtotal = (float) $batchItems->sum(fn($item) => $getAdminPriceParts($item)['quoted'] ?? 0);
+    $batchShippingTotal = (float) $batchItems->sum(fn($item) => $getAdminPriceParts($item)['shipping'] ?? 0);
+    $batchGrandTotal = (float) $batchItems->sum(fn($item) => $getAdminPriceParts($item)['total'] ?? 0);
+    $batchPaidCount = (int) $batchItems->filter(fn($item) => (($item->payment_status ?? '') === 'paid') || !empty($item->payment_confirmed_at))->count();
 @endphp
 <div class="container mx-auto px-4 py-6">
     {{-- Header --}}
@@ -102,26 +111,34 @@
                         <th class="py-2 pr-4 text-left font-semibold">Order</th>
                         <th class="py-2 px-4 text-left font-semibold">Status</th>
                         <th class="py-2 px-4 text-left font-semibold">Payment</th>
-                        <th class="py-2 px-4 text-left font-semibold">Price</th>
+                        <th class="py-2 px-4 text-left font-semibold">Quoted</th>
+                        <th class="py-2 px-4 text-left font-semibold">Shipping</th>
+                        <th class="py-2 px-4 text-left font-semibold">Item Total</th>
                         <th class="py-2 pl-4 text-center font-semibold">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {{-- Current order row (this page's order) --}}
+                    @php $currentPriceParts = $getAdminPriceParts($order); @endphp
                     <tr class="border-b" style="border-color:#f1d1d8; background-color:#fdf0f2;">
                         <td class="py-2 pr-4 font-bold" style="color:#800000;">#{{ $order->id }} <span class="text-[10px] font-normal" style="color:#8b3a56;">(this)</span></td>
                         <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background-color:#f5e6e8; color:#800000;">{{ ucfirst(str_replace('_',' ',$order->status)) }}</span></td>
                         <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full {{ $order->payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }} font-medium">{{ ucfirst(str_replace('_',' ',$order->payment_status ?? 'unpaid')) }}</span></td>
-                        <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($calculateAdminDisplayTotal($order), 2) }}</td>
+                        <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($currentPriceParts['quoted'], 2) }}</td>
+                        <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($currentPriceParts['shipping'], 2) }}</td>
+                        <td class="py-2 px-4 font-semibold text-[#800000]">₱{{ number_format($currentPriceParts['total'], 2) }}</td>
                         <td class="py-2 pl-4 text-center text-xs italic" style="color:#8b3a56;">current</td>
                     </tr>
                     {{-- Sibling order rows --}}
                     @foreach($batchOrders as $sibling)
+                    @php $siblingPriceParts = $getAdminPriceParts($sibling); @endphp
                     <tr class="border-b last:border-0" style="border-color:#f1d1d8;">
                         <td class="py-2 pr-4 font-semibold text-gray-800">#{{ $sibling->id }}</td>
                         <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-medium">{{ ucfirst(str_replace('_',' ',$sibling->status)) }}</span></td>
                         <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full {{ $sibling->payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }} font-medium">{{ ucfirst(str_replace('_',' ',$sibling->payment_status ?? 'unpaid')) }}</span></td>
-                        <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($calculateAdminDisplayTotal($sibling), 2) }}</td>
+                        <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($siblingPriceParts['quoted'], 2) }}</td>
+                        <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($siblingPriceParts['shipping'], 2) }}</td>
+                        <td class="py-2 px-4 font-semibold text-[#800000]">₱{{ number_format($siblingPriceParts['total'], 2) }}</td>
                         <td class="py-2 pl-4 text-center">
                             <a href="{{ route('admin.custom-orders.show', $sibling->id) }}{{ request('auth_token') ? '?auth_token='.request('auth_token') : '' }}"
                                class="text-xs font-semibold text-[#800000] hover:underline">View →</a>
@@ -131,12 +148,56 @@
                 </tbody>
             </table>
         </div>
-        @php
-            $combinedTotal = $calculateAdminDisplayTotal($order) + $batchOrders->sum(fn($o) => $calculateAdminDisplayTotal($o));
-        @endphp
-        <div class="mt-3 pt-3 border-t flex justify-between items-center" style="border-color:#e0b0b0;">
-            <span class="text-sm font-semibold" style="color:#8b3a56;">Combined Total:</span>
-            <span class="text-lg font-bold text-[#800000]">₱{{ number_format($combinedTotal, 2) }}</span>
+        <div class="mt-3 grid grid-cols-1 md:grid-cols-4 gap-2 text-xs">
+            <div class="rounded-lg border p-2" style="border-color:#e0b0b0; background-color:#fffafb;">
+                <div style="color:#8b3a56;" class="font-semibold">Items in submission</div>
+                <div class="text-base font-bold text-[#800000]">{{ $batchItems->count() }}</div>
+            </div>
+            <div class="rounded-lg border p-2" style="border-color:#e0b0b0; background-color:#fffafb;">
+                <div style="color:#8b3a56;" class="font-semibold">Quoted subtotal</div>
+                <div class="text-base font-bold text-gray-900">₱{{ number_format($batchQuotedSubtotal, 2) }}</div>
+            </div>
+            <div class="rounded-lg border p-2" style="border-color:#e0b0b0; background-color:#fffafb;">
+                <div style="color:#8b3a56;" class="font-semibold">Total shipping fee</div>
+                <div class="text-base font-bold text-gray-900">₱{{ number_format($batchShippingTotal, 2) }}</div>
+            </div>
+            <div class="rounded-lg border p-2" style="border-color:#e0b0b0; background-color:#fffafb;">
+                <div style="color:#8b3a56;" class="font-semibold">Grand total to pay</div>
+                <div class="text-base font-extrabold text-[#800000]">₱{{ number_format($batchGrandTotal, 2) }}</div>
+            </div>
+        </div>
+        <div class="mt-2 text-xs flex items-center justify-between" style="color:#8b3a56;">
+            <span class="font-semibold">Payment progress</span>
+            <span class="font-bold">{{ $batchPaidCount }}/{{ $batchItems->count() }} paid</span>
+        </div>
+
+        <div class="mt-3 pt-3 border-t space-y-2" style="border-color:#e0b0b0;">
+            <div class="text-xs font-semibold" style="color:#8b3a56;">Submission-level actions</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <button type="button" class="batch-action-btn px-3 py-2 rounded-lg text-xs font-bold text-white" style="background-color:#800000;" data-batch-action="approve-all" data-order-ids="{{ $batchItems->pluck('id')->implode(',') }}">
+                    Approve all items
+                </button>
+                <button type="button" class="batch-action-btn px-3 py-2 rounded-lg text-xs font-bold text-[#800000] border" style="border-color:#c08080; background-color:#fff5f5;" data-batch-action="ready-payment" data-order-ids="{{ $batchItems->pluck('id')->implode(',') }}">
+                    Mark all ready for payment
+                </button>
+            </div>
+            <p class="text-[11px]" style="color:#8b3a56;">Request changes: open a specific item and use the reject/order-note tools for that item only.</p>
+        </div>
+
+        <div class="mt-3 pt-3 border-t" style="border-color:#e0b0b0;">
+            <div class="text-xs font-semibold mb-2" style="color:#8b3a56;">Mini audit trail (batch)</div>
+            <div class="space-y-1 max-h-36 overflow-y-auto text-[11px]">
+                @foreach($batchItems as $auditItem)
+                    <div class="rounded border px-2 py-1" style="border-color:#f1d1d8; background-color:#fffafb;">
+                        <span class="font-bold text-[#800000]">#{{ $auditItem->id }}</span>
+                        <span class="text-gray-600">created {{ optional($auditItem->created_at)->format('M d h:i A') ?? '—' }}</span>
+                        <span class="text-gray-600">• quoted {{ optional($auditItem->price_quoted_at)->format('M d h:i A') ?? '—' }}</span>
+                        <span class="text-gray-600">• approved {{ optional($auditItem->approved_at)->format('M d h:i A') ?? '—' }}</span>
+                        <span class="text-gray-600">• paid {{ optional($auditItem->payment_confirmed_at)->format('M d h:i A') ?? '—' }}</span>
+                        <span class="text-gray-600">• updated {{ optional($auditItem->updated_at)->format('M d h:i A') ?? '—' }}</span>
+                    </div>
+                @endforeach
+            </div>
         </div>
     </div>
     @endif
@@ -1624,6 +1685,77 @@ document.addEventListener('DOMContentLoaded', function() {
                 showMessage('❌ Network error. Please try again.', 'error');
                 setButtonLoading(button, false);
             }
+        });
+    }
+
+    // Submission-level batch actions
+    const batchActionButtons = document.querySelectorAll('.batch-action-btn');
+    if (batchActionButtons.length > 0) {
+        batchActionButtons.forEach((btn) => {
+            btn.addEventListener('click', async function() {
+                const action = this.dataset.batchAction;
+                const rawIds = this.dataset.orderIds || '';
+                const orderIds = rawIds.split(',').map(id => id.trim()).filter(Boolean);
+
+                if (!orderIds.length) {
+                    showMessage('❌ No batch items found for this action.', 'error');
+                    return;
+                }
+
+                const prompts = {
+                    'approve-all': `Approve all ${orderIds.length} items in this submission?`,
+                    'ready-payment': `Mark all ${orderIds.length} items as ready for payment?`
+                };
+
+                if (!confirm(prompts[action] || 'Proceed with batch action?')) {
+                    return;
+                }
+
+                setButtonLoading(this, true);
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const authToken = urlParams.get('auth_token');
+
+                try {
+                    const requests = orderIds.map((id) => {
+                        const routePath = action === 'approve-all'
+                            ? `/admin/custom-orders/${id}/approve`
+                            : `/admin/custom-orders/${id}/update-status`;
+                        const url = `${routePath}${authToken ? '?auth_token=' + authToken : ''}`;
+                        const body = action === 'approve-all'
+                            ? {}
+                            : { status: 'approved' };
+
+                        return fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(body)
+                        });
+                    });
+
+                    const responses = await Promise.all(requests);
+                    const failed = responses.filter((r) => !r.ok);
+
+                    if (failed.length > 0) {
+                        showMessage(`❌ Batch action completed with ${failed.length} failed update(s).`, 'error');
+                        setButtonLoading(this, false);
+                        return;
+                    }
+
+                    showMessage('✅ Batch action completed successfully.', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } catch (error) {
+                    console.error('Batch action error:', error);
+                    showMessage('❌ Network error while running batch action.', 'error');
+                    setButtonLoading(this, false);
+                }
+            });
         });
     }
     
