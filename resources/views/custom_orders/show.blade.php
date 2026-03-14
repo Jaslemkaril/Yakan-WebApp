@@ -992,9 +992,28 @@
                                     </div>
                                 @elseif($order->status === 'approved' && $order->final_price)
                                     <div>
+                                        @php
+                                            $summaryShippingFee = $deliveryType === 'pickup' ? 0 : (float) ($order->shipping_fee ?? 0);
+                                            $summaryTotal = (float) $order->final_price + $summaryShippingFee;
+                                        @endphp
                                         <p class="text-sm font-medium text-gray-700 mb-1">Agreed Price</p>
                                         <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
                                         <p class="text-xs mt-1 font-semibold text-emerald-600">✓ Quote accepted</p>
+
+                                        <div class="mt-3 bg-gray-50 rounded-lg p-3 border border-gray-200 text-sm space-y-2">
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">Agreed Price</span>
+                                                <span class="font-semibold text-gray-900">₱{{ number_format((float) $order->final_price, 2) }}</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600">Shipping Fee</span>
+                                                <span class="font-semibold text-gray-900">₱{{ number_format($summaryShippingFee, 2) }}</span>
+                                            </div>
+                                            <div class="pt-2 border-t border-gray-300 flex justify-between">
+                                                <span class="font-semibold text-gray-900">Total</span>
+                                                <span class="font-bold" style="color:#800000;">₱{{ number_format($summaryTotal, 2) }}</span>
+                                            </div>
+                                        </div>
                                         
                                         {{-- Price Breakdown from Admin --}}
                                         @php
