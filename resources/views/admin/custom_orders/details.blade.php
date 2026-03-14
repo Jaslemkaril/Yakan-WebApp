@@ -127,7 +127,28 @@
                         <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($currentPriceParts['quoted'], 2) }}</td>
                         <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($currentPriceParts['shipping'], 2) }}</td>
                         <td class="py-2 px-4 font-semibold text-[#800000]">₱{{ number_format($currentPriceParts['total'], 2) }}</td>
-                        <td class="py-2 pl-4 text-center text-xs italic" style="color:#8b3a56;">current</td>
+                        <td class="py-2 pl-4 text-left" style="min-width: 240px;">
+                            <div class="space-y-2">
+                                <form action="{{ route('admin.custom-orders.quote_price', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" class="grid grid-cols-3 gap-1">
+                                    @csrf
+                                    <input type="number" name="price" step="0.01" min="0" value="{{ number_format($currentPriceParts['quoted'], 2, '.', '') }}" class="col-span-1 border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Quote">
+                                    <input type="number" name="shipping_fee" step="0.01" min="0" value="{{ number_format($currentPriceParts['shipping'], 2, '.', '') }}" class="col-span-1 border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Ship" {{ (($order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup')) === 'pickup') ? 'readonly' : '' }}>
+                                    <button type="submit" class="col-span-1 text-xs font-semibold text-white rounded px-2 py-1" style="background-color:#800000;">Save</button>
+                                    <input type="hidden" name="notes" value="Item-level quote update from batch panel">
+                                </form>
+                                <div class="grid grid-cols-2 gap-1">
+                                    <form action="{{ route('admin.custom-orders.approve', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
+                                        @csrf
+                                        <button type="submit" class="w-full text-[11px] font-semibold text-white rounded px-2 py-1 bg-green-600 hover:bg-green-700">Approve</button>
+                                    </form>
+                                    <form action="{{ route('admin.custom-orders.reject', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
+                                        @csrf
+                                        <input type="hidden" name="rejection_reason" value="Rejected from batch panel">
+                                        <button type="submit" class="w-full text-[11px] font-semibold text-white rounded px-2 py-1 bg-red-600 hover:bg-red-700">Reject</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </td>
                     </tr>
                     {{-- Sibling order rows --}}
                     @foreach($batchOrders as $sibling)
@@ -139,9 +160,29 @@
                         <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($siblingPriceParts['quoted'], 2) }}</td>
                         <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($siblingPriceParts['shipping'], 2) }}</td>
                         <td class="py-2 px-4 font-semibold text-[#800000]">₱{{ number_format($siblingPriceParts['total'], 2) }}</td>
-                        <td class="py-2 pl-4 text-center">
-                            <a href="{{ route('admin.custom-orders.show', $sibling->id) }}{{ request('auth_token') ? '?auth_token='.request('auth_token') : '' }}"
-                               class="text-xs font-semibold text-[#800000] hover:underline">View →</a>
+                        <td class="py-2 pl-4 text-left" style="min-width: 240px;">
+                            <div class="space-y-2">
+                                <form action="{{ route('admin.custom-orders.quote_price', $sibling) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" class="grid grid-cols-3 gap-1">
+                                    @csrf
+                                    <input type="number" name="price" step="0.01" min="0" value="{{ number_format($siblingPriceParts['quoted'], 2, '.', '') }}" class="col-span-1 border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Quote">
+                                    <input type="number" name="shipping_fee" step="0.01" min="0" value="{{ number_format($siblingPriceParts['shipping'], 2, '.', '') }}" class="col-span-1 border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Ship" {{ (($sibling->delivery_type ?? ($sibling->delivery_address ? 'delivery' : 'pickup')) === 'pickup') ? 'readonly' : '' }}>
+                                    <button type="submit" class="col-span-1 text-xs font-semibold text-white rounded px-2 py-1" style="background-color:#800000;">Save</button>
+                                    <input type="hidden" name="notes" value="Item-level quote update from batch panel">
+                                </form>
+                                <div class="grid grid-cols-3 gap-1">
+                                    <form action="{{ route('admin.custom-orders.approve', $sibling) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
+                                        @csrf
+                                        <button type="submit" class="w-full text-[11px] font-semibold text-white rounded px-2 py-1 bg-green-600 hover:bg-green-700">Approve</button>
+                                    </form>
+                                    <form action="{{ route('admin.custom-orders.reject', $sibling) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
+                                        @csrf
+                                        <input type="hidden" name="rejection_reason" value="Rejected from batch panel">
+                                        <button type="submit" class="w-full text-[11px] font-semibold text-white rounded px-2 py-1 bg-red-600 hover:bg-red-700">Reject</button>
+                                    </form>
+                                    <a href="{{ route('admin.custom-orders.show', $sibling->id) }}{{ request('auth_token') ? '?auth_token='.request('auth_token') : '' }}"
+                                       class="w-full text-[11px] font-semibold text-[#800000] border border-[#c08080] rounded px-2 py-1 text-center bg-white hover:bg-[#fff5f5]">View</a>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     @endforeach

@@ -304,6 +304,7 @@ class AdminCustomOrderController extends Controller
         $request->validate([
             'price' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
+            'shipping_fee' => 'nullable|numeric|min:0',
             // Price breakdown fields (optional)
             'material_cost' => 'nullable|numeric|min:0',
             'pattern_fee' => 'nullable|numeric|min:0',
@@ -354,6 +355,9 @@ class AdminCustomOrderController extends Controller
             $success = $order->quotePrice($request->price, $adminNotes);
             
             if ($success) {
+                if ($request->filled('shipping_fee')) {
+                    $order->shipping_fee = (float) $request->shipping_fee;
+                }
                 // Auto-progression: Update status to price_quoted
                 $order->status = 'price_quoted';
                 $order->save();
