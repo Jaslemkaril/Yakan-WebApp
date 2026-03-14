@@ -9,6 +9,28 @@ use Illuminate\Support\Facades\DB;
 
 class AdminCustomOrderController extends Controller
 {
+    private function calculateOrderDisplayTotal(CustomOrder $order): float
+    {
+        $base = (float) ($order->final_price ?? $order->estimated_price ?? 0);
+        $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
+        if ($deliveryType === 'pickup') {
+            return $base;
+        }
+
+        $breakdown = $order->getPriceBreakdown();
+        $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
+        if ($deliveryFeeInBreakdown > 0) {
+            return $base;
+        }
+
+        return $base + (float) ($order->shipping_fee ?? 0);
+    }
+
+    private function calculateBatchDisplayTotal(\Illuminate\Support\Collection $orders): float
+    {
+        return (float) $orders->sum(fn(CustomOrder $item) => $this->calculateOrderDisplayTotal($item));
+    }
+
     public function index(Request $request)
     {
         try {
@@ -35,33 +57,32 @@ class AdminCustomOrderController extends Controller
                 ->get();
 
             $implicitCountMap = $implicitGroups->pluck('cnt', 'primary_id')->toArray();
-            $implicitMetaMap = $implicitGroups
-                ->mapWithKeys(function ($group) {
-                    return [
-                        (int) $group->primary_id => [
-                            'item_count' => (int) $group->cnt,
-                            'batch_total' => (float) $group->implicit_total,
-                        ],
-                    ];
-                })
-                ->toArray();
+            $implicitMetaMap = [];
 
             $implicitExcludeIds = collect();
             foreach ($implicitGroups as $group) {
-                $memberIdsQuery = DB::table('custom_orders')
+                $memberOrdersQuery = CustomOrder::query()
                     ->where('user_id', $group->user_id)
                     ->whereRaw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') = ?", [$group->minute_key]);
 
                 if ($hasBatchColumn) {
-                    $memberIdsQuery->where(function ($w) {
+                    $memberOrdersQuery->where(function ($w) {
                         $w->whereNull('batch_order_number')
                           ->orWhere('batch_order_number', '');
                     });
                 }
 
-                $memberIds = $memberIdsQuery
-                    ->where('id', '!=', $group->primary_id)
-                    ->pluck('id');
+                $memberOrders = $memberOrdersQuery->orderBy('id')->get();
+
+                $implicitMetaMap[(int) $group->primary_id] = [
+                    'item_count' => (int) $group->cnt,
+                    'batch_total' => $this->calculateBatchDisplayTotal($memberOrders),
+                ];
+
+                $memberIds = $memberOrders
+                    ->pluck('id')
+                    ->filter(fn($id) => (int) $id !== (int) $group->primary_id)
+                    ->values();
 
                 $implicitExcludeIds = $implicitExcludeIds->merge($memberIds);
             }
@@ -135,20 +156,16 @@ class AdminCustomOrderController extends Controller
                         ->pluck('cnt', 'batch_order_number')
                         ->toArray();
 
-                    $batchMetaMap = CustomOrder::select(
-                            'batch_order_number',
-                            DB::raw('COUNT(*) as item_count'),
-                            DB::raw('SUM(COALESCE(final_price, estimated_price, 0)) as batch_total')
-                        )
+                    $batchRows = CustomOrder::query()
                         ->whereIn('batch_order_number', $batchNumbers)
-                        ->groupBy('batch_order_number')
                         ->get()
-                        ->mapWithKeys(function ($row) {
+                        ->groupBy('batch_order_number');
+
+                    $batchMetaMap = $batchRows
+                        ->map(function ($rows) {
                             return [
-                                $row->batch_order_number => [
-                                    'item_count' => (int) $row->item_count,
-                                    'batch_total' => (float) $row->batch_total,
-                                ],
+                                'item_count' => $rows->count(),
+                                'batch_total' => $this->calculateBatchDisplayTotal($rows),
                             ];
                         })
                         ->toArray();
@@ -1521,20 +1538,16 @@ class AdminCustomOrderController extends Controller
                         ->pluck('cnt', 'batch_order_number')
                         ->toArray();
 
-                    $batchMetaMap = CustomOrder::select(
-                            'batch_order_number',
-                            \DB::raw('COUNT(*) as item_count'),
-                            \DB::raw('SUM(COALESCE(final_price, estimated_price, 0)) as batch_total')
-                        )
+                    $batchRows = CustomOrder::query()
                         ->whereIn('batch_order_number', $batchNumbers)
-                        ->groupBy('batch_order_number')
                         ->get()
-                        ->mapWithKeys(function ($row) {
+                        ->groupBy('batch_order_number');
+
+                    $batchMetaMap = $batchRows
+                        ->map(function ($rows) {
                             return [
-                                $row->batch_order_number => [
-                                    'item_count' => (int) $row->item_count,
-                                    'batch_total' => (float) $row->batch_total,
-                                ],
+                                'item_count' => $rows->count(),
+                                'batch_total' => $this->calculateBatchDisplayTotal($rows),
                             ];
                         })
                         ->toArray();

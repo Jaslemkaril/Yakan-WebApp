@@ -412,6 +412,12 @@
                         <td class="px-4 py-3.5">
                             @php
                                 $itemDisplayPrice = (float) ($order->final_price ?? $order->estimated_price ?? 0);
+                                $itemDeliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
+                                $itemBreakdown = $order->getPriceBreakdown();
+                                $itemDeliveryFeeInBreakdown = (float) (($itemBreakdown['breakdown']['delivery_fee'] ?? 0));
+                                if ($itemDeliveryType !== 'pickup' && $itemDeliveryFeeInBreakdown <= 0) {
+                                    $itemDisplayPrice += (float) ($order->shipping_fee ?? 0);
+                                }
                                 $currentBatchMeta = null;
                                 if (!empty($order->batch_order_number) && !empty($batchMetaMap[$order->batch_order_number])) {
                                     $currentBatchMeta = $batchMetaMap[$order->batch_order_number];

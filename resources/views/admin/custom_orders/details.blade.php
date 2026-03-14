@@ -5,6 +5,19 @@
     $batchOrders = $batchOrders ?? collect();
     $customOrderEstimatedDays = (int) \App\Models\SystemSetting::get('custom_order_estimated_days', 14);
     $estimatedCompletionDate = $order->created_at ? $order->created_at->copy()->addDays($customOrderEstimatedDays) : null;
+    $calculateAdminDisplayTotal = function ($item) {
+        $base = (float) ($item->final_price ?? $item->estimated_price ?? 0);
+        $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+        if ($deliveryType === 'pickup') {
+            return $base;
+        }
+        $breakdown = method_exists($item, 'getPriceBreakdown') ? ($item->getPriceBreakdown() ?? []) : [];
+        $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
+        if ($deliveryFeeInBreakdown > 0) {
+            return $base;
+        }
+        return $base + (float) ($item->shipping_fee ?? 0);
+    };
 @endphp
 <div class="container mx-auto px-4 py-6">
     {{-- Header --}}
@@ -99,7 +112,7 @@
                         <td class="py-2 pr-4 font-bold" style="color:#800000;">#{{ $order->id }} <span class="text-[10px] font-normal" style="color:#8b3a56;">(this)</span></td>
                         <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background-color:#f5e6e8; color:#800000;">{{ ucfirst(str_replace('_',' ',$order->status)) }}</span></td>
                         <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full {{ $order->payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }} font-medium">{{ ucfirst(str_replace('_',' ',$order->payment_status ?? 'unpaid')) }}</span></td>
-                        <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($order->final_price ?? $order->estimated_price ?? 0, 2) }}</td>
+                        <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($calculateAdminDisplayTotal($order), 2) }}</td>
                         <td class="py-2 pl-4 text-center text-xs italic" style="color:#8b3a56;">current</td>
                     </tr>
                     {{-- Sibling order rows --}}
@@ -108,7 +121,7 @@
                         <td class="py-2 pr-4 font-semibold text-gray-800">#{{ $sibling->id }}</td>
                         <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-medium">{{ ucfirst(str_replace('_',' ',$sibling->status)) }}</span></td>
                         <td class="py-2 px-4"><span class="text-xs px-2 py-0.5 rounded-full {{ $sibling->payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }} font-medium">{{ ucfirst(str_replace('_',' ',$sibling->payment_status ?? 'unpaid')) }}</span></td>
-                        <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($sibling->final_price ?? $sibling->estimated_price ?? 0, 2) }}</td>
+                        <td class="py-2 px-4 font-semibold text-gray-800">₱{{ number_format($calculateAdminDisplayTotal($sibling), 2) }}</td>
                         <td class="py-2 pl-4 text-center">
                             <a href="{{ route('admin.custom-orders.show', $sibling->id) }}{{ request('auth_token') ? '?auth_token='.request('auth_token') : '' }}"
                                class="text-xs font-semibold text-[#800000] hover:underline">View →</a>
@@ -119,7 +132,7 @@
             </table>
         </div>
         @php
-            $combinedTotal = ($order->final_price ?? $order->estimated_price ?? 0) + $batchOrders->sum(fn($o) => $o->final_price ?? $o->estimated_price ?? 0);
+            $combinedTotal = $calculateAdminDisplayTotal($order) + $batchOrders->sum(fn($o) => $calculateAdminDisplayTotal($o));
         @endphp
         <div class="mt-3 pt-3 border-t flex justify-between items-center" style="border-color:#e0b0b0;">
             <span class="text-sm font-semibold" style="color:#8b3a56;">Combined Total:</span>
@@ -447,8 +460,11 @@
                         $breakdownParsed = true;
                     }
                     
+                    $quotedPrice = (float) ($order->final_price ?? $order->estimated_price ?? 0);
+                    $orderDeliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
+                    $shippingFee = $orderDeliveryType === 'pickup' ? 0 : (float) ($order->shipping_fee ?? 0);
                     $subtotal = $materialCost + $patternFee;
-                    $totalCalculated = $subtotal + $shippingFee;
+                    $totalCalculated = $quotedPrice + $shippingFee;
                 @endphp
                 
                 <div class="space-y-3">
@@ -549,7 +565,7 @@
                                     
                                     <div class="border-t-2 border-[#800000] pt-2 mt-2 flex justify-between items-center">
                                         <span class="text-gray-900 font-bold text-base">TOTAL:</span>
-                                        <span class="font-bold text-lg text-green-600">₱{{ number_format($order->final_price, 2) }}</span>
+                                        <span class="font-bold text-lg text-green-600">₱{{ number_format($quotedPrice + ($orderDeliveryType === 'pickup' ? 0 : (float) ($order->shipping_fee ?? 0)), 2) }}</span>
                                     </div>
                                 </div>
                                 
@@ -715,7 +731,7 @@
                 <div class="border-t border-gray-200 pt-3 mt-3">
                     <div class="flex justify-between items-center">
                         <span class="text-sm font-semibold text-gray-700">Amount {{ $order->payment_status === 'paid' ? 'Paid' : 'Submitted' }}</span>
-                        <span class="text-lg font-bold text-green-600">₱{{ number_format($order->final_price, 2) }}</span>
+                        <span class="text-lg font-bold text-green-600">₱{{ number_format($calculateAdminDisplayTotal($order), 2) }}</span>
                     </div>
                 </div>
                 @endif
