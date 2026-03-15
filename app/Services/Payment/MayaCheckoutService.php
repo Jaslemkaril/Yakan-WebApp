@@ -2,7 +2,9 @@
 
 namespace App\Services\Payment;
 
+use App\Models\Notification;
 use App\Models\Order;
+use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -112,22 +114,11 @@ class MayaCheckoutService
             ?? 'pending'
         ));
 
-        if (str_contains($gatewayStatus, 'paid') || str_contains($gatewayStatus, 'success') || str_contains($gatewayStatus, 'complete')) {
-            $order->payment_status = 'paid';
-            if (in_array($order->status, ['pending', 'pending_confirmation', 'confirmed'], true)) {
-                $order->status = 'processing';
-            }
-        } elseif (str_contains($gatewayStatus, 'fail') || str_contains($gatewayStatus, 'cancel') || str_contains($gatewayStatus, 'expire')) {
-            $order->payment_status = 'failed';
-        } else {
-            $order->payment_status = 'pending';
-        }
-
         if (empty($order->payment_reference)) {
             $order->payment_reference = $reference;
         }
 
-        $order->save();
+        $this->applyGatewayStatusToOrder($order, $gatewayStatus, 'checkout_sync');
 
         return (string) $order->payment_status;
     }
@@ -155,12 +146,35 @@ class MayaCheckoutService
     public function verifyWebhookSignature(string $rawBody, ?string $signature): bool
     {
         $secret = config('services.maya.webhook_secret');
-        if (empty($secret) || empty($signature)) {
+
+        if (empty($secret)) {
             return true;
         }
 
-        $calculated = hash_hmac('sha256', $rawBody, $secret);
-        return hash_equals($calculated, $signature);
+        if (empty($signature)) {
+            return false;
+        }
+
+        $signature = trim((string) $signature);
+        $normalized = $signature;
+
+        if (str_contains($signature, '=')) {
+            $parts = explode('=', $signature, 2);
+            if (!empty($parts[1])) {
+                $normalized = trim($parts[1]);
+            }
+        }
+
+        $hexSignature = hash_hmac('sha256', $rawBody, $secret);
+        $base64Signature = base64_encode(hex2bin($hexSignature));
+
+        foreach (array_filter(array_unique([$signature, $normalized])) as $incoming) {
+            if (hash_equals($hexSignature, $incoming) || hash_equals($base64Signature, $incoming)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function processWebhook(array $payload): ?Order
@@ -170,13 +184,31 @@ class MayaCheckoutService
             ?? data_get($payload, 'data.attributes.checkoutId')
             ?? data_get($payload, 'data.attributes.checkout_id');
 
-        if (!$checkoutId) {
+        $referenceNumber = $payload['requestReferenceNumber']
+            ?? data_get($payload, 'requestReferenceNumber')
+            ?? data_get($payload, 'data.attributes.requestReferenceNumber')
+            ?? data_get($payload, 'data.attributes.request_reference_number');
+
+        if (!$checkoutId && !$referenceNumber) {
             return null;
         }
 
-        $order = Order::where('payment_reference', $checkoutId)->first();
+        $order = null;
+
+        if ($checkoutId) {
+            $order = Order::where('payment_reference', $checkoutId)->first();
+        }
+
+        if (!$order && $referenceNumber) {
+            $order = Order::where('order_ref', $referenceNumber)->first();
+        }
+
         if (!$order) {
             return null;
+        }
+
+        if (!empty($checkoutId) && empty($order->payment_reference)) {
+            $order->payment_reference = $checkoutId;
         }
 
         $normalizedStatus = strtolower(
@@ -186,20 +218,114 @@ class MayaCheckoutService
                 ?? 'pending')
         );
 
-        if (str_contains($normalizedStatus, 'paid') || str_contains($normalizedStatus, 'success')) {
-            $order->payment_status = 'paid';
-            if ($order->status === 'pending') {
+        $this->applyGatewayStatusToOrder($order, $normalizedStatus, 'webhook');
+
+        return $order;
+    }
+
+    private function applyGatewayStatusToOrder(Order $order, string $gatewayStatus, string $source): void
+    {
+        $previousPaymentStatus = (string) $order->payment_status;
+        $previousOrderStatus = (string) $order->status;
+
+        $nextPaymentStatus = $this->resolvePaymentStatus($gatewayStatus);
+        $order->payment_status = $nextPaymentStatus;
+
+        if ($nextPaymentStatus === 'paid') {
+            if (in_array((string) $order->status, ['pending', 'pending_confirmation', 'confirmed'], true)) {
                 $order->status = 'processing';
             }
-        } elseif (str_contains($normalizedStatus, 'fail') || str_contains($normalizedStatus, 'cancel')) {
-            $order->payment_status = 'failed';
-        } else {
-            $order->payment_status = 'pending';
+
+            if (empty($order->payment_verified_at)) {
+                $order->payment_verified_at = now();
+            }
         }
 
         $order->save();
 
-        return $order;
+        $this->afterStatusTransition($order, $previousPaymentStatus, $previousOrderStatus, $source, $gatewayStatus);
+    }
+
+    private function resolvePaymentStatus(string $gatewayStatus): string
+    {
+        $status = strtolower($gatewayStatus);
+
+        if (str_contains($status, 'paid') || str_contains($status, 'success') || str_contains($status, 'complete') || str_contains($status, 'capture')) {
+            return 'paid';
+        }
+
+        if (str_contains($status, 'fail') || str_contains($status, 'cancel') || str_contains($status, 'expire') || str_contains($status, 'declin')) {
+            return 'failed';
+        }
+
+        return 'pending';
+    }
+
+    private function afterStatusTransition(
+        Order $order,
+        string $previousPaymentStatus,
+        string $previousOrderStatus,
+        string $source,
+        string $gatewayStatus
+    ): void {
+        if ($previousPaymentStatus === (string) $order->payment_status && $previousOrderStatus === (string) $order->status) {
+            return;
+        }
+
+        if ((string) $order->payment_status === 'paid' && $previousPaymentStatus !== 'paid') {
+            $order->appendTrackingEvent('Maya payment confirmed (' . str_replace('_', ' ', $source) . ').');
+            $order->save();
+
+            Notification::createNotification(
+                $order->user_id,
+                'payment',
+                'Maya payment confirmed',
+                'Your Maya payment for order #' . $order->id . ' has been confirmed.',
+                url('/orders/' . $order->id),
+                [
+                    'order_id' => $order->id,
+                    'payment_method' => 'maya',
+                    'payment_status' => 'paid',
+                    'source' => $source,
+                ]
+            );
+
+            $admins = User::where('role', 'admin')->get();
+            foreach ($admins as $admin) {
+                Notification::createNotification(
+                    $admin->id,
+                    'payment',
+                    'Maya payment received',
+                    'Order #' . $order->id . ' was paid via Maya. Amount: ₱' . number_format((float) ($order->total_amount ?? $order->total ?? 0), 2),
+                    url('/admin/orders/' . $order->id),
+                    [
+                        'order_id' => $order->id,
+                        'payment_method' => 'maya',
+                        'payment_status' => 'paid',
+                        'source' => $source,
+                    ]
+                );
+            }
+        }
+
+        if ((string) $order->payment_status === 'failed' && $previousPaymentStatus !== 'failed') {
+            $order->appendTrackingEvent('Maya payment failed or cancelled (' . str_replace('_', ' ', $source) . ').');
+            $order->save();
+
+            Notification::createNotification(
+                $order->user_id,
+                'payment',
+                'Maya payment not completed',
+                'Your Maya payment for order #' . $order->id . ' was not completed (' . $gatewayStatus . ').',
+                url('/orders/' . $order->id),
+                [
+                    'order_id' => $order->id,
+                    'payment_method' => 'maya',
+                    'payment_status' => 'failed',
+                    'source' => $source,
+                ]
+            );
+        }
     }
 
     private function firstName(?string $fullName): string

@@ -60,6 +60,15 @@ class MayaPaymentController extends Controller
             ], 403);
         }
 
+        if ($order->payment_method === 'maya' && !empty($order->payment_reference)) {
+            try {
+                $this->mayaService->syncOrderStatusFromCheckout($order);
+                $order->refresh();
+            } catch (\Throwable $exception) {
+                // Return latest stored status if live sync is temporarily unavailable.
+            }
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -91,6 +100,7 @@ class MayaPaymentController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Webhook received, no matching order.',
+                'received_status' => $request->input('status') ?? data_get($request->all(), 'data.attributes.status'),
             ]);
         }
 
