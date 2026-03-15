@@ -495,6 +495,26 @@ class ApiService {
     return this.request('GET', endpoint);
   }
 
+  /**
+   * Create Maya checkout session
+   */
+  async createMayaCheckout(orderId, urls = {}) {
+    return this.request('POST', API_CONFIG.ENDPOINTS.PAYMENT.MAYA_CHECKOUT, {
+      order_id: orderId,
+      success_url: urls.successUrl,
+      failure_url: urls.failureUrl,
+      cancel_url: urls.cancelUrl,
+    });
+  }
+
+  /**
+   * Get Maya payment status for an order
+   */
+  async getMayaPaymentStatus(orderId) {
+    const endpoint = API_CONFIG.ENDPOINTS.PAYMENT.MAYA_STATUS.replace(':orderId', orderId);
+    return this.request('GET', endpoint);
+  }
+
   // ==================== USER ENDPOINTS ====================
 
   /**

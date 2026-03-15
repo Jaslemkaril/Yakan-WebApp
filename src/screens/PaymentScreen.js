@@ -18,12 +18,17 @@ import ApiService from '../services/api';
 import NotificationService from '../services/notificationService';
 import colors from '../constants/colors';
 import * as ImagePicker from 'expo-image-picker';
+import * as WebBrowser from 'expo-web-browser';
 import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
 
 // Payment account details — fetched from API at runtime, these are fallback defaults
 const DEFAULT_PAYMENT_ACCOUNTS = {
   gcash: {
+    number: '0956-739-0720',
+    name: 'Oliver Hamja',
+  },
+  maya: {
     number: '0956-739-0720',
     name: 'Oliver Hamja',
   },
@@ -68,15 +73,19 @@ export default function PaymentScreen({ navigation, route }) {
       try {
         const response = await ApiService.request('GET', '/settings/payment-info');
         if (response?.success && response?.data) {
-          const d = response.data;
+          const d = response.data?.data || response.data || {};
           setPaymentAccounts({
             gcash: {
               number: d.gcash_number || DEFAULT_PAYMENT_ACCOUNTS.gcash.number,
               name:   d.gcash_name   || DEFAULT_PAYMENT_ACCOUNTS.gcash.name,
             },
+            maya: {
+              number: d.maya_number || d.gcash_number || DEFAULT_PAYMENT_ACCOUNTS.maya.number,
+              name:   d.maya_name   || d.gcash_name   || DEFAULT_PAYMENT_ACCOUNTS.maya.name,
+            },
             bank_transfer: {
               bankName:      d.bank_name            || DEFAULT_PAYMENT_ACCOUNTS.bank_transfer.bankName,
-              accountNumber: d.bank_account_number  || DEFAULT_PAYMENT_ACCOUNTS.bank_transfer.accountNumber,
+              accountNumber: d.bank_account_number  || d.bank_account || DEFAULT_PAYMENT_ACCOUNTS.bank_transfer.accountNumber,
               accountName:   d.bank_account_name    || DEFAULT_PAYMENT_ACCOUNTS.bank_transfer.accountName,
               branch:        d.bank_branch          || DEFAULT_PAYMENT_ACCOUNTS.bank_transfer.branch,
             },
@@ -95,6 +104,13 @@ export default function PaymentScreen({ navigation, route }) {
       name: 'GCash',
       description: 'Pay securely with GCash mobile wallet',
       icon: '📱',
+      fee: 0,
+    },
+    {
+      id: 'maya',
+      name: 'Maya',
+      description: 'Pay securely with Maya wallet',
+      icon: '💚',
       fee: 0,
     },
     {
@@ -194,18 +210,30 @@ export default function PaymentScreen({ navigation, route }) {
         ...orderData,
         paymentMethod: selectedPaymentMethod,
         paymentReference: referenceNumber,
-        status: 'payment_verified', // align with timeline stage
+        status: isMaya ? 'pending_payment' : 'payment_verified', // align with timeline stage
         backendOrderId: backendId,
         id: backendId, // Also store as 'id' for compatibility
       };
 
-      // If user attached receipt, upload it after order is created
-      if (receiptImage && backendId) {
+      // If user attached receipt, upload it after order is created (manual payment methods)
+      if (!isMaya && receiptImage && backendId) {
         try {
           await ApiService.uploadPaymentProof(backendId, receiptImage);
         } catch (uploadErr) {
           console.warn('Failed to upload receipt image', uploadErr?.message || uploadErr);
         }
+      }
+
+      // For Maya, create hosted checkout and open in browser
+      if (isMaya && backendId) {
+        const mayaCheckout = await ApiService.createMayaCheckout(backendId);
+        const checkoutUrl = mayaCheckout?.data?.data?.checkout_url;
+
+        if (!mayaCheckout?.success || !checkoutUrl) {
+          throw new Error(mayaCheckout?.error || 'Unable to initialize Maya checkout.');
+        }
+
+        await WebBrowser.openBrowserAsync(checkoutUrl);
       }
 
       await updateOrderInStorage(finalOrderData);
@@ -222,7 +250,7 @@ export default function PaymentScreen({ navigation, route }) {
         paymentMethod: selectedPaymentMethod,
         items: orderData.items,
         shippingAddress: orderData.shippingAddress,
-        status: 'pending_confirmation',
+        status: isMaya ? 'pending_payment' : 'pending_confirmation',
       });
 
       // Start polling for order status updates
@@ -252,7 +280,7 @@ export default function PaymentScreen({ navigation, route }) {
         ...orderData,
         paymentMethod: selectedPaymentMethod,
         paymentReference: referenceNumber,
-        status: 'payment_verified',
+        status: isMaya ? 'pending_payment' : 'payment_verified',
       };
       await updateOrderInStorage(finalOrderData);
       
@@ -268,7 +296,7 @@ export default function PaymentScreen({ navigation, route }) {
         paymentMethod: selectedPaymentMethod,
         items: orderData.items,
         shippingAddress: orderData.shippingAddress,
-        status: 'pending_confirmation',
+        status: isMaya ? 'pending_payment' : 'pending_confirmation',
         syncStatus: 'pending',
       });
       
@@ -291,6 +319,11 @@ export default function PaymentScreen({ navigation, route }) {
   const total = (orderData.subtotal || 0) + (orderData.shippingFee || 0);
   const selectedMethod = paymentMethods.find(m => m.id === selectedPaymentMethod);
   const finalTotal = total + (selectedMethod?.fee || 0);
+  const isMaya = selectedPaymentMethod === 'maya';
+  const isBankTransfer = selectedPaymentMethod === 'bank_transfer';
+  const walletLabel = selectedPaymentMethod === 'maya' ? 'Maya' : 'GCash';
+  const walletNumber = selectedPaymentMethod === 'maya' ? paymentAccounts.maya.number : paymentAccounts.gcash.number;
+  const walletName = selectedPaymentMethod === 'maya' ? paymentAccounts.maya.name : paymentAccounts.gcash.name;
 
   // Payment Instructions Screen
   if (showPaymentInstructions && selectedPaymentMethod) {
@@ -302,7 +335,7 @@ export default function PaymentScreen({ navigation, route }) {
             <Text style={styles.backButton}>← Back</Text>
           </TouchableOpacity>
           <Text style={styles.title}>
-            {selectedPaymentMethod === 'gcash' ? 'GCash Payment' : selectedPaymentMethod === 'cod' ? 'Cash on Delivery' : 'Bank Transfer'}
+            {isBankTransfer ? 'Bank Transfer' : `${walletLabel} Payment`}
           </Text>
           <View style={{ width: 50 }} />
         </View>
@@ -318,11 +351,11 @@ export default function PaymentScreen({ navigation, route }) {
             <View style={styles.instructionsCard}>
               <View style={styles.instructionsHeader}>
                 <Text style={styles.instructionsIcon}>
-                  {selectedPaymentMethod === 'gcash' ? '📱' : selectedPaymentMethod === 'cod' ? '🔵' : '🏦'}
+                  {isBankTransfer ? '🏦' : '💳'}
                 </Text>
                 <View>
                   <Text style={styles.instructionsTitle}>
-                    {selectedPaymentMethod === 'gcash' ? 'GCash Payment Instructions' : selectedPaymentMethod === 'cod' ? 'Cash on Delivery' : 'Bank Transfer Instructions'}
+                    {isBankTransfer ? 'Bank Transfer Instructions' : `${walletLabel} Payment Instructions`}
                   </Text>
                   <Text style={styles.instructionsSubtitle}>Follow these steps to complete your payment</Text>
                 </View>
@@ -335,11 +368,11 @@ export default function PaymentScreen({ navigation, route }) {
                 </View>
                 <View style={styles.stepContent}>
                   <Text style={styles.stepTitle}>
-                    {selectedPaymentMethod === 'gcash' ? 'Open your GCash App' : 'Open your Banking App'}
+                    {isBankTransfer ? 'Open your Banking App' : `Open your ${walletLabel} App`}
                   </Text>
                   <Text style={styles.stepDescription}>
-                    {selectedPaymentMethod === 'gcash' 
-                      ? 'Launch the GCash mobile application on your phone.'
+                    {!isBankTransfer 
+                      ? `Launch the ${walletLabel} mobile application on your phone.`
                       : 'Open your mobile banking app or go to your bank\'s website.'}
                   </Text>
                 </View>
@@ -352,13 +385,13 @@ export default function PaymentScreen({ navigation, route }) {
                 </View>
                 <View style={styles.stepContent}>
                   <Text style={styles.stepTitle}>
-                    {selectedPaymentMethod === 'gcash' ? 'Send Money to this GCash Number' : 'Transfer to this Account'}
+                    {!isBankTransfer ? `Send Money to this ${walletLabel} Number` : 'Transfer to this Account'}
                   </Text>
-                  {selectedPaymentMethod === 'gcash' ? (
+                  {!isBankTransfer ? (
                     <View style={styles.accountBox}>
-                      <Text style={styles.accountLabel}>GCash Number</Text>
-                      <Text style={styles.accountNumber}>{paymentAccounts.gcash.number}</Text>
-                      <Text style={styles.accountName}>Account Name: {paymentAccounts.gcash.name}</Text>
+                      <Text style={styles.accountLabel}>{walletLabel} Number</Text>
+                      <Text style={styles.accountNumber}>{walletNumber}</Text>
+                      <Text style={styles.accountName}>Account Name: {walletName}</Text>
                     </View>
                   ) : (
                     <View style={styles.accountBox}>
@@ -392,7 +425,7 @@ export default function PaymentScreen({ navigation, route }) {
                 <View style={styles.stepContent}>
                   <Text style={styles.stepTitle}>Add Reference Number</Text>
                   <Text style={styles.stepDescription}>
-                    Include this reference in your {selectedPaymentMethod === 'gcash' ? 'GCash' : 'bank transfer'} message:
+                    Include this reference in your {!isBankTransfer ? walletLabel : 'bank transfer'} message:
                   </Text>
                   <View style={styles.referenceBox}>
                     <Text style={styles.referenceLabel}>Reference Number</Text>
@@ -407,15 +440,21 @@ export default function PaymentScreen({ navigation, route }) {
                   <Text style={styles.stepNumberText}>5</Text>
                 </View>
                 <View style={styles.stepContent}>
-                  <Text style={styles.stepTitle}>Submit Payment Confirmation</Text>
+                  <Text style={styles.stepTitle}>{isMaya ? 'Proceed to Maya Checkout' : 'Submit Payment Confirmation'}</Text>
                   <Text style={styles.stepDescription}>
-                    After sending the payment, click the button below to confirm. Your payment will be verified automatically and your order will start processing immediately!
+                    {isMaya
+                      ? 'Tap the button below to open Maya Checkout and complete payment securely.'
+                      : 'After sending the payment, click the button below to confirm. Your payment will be verified automatically and your order will start processing immediately!'}
                   </Text>
-                  <TouchableOpacity style={styles.receiptButton} onPress={handlePickReceipt}>
-                    <Text style={styles.receiptButtonText}>📎 Upload receipt image</Text>
-                  </TouchableOpacity>
-                  {receiptImage && (
-                    <Text style={styles.receiptPreview}>Attached: {receiptImage.split('/').pop()}</Text>
+                  {!isMaya && (
+                    <>
+                      <TouchableOpacity style={styles.receiptButton} onPress={handlePickReceipt}>
+                        <Text style={styles.receiptButtonText}>📎 Upload receipt image</Text>
+                      </TouchableOpacity>
+                      {receiptImage && (
+                        <Text style={styles.receiptPreview}>Attached: {receiptImage.split('/').pop()}</Text>
+                      )}
+                    </>
                   )}
                 </View>
               </View>
@@ -553,8 +592,8 @@ export default function PaymentScreen({ navigation, route }) {
                 <View style={styles.quickReferenceRow}>
                   <Text style={styles.quickReferenceLabel}>Send to:</Text>
                   <Text style={styles.quickReferenceValue}>
-                    {selectedPaymentMethod === 'gcash' 
-                      ? paymentAccounts.gcash.number 
+                    {!isBankTransfer 
+                      ? walletNumber 
                       : paymentAccounts.bank_transfer.accountNumber}
                   </Text>
                 </View>
@@ -592,26 +631,29 @@ export default function PaymentScreen({ navigation, route }) {
             <View style={styles.noticeContent}>
               <Text style={styles.warningTitle}>Important Reminder</Text>
               <Text style={styles.noticeDescription}>
-                Please make sure to send the EXACT amount (₱{finalTotal.toFixed(2)}) and include the reference number ({orderData.orderRef}) in your {selectedPaymentMethod === 'gcash' ? 'GCash' : 'bank transfer'} message.
+                {isMaya
+                  ? 'Complete payment in the Maya checkout page. Your order status will update after successful payment.'
+                  : `Please make sure to send the EXACT amount (₱${finalTotal.toFixed(2)}) and include the reference number (${orderData.orderRef}) in your ${!isBankTransfer ? walletLabel : 'bank transfer'} message.`}
               </Text>
             </View>
           </View>
 
           {/* Reference Number Input */}
+          {!isMaya && (
           <View style={styles.referenceInputCard}>
             <Text style={styles.referenceInputLabel}>
-              {selectedPaymentMethod === 'gcash' ? 'GCash' : 'Bank'} Reference Number (optional)
+              {!isBankTransfer ? walletLabel : 'Bank'} Reference Number (optional)
             </Text>
             <TextInput
               style={styles.referenceInput}
-              placeholder={`Enter ${selectedPaymentMethod === 'gcash' ? 'GCash' : 'bank'} reference number`}
+              placeholder={`Enter ${!isBankTransfer ? walletLabel : 'bank'} reference number`}
               placeholderTextColor="#999"
               value={referenceNumber}
               onChangeText={setReferenceNumber}
             />
             <Text style={styles.referenceHelper}>
               Upload Proof of Payment *
-              {'\n'}Upload a clear screenshot or photo of your {selectedPaymentMethod === 'gcash' ? 'GCash' : 'bank'} receipt showing the transaction details, amount, and reference number.
+              {'\n'}Upload a clear screenshot or photo of your {!isBankTransfer ? walletLabel : 'bank'} receipt showing the transaction details, amount, and reference number.
             </Text>
             <TouchableOpacity style={styles.receiptButton} onPress={handlePickReceipt}>
               <Text style={styles.receiptButtonText}>📎 Upload receipt image</Text>
@@ -620,6 +662,7 @@ export default function PaymentScreen({ navigation, route }) {
               <Text style={styles.receiptPreview}>Attached: {receiptImage.split('/').pop()}</Text>
             )}
           </View>
+          )}
 
           <View style={{ height: 100 }} />
         </ScrollView>
@@ -635,7 +678,7 @@ export default function PaymentScreen({ navigation, route }) {
               <ActivityIndicator color={colors.white} />
             ) : (
               <Text style={styles.confirmPaymentButtonText}>
-                {`I have paid via ${selectedMethod?.name}`}
+                {isMaya ? 'Proceed to Maya Checkout' : `I have paid via ${selectedMethod?.name}`}
               </Text>
             )}
           </TouchableOpacity>

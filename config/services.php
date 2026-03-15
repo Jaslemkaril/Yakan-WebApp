@@ -78,6 +78,15 @@ return [
         'sandbox_url' => env('GCASH_SANDBOX_URL', 'https://sandbox.gcash.com'),
     ],
 
+    'maya' => [
+        'enabled' => env('MAYA_ENABLED', false),
+        'public_key' => env('MAYA_PUBLIC_KEY'),
+        'secret_key' => env('MAYA_SECRET_KEY'),
+        'webhook_secret' => env('MAYA_WEBHOOK_SECRET'),
+        'base_url' => env('MAYA_BASE_URL', 'https://pg-sandbox.paymaya.com'),
+        'sandbox_url' => env('MAYA_SANDBOX_URL', 'https://pg-sandbox.paymaya.com'),
+    ],
+
     'online_banking' => [
         'api_key' => env('ONLINE_BANKING_API_KEY'),
         'merchant_id' => env('ONLINE_BANKING_MERCHANT_ID'),

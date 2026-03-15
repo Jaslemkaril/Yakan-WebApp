@@ -18,9 +18,13 @@ class SettingsController extends Controller
             'data' => [
                 'gcash_number' => SystemSetting::get('gcash_number', ''),
                 'gcash_name'   => SystemSetting::get('gcash_name', 'Tuwas Yakan'),
+                'maya_number'  => SystemSetting::get('maya_number', SystemSetting::get('gcash_number', '')),
+                'maya_name'    => SystemSetting::get('maya_name', SystemSetting::get('gcash_name', 'Tuwas Yakan')),
                 'bank_name'    => SystemSetting::get('bank_name', 'BDO'),
                 'bank_account' => SystemSetting::get('bank_account_number', ''),
+                'bank_account_number' => SystemSetting::get('bank_account_number', ''),
                 'bank_account_name' => SystemSetting::get('bank_account_name', 'Tuwas Yakan'),
+                'bank_branch' => SystemSetting::get('bank_branch', ''),
             ],
         ]);
     }

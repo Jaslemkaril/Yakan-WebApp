@@ -116,18 +116,69 @@
                         @error('gcash_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         <p class="text-xs text-gray-400 mt-1">Full name displayed on the GCash account</p>
                     </div>
+
+                    <!-- Maya Number -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Maya Number
+                            <span class="text-red-500 ml-1">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <input type="text" name="maya_number" value="{{ old('maya_number', $settings['maya_number']) }}"
+                                   placeholder="e.g. 09XX-XXX-XXXX"
+                                   class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all @error('maya_number') border-red-400 @enderror">
+                        </div>
+                        @error('maya_number') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        <p class="text-xs text-gray-400 mt-1">The mobile number customers will send money to via Maya</p>
+                    </div>
+
+                    <!-- Maya Account Name -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Maya Account Name
+                            <span class="text-red-500 ml-1">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                </svg>
+                            </div>
+                            <input type="text" name="maya_name" value="{{ old('maya_name', $settings['maya_name']) }}"
+                                   placeholder="e.g. Tuwas Yakan"
+                                   class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all @error('maya_name') border-red-400 @enderror">
+                        </div>
+                        @error('maya_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        <p class="text-xs text-gray-400 mt-1">Full name displayed on the Maya account</p>
+                    </div>
                 </div>
 
                 <!-- Preview -->
                 <div class="mx-6 mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
                     <p class="text-xs font-semibold text-blue-800 mb-2 uppercase tracking-wide">Customer Preview</p>
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg">G</div>
-                        <div>
-                            <p class="font-bold text-blue-900">GCash</p>
-                            <p class="text-sm text-blue-700">
-                                {{ $settings['gcash_number'] ?: '09XX-XXX-XXXX' }} · {{ $settings['gcash_name'] ?: 'Account Name' }}
-                            </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg">G</div>
+                            <div>
+                                <p class="font-bold text-blue-900">GCash</p>
+                                <p class="text-sm text-blue-700">
+                                    {{ $settings['gcash_number'] ?: '09XX-XXX-XXXX' }} · {{ $settings['gcash_name'] ?: 'Account Name' }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-lg">M</div>
+                            <div>
+                                <p class="font-bold text-emerald-900">Maya</p>
+                                <p class="text-sm text-emerald-700">
+                                    {{ $settings['maya_number'] ?: '09XX-XXX-XXXX' }} · {{ $settings['maya_name'] ?: 'Account Name' }}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

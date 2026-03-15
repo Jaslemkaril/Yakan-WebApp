@@ -26,7 +26,7 @@ class OrderController extends Controller
                 'customer_phone' => 'required|string|max:20',
                 'shipping_address' => 'required|string',
                 'delivery_address' => 'required|string',
-                'payment_method' => 'required|string|in:gcash,bank_transfer,cash',
+                'payment_method' => 'required|string|in:gcash,maya,bank_transfer,cash',
                 'payment_status' => 'nullable|string|in:pending,paid,verified,failed',
                 'payment_reference' => 'nullable|string',
                 'subtotal' => 'required|numeric|min:0',

@@ -12,10 +12,12 @@ use App\Http\Controllers\Api\SocialAuthController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\MayaPaymentController;
 
 Route::prefix('v1')->group(function () {
     // ===================== PUBLIC SETTINGS =====================
     Route::get('/settings/payment-info', [SettingsController::class, 'paymentInfo']);
+    Route::post('/payments/maya/webhook', [MayaPaymentController::class, 'webhook']);
 
     // ===================== AUTHENTICATION (Public) =====================
     // Rate limited: 5 attempts per minute from the same IP
@@ -63,6 +65,8 @@ Route::prefix('v1')->group(function () {
         
         // Payment proof upload (mobile/web)
         Route::post('/payments/upload-proof', [PaymentController::class, 'uploadProof']);
+        Route::post('/payments/maya/checkout', [MayaPaymentController::class, 'createCheckout']);
+        Route::get('/payments/maya/{order}/status', [MayaPaymentController::class, 'status']);
 
         // Wishlist
         Route::get('/wishlist', [\App\Http\Controllers\Api\WishlistController::class, 'index']);

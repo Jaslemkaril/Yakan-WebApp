@@ -21,7 +21,7 @@ class PaymentController extends Controller
         }
 
         $request->validate([
-            'payment_method' => 'required|in:gcash,online_banking,bank_transfer',
+            'payment_method' => 'required|in:gcash,maya,online_banking,bank_transfer',
         ]);
 
         try {
@@ -64,16 +64,21 @@ class PaymentController extends Controller
         }
 
         // Build instructions from system settings
-        $isGcash = in_array($order->payment_method, ['gcash', 'online_banking']);
+        $isGcash = in_array($order->payment_method, ['gcash', 'maya', 'online_banking']);
 
         if ($isGcash) {
+            $isMaya = $order->payment_method === 'maya';
             $instructions = [
-                'title'         => 'GCash Payment Instructions',
-                'gcash_number'  => SystemSetting::get('gcash_number', ''),
-                'account_name'  => SystemSetting::get('gcash_name', 'Tuwas Yakan'),
+                'title'         => $isMaya ? 'Maya Payment Instructions' : 'GCash Payment Instructions',
+                'gcash_number'  => $isMaya
+                    ? SystemSetting::get('maya_number', SystemSetting::get('gcash_number', ''))
+                    : SystemSetting::get('gcash_number', ''),
+                'account_name'  => $isMaya
+                    ? SystemSetting::get('maya_name', SystemSetting::get('gcash_name', 'Tuwas Yakan'))
+                    : SystemSetting::get('gcash_name', 'Tuwas Yakan'),
                 'steps'         => [
-                    'Open your GCash app and tap "Send Money".',
-                    'Enter the GCash number shown below.',
+                    'Open your ' . ($isMaya ? 'Maya' : 'GCash') . ' app and tap "Send Money".',
+                    'Enter the ' . ($isMaya ? 'Maya' : 'GCash') . ' number shown below.',
                     'Enter the exact amount: ₱' . number_format($order->final_price, 2) . '.',
                     'Use your Order ID (' . $order->id . ') as the payment message/reference.',
                     'Take a screenshot of the success screen.',
@@ -81,7 +86,7 @@ class PaymentController extends Controller
                 ],
                 'amount'         => $order->final_price,
                 'reference_code' => $order->transaction_id ?? 'ORDER-' . $order->id,
-                'notes'          => 'Include Order #' . $order->id . ' in your GCash message for quick verification.',
+                'notes'          => 'Include Order #' . $order->id . ' in your ' . ($isMaya ? 'Maya' : 'GCash') . ' message for quick verification.',
             ];
         } else {
             $instructions = [

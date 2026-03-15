@@ -74,6 +74,8 @@ export const API_CONFIG = {
       UPLOAD_PROOF: '/payments/upload-proof',
       VERIFY: '/payments/verify',
       STATUS: '/payments/:orderId/status',
+      MAYA_CHECKOUT: '/payments/maya/checkout',
+      MAYA_STATUS: '/payments/maya/:orderId/status',
     },
     
     // User endpoints
