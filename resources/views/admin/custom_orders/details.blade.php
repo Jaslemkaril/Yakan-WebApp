@@ -527,6 +527,10 @@
                     $shippingFee = $orderDeliveryType === 'pickup' ? 0 : (float) ($order->shipping_fee ?? 0);
                     $subtotal = $materialCost + $patternFee;
                     $totalCalculated = $quotedPrice + $shippingFee;
+                    $isGroupedContext = $batchItems->count() > 1;
+                    $pricingCardQuoted = $isGroupedContext ? $batchQuotedSubtotal : $quotedPrice;
+                    $pricingCardShipping = $isGroupedContext ? $batchShippingTotal : $shippingFee;
+                    $pricingCardTotal = $isGroupedContext ? $batchGrandTotal : $totalCalculated;
                 @endphp
                 
                 <div class="space-y-3">
@@ -553,19 +557,24 @@
                                 </div>
                                 @endif
                                 <div class="border-t border-gray-300 pt-2 flex justify-between items-center">
-                                    <span class="text-gray-700 font-medium">Subtotal:</span>
-                                    <span class="font-bold text-gray-900">₱{{ number_format($subtotal, 2) }}</span>
+                                    <span class="text-gray-700 font-medium">{{ $isGroupedContext ? 'Quoted Subtotal (Group):' : 'Subtotal:' }}</span>
+                                    <span class="font-bold text-gray-900">₱{{ number_format($isGroupedContext ? $pricingCardQuoted : $subtotal, 2) }}</span>
                                 </div>
                                 <div class="flex justify-between items-center">
-                                    <span class="text-gray-700">Shipping Fee:</span>
-                                    <span class="font-semibold {{ $shippingFee == 0 ? 'text-green-600' : 'text-gray-900' }}">
-                                        {{ $shippingFee == 0 ? 'FREE DELIVERY! 🎉' : '₱' . number_format($shippingFee, 2) }}
+                                    <span class="text-gray-700">{{ $isGroupedContext ? 'Shared Shipping Fee (Group):' : 'Shipping Fee:' }}</span>
+                                    <span class="font-semibold {{ $pricingCardShipping == 0 ? 'text-green-600' : 'text-gray-900' }}">
+                                        {{ $pricingCardShipping == 0 ? 'FREE DELIVERY! 🎉' : '₱' . number_format($pricingCardShipping, 2) }}
                                     </span>
                                 </div>
                                 <div class="border-t-2 border-[#800000] pt-2 mt-2 flex justify-between items-center">
-                                    <span class="text-gray-900 font-bold text-base">TOTAL TO PAY:</span>
-                                    <span class="font-bold text-lg text-green-600">₱{{ number_format($totalCalculated, 2) }}</span>
+                                    <span class="text-gray-900 font-bold text-base">{{ $isGroupedContext ? 'GROUP TOTAL TO PAY:' : 'TOTAL TO PAY:' }}</span>
+                                    <span class="font-bold text-lg text-green-600">₱{{ number_format($pricingCardTotal, 2) }}</span>
                                 </div>
+                                @if($isGroupedContext)
+                                <div class="text-[11px] text-gray-600 mt-2">
+                                    Formula: Quoted Subtotal + One Shared Shipping Fee = Group Total
+                                </div>
+                                @endif
                             </div>
                         </div>
                     @else
@@ -626,9 +635,14 @@
                                     @endif
                                     
                                     <div class="border-t-2 border-[#800000] pt-2 mt-2 flex justify-between items-center">
-                                        <span class="text-gray-900 font-bold text-base">TOTAL:</span>
-                                        <span class="font-bold text-lg text-green-600">₱{{ number_format($quotedPrice + ($orderDeliveryType === 'pickup' ? 0 : (float) ($order->shipping_fee ?? 0)), 2) }}</span>
+                                        <span class="text-gray-900 font-bold text-base">{{ $isGroupedContext ? 'GROUP TOTAL:' : 'TOTAL:' }}</span>
+                                        <span class="font-bold text-lg text-green-600">₱{{ number_format($pricingCardTotal, 2) }}</span>
                                     </div>
+                                    @if($isGroupedContext)
+                                    <div class="text-[11px] text-gray-600 mt-2">
+                                        Quoted Subtotal: ₱{{ number_format($pricingCardQuoted, 2) }} + Shared Shipping: ₱{{ number_format($pricingCardShipping, 2) }}
+                                    </div>
+                                    @endif
                                 </div>
                                 
                                 {{-- Admin Pricing Notes --}}
