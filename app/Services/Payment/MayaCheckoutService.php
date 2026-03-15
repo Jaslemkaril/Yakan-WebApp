@@ -63,7 +63,7 @@ class MayaCheckoutService
             })->values()->all(),
         ];
 
-        $response = Http::withBasicAuth($secretKey, '')
+        $response = Http::withBasicAuth($publicKey, '')
             ->acceptJson()
             ->post($baseUrl . '/checkout/v1/checkouts', $payload);
 
