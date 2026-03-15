@@ -353,9 +353,9 @@
                         
                         <div class="space-y-3">
                             <!-- Maya Payment Option -->
-                            <div class="border-2 border-gray-200 rounded-xl overflow-hidden transition-all duration-200" id="gcash-option-wrap">
+                            <div class="border-2 border-gray-200 rounded-xl overflow-hidden transition-all duration-200" id="maya-option-wrap">
                                 <label class="relative flex items-center p-4 cursor-pointer hover:bg-blue-50 transition-all duration-200 group">
-                                    <input type="radio" name="payment_method" value="online" required class="w-5 h-5 text-blue-600 focus:ring-blue-500 focus:ring-2" form="checkout-form" onclick="showPaymentDetails('gcash')">
+                                    <input type="radio" name="payment_method" value="maya" required class="w-5 h-5 text-blue-600 focus:ring-blue-500 focus:ring-2" form="checkout-form" onclick="showPaymentDetails('maya')">
                                     <div class="ml-4 flex-1">
                                         <div class="flex items-center gap-3">
                                             <div class="w-12 h-12 bg-white border border-blue-100 rounded-lg flex items-center justify-center p-1 overflow-hidden">
@@ -367,21 +367,21 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <svg class="w-5 h-5 text-blue-600 payment-check-gcash hidden" fill="currentColor" viewBox="0 0 20 20">
+                                    <svg class="w-5 h-5 text-blue-600 payment-check-maya hidden" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                     </svg>
                                 </label>
                                 <!-- Maya Details (shown on select) -->
-                                <div id="gcash-details" class="hidden px-4 pb-4">
+                                <div id="maya-details" class="hidden px-4 pb-4">
                                     <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
                                         <p class="text-xs font-bold text-blue-800 uppercase tracking-wide mb-2">Send payment to:</p>
                                         <div class="flex justify-between items-center">
                                             <span class="text-sm text-gray-600 font-medium">Maya Number</span>
-                                            <span class="font-bold text-blue-700 text-base font-mono">{{ \App\Models\SystemSetting::get('gcash_number', '—') }}</span>
+                                            <span class="font-bold text-blue-700 text-base font-mono">{{ \App\Models\SystemSetting::get('maya_number', \App\Models\SystemSetting::get('gcash_number', '—')) }}</span>
                                         </div>
                                         <div class="flex justify-between items-center">
                                             <span class="text-sm text-gray-600 font-medium">Account Name</span>
-                                            <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('gcash_name', 'Tuwas Yakan') }}</span>
+                                            <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('maya_name', \App\Models\SystemSetting::get('gcash_name', 'Tuwas Yakan')) }}</span>
                                         </div>
                                         <p class="text-xs text-blue-700 mt-2 pt-2 border-t border-blue-200">Upload your Maya receipt on the order confirmation page.</p>
                                     </div>
@@ -451,18 +451,18 @@
                         <script>
                         function showPaymentDetails(type) {
                             // Reset borders
-                            document.getElementById('gcash-option-wrap').classList.remove('border-blue-400');
+                            document.getElementById('maya-option-wrap').classList.remove('border-blue-400');
                             document.getElementById('bank-option-wrap').classList.remove('border-green-400');
                             // Hide all details
-                            document.getElementById('gcash-details').classList.add('hidden');
+                            document.getElementById('maya-details').classList.add('hidden');
                             document.getElementById('bank-details').classList.add('hidden');
                             // Hide checks
-                            document.querySelectorAll('.payment-check-gcash, .payment-check-bank').forEach(el => el.classList.add('hidden'));
+                            document.querySelectorAll('.payment-check-maya, .payment-check-bank').forEach(el => el.classList.add('hidden'));
                             // Show selected
-                            if (type === 'gcash') {
-                                document.getElementById('gcash-details').classList.remove('hidden');
-                                document.getElementById('gcash-option-wrap').classList.add('border-blue-400');
-                                document.querySelectorAll('.payment-check-gcash').forEach(el => el.classList.remove('hidden'));
+                            if (type === 'maya') {
+                                document.getElementById('maya-details').classList.remove('hidden');
+                                document.getElementById('maya-option-wrap').classList.add('border-blue-400');
+                                document.querySelectorAll('.payment-check-maya').forEach(el => el.classList.remove('hidden'));
                             } else {
                                 document.getElementById('bank-details').classList.remove('hidden');
                                 document.getElementById('bank-option-wrap').classList.add('border-green-400');

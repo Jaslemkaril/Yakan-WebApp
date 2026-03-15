@@ -1,6 +1,16 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $walletMethod = ($order->payment_method === 'maya') ? 'maya' : 'gcash';
+    $walletLabel = $walletMethod === 'maya' ? 'Maya' : 'GCash';
+    $walletNumber = $walletMethod === 'maya'
+        ? \App\Models\SystemSetting::get('maya_number', \App\Models\SystemSetting::get('gcash_number', '—'))
+        : \App\Models\SystemSetting::get('gcash_number', '—');
+    $walletName = $walletMethod === 'maya'
+        ? \App\Models\SystemSetting::get('maya_name', \App\Models\SystemSetting::get('gcash_name', 'Tuwas Yakan'))
+        : \App\Models\SystemSetting::get('gcash_name', 'Tuwas Yakan');
+@endphp
 <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-4xl mx-auto">
         <!-- Success Message -->
@@ -14,15 +24,15 @@
         <div class="mb-8">
             <h1 class="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
                 <span class="text-blue-600">💳</span>
-                GCash Payment
+                {{ $walletLabel }} Payment
             </h1>
-            <p class="text-gray-600">Complete your payment securely via GCash</p>
+            <p class="text-gray-600">Complete your payment securely via {{ $walletLabel }}</p>
         </div>
 
         <div class="grid lg:grid-cols-3 gap-8">
             <!-- Payment Instructions Section -->
             <div class="lg:col-span-2">
-                <!-- GCash Instructions Card -->
+                <!-- Wallet Instructions Card -->
                 <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
                     <div class="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200">
                         <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -31,7 +41,7 @@
                             </svg>
                         </div>
                         <div>
-                            <h2 class="text-xl font-bold text-gray-900">GCash Payment Instructions</h2>
+                            <h2 class="text-xl font-bold text-gray-900">{{ $walletLabel }} Payment Instructions</h2>
                             <p class="text-sm text-gray-600">Follow these steps to complete your payment</p>
                         </div>
                     </div>
@@ -43,8 +53,8 @@
                                 1
                             </div>
                             <div class="flex-1">
-                                <h3 class="font-semibold text-gray-900 mb-2">Open your GCash App</h3>
-                                <p class="text-gray-600 text-sm">Launch the GCash mobile application on your phone.</p>
+                                <h3 class="font-semibold text-gray-900 mb-2">Open your {{ $walletLabel }} App</h3>
+                                <p class="text-gray-600 text-sm">Launch the {{ $walletLabel }} mobile application on your phone.</p>
                             </div>
                         </div>
 
@@ -54,11 +64,11 @@
                                 2
                             </div>
                             <div class="flex-1">
-                                <h3 class="font-semibold text-gray-900 mb-2">Send Money to this GCash Number</h3>
+                                <h3 class="font-semibold text-gray-900 mb-2">Send Money to this {{ $walletLabel }} Number</h3>
                                 <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 mt-2 border-2 border-blue-200">
-                                    <div class="text-sm text-gray-600 mb-1">GCash Number</div>
-                                    <div class="text-2xl font-bold text-blue-600">{{ \App\Models\SystemSetting::get('gcash_number', '—') }}</div>
-                                    <div class="text-sm text-gray-700 mt-2 font-medium">Account Name: {{ \App\Models\SystemSetting::get('gcash_name', 'Tuwas Yakan') }}</div>
+                                    <div class="text-sm text-gray-600 mb-1">{{ $walletLabel }} Number</div>
+                                    <div class="text-2xl font-bold text-blue-600">{{ $walletNumber }}</div>
+                                    <div class="text-sm text-gray-700 mt-2 font-medium">Account Name: {{ $walletName }}</div>
                                 </div>
                             </div>
                         </div>
@@ -84,7 +94,7 @@
                             </div>
                             <div class="flex-1">
                                 <h3 class="font-semibold text-gray-900 mb-2">Add Reference Number</h3>
-                                <p class="text-gray-600 text-sm mb-2">Include this reference in your GCash message:</p>
+                                <p class="text-gray-600 text-sm mb-2">Include this reference in your {{ $walletLabel }} message:</p>
                                 <div class="bg-gray-100 rounded-lg p-3 border-2 border-gray-300">
                                     <div class="text-xs text-gray-500 mb-1">Reference Number</div>
                                     <div class="font-mono font-bold text-lg text-gray-900">ORDER-{{ $order->id }}</div>
@@ -128,7 +138,7 @@
                             </svg>
                             <div>
                                 <p class="text-sm font-medium text-yellow-900">Important Reminder</p>
-                                <p class="text-sm text-yellow-700 mt-1">Please make sure to send the EXACT amount (₱{{ number_format($order->total_amount, 2) }}) and include the reference number (ORDER-{{ $order->id }}) in your GCash message.</p>
+                                <p class="text-sm text-yellow-700 mt-1">Please make sure to send the EXACT amount (₱{{ number_format($order->total_amount, 2) }}) and include the reference number (ORDER-{{ $order->id }}) in your {{ $walletLabel }} message.</p>
                             </div>
                         </div>
                     </div>
@@ -140,10 +150,10 @@
                         @csrf
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">GCash Reference Number <span class="text-gray-500">(Optional)</span></label>
-                            <input type="text" name="gcash_reference" placeholder="e.g., 1234567890"
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ $walletLabel }} Reference Number <span class="text-gray-500">(Optional)</span></label>
+                            <input type="text" name="payment_reference" placeholder="e.g., 1234567890"
                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                            <p class="mt-1 text-xs text-gray-500">Enter the reference number from your GCash receipt</p>
+                            <p class="mt-1 text-xs text-gray-500">Enter the reference number from your {{ $walletLabel }} receipt</p>
                         </div>
 
                         <div>
@@ -158,7 +168,7 @@
                                 <svg class="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
                                 </svg>
-                                <p class="text-xs text-gray-600">Upload a clear screenshot or photo of your GCash receipt showing the transaction details, amount, and reference number.</p>
+                                <p class="text-xs text-gray-600">Upload a clear screenshot or photo of your {{ $walletLabel }} receipt showing the transaction details, amount, and reference number.</p>
                             </div>
                         </div>
 
@@ -248,7 +258,7 @@
                         @endif
                         <div class="flex justify-between">
                             <span>Payment Method:</span>
-                            <span class="font-medium text-gray-900">GCash</span>
+                            <span class="font-medium text-gray-900">{{ $walletLabel }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span>Status:</span>
@@ -262,7 +272,7 @@
                         <div class="space-y-3">
                             <div>
                                 <span class="text-xs text-blue-700">Send to:</span>
-                                <div class="font-bold text-blue-900 text-lg">{{ \App\Models\SystemSetting::get('gcash_number', '—') }}</div>
+                                <div class="font-bold text-blue-900 text-lg">{{ $walletNumber }}</div>
                             </div>
                             <div>
                                 <span class="text-xs text-blue-700">Amount:</span>

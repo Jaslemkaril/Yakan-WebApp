@@ -266,8 +266,9 @@
                 <p><strong>Payment Method:</strong> 
                     {{ $order->payment_method === 'online_banking' ? 'GCash' : 
                        ($order->payment_method === 'online' ? 'GCash' : 
+                      ($order->payment_method === 'maya' ? 'Maya' : 
                        ($order->payment_method === 'gcash' ? 'GCash' : 
-                       ($order->payment_method === 'bank_transfer' ? 'Bank Transfer' : ucfirst(str_replace('_', ' ', $order->payment_method ?? 'N/A'))))) }}
+                      ($order->payment_method === 'bank_transfer' ? 'Bank Transfer' : ucfirst(str_replace('_', ' ', $order->payment_method ?? 'N/A')))))) }}
                 </p>
                 <p><strong>Payment Status:</strong> {{ ucfirst($order->payment_status ?? 'pending') }}</p>
                 @if($order->tracking_number)

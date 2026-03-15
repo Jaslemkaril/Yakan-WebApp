@@ -22,7 +22,12 @@
     $monthlyOrders  = $monthlyRevenue->pluck('orders')->map(fn($v) => (int)$v)->toArray();
     $monthlyRev     = $monthlyRevenue->pluck('revenue')->map(fn($v) => (float)$v)->toArray();
 
-    $pmLabels  = $paymentMethods->map(fn($p) => ucwords(str_replace('_',' ', $p->payment_method ?? 'Unknown')))->toArray();
+    $pmLabels  = $paymentMethods->map(fn($p) => ($p->display_name ?? match($p->payment_method) {
+        'online', 'online_banking', 'gcash' => 'GCash',
+        'maya' => 'Maya',
+        'bank_transfer' => 'Bank Transfer',
+        default => ucwords(str_replace('_', ' ', $p->payment_method ?? 'Unknown')),
+    }))->toArray();
     $pmTotals  = $paymentMethods->pluck('total')->map(fn($v) => (float)$v)->toArray();
     $pmCounts  = $paymentMethods->pluck('count')->map(fn($v) => (int)$v)->toArray();
 
@@ -151,7 +156,12 @@
                     @foreach($paymentMethods as $method)
                     <div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
                         <div>
-                            <p class="font-medium text-gray-800 text-sm">{{ ucwords(str_replace('_', ' ', $method->payment_method ?? 'Unknown')) }}</p>
+                            <p class="font-medium text-gray-800 text-sm">{{ $method->display_name ?? match($method->payment_method) {
+                                'online', 'online_banking', 'gcash' => 'GCash',
+                                'maya' => 'Maya',
+                                'bank_transfer' => 'Bank Transfer',
+                                default => ucwords(str_replace('_', ' ', $method->payment_method ?? 'Unknown')),
+                            } }}</p>
                             <p class="text-xs text-gray-400">{{ $method->count }} orders</p>
                         </div>
                         <span class="font-bold text-[#800000] text-sm">₱{{ number_format($method->total ?? 0, 2) }}</span>

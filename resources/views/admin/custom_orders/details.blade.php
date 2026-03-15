@@ -692,9 +692,10 @@
                     <div class="flex justify-between items-center py-2">
                         <span class="text-gray-600">Payment Method:</span>
                         <span class="text-sm font-semibold text-gray-900">
-                            {{ $order->payment_method === 'online_banking' ? 'GCash' :
+                            {{ in_array($order->payment_method, ['online', 'online_banking']) ? 'GCash' :
+                               ($order->payment_method === 'maya' ? 'Maya' :
                                ($order->payment_method === 'gcash' ? 'GCash' :
-                               ($order->payment_method === 'bank_transfer' ? 'Bank Transfer' : ucfirst(str_replace('_', ' ', $order->payment_method)))) }}
+                               ($order->payment_method === 'bank_transfer' ? 'Bank Transfer' : ucfirst(str_replace('_', ' ', $order->payment_method))))) }}
                         </span>
                     </div>
                     @endif
@@ -780,9 +781,10 @@
                 <div class="mb-4">
                     <div class="text-sm font-semibold text-gray-700 mb-1">Payment Method</div>
                     <div class="text-sm text-gray-900">
-                        {{ $order->payment_method === 'online_banking' ? 'GCash' :
+                        {{ in_array($order->payment_method, ['online', 'online_banking']) ? 'GCash' :
+                           ($order->payment_method === 'maya' ? 'Maya' :
                            ($order->payment_method === 'gcash' ? 'GCash' :
-                           ($order->payment_method === 'bank_transfer' ? 'Bank Transfer' : ucfirst(str_replace('_', ' ', $order->payment_method)))) }}
+                           ($order->payment_method === 'bank_transfer' ? 'Bank Transfer' : ucfirst(str_replace('_', ' ', $order->payment_method))))) }}
                     </div>
                 </div>
                 @endif
@@ -800,7 +802,9 @@
                 <div class="mb-4">
                     @php
                         $receiptLabel = match($order->payment_method) {
+                            'maya' => 'Maya Receipt',
                             'gcash' => 'GCash Receipt',
+                            'online', 'online_banking' => 'GCash Receipt',
                             'bank_transfer' => 'Bank Transfer Receipt',
                             default => 'Payment Receipt',
                         };

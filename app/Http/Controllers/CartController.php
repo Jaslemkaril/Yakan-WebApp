@@ -608,7 +608,7 @@ class CartController extends Controller
     public function processCheckout(Request $request)
     {
         $request->validate([
-            'payment_method'      => 'required|in:online,bank_transfer',
+            'payment_method'      => 'required|in:online,maya,bank_transfer',
             'delivery_type'       => 'required|in:delivery,pickup',
             'address_id'          => 'required_if:delivery_type,delivery|exists:user_addresses,id',
             'customer_notes'      => 'nullable|string|max:500',
@@ -902,14 +902,16 @@ class CartController extends Controller
 
         // Redirect based on payment method — use JS redirect to avoid Railway's broken
         // plain "Redirecting to..." HTML body that PHP redirect() produces.
-        $redirectUrl = $request->payment_method === 'online'
+        $redirectUrl = in_array($request->payment_method, ['online', 'maya'])
             ? route('payment.online', $order->id) . $tokenParam
             : route('payment.bank', $order->id) . $tokenParam;
 
         $redirectUrlJs   = json_encode($redirectUrl);
         $orderRef        = htmlspecialchars($order->order_ref ?? '#' . $order->id, ENT_QUOTES, 'UTF-8');
         $totalFormatted  = '₱' . number_format($totalAmount, 2);
-        $paymentLabel    = $request->payment_method === 'online' ? 'Complete GCash Payment' : 'Complete Bank Transfer';
+        $paymentLabel    = $request->payment_method === 'maya'
+            ? 'Complete Maya Payment'
+            : ($request->payment_method === 'online' ? 'Complete GCash Payment' : 'Complete Bank Transfer');
 
         return response(<<<HTML
 <!DOCTYPE html>
@@ -1223,13 +1225,16 @@ HTML
                 abort(403, 'Unauthorized access to this order.');
             }
 
-            if ($order->payment_method !== 'gcash') {
+            if (!in_array($order->payment_method, ['gcash', 'maya'])) {
                 return redirect()->route('orders.show', $orderId)
                                  ->with('error', 'This order is not set up for online payment.');
             }
 
+            $walletLabel = $order->payment_method === 'maya' ? 'Maya' : 'GCash';
+
             $request->validate([
                 'gcash_reference' => 'nullable|string|max:191',
+                'payment_reference' => 'nullable|string|max:191',
                 'payment_proof' => 'required|image|mimes:jpeg,jpg,png,gif|max:5120',
             ]);
 
@@ -1254,9 +1259,10 @@ HTML
                 $order->gcash_receipt = $paymentProofPath;
             }
 
-            $message = 'Payment verified via GCash';
-            if ($request->filled('gcash_reference')) {
-                $message .= ' (Ref: ' . $request->input('gcash_reference') . ')';
+            $message = 'Payment verified via ' . $walletLabel;
+            $reference = $request->input('payment_reference', $request->input('gcash_reference'));
+            if (!empty($reference)) {
+                $message .= ' (Ref: ' . $reference . ')';
             }
 
             $order->appendTrackingEvent($message);
@@ -1271,8 +1277,8 @@ HTML
             \App\Models\Notification::createNotification(
                 $order->user_id,
                 'payment',
-                'GCash payment verified',
-                "Your GCash payment for order #{$order->id} has been verified. Your order is now being processed!",
+                $walletLabel . ' payment verified',
+                "Your {$walletLabel} payment for order #{$order->id} has been verified. Your order is now being processed!",
                 route('orders.show', $order->id),
                 [
                     'order_id' => $order->id,
@@ -1288,7 +1294,7 @@ HTML
                     $admin->id,
                     'payment',
                     'Payment Received',
-                    "Payment received for order #{$order->id} via GCash. Amount: ₱" . number_format($order->total_amount, 2),
+                    "Payment received for order #{$order->id} via {$walletLabel}. Amount: ₱" . number_format($order->total_amount, 2),
                     route('admin.orders.show', $order->id),
                     [
                         'order_id' => $order->id,
@@ -1301,7 +1307,7 @@ HTML
             $authToken = request()->input('auth_token') ?? session('auth_token');
             $tokenParam = $authToken ? '?auth_token=' . $authToken : '';
             return redirect(route('orders.show', $orderId) . $tokenParam)
-                             ->with('success', 'GCash payment verified! Your order is now being processed.');
+                             ->with('success', $walletLabel . ' payment verified! Your order is now being processed.');
         } catch (\Exception $e) {
             \Log::error('Error processing payment', [
                 'order_id' => $orderId,

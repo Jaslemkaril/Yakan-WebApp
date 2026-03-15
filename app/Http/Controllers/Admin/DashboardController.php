@@ -79,22 +79,11 @@ class DashboardController extends Controller
             $rawPaymentMethods = (clone $dateQuery)->selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
                 ->groupBy('payment_method')
                 ->get();
-            
-            // Merge GCash variants (online, online_banking, gcash) and bank_transfer
-            $paymentMethods = collect([
-                (object)[
-                    'payment_method' => 'gcash',
-                    'count' => $rawPaymentMethods->whereIn('payment_method', ['online', 'online_banking', 'gcash'])->sum('count'),
-                    'total' => $rawPaymentMethods->whereIn('payment_method', ['online', 'online_banking', 'gcash'])->sum('total'),
-                ],
-                (object)[
-                    'payment_method' => 'bank_transfer',
-                    'count' => $rawPaymentMethods->where('payment_method', 'bank_transfer')->sum('count'),
-                    'total' => $rawPaymentMethods->where('payment_method', 'bank_transfer')->sum('total'),
-                ],
-            ])->filter(function($method) {
-                return $method->count > 0; // Only show payment methods that have orders
-            });
+
+            $paymentMethods = $this->normalizePaymentMethods($rawPaymentMethods)
+                ->filter(function ($method) {
+                    return $method->count > 0;
+                });
 
 
             // Delivery type breakdown
@@ -297,9 +286,10 @@ class DashboardController extends Controller
                 ->get();
 
             // Payment method breakdown
-            $paymentMethods = Order::selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
+            $rawPaymentMethods = Order::selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
                 ->groupBy('payment_method')
                 ->get();
+            $paymentMethods = $this->normalizePaymentMethods($rawPaymentMethods);
 
             // Top products by revenue
             $topProducts = OrderItem::selectRaw('product_id, SUM(quantity) as sold, SUM(price * quantity) as revenue')
@@ -468,9 +458,10 @@ class DashboardController extends Controller
                     ->get();
 
                 // Payment method breakdown (all orders, not just completed)
-                $data['paymentMethods'] = (clone $dateQuery)->selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
+                $rawPaymentMethods = (clone $dateQuery)->selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
                     ->groupBy('payment_method')
                     ->get();
+                $data['paymentMethods'] = $this->normalizePaymentMethods($rawPaymentMethods);
             }
 
             // --- Product Sales Report ---
@@ -584,9 +575,10 @@ class DashboardController extends Controller
             $topProducts = $topProductsQuery->take(10)->get();
 
             // Payment method breakdown
-            $paymentMethods = (clone $dateQuery)->selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
+            $rawPaymentMethods = (clone $dateQuery)->selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
                 ->groupBy('payment_method')
                 ->get();
+            $paymentMethods = $this->normalizePaymentMethods($rawPaymentMethods);
 
             // Prepare CSV output
             $filename = 'dashboard_report_' . $period . '_' . date('Y-m-d_His') . '.csv';
@@ -619,7 +611,7 @@ class DashboardController extends Controller
                 fputcsv($file, ['Payment Method', 'Orders', 'Total Amount']);
                 foreach ($paymentMethods as $method) {
                     fputcsv($file, [
-                        ucfirst($method->payment_method ?? 'Unknown'),
+                        $method->display_name ?? $this->paymentMethodDisplayName($method->payment_method ?? null),
                         $method->count,
                         'P' . number_format($method->total ?? 0, 2)
                     ]);
@@ -651,7 +643,7 @@ class DashboardController extends Controller
                         $order->user->name ?? ($order->customer_name ?? 'Guest'),
                         $order->created_at->format('Y-m-d H:i:s'),
                         ucfirst($order->status ?? 'Unknown'),
-                        ucfirst($order->payment_method ?? 'N/A'),
+                        $this->paymentMethodDisplayName($order->payment_method ?? null),
                         ucfirst($order->delivery_type ?? 'N/A'),
                         'P' . number_format($order->total_amount ?? 0, 2),
                         $items ?: 'No items'
@@ -667,5 +659,51 @@ class DashboardController extends Controller
             \Log::error('Export report error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Unable to export report: ' . $e->getMessage());
         }
+    }
+
+    private function canonicalPaymentMethod(?string $method): string
+    {
+        $normalized = strtolower(trim((string) $method));
+
+        return match ($normalized) {
+            'online', 'online_banking', 'gcash' => 'gcash',
+            'maya' => 'maya',
+            'bank_transfer' => 'bank_transfer',
+            'cash' => 'cash',
+            '', null => 'unknown',
+            default => $normalized,
+        };
+    }
+
+    private function paymentMethodDisplayName(?string $method): string
+    {
+        $canonical = $this->canonicalPaymentMethod($method);
+
+        return match ($canonical) {
+            'gcash' => 'GCash',
+            'maya' => 'Maya',
+            'bank_transfer' => 'Bank Transfer',
+            'cash' => 'Cash on Delivery',
+            'unknown' => 'Unknown',
+            default => ucwords(str_replace('_', ' ', $canonical)),
+        };
+    }
+
+    private function normalizePaymentMethods($paymentMethods)
+    {
+        return collect($paymentMethods)
+            ->groupBy(function ($method) {
+                return $this->canonicalPaymentMethod($method->payment_method ?? null);
+            })
+            ->map(function ($methods, $paymentMethod) {
+                return (object) [
+                    'payment_method' => $paymentMethod,
+                    'display_name' => $this->paymentMethodDisplayName($paymentMethod),
+                    'count' => (int) $methods->sum('count'),
+                    'total' => (float) $methods->sum('total'),
+                ];
+            })
+            ->sortByDesc('count')
+            ->values();
     }
 }

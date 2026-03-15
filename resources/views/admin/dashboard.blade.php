@@ -591,11 +591,21 @@
                 <div class="space-y-3 sm:space-y-4">
                     @foreach($paymentMethods as $method)
                         @php
-                            // Map payment method to display properties
-                            $isGcash = $method->payment_method === 'gcash';
-                            $displayName = $isGcash ? 'GCash' : 'Bank Transfer';
-                            $iconColor = $isGcash ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600';
-                            $icon = $isGcash ? 'fa-mobile-alt' : 'fa-university';
+                            $displayName = $method->display_name ?? match($method->payment_method) {
+                                'gcash', 'online', 'online_banking' => 'GCash',
+                                'maya' => 'Maya',
+                                'bank_transfer' => 'Bank Transfer',
+                                default => ucfirst(str_replace('_', ' ', $method->payment_method ?? 'Unknown')),
+                            };
+                            $iconColor = match($method->payment_method) {
+                                'gcash', 'online', 'online_banking' => 'bg-blue-100 text-blue-600',
+                                'maya' => 'bg-emerald-100 text-emerald-600',
+                                default => 'bg-green-100 text-green-600',
+                            };
+                            $icon = match($method->payment_method) {
+                                'gcash', 'online', 'online_banking', 'maya' => 'fa-mobile-alt',
+                                default => 'fa-university',
+                            };
                         @endphp
                         <div class="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                             <div class="flex items-center space-x-2 sm:space-x-3">

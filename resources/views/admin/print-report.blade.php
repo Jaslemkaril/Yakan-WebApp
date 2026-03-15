@@ -192,8 +192,19 @@
                         @foreach($paymentMethods as $method)
                             <tr class="border-b border-gray-200 {{ $loop->even ? 'bg-gray-50' : 'bg-white' }}">
                                 <td class="py-2.5 px-4 font-medium">
-                                    <i class="fas {{ $method->payment_method === 'online' ? 'fa-mobile-alt' : 'fa-university' }} mr-2 text-[#800000]"></i>
-                                    {{ $method->payment_method === 'online' ? 'GCash' : ucfirst($method->payment_method ?? 'Unknown') }}
+                                    @php
+                                        $paymentMethodLabel = $method->display_name ?? match($method->payment_method) {
+                                            'online', 'online_banking', 'gcash' => 'GCash',
+                                            'maya' => 'Maya',
+                                            'bank_transfer' => 'Bank Transfer',
+                                            default => ucfirst(str_replace('_', ' ', $method->payment_method ?? 'Unknown')),
+                                        };
+                                        $paymentMethodIcon = in_array($method->payment_method, ['online', 'online_banking', 'gcash', 'maya'])
+                                            ? 'fa-mobile-alt'
+                                            : 'fa-university';
+                                    @endphp
+                                    <i class="fas {{ $paymentMethodIcon }} mr-2 text-[#800000]"></i>
+                                    {{ $paymentMethodLabel }}
                                 </td>
                                 <td class="py-2.5 px-4 text-right">{{ $method->count }}</td>
                                 <td class="py-2.5 px-4 text-right font-semibold">₱{{ number_format($method->total ?? 0, 2) }}</td>

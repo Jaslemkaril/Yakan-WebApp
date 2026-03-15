@@ -474,7 +474,8 @@
                             @if($order->payment_method)
                                 <p class="text-[10px] text-gray-400 mt-0.5">
                                     {{ match($order->payment_method) {
-                                        'online_banking', 'gcash' => 'GCash',
+                                        'online', 'online_banking', 'gcash' => 'GCash',
+                                        'maya' => 'Maya',
                                         'bank_transfer' => 'Bank Transfer',
                                         default => ucfirst(str_replace('_', ' ', $order->payment_method))
                                     } }}

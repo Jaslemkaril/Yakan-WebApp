@@ -746,11 +746,15 @@
                 @endif
 
                 {{-- API Payment Status Check --}}
-                @if(in_array($order->payment_method, ['gcash', 'online_banking']) && in_array($order->payment_status, ['pending', 'unpaid']))
+                @if(in_array($order->payment_method, ['gcash', 'online', 'online_banking', 'maya']) && in_array($order->payment_status, ['pending', 'unpaid']))
                     <div class="bg-red-50 border border-red-200 mt-4 p-4 rounded-xl">
                         <h2 class="text-lg font-semibold mb-2 text-[#800000]">API Payment Status</h2>
                         <p class="text-sm text-gray-700 mb-3">
-                            This payment was processed via {{ ucfirst($order->payment_method) }}. Status will be updated automatically via webhook.
+                            This payment was processed via {{ match($order->payment_method) {
+                                'online', 'online_banking', 'gcash' => 'GCash',
+                                'maya' => 'Maya',
+                                default => ucfirst(str_replace('_', ' ', $order->payment_method ?? 'Unknown')),
+                            } }}. Status will be updated automatically via webhook.
                         </p>
                         @if($order->transaction_id)
                             <form action="{{ route('admin.custom-orders.check_payment', $order->id) }}" method="POST" class="inline">

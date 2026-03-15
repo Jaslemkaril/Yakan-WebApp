@@ -128,6 +128,9 @@
                     <span class="text-sm text-gray-600">Method:</span>
                     <span class="text-sm font-medium text-gray-900">
                         @switch($order->payment_method)
+                            @case('maya') Maya @break
+                            @case('online') GCash @break
+                            @case('online_banking') GCash @break
                             @case('gcash') GCash @break
                             @case('bank_transfer') Bank Transfer @break
                             @case('cash') Cash on Delivery @break
@@ -159,7 +162,9 @@
                     
                     // Label based on payment method
                     $receiptLabel = match($order->payment_method) {
+                        'maya' => 'Maya Receipt',
                         'gcash' => 'GCash Receipt',
+                        'online', 'online_banking' => 'GCash Receipt',
                         'bank_transfer' => 'Bank Transfer Receipt',
                         default => 'Payment Receipt',
                     };
