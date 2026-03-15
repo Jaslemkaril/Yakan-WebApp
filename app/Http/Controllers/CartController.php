@@ -908,6 +908,13 @@ class CartController extends Controller
         }
 
         if ($request->payment_method === 'maya') {
+            \Log::info('Maya checkout attempt', [
+                'order_id' => $order->id,
+                'maya_enabled' => config('services.maya.enabled'),
+                'has_public_key' => !empty(config('services.maya.public_key')),
+                'has_secret_key' => !empty(config('services.maya.secret_key')),
+                'base_url' => config('services.maya.base_url'),
+            ]);
             try {
                 $mayaCheckoutUrl = $this->createMayaCheckoutRedirectUrl($order, $authToken);
                 $redirectUrl = $mayaCheckoutUrl;
@@ -916,6 +923,7 @@ class CartController extends Controller
                 \Log::error('Maya checkout redirect failed.', [
                     'order_id' => $order->id,
                     'error' => $exception->getMessage(),
+                    'trace' => $exception->getTraceAsString(),
                 ]);
 
                 $orderUrl = $this->appendAuthToken(route('orders.show', $order->id), $authToken);
