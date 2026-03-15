@@ -16,9 +16,17 @@ class Authenticate extends Middleware
         $resolvedToken = $request->input('auth_token')
             ?? $request->query('auth_token')
             ?? $request->cookie('auth_token')
-            ?? session('auth_token')
             ?? $request->header('X-Auth-Token')
             ?? $request->bearerToken();
+
+        // For auth_token-based requests, avoid DB-backed sessions before auth middleware completes.
+        if ($resolvedToken && config('session.driver') === 'database') {
+            config(['session.driver' => 'cookie']);
+        }
+
+        if (!$resolvedToken) {
+            $resolvedToken = session('auth_token');
+        }
 
         // Try token authentication if not already authenticated
         if (!Auth::check()) {

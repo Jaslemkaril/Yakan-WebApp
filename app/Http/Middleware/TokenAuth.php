@@ -12,15 +12,22 @@ class TokenAuth
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // Check for auth_token in multiple places
-        // For JSON requests, check the JSON body as well
+        // Resolve auth_token from request sources first (avoid session dependency)
         $token = $request->input('auth_token') 
             ?? $request->json('auth_token')  // Add JSON body support
             ?? $request->query('auth_token') 
             ?? $request->cookie('auth_token')
-            ?? session('auth_token')
             ?? $request->header('X-Auth-Token') // Also check headers
             ?? $request->bearerToken(); // Check Authorization: Bearer header
+
+        // For auth_token-based requests, avoid hitting DB-backed sessions before auth.
+        if ($token && config('session.driver') === 'database') {
+            config(['session.driver' => 'cookie']);
+        }
+
+        if (!$token) {
+            $token = session('auth_token');
+        }
         
         // Log the request for debugging
         if (!Auth::check()) {
@@ -29,7 +36,6 @@ class TokenAuth
                 'method' => $request->method(),
                 'has_token' => !empty($token),
                 'token_source' => $token ? ($request->json('auth_token') ? 'json' : ($request->query('auth_token') ? 'query' : ($request->bearerToken() ? 'bearer' : ($request->cookie('auth_token') ? 'cookie' : 'session')))) : 'none',
-                'session_id' => session()->getId(),
                 'is_guest' => Auth::guest()
             ]);
         }
