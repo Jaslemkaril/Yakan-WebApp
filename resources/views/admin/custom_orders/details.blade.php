@@ -410,12 +410,29 @@
                     </div>
                     @endif
                 </div>
+
+                @php
+                    $rawSpecifications = trim((string) ($order->specifications ?? ''));
+                    $specLines = preg_split('/\r\n|\r|\n/', $rawSpecifications) ?: [];
+                    $meaningfulSpecLines = collect($specLines)
+                        ->map(fn($line) => trim((string) $line))
+                        ->filter(fn($line) => $line !== '')
+                        ->reject(function ($line) {
+                            $lower = strtolower($line);
+                            return $lower === 'custom fabric order'
+                                || str_starts_with($lower, 'fabric type:')
+                                || str_starts_with($lower, 'quantity:')
+                                || str_starts_with($lower, 'intended use:');
+                        })
+                        ->values();
+                    $hasMeaningfulSpecifications = $meaningfulSpecLines->isNotEmpty();
+                @endphp
                 
                 {{-- Specifications --}}
-                @if($order->specifications)
+                @if($hasMeaningfulSpecifications)
                 <div class="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <div class="text-sm text-gray-600 font-semibold mb-2">Specifications:</div>
-                    <p class="text-gray-800 whitespace-pre-wrap">{{ $order->specifications }}</p>
+                    <p class="text-gray-800 whitespace-pre-wrap">{{ $meaningfulSpecLines->implode("\n") }}</p>
                 </div>
                 @endif
                 
