@@ -908,14 +908,18 @@ class CartController extends Controller
         }
 
         if ($request->payment_method === 'maya') {
-            $mayaCheckoutUrl = $this->createMayaCheckoutRedirectUrl($order, $authToken);
-
-            if ($mayaCheckoutUrl) {
+            try {
+                $mayaCheckoutUrl = $this->createMayaCheckoutRedirectUrl($order, $authToken);
                 $redirectUrl = $mayaCheckoutUrl;
                 $paymentLabel = 'Opening Maya Checkout';
-            } else {
-                $redirectUrl = $this->appendAuthToken(route('payment.online', $order->id), $authToken);
-                $paymentLabel = 'Complete Maya Payment';
+            } catch (\Throwable $exception) {
+                \Log::error('Maya checkout redirect failed.', [
+                    'order_id' => $order->id,
+                    'error' => $exception->getMessage(),
+                ]);
+
+                return redirect($this->appendAuthToken(route('orders.show', $order->id), $authToken))
+                    ->with('error', 'Unable to open Maya checkout right now. Please verify Maya keys and try again.');
             }
         }
 
@@ -1072,31 +1076,27 @@ HTML
         return $url . $separator . 'auth_token=' . urlencode($authToken);
     }
 
-    private function createMayaCheckoutRedirectUrl(Order $order, ?string $authToken): ?string
+    private function createMayaCheckoutRedirectUrl(Order $order, ?string $authToken): string
     {
         if (!config('services.maya.enabled', false)) {
-            return null;
+            throw new \RuntimeException('Maya payment is disabled in configuration.');
         }
 
-        try {
-            $result = app(MayaCheckoutService::class)->createCheckout(
-                $order->loadMissing('items.product'),
-                [
-                    'success_url' => $this->appendAuthToken(route('payment.success', $order->id), $authToken),
-                    'failure_url' => $this->appendAuthToken(route('payment.failed', $order->id), $authToken),
-                    'cancel_url' => $this->appendAuthToken(route('payment.failed', $order->id), $authToken),
-                ]
-            );
+        $result = app(MayaCheckoutService::class)->createCheckout(
+            $order->loadMissing('items.product'),
+            [
+                'success_url' => $this->appendAuthToken(route('payment.success', $order->id), $authToken),
+                'failure_url' => $this->appendAuthToken(route('payment.failed', $order->id), $authToken),
+                'cancel_url' => $this->appendAuthToken(route('payment.failed', $order->id), $authToken),
+            ]
+        );
 
-            return $result['checkout_url'] ?? null;
-        } catch (\Throwable $exception) {
-            \Log::warning('Maya checkout redirect unavailable, falling back to manual page.', [
-                'order_id' => $order->id,
-                'error' => $exception->getMessage(),
-            ]);
-
-            return null;
+        $checkoutUrl = $result['checkout_url'] ?? null;
+        if (!$checkoutUrl) {
+            throw new \RuntimeException('Maya checkout URL missing from gateway response.');
         }
+
+        return $checkoutUrl;
     }
 
     /**
