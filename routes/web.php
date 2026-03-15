@@ -1198,19 +1198,19 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         });
 
     // Inventory Management
-    Route::prefix('inventory')->group(function () {
-        Route::get('/', [InventoryController::class, 'index'])->name('inventory.index');
-        Route::get('/history', [InventoryController::class, 'history'])->name('inventory.history');
-        Route::get('/create', [InventoryController::class, 'create'])->name('inventory.create');
-        Route::post('/', [InventoryController::class, 'store'])->name('inventory.store');
-        Route::get('/{inventory}', [InventoryController::class, 'show'])->name('inventory.show');
-        Route::get('/{inventory}/edit', [InventoryController::class, 'edit'])->name('inventory.edit');
-        Route::patch('/{inventory}', [InventoryController::class, 'update'])->name('inventory.update');
-        Route::patch('/{inventory}/restock', [InventoryController::class, 'restock'])->name('inventory.restock');
-        Route::patch('/{inventory}/stock-out', [InventoryController::class, 'stockOut'])->name('inventory.stockOut');
-        Route::delete('/{inventory}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
-        Route::get('/low-stock', [InventoryController::class, 'lowStockAlerts'])->name('inventory.low-stock');
-        Route::get('/report', [InventoryController::class, 'report'])->name('inventory.report');
+    Route::prefix('inventory')->name('inventory.')->group(function () {
+        Route::get('/', [InventoryController::class, 'index'])->name('index');
+        Route::get('/history', [InventoryController::class, 'history'])->name('history');
+        Route::get('/create', [InventoryController::class, 'create'])->name('create');
+        Route::post('/', [InventoryController::class, 'store'])->name('store');
+        Route::get('/low-stock', [InventoryController::class, 'lowStockAlerts'])->name('low-stock');
+        Route::get('/report', [InventoryController::class, 'report'])->name('report');
+        Route::get('/{inventory}', [InventoryController::class, 'show'])->name('show');
+        Route::get('/{inventory}/edit', [InventoryController::class, 'edit'])->name('edit');
+        Route::patch('/{inventory}', [InventoryController::class, 'update'])->name('update');
+        Route::patch('/{inventory}/restock', [InventoryController::class, 'restock'])->name('restock');
+        Route::patch('/{inventory}/stock-out', [InventoryController::class, 'stockOut'])->name('stockOut');
+        Route::delete('/{inventory}', [InventoryController::class, 'destroy'])->name('destroy');
     });
 
     // Custom Orders - Clean Implementation
