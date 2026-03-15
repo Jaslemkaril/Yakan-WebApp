@@ -51,7 +51,7 @@ class MayaCheckoutService
             ],
             'items' => $order->items->map(function ($item) {
                 return [
-                    'name' => (string) ($item->product_name ?? ('Product #' . $item->product_id)),
+                    'name' => (string) ($item->product_name ?? ($item->product->name ?? ('Product #' . $item->product_id))),
                     'quantity' => (int) $item->quantity,
                     'totalAmount' => [
                         'value' => number_format((float) $item->price * (int) $item->quantity, 2, '.', ''),
@@ -93,6 +93,63 @@ class MayaCheckoutService
             'checkout_url' => $checkoutUrl,
             'raw' => $data,
         ];
+    }
+
+    public function syncOrderStatusFromCheckout(Order $order, ?string $checkoutId = null): string
+    {
+        $reference = trim((string) ($checkoutId ?: $order->payment_reference));
+
+        if ($reference === '') {
+            return (string) $order->payment_status;
+        }
+
+        $checkout = $this->fetchCheckout($reference);
+        $gatewayStatus = strtolower((string) (
+            $checkout['status']
+            ?? $checkout['paymentStatus']
+            ?? data_get($checkout, 'data.attributes.status')
+            ?? data_get($checkout, 'data.attributes.paymentStatus')
+            ?? 'pending'
+        ));
+
+        if (str_contains($gatewayStatus, 'paid') || str_contains($gatewayStatus, 'success') || str_contains($gatewayStatus, 'complete')) {
+            $order->payment_status = 'paid';
+            if (in_array($order->status, ['pending', 'pending_confirmation', 'confirmed'], true)) {
+                $order->status = 'processing';
+            }
+        } elseif (str_contains($gatewayStatus, 'fail') || str_contains($gatewayStatus, 'cancel') || str_contains($gatewayStatus, 'expire')) {
+            $order->payment_status = 'failed';
+        } else {
+            $order->payment_status = 'pending';
+        }
+
+        if (empty($order->payment_reference)) {
+            $order->payment_reference = $reference;
+        }
+
+        $order->save();
+
+        return (string) $order->payment_status;
+    }
+
+    private function fetchCheckout(string $checkoutId): array
+    {
+        $secretKey = config('services.maya.secret_key');
+        $baseUrl = rtrim(config('services.maya.base_url', 'https://pg-sandbox.paymaya.com'), '/');
+
+        if (empty($secretKey)) {
+            throw new \RuntimeException('Maya secret key is not configured.');
+        }
+
+        $response = Http::withBasicAuth($secretKey, '')
+            ->acceptJson()
+            ->get($baseUrl . '/checkout/v1/checkouts/' . urlencode($checkoutId));
+
+        if (!$response->successful()) {
+            throw new \RuntimeException('Maya checkout status request failed: HTTP ' . $response->status());
+        }
+
+        return $response->json() ?? [];
     }
 
     public function verifyWebhookSignature(string $rawBody, ?string $signature): bool

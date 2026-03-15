@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Services\CloudinaryService;
+use App\Services\Payment\MayaCheckoutService;
 
 class CartController extends Controller
 {
@@ -896,22 +897,31 @@ class CartController extends Controller
             );
         }
 
-        // Get auth_token to pass through redirects (cookies are stripped by Railway edge proxy)
         $authToken = request()->input('auth_token') ?? session('auth_token');
-        $tokenParam = $authToken ? '?auth_token=' . $authToken : '';
 
-        // Redirect based on payment method — use JS redirect to avoid Railway's broken
-        // plain "Redirecting to..." HTML body that PHP redirect() produces.
-        $redirectUrl = in_array($request->payment_method, ['online', 'maya'])
-            ? route('payment.online', $order->id) . $tokenParam
-            : route('payment.bank', $order->id) . $tokenParam;
+        $redirectUrl = $this->appendAuthToken(route('payment.bank', $order->id), $authToken);
+        $paymentLabel = 'Complete Bank Transfer';
+
+        if ($request->payment_method === 'online') {
+            $redirectUrl = $this->appendAuthToken(route('payment.online', $order->id), $authToken);
+            $paymentLabel = 'Complete GCash Payment';
+        }
+
+        if ($request->payment_method === 'maya') {
+            $mayaCheckoutUrl = $this->createMayaCheckoutRedirectUrl($order, $authToken);
+
+            if ($mayaCheckoutUrl) {
+                $redirectUrl = $mayaCheckoutUrl;
+                $paymentLabel = 'Opening Maya Checkout';
+            } else {
+                $redirectUrl = $this->appendAuthToken(route('payment.online', $order->id), $authToken);
+                $paymentLabel = 'Complete Maya Payment';
+            }
+        }
 
         $redirectUrlJs   = json_encode($redirectUrl);
         $orderRef        = htmlspecialchars($order->order_ref ?? '#' . $order->id, ENT_QUOTES, 'UTF-8');
         $totalFormatted  = '₱' . number_format($totalAmount, 2);
-        $paymentLabel    = $request->payment_method === 'maya'
-            ? 'Complete Maya Payment'
-            : ($request->payment_method === 'online' ? 'Complete GCash Payment' : 'Complete Bank Transfer');
 
         return response(<<<HTML
 <!DOCTYPE html>
@@ -1049,6 +1059,43 @@ HTML
                 'error' => $exception->getMessage(),
             ]);
             return false;
+        }
+    }
+
+    private function appendAuthToken(string $url, ?string $authToken): string
+    {
+        if (!$authToken) {
+            return $url;
+        }
+
+        $separator = str_contains($url, '?') ? '&' : '?';
+        return $url . $separator . 'auth_token=' . urlencode($authToken);
+    }
+
+    private function createMayaCheckoutRedirectUrl(Order $order, ?string $authToken): ?string
+    {
+        if (!config('services.maya.enabled', false)) {
+            return null;
+        }
+
+        try {
+            $result = app(MayaCheckoutService::class)->createCheckout(
+                $order->loadMissing('items.product'),
+                [
+                    'success_url' => $this->appendAuthToken(route('payment.success', $order->id), $authToken),
+                    'failure_url' => $this->appendAuthToken(route('payment.failed', $order->id), $authToken),
+                    'cancel_url' => $this->appendAuthToken(route('payment.failed', $order->id), $authToken),
+                ]
+            );
+
+            return $result['checkout_url'] ?? null;
+        } catch (\Throwable $exception) {
+            \Log::warning('Maya checkout redirect unavailable, falling back to manual page.', [
+                'order_id' => $order->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
         }
     }
 
@@ -1390,6 +1437,70 @@ HTML
             $tokenParam = $authToken ? '?auth_token=' . $authToken : '';
             return redirect(route('orders.show', $orderId) . $tokenParam)
                              ->with('error', 'Error processing payment: ' . $e->getMessage());
+        }
+    }
+
+    public function paymentSuccess(Request $request, $orderId)
+    {
+        $order = Order::with('user')->findOrFail($orderId);
+
+        if ($order->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized access to this order.');
+        }
+
+        if ($order->payment_method === 'maya') {
+            $checkoutId = $request->query('checkoutId')
+                ?? $request->query('checkout_id')
+                ?? $request->query('id');
+
+            $paymentStatus = $this->syncMayaPaymentStatus($order, $checkoutId);
+
+            if ($paymentStatus === 'paid') {
+                return redirect($this->appendAuthToken(route('orders.show', $orderId), $request->input('auth_token') ?? session('auth_token')))
+                    ->with('success', 'Maya payment confirmed successfully.');
+            }
+        }
+
+        return redirect($this->appendAuthToken(route('orders.show', $orderId), $request->input('auth_token') ?? session('auth_token')))
+            ->with('info', 'Maya checkout completed. Payment verification is in progress.');
+    }
+
+    public function paymentFailed(Request $request, $orderId)
+    {
+        $order = Order::with('user')->findOrFail($orderId);
+
+        if ($order->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized access to this order.');
+        }
+
+        if ($order->payment_method === 'maya') {
+            $checkoutId = $request->query('checkoutId')
+                ?? $request->query('checkout_id')
+                ?? $request->query('id');
+
+            $paymentStatus = $this->syncMayaPaymentStatus($order, $checkoutId);
+
+            if ($paymentStatus === 'paid') {
+                return redirect($this->appendAuthToken(route('orders.show', $orderId), $request->input('auth_token') ?? session('auth_token')))
+                    ->with('success', 'Maya payment was completed successfully.');
+            }
+        }
+
+        return redirect($this->appendAuthToken(route('orders.show', $orderId), $request->input('auth_token') ?? session('auth_token')))
+            ->with('error', 'Maya payment was not completed. You can try again from your order page.');
+    }
+
+    private function syncMayaPaymentStatus(Order $order, ?string $checkoutId = null): string
+    {
+        try {
+            return app(MayaCheckoutService::class)->syncOrderStatusFromCheckout($order, $checkoutId);
+        } catch (\Throwable $exception) {
+            \Log::warning('Unable to sync Maya payment status from checkout API.', [
+                'order_id' => $order->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return (string) $order->payment_status;
         }
     }
 }
