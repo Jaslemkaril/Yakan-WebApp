@@ -985,6 +985,10 @@ HTML
         $paymentMethod = $requestedMethod === 'online' ? 'gcash' : $requestedMethod;
 
         if ($paymentMethod === 'maya' && !$this->ordersPaymentMethodSupports('maya')) {
+            if ($this->tryEnableMayaPaymentMethod()) {
+                return 'maya';
+            }
+
             \Log::warning('orders.payment_method enum does not include maya yet; using gcash fallback until migration is applied.');
             return 'gcash';
         }
@@ -1002,7 +1006,7 @@ HTML
 
         try {
             $column = DB::selectOne("SHOW COLUMNS FROM orders WHERE Field = 'payment_method'");
-            $columnType = strtolower((string) ($column->Type ?? ''));
+            $columnType = $this->extractColumnType($column);
 
             if ($columnType === '') {
                 return $supportCache[$method] = false;
@@ -1016,6 +1020,35 @@ HTML
         } catch (\Throwable $exception) {
             \Log::warning('Unable to inspect orders.payment_method schema support', ['error' => $exception->getMessage()]);
             return $supportCache[$method] = false;
+        }
+    }
+
+    private function extractColumnType($column): string
+    {
+        if (is_null($column)) {
+            return '';
+        }
+
+        foreach ((array) $column as $key => $value) {
+            if (strtolower((string) $key) === 'type') {
+                return strtolower((string) $value);
+            }
+        }
+
+        return '';
+    }
+
+    private function tryEnableMayaPaymentMethod(): bool
+    {
+        try {
+            DB::statement("ALTER TABLE orders MODIFY payment_method ENUM('gcash','maya','bank_transfer','cash') NOT NULL DEFAULT 'gcash'");
+            \Log::info('Auto-updated orders.payment_method enum to include maya during checkout.');
+            return true;
+        } catch (\Throwable $exception) {
+            \Log::warning('Auto-update of orders.payment_method enum failed; maya will fallback to gcash.', [
+                'error' => $exception->getMessage(),
+            ]);
+            return false;
         }
     }
 
