@@ -5,7 +5,7 @@
 @push('styles')
 <style>
     .hero-section {
-        background: url('/images/jus.jpg') center center / cover no-repeat;
+        background: url('{{ asset('images/jus.jpg') }}') center center / cover no-repeat;
         position: relative;
         overflow: hidden;
         min-height: 80vh;
