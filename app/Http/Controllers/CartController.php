@@ -401,14 +401,14 @@ class CartController extends Controller
                 $discount = 0;
                 if (session()->has('coupon_code')) {
                     $coupon = \App\Models\Coupon::where('code', session('coupon_code'))->first();
-                    if ($coupon) {
-                        $discount = $coupon->discount_type === 'fixed' 
-                            ? $coupon->discount_amount 
-                            : ($cartTotal * ($coupon->discount_amount / 100));
+                    if ($coupon && $coupon->canBeUsedBy(Auth::user())) {
+                        $discount = $coupon->calculateDiscount((float) $cartTotal);
+                    } else {
+                        session()->forget('coupon_code');
                     }
                 }
                 
-                $totalAmount = $cartTotal - $discount;
+                $totalAmount = max(0, $cartTotal - $discount);
                 
                 return response()->json([
                     'success' => true,
@@ -464,14 +464,14 @@ class CartController extends Controller
             $discount = 0;
             if (session()->has('coupon_code')) {
                 $coupon = \App\Models\Coupon::where('code', session('coupon_code'))->first();
-                if ($coupon) {
-                    $discount = $coupon->discount_type === 'fixed' 
-                        ? $coupon->discount_amount 
-                        : ($cartTotal * ($coupon->discount_amount / 100));
+                if ($coupon && $coupon->canBeUsedBy(Auth::user())) {
+                    $discount = $coupon->calculateDiscount((float) $cartTotal);
+                } else {
+                    session()->forget('coupon_code');
                 }
             }
             
-            $totalAmount = $cartTotal - $discount;
+            $totalAmount = max(0, $cartTotal - $discount);
             $totalItems = $allCartItems->sum('quantity');
             
             return response()->json([
@@ -615,7 +615,7 @@ class CartController extends Controller
         ]);
 
         // Map form values to database enum values for compatibility
-        $paymentMethod = $request->input('payment_method') === 'online' ? 'gcash' : $request->input('payment_method');
+        $paymentMethod = $this->normalizeCheckoutPaymentMethod((string) $request->input('payment_method'));
         $deliveryType = $request->input('delivery_type') === 'delivery' ? 'deliver' : $request->input('delivery_type');
         $status = 'pending_confirmation'; // Map 'pending' to 'pending_confirmation'
 
@@ -978,6 +978,45 @@ class CartController extends Controller
 </html>
 HTML
         );
+    }
+
+    private function normalizeCheckoutPaymentMethod(string $requestedMethod): string
+    {
+        $paymentMethod = $requestedMethod === 'online' ? 'gcash' : $requestedMethod;
+
+        if ($paymentMethod === 'maya' && !$this->ordersPaymentMethodSupports('maya')) {
+            \Log::warning('orders.payment_method enum does not include maya yet; using gcash fallback until migration is applied.');
+            return 'gcash';
+        }
+
+        return $paymentMethod;
+    }
+
+    private function ordersPaymentMethodSupports(string $method): bool
+    {
+        static $supportCache = [];
+
+        if (array_key_exists($method, $supportCache)) {
+            return $supportCache[$method];
+        }
+
+        try {
+            $column = DB::selectOne("SHOW COLUMNS FROM orders WHERE Field = 'payment_method'");
+            $columnType = strtolower((string) ($column->Type ?? ''));
+
+            if ($columnType === '') {
+                return $supportCache[$method] = false;
+            }
+
+            if (!str_contains($columnType, 'enum(')) {
+                return $supportCache[$method] = true;
+            }
+
+            return $supportCache[$method] = str_contains($columnType, "'" . strtolower($method) . "'");
+        } catch (\Throwable $exception) {
+            \Log::warning('Unable to inspect orders.payment_method schema support', ['error' => $exception->getMessage()]);
+            return $supportCache[$method] = false;
+        }
     }
 
     /**
