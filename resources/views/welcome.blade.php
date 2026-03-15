@@ -5,7 +5,7 @@
 @push('styles')
 <style>
     .hero-section {
-        background: linear-gradient(160deg, #6b0000 0%, #8b0000 40%, #6b0000 70%, #3d0000 100%);
+        background: url('/images/jus.jpg') center center / cover no-repeat;
         position: relative;
         overflow: hidden;
         min-height: 80vh;
@@ -17,31 +17,14 @@
         content: '';
         position: absolute;
         inset: 0;
-        background:
-            radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,255,255,0.06) 0%, transparent 60%),
-            radial-gradient(ellipse 60% 80% at 80% 100%, rgba(180,0,0,0.25) 0%, transparent 60%),
-            radial-gradient(ellipse 50% 60% at 20% 100%, rgba(100,0,0,0.3) 0%, transparent 60%);
+        background: rgba(0, 0, 0, 0.45);
         pointer-events: none;
     }
 
-    /* Subtle woven-pattern overlay */
     .hero-section::after {
         content: '';
         position: absolute;
         inset: 0;
-        background-image: repeating-linear-gradient(
-            45deg,
-            transparent,
-            transparent 18px,
-            rgba(255,255,255,0.015) 18px,
-            rgba(255,255,255,0.015) 19px
-        ), repeating-linear-gradient(
-            -45deg,
-            transparent,
-            transparent 18px,
-            rgba(255,255,255,0.015) 18px,
-            rgba(255,255,255,0.015) 19px
-        );
         pointer-events: none;
     }
 
