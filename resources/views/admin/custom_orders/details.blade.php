@@ -130,6 +130,14 @@
                 <div class="text-base font-extrabold text-[#800000]">₱{{ number_format($batchGrandTotal, 2) }}</div>
             </div>
         </div>
+        <div class="rounded-lg border px-3 py-2 mb-4 text-xs flex flex-wrap items-center gap-2" style="border-color:#e0b0b0; background-color:#fffafb; color:#8b3a56;">
+            <span class="font-semibold">Formula:</span>
+            <span class="font-bold text-gray-900">Quoted Subtotal</span>
+            <span>+</span>
+            <span class="font-bold text-gray-900">One Shared Group Shipping</span>
+            <span>=</span>
+            <span class="font-extrabold" style="color:#800000;">Grand Total</span>
+        </div>
         <form action="{{ route('admin.custom-orders.batch_shipping', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
             @csrf
             <input type="number" name="shipping_fee" step="0.01" min="0" value="{{ number_format($batchShippingTotal, 2, '.', '') }}" class="border border-gray-300 rounded px-2 py-1.5 text-xs" placeholder="Set one shipping fee for this whole group">
@@ -158,8 +166,8 @@
                             </div>
                             <div class="text-[11px] text-right">
                                 <div class="font-semibold text-gray-900">Quoted: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
-                                <div class="text-gray-600">Shipping: Shared at group level</div>
-                                <div class="font-bold text-[#800000]">Line total: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
+                                <div class="text-gray-600">Shipping: Shared once for the whole group</div>
+                                <div class="font-bold text-[#800000]">Item quoted amount: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
                             </div>
                             <div class="flex flex-col items-end gap-1">
                                 <span class="text-[10px] px-2 py-0.5 rounded-full {{ in_array($statusPill, ['approved','in_production','production_complete','out_for_delivery','delivered','completed']) ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">{{ ucfirst(str_replace('_',' ', $statusPill)) }}</span>
