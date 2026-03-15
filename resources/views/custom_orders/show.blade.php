@@ -5,18 +5,6 @@
     $batchOrders = $batchOrders ?? collect([$order]);
     $isBatchOrder = $isBatchOrder ?? ($batchOrders->count() > 1);
     $batchUnpaidOrders = $batchOrders->where('payment_status', '!=', 'paid')->values();
-    $batchQuotedSubtotal = (float) $batchUnpaidOrders->sum(fn($item) => (float) ($item->final_price ?? $item->estimated_price ?? 0));
-    $batchSharedShipping = (float) ($batchUnpaidOrders->map(function ($item) {
-        $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
-        if ($deliveryType === 'pickup') {
-            return 0;
-        }
-
-        $breakdown = method_exists($item, 'getPriceBreakdown') ? ($item->getPriceBreakdown() ?? []) : [];
-        $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
-
-        return $deliveryFeeInBreakdown > 0 ? 0 : (float) ($item->shipping_fee ?? 0);
-    })->max() ?? 0);
     $batchPaymentTotal = $batchPaymentTotal ?? (function () use ($batchUnpaidOrders) {
         $quotedSubtotal = (float) $batchUnpaidOrders->sum(fn($item) => (float) ($item->final_price ?? $item->estimated_price ?? 0));
 
@@ -226,27 +214,9 @@
                     </h2>
                     @if($batchPaymentTotal > 0)
                         <span class="text-sm font-semibold" style="color:#800000;">
-                            Group Total: ₱{{ number_format($batchPaymentTotal, 2) }}
+                            Combined Unpaid Total: ₱{{ number_format($batchPaymentTotal, 2) }}
                         </span>
                     @endif
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4 text-xs">
-                    <div class="rounded-lg border p-2" style="border-color:#e0b0b0; background-color:#fff;">
-                        <div class="font-semibold" style="color:#8b3a56;">Quoted Subtotal</div>
-                        <div class="text-sm font-bold text-gray-900">₱{{ number_format($batchQuotedSubtotal, 2) }}</div>
-                    </div>
-                    <div class="rounded-lg border p-2" style="border-color:#e0b0b0; background-color:#fff;">
-                        <div class="font-semibold" style="color:#8b3a56;">Shared Shipping (Group)</div>
-                        <div class="text-sm font-bold text-gray-900">₱{{ number_format($batchSharedShipping, 2) }}</div>
-                    </div>
-                    <div class="rounded-lg border p-2" style="border-color:#e0b0b0; background-color:#fff;">
-                        <div class="font-semibold" style="color:#8b3a56;">Grand Total</div>
-                        <div class="text-sm font-extrabold" style="color:#800000;">₱{{ number_format($batchPaymentTotal, 2) }}</div>
-                    </div>
-                </div>
-                <div class="rounded-lg border px-3 py-2 mb-4 text-xs" style="border-color:#e0b0b0; background-color:#fff; color:#8b3a56;">
-                    Formula: <span class="font-semibold text-gray-900">Quoted Subtotal</span> + <span class="font-semibold text-gray-900">One Shared Shipping Fee</span> = <span class="font-bold" style="color:#800000;">Grand Total</span>
                 </div>
 
                 <div class="space-y-3">
@@ -325,7 +295,7 @@
                                     <p class="font-semibold text-gray-900">{{ $item->formatted_fabric_quantity ?? (($item->quantity ?? 1) . ' unit' . (($item->quantity ?? 1) > 1 ? 's' : '')) }}</p>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-gray-500 mb-0.5">Item Quoted Amount</p>
+                                    <p class="text-xs text-gray-500 mb-0.5">Est. Price</p>
                                     <p class="font-semibold" style="color:#800000;">₱{{ number_format($item->final_price ?? $item->estimated_price ?? 0, 2) }}</p>
                                 </div>
                             </div>
