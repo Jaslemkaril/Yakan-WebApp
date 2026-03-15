@@ -247,13 +247,13 @@
         
         /* Responsive Sidebar Styles */
         .sidebar-overlay {
-            @apply fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden;
+            position: fixed; inset: 0; background-color: rgba(0,0,0,0.5); z-index: 40; display: none;
             opacity: 0;
             transition: opacity 0.3s ease-in-out;
         }
         
         .sidebar-overlay.active {
-            @apply block;
+            display: block;
             opacity: 1;
         }
         
@@ -262,15 +262,15 @@
         }
         
         .sidebar-collapsed .sidebar-text {
-            @apply hidden;
+            display: none;
         }
         
         .sidebar-collapsed .sidebar-logo {
-            @apply justify-center;
+            justify-content: center;
         }
         
         .sidebar-collapsed .sidebar-logo-text {
-            @apply hidden;
+            display: none;
         }
         
         /* Enhanced Mobile Responsive */
@@ -380,13 +380,13 @@
         
         /* Responsive Sidebar Styles */
         .sidebar-overlay {
-            @apply fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden;
+            position: fixed; inset: 0; background-color: rgba(0,0,0,0.5); z-index: 40; display: none;
             opacity: 0;
             transition: opacity 0.3s ease-in-out;
         }
         
         .sidebar-overlay.active {
-            @apply block;
+            display: block;
             opacity: 1;
         }
         
@@ -395,15 +395,15 @@
         }
         
         .sidebar-collapsed .sidebar-text {
-            @apply hidden;
+            display: none;
         }
         
         .sidebar-collapsed .sidebar-logo {
-            @apply justify-center;
+            justify-content: center;
         }
         
         .sidebar-collapsed .sidebar-logo-text {
-            @apply hidden;
+            display: none;
         }
         
         /* Enhanced Mobile Responsive */
