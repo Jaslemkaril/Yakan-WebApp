@@ -9,6 +9,27 @@ use Illuminate\Support\Facades\DB;
 
 class AdminCustomOrderController extends Controller
 {
+    private function calculateBatchSharedShipping(
+        \Illuminate\Support\Collection $orders
+    ): float {
+        $eligibleShipping = $orders->map(function (CustomOrder $item) {
+            $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+            if ($deliveryType === 'pickup') {
+                return 0.0;
+            }
+
+            $breakdown = $item->getPriceBreakdown();
+            $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
+            if ($deliveryFeeInBreakdown > 0) {
+                return 0.0;
+            }
+
+            return (float) ($item->shipping_fee ?? 0);
+        });
+
+        return (float) ($eligibleShipping->max() ?? 0);
+    }
+
     private function calculateOrderDisplayTotal(CustomOrder $order): float
     {
         $base = (float) ($order->final_price ?? $order->estimated_price ?? 0);
@@ -28,7 +49,45 @@ class AdminCustomOrderController extends Controller
 
     private function calculateBatchDisplayTotal(\Illuminate\Support\Collection $orders): float
     {
-        return (float) $orders->sum(fn(CustomOrder $item) => $this->calculateOrderDisplayTotal($item));
+        if ($orders->count() <= 1) {
+            return (float) $orders->sum(fn(CustomOrder $item) => $this->calculateOrderDisplayTotal($item));
+        }
+
+        $quotedSubtotal = (float) $orders->sum(
+            fn(CustomOrder $item) => (float) ($item->final_price ?? $item->estimated_price ?? 0)
+        );
+
+        return $quotedSubtotal + $this->calculateBatchSharedShipping($orders);
+    }
+
+    private function resolveBatchOrders(CustomOrder $order): \Illuminate\Support\Collection
+    {
+        $hasBatchColumn = \Schema::hasColumn('custom_orders', 'batch_order_number');
+
+        if ($hasBatchColumn && !empty($order->batch_order_number)) {
+            return CustomOrder::where('batch_order_number', $order->batch_order_number)
+                ->orderBy('id')
+                ->get();
+        }
+
+        $minuteKey = optional($order->created_at)->format('Y-m-d H:i');
+        if (!$minuteKey || empty($order->user_id)) {
+            return collect([$order]);
+        }
+
+        $query = CustomOrder::where('user_id', $order->user_id)
+            ->whereRaw("DATE_FORMAT(created_at, '%Y-%m-%d %H:%i') = ?", [$minuteKey]);
+
+        if ($hasBatchColumn) {
+            $query->where(function ($q) {
+                $q->whereNull('batch_order_number')
+                    ->orWhere('batch_order_number', '');
+            });
+        }
+
+        $rows = $query->orderBy('id')->get();
+
+        return $rows->isNotEmpty() ? $rows : collect([$order]);
     }
 
     public function index(Request $request)
@@ -409,6 +468,42 @@ class AdminCustomOrderController extends Controller
             }
 
             return redirect()->back()->with('error', 'Failed to quote price: ' . $e->getMessage());
+        }
+    }
+
+    public function updateBatchShipping(Request $request, CustomOrder $order)
+    {
+        $request->validate([
+            'shipping_fee' => 'required|numeric|min:0',
+        ]);
+
+        try {
+            $shippingFee = (float) $request->shipping_fee;
+            $batchOrders = $this->resolveBatchOrders($order);
+
+            foreach ($batchOrders as $batchItem) {
+                $deliveryType = $batchItem->delivery_type ?? ($batchItem->delivery_address ? 'delivery' : 'pickup');
+                $batchItem->shipping_fee = $deliveryType === 'pickup' ? 0 : $shippingFee;
+                $batchItem->save();
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Batch shipping fee updated successfully.',
+                ]);
+            }
+
+            return redirect()->back()->with('success', 'Batch shipping fee updated successfully.');
+        } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to update batch shipping fee: ' . $e->getMessage(),
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', 'Failed to update batch shipping fee: ' . $e->getMessage());
         }
     }
 

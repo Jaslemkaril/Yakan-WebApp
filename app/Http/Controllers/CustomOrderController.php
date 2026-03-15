@@ -512,9 +512,32 @@ class CustomOrderController extends Controller
      */
     private function calculateOrdersTotal(\Illuminate\Support\Collection $orders): float
     {
-        return (float) $orders->sum(function (CustomOrder $item) {
-            return $this->calculateOrderPayableTotal($item);
-        });
+        if ($orders->count() <= 1) {
+            return (float) $orders->sum(function (CustomOrder $item) {
+                return $this->calculateOrderPayableTotal($item);
+            });
+        }
+
+        $quotedSubtotal = (float) $orders->sum(
+            fn(CustomOrder $item) => (float) ($item->final_price ?? $item->estimated_price ?? 0)
+        );
+
+        $sharedShipping = (float) ($orders->map(function (CustomOrder $item) {
+            $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+            if ($deliveryType === 'pickup') {
+                return 0.0;
+            }
+
+            $breakdown = $item->getPriceBreakdown();
+            $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
+            if ($deliveryFeeInBreakdown > 0) {
+                return 0.0;
+            }
+
+            return (float) ($item->shipping_fee ?? 0);
+        })->max() ?? 0);
+
+        return $quotedSubtotal + $sharedShipping;
     }
 
     /**

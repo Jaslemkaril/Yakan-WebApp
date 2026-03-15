@@ -24,8 +24,16 @@
 
     $batchItems = collect([$order])->merge($batchOrders)->sortBy('id')->values();
     $batchQuotedSubtotal = (float) $batchItems->sum(fn($item) => $getAdminPriceParts($item)['quoted'] ?? 0);
-    $batchShippingTotal = (float) $batchItems->sum(fn($item) => $getAdminPriceParts($item)['shipping'] ?? 0);
-    $batchGrandTotal = (float) $batchItems->sum(fn($item) => $getAdminPriceParts($item)['total'] ?? 0);
+    $batchShippingTotal = (float) $batchItems
+        ->map(function ($item) use ($getAdminPriceParts) {
+            $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+            if ($deliveryType === 'pickup') {
+                return 0;
+            }
+            return (float) ($getAdminPriceParts($item)['shipping'] ?? 0);
+        })
+        ->max();
+    $batchGrandTotal = $batchQuotedSubtotal + $batchShippingTotal;
     $batchPaidCount = (int) $batchItems->filter(fn($item) => (($item->payment_status ?? '') === 'paid') || !empty($item->payment_confirmed_at))->count();
 @endphp
 <div class="container mx-auto px-4 py-6">
@@ -114,7 +122,7 @@
                 <div class="text-base font-bold text-gray-900">₱{{ number_format($batchQuotedSubtotal, 2) }}</div>
             </div>
             <div class="rounded-lg border p-2" style="border-color:#e0b0b0; background-color:#fffafb;">
-                <div style="color:#8b3a56;" class="font-semibold">Total shipping fee</div>
+                <div style="color:#8b3a56;" class="font-semibold">Group shipping fee (shared)</div>
                 <div class="text-base font-bold text-gray-900">₱{{ number_format($batchShippingTotal, 2) }}</div>
             </div>
             <div class="rounded-lg border p-2" style="border-color:#e0b0b0; background-color:#fffafb;">
@@ -122,6 +130,12 @@
                 <div class="text-base font-extrabold text-[#800000]">₱{{ number_format($batchGrandTotal, 2) }}</div>
             </div>
         </div>
+        <form action="{{ route('admin.custom-orders.batch_shipping', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
+            @csrf
+            <input type="number" name="shipping_fee" step="0.01" min="0" value="{{ number_format($batchShippingTotal, 2, '.', '') }}" class="border border-gray-300 rounded px-2 py-1.5 text-xs" placeholder="Set one shipping fee for this whole group">
+            <button type="submit" class="text-xs font-semibold text-white rounded px-3 py-1.5" style="background-color:#800000;">Save Group Shipping</button>
+            <p class="text-[11px] text-gray-600 self-center">Applied once to the whole batch total, not per item.</p>
+        </form>
         <div class="text-xs flex items-center justify-between mb-4" style="color:#8b3a56;">
             <span class="font-semibold">Payment progress</span>
             <span class="font-bold">{{ $batchPaidCount }}/{{ $batchItems->count() }} paid</span>
@@ -144,8 +158,8 @@
                             </div>
                             <div class="text-[11px] text-right">
                                 <div class="font-semibold text-gray-900">Quoted: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
-                                <div class="text-gray-600">Shipping: ₱{{ number_format($itemPrice['shipping'], 2) }}</div>
-                                <div class="font-bold text-[#800000]">Total: ₱{{ number_format($itemPrice['total'], 2) }}</div>
+                                <div class="text-gray-600">Shipping: Shared at group level</div>
+                                <div class="font-bold text-[#800000]">Line total: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
                             </div>
                             <div class="flex flex-col items-end gap-1">
                                 <span class="text-[10px] px-2 py-0.5 rounded-full {{ in_array($statusPill, ['approved','in_production','production_complete','out_for_delivery','delivered','completed']) ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">{{ ucfirst(str_replace('_',' ', $statusPill)) }}</span>
@@ -155,10 +169,9 @@
                     </summary>
                     <div class="px-3 pb-3 pt-1 border-t" style="border-color:#f1d1d8;">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                            <form action="{{ route('admin.custom-orders.quote_price', $item) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" class="md:col-span-2 grid grid-cols-3 gap-2">
+                            <form action="{{ route('admin.custom-orders.quote_price', $item) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" class="md:col-span-2 grid grid-cols-2 gap-2">
                                 @csrf
                                 <input type="number" name="price" step="0.01" min="0" value="{{ number_format($itemPrice['quoted'], 2, '.', '') }}" class="border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Quote">
-                                <input type="number" name="shipping_fee" step="0.01" min="0" value="{{ number_format($itemPrice['shipping'], 2, '.', '') }}" class="border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Shipping" {{ $itemDeliveryType === 'pickup' ? 'readonly' : '' }}>
                                 <button type="submit" class="text-xs font-semibold text-white rounded px-2 py-1" style="background-color:#800000;">Save Quote</button>
                                 <input type="hidden" name="notes" value="Item-level quote update from compact batch panel">
                             </form>

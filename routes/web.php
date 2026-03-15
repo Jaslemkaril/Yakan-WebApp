@@ -1244,6 +1244,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         // Order management actions
         Route::post('/{order}/update-status', [AdminCustomOrderController::class, 'updateStatus'])->name('update_status');
         Route::post('/{order}/quote-price', [AdminCustomOrderController::class, 'quotePrice'])->name('quote_price');
+        Route::post('/{order}/batch-shipping', [AdminCustomOrderController::class, 'updateBatchShipping'])->name('batch_shipping');
         Route::post('/{order}/verify-payment', [AdminCustomOrderController::class, 'verifyPayment'])->name('verify_payment');
         Route::post('/{order}/confirm-payment', [AdminCustomOrderController::class, 'confirmPayment'])->name('confirmPayment');
         Route::post('/{order}/reject-payment', [AdminCustomOrderController::class, 'rejectPayment'])->name('rejectPayment');
