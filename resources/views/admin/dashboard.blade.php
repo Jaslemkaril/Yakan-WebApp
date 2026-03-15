@@ -575,6 +575,48 @@
             </a>
         </div>
 
+        <!-- Inventory Stats Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+            <!-- Low Stock -->
+            <a href="{{ route('admin.inventory.index') }}?status=low_stock" class="block bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border border-orange-100 card-hover-lift hover:shadow-xl transition-shadow cursor-pointer">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-11 h-11 bg-orange-100 rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                    </div>
+                    <span class="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full">Low Stock</span>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900">{{ $lowStockCount }}</h3>
+                <p class="text-sm text-gray-600 font-medium mt-1">Low Stock Products</p>
+                <p class="text-xs text-gray-400 mt-1">Below minimum level</p>
+            </a>
+
+            <!-- Out of Stock -->
+            <a href="#out-of-stock-section" class="block bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border border-red-100 card-hover-lift hover:shadow-xl transition-shadow cursor-pointer">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-11 h-11 bg-red-100 rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                    </div>
+                    <span class="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">Out of Stock</span>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900">{{ $outOfStockCount }}</h3>
+                <p class="text-sm text-gray-600 font-medium mt-1">Out of Stock</p>
+                <p class="text-xs text-gray-400 mt-1">Need restocking</p>
+            </a>
+
+            <!-- Stock In Today -->
+            <a href="{{ route('admin.inventory.history') }}?date_from={{ date('Y-m-d') }}&movement=in" class="block bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border border-green-100 card-hover-lift hover:shadow-xl transition-shadow cursor-pointer">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-11 h-11 bg-green-100 rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    </div>
+                    <span class="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">Today</span>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900">+{{ $stockInToday }}</h3>
+                <p class="text-sm text-gray-600 font-medium mt-1">Stock Added Today</p>
+                <p class="text-xs text-gray-400 mt-1">Units restocked</p>
+            </a>
+        </div>
+
         <!-- Payment & Delivery Analytics -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <!-- Payment Methods Breakdown -->

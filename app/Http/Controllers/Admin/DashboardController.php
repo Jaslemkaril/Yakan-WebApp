@@ -112,6 +112,16 @@ class DashboardController extends Controller
                 ->get();
             $outOfStockCount = $outOfStockItems->count();
 
+            // Inventory stats
+            $lowStockCount = \App\Models\Inventory::whereRaw('quantity <= min_stock_level AND quantity > 0')->count();
+            $totalInventoryValue = (int) (\App\Models\Inventory::selectRaw('SUM(quantity * selling_price) as total')->value('total') ?? 0);
+            $stockInToday = 0;
+            if (\Schema::hasTable('stock_logs')) {
+                $stockInToday = \App\Models\StockLog::where('quantity', '>', 0)
+                    ->whereDate('created_at', today())
+                    ->sum('quantity');
+            }
+
             // Top products by sold quantity (Best Sellers)
             $topProductsQuery = \App\Models\OrderItem::selectRaw('product_id, SUM(quantity) as sold, SUM(price * quantity) as revenue')
                 ->groupBy('product_id')
@@ -179,6 +189,9 @@ class DashboardController extends Controller
                 'lowSalesProducts',
                 'outOfStockItems',
                 'outOfStockCount',
+                'lowStockCount',
+                'totalInventoryValue',
+                'stockInToday',
                 'allSalesData',
                 'period',
                 'stockFilter'
