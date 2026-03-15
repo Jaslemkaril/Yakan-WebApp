@@ -918,8 +918,16 @@ class CartController extends Controller
                     'error' => $exception->getMessage(),
                 ]);
 
-                return redirect($this->appendAuthToken(route('orders.show', $order->id), $authToken))
-                    ->with('error', 'Unable to open Maya checkout right now. Please verify Maya keys and try again.');
+                $orderUrl = $this->appendAuthToken(route('orders.show', $order->id), $authToken);
+
+                return $this->renderTransitionPage(
+                    'Payment Setup Issue',
+                    'We couldn\'t open Maya checkout right now.',
+                    'Your order is saved. We\'ll take you to your order details so you can retry payment.',
+                    $orderUrl,
+                    'Go to Order Details',
+                    '#b91c1c'
+                );
             }
         }
 
@@ -1097,6 +1105,90 @@ HTML
         }
 
         return $checkoutUrl;
+    }
+
+    private function renderTransitionPage(
+        string $title,
+        string $headline,
+        string $message,
+        string $redirectUrl,
+        string $buttonLabel,
+        string $accentColor = '#800000'
+    ) {
+        $safeTitle = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
+        $safeHeadline = htmlspecialchars($headline, ENT_QUOTES, 'UTF-8');
+        $safeMessage = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+        $safeButtonLabel = htmlspecialchars($buttonLabel, ENT_QUOTES, 'UTF-8');
+        $safeRedirectUrl = json_encode($redirectUrl);
+
+        return response(<<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{$safeTitle} — Yakan</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(160deg, #6b0000 0%, #800000 45%, #3d0000 100%);
+            font-family: 'Inter', system-ui, sans-serif;
+            padding: 20px;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.22);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 36px 30px;
+            text-align: center;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.38);
+        }
+        .icon { font-size: 48px; margin-bottom: 14px; display: block; }
+        h1 { color: #fff; font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+        .headline { color: #ffe4e6; font-size: 15px; margin-bottom: 8px; }
+        .message { color: rgba(255,255,255,0.82); font-size: 14px; margin-bottom: 18px; line-height: 1.5; }
+        .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .btn {
+            border: 0;
+            border-radius: 12px;
+            padding: 10px 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: transform .15s ease, opacity .15s ease;
+        }
+        .btn-primary { background: {$accentColor}; color: #fff; }
+        .btn-secondary { background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.35); }
+        .btn:hover { transform: translateY(-1px); opacity: .95; }
+        .small { color: rgba(255,255,255,.65); font-size: 12px; margin-top: 14px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <span class="icon">⚠️</span>
+        <h1>{$safeTitle}</h1>
+        <p class="headline">{$safeHeadline}</p>
+        <p class="message">{$safeMessage}</p>
+        <div class="actions">
+            <a class="btn btn-primary" href="{$redirectUrl}">{$safeButtonLabel}</a>
+            <button class="btn btn-secondary" onclick="window.location.href={$safeRedirectUrl}">Continue</button>
+        </div>
+        <p class="small">Redirecting automatically in 3 seconds…</p>
+    </div>
+    <script>
+        setTimeout(function () { window.location.href = {$safeRedirectUrl}; }, 3000);
+    </script>
+</body>
+</html>
+HTML
+        );
     }
 
     /**
