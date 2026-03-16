@@ -112,7 +112,7 @@
                 BATCH &times;{{ $batchOrders->count() + 1 }}
             </span>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs mb-4">
             <div class="rounded-lg border p-2" style="border-color:#e0b0b0; background-color:#fffafb;">
                 <div style="color:#8b3a56;" class="font-semibold">Items in submission</div>
                 <div class="text-base font-bold text-[#800000]">{{ $batchItems->count() }}</div>
@@ -122,28 +122,10 @@
                 <div class="text-base font-bold text-gray-900">₱{{ number_format($batchQuotedSubtotal, 2) }}</div>
             </div>
             <div class="rounded-lg border p-2" style="border-color:#e0b0b0; background-color:#fffafb;">
-                <div style="color:#8b3a56;" class="font-semibold">Group shipping fee (shared)</div>
-                <div class="text-base font-bold text-gray-900">₱{{ number_format($batchShippingTotal, 2) }}</div>
-            </div>
-            <div class="rounded-lg border p-2" style="border-color:#e0b0b0; background-color:#fffafb;">
                 <div style="color:#8b3a56;" class="font-semibold">Grand total to pay</div>
                 <div class="text-base font-extrabold text-[#800000]">₱{{ number_format($batchGrandTotal, 2) }}</div>
             </div>
         </div>
-        <div class="rounded-lg border px-3 py-2 mb-4 text-xs flex flex-wrap items-center gap-2" style="border-color:#e0b0b0; background-color:#fffafb; color:#8b3a56;">
-            <span class="font-semibold">Formula:</span>
-            <span class="font-bold text-gray-900">Quoted Subtotal</span>
-            <span>+</span>
-            <span class="font-bold text-gray-900">One Shared Group Shipping</span>
-            <span>=</span>
-            <span class="font-extrabold" style="color:#800000;">Grand Total</span>
-        </div>
-        <form action="{{ route('admin.custom-orders.batch_shipping', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
-            @csrf
-            <input type="number" name="shipping_fee" step="0.01" min="0" value="{{ number_format($batchShippingTotal, 2, '.', '') }}" class="border border-gray-300 rounded px-2 py-1.5 text-xs" placeholder="Set one shipping fee for this whole group">
-            <button type="submit" class="text-xs font-semibold text-white rounded px-3 py-1.5" style="background-color:#800000;">Save Group Shipping</button>
-            <p class="text-[11px] text-gray-600 self-center">Applied once to the whole batch total, not per item.</p>
-        </form>
         <div class="text-xs flex items-center justify-between mb-4" style="color:#8b3a56;">
             <span class="font-semibold">Payment progress</span>
             <span class="font-bold">{{ $batchPaidCount }}/{{ $batchItems->count() }} paid</span>
@@ -166,7 +148,7 @@
                             </div>
                             <div class="text-[11px] text-right">
                                 <div class="font-semibold text-gray-900">Quoted: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
-                                <div class="text-gray-600">Shipping: Shared once for the whole group</div>
+                                <div class="text-gray-600">Shipping: Based on delivery address</div>
                                 <div class="font-bold text-[#800000]">Item quoted amount: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
                             </div>
                             <div class="flex flex-col items-end gap-1">
@@ -551,7 +533,80 @@
                 @endphp
                 
                 <div class="space-y-3">
-                    @if($breakdownParsed && ($materialCost > 0 || $patternFee > 0))
+                    @if($isGroupedContext)
+                        @php
+                            $groupPriceRows = $batchItems->map(function ($item) {
+                                $quoted = (float) ($item->final_price ?? $item->estimated_price ?? 0);
+                                $breakdownData = method_exists($item, 'getPriceBreakdown') ? ($item->getPriceBreakdown() ?? []) : [];
+                                $breakdown = $breakdownData['breakdown'] ?? [];
+
+                                $material = (float) ($breakdown['material_cost'] ?? 0);
+                                $pattern = (float) ($breakdown['pattern_fee'] ?? 0);
+                                $itemSubtotal = ($material + $pattern) > 0 ? ($material + $pattern) : $quoted;
+
+                                $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+                                $itemShipping = $deliveryType === 'pickup' ? 0 : (float) ($item->shipping_fee ?? 0);
+
+                                return [
+                                    'id' => $item->id,
+                                    'material' => $material,
+                                    'pattern' => $pattern,
+                                    'subtotal' => $itemSubtotal,
+                                    'shipping' => $itemShipping,
+                                ];
+                            });
+
+                            $groupItemsSubtotal = (float) $groupPriceRows->sum('subtotal');
+                            $groupShippingByAddress = (float) ($groupPriceRows->max('shipping') ?? 0);
+                            $groupFinalTotal = $groupItemsSubtotal + $groupShippingByAddress;
+                        @endphp
+
+                        <div class="mt-3 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border-2 border-gray-300">
+                            <h3 class="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                <svg class="w-4 h-4 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                </svg>
+                                💰 Price Breakdown
+                            </h3>
+
+                            <div class="space-y-3 text-sm">
+                                @foreach($groupPriceRows as $row)
+                                    <div class="rounded-lg border border-gray-200 bg-white p-3">
+                                        <div class="font-bold text-[#800000] mb-2">Custom Order #{{ $row['id'] }}</div>
+                                        <div class="space-y-1">
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-gray-700">Material Cost:</span>
+                                                <span class="font-semibold text-gray-900">₱{{ number_format($row['material'], 2) }}</span>
+                                            </div>
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-gray-700">Pattern Fee:</span>
+                                                <span class="font-semibold text-gray-900">₱{{ number_format($row['pattern'], 2) }}</span>
+                                            </div>
+                                            <div class="border-t border-gray-200 pt-1 flex justify-between items-center">
+                                                <span class="text-gray-700 font-medium">Subtotal:</span>
+                                                <span class="font-bold text-gray-900">₱{{ number_format($row['subtotal'], 2) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+
+                                <div class="border-t border-gray-300 pt-2 flex justify-between items-center">
+                                    <span class="text-gray-700 font-medium">Subtotal (All Items):</span>
+                                    <span class="font-bold text-gray-900">₱{{ number_format($groupItemsSubtotal, 2) }}</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700">Shipping Fee (Based on Delivery Address):</span>
+                                    <span class="font-semibold {{ $groupShippingByAddress == 0 ? 'text-green-600' : 'text-gray-900' }}">
+                                        {{ $groupShippingByAddress == 0 ? 'FREE DELIVERY! 🎉' : '₱' . number_format($groupShippingByAddress, 2) }}
+                                    </span>
+                                </div>
+                                <div class="border-t-2 border-[#800000] pt-2 mt-2 flex justify-between items-center">
+                                    <span class="text-gray-900 font-bold text-base">TOTAL PRICE (ALL ITEMS):</span>
+                                    <span class="font-bold text-lg text-green-600">₱{{ number_format($groupFinalTotal, 2) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    @elseif($breakdownParsed && ($materialCost > 0 || $patternFee > 0))
                         {{-- Itemized Breakdown --}}
                         <div class="mt-3 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border-2 border-gray-300">
                             <h3 class="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
@@ -574,24 +629,19 @@
                                 </div>
                                 @endif
                                 <div class="border-t border-gray-300 pt-2 flex justify-between items-center">
-                                    <span class="text-gray-700 font-medium">{{ $isGroupedContext ? 'Quoted Subtotal (Group):' : 'Subtotal:' }}</span>
-                                    <span class="font-bold text-gray-900">₱{{ number_format($isGroupedContext ? $pricingCardQuoted : $subtotal, 2) }}</span>
+                                    <span class="text-gray-700 font-medium">Subtotal:</span>
+                                    <span class="font-bold text-gray-900">₱{{ number_format($subtotal, 2) }}</span>
                                 </div>
                                 <div class="flex justify-between items-center">
-                                    <span class="text-gray-700">{{ $isGroupedContext ? 'Shared Shipping Fee (Group):' : 'Shipping Fee:' }}</span>
-                                    <span class="font-semibold {{ $pricingCardShipping == 0 ? 'text-green-600' : 'text-gray-900' }}">
-                                        {{ $pricingCardShipping == 0 ? 'FREE DELIVERY! 🎉' : '₱' . number_format($pricingCardShipping, 2) }}
+                                    <span class="text-gray-700">Shipping Fee:</span>
+                                    <span class="font-semibold {{ $shippingFee == 0 ? 'text-green-600' : 'text-gray-900' }}">
+                                        {{ $shippingFee == 0 ? 'FREE DELIVERY! 🎉' : '₱' . number_format($shippingFee, 2) }}
                                     </span>
                                 </div>
                                 <div class="border-t-2 border-[#800000] pt-2 mt-2 flex justify-between items-center">
-                                    <span class="text-gray-900 font-bold text-base">{{ $isGroupedContext ? 'GROUP TOTAL TO PAY:' : 'TOTAL TO PAY:' }}</span>
-                                    <span class="font-bold text-lg text-green-600">₱{{ number_format($pricingCardTotal, 2) }}</span>
+                                    <span class="text-gray-900 font-bold text-base">TOTAL TO PAY:</span>
+                                    <span class="font-bold text-lg text-green-600">₱{{ number_format($totalCalculated, 2) }}</span>
                                 </div>
-                                @if($isGroupedContext)
-                                <div class="text-[11px] text-gray-600 mt-2">
-                                    Formula: Quoted Subtotal + One Shared Shipping Fee = Group Total
-                                </div>
-                                @endif
                             </div>
                         </div>
                     @else
@@ -652,14 +702,9 @@
                                     @endif
                                     
                                     <div class="border-t-2 border-[#800000] pt-2 mt-2 flex justify-between items-center">
-                                        <span class="text-gray-900 font-bold text-base">{{ $isGroupedContext ? 'GROUP TOTAL:' : 'TOTAL:' }}</span>
-                                        <span class="font-bold text-lg text-green-600">₱{{ number_format($pricingCardTotal, 2) }}</span>
+                                        <span class="text-gray-900 font-bold text-base">TOTAL:</span>
+                                        <span class="font-bold text-lg text-green-600">₱{{ number_format($quotedPrice + ($orderDeliveryType === 'pickup' ? 0 : (float) ($order->shipping_fee ?? 0)), 2) }}</span>
                                     </div>
-                                    @if($isGroupedContext)
-                                    <div class="text-[11px] text-gray-600 mt-2">
-                                        Quoted Subtotal: ₱{{ number_format($pricingCardQuoted, 2) }} + Shared Shipping: ₱{{ number_format($pricingCardShipping, 2) }}
-                                    </div>
-                                    @endif
                                 </div>
                                 
                                 {{-- Admin Pricing Notes --}}
