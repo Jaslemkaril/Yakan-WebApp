@@ -16,6 +16,27 @@
         $address = strtolower((string) ($item->delivery_address ?? ''));
         $haystack = trim($address . ' ' . $city . ' ' . $province);
 
+        // Older orders may miss delivery fields; fallback to user's default address.
+        if ($haystack === '' && !empty($item->user_id)) {
+            $defaultAddress = \App\Models\UserAddress::query()
+                ->where('user_id', $item->user_id)
+                ->where('is_default', true)
+                ->first();
+
+            if ($defaultAddress) {
+                $fallbackCity = strtolower((string) ($defaultAddress->city ?? ''));
+                $fallbackProvince = strtolower((string) ($defaultAddress->province ?? $defaultAddress->region ?? ''));
+                $fallbackAddress = strtolower(implode(' ', array_filter([
+                    $defaultAddress->street_name ?? null,
+                    $defaultAddress->barangay ?? null,
+                    $defaultAddress->city ?? null,
+                    $defaultAddress->province ?? ($defaultAddress->region ?? null),
+                ])));
+
+                $haystack = trim($fallbackAddress . ' ' . $fallbackCity . ' ' . $fallbackProvince);
+            }
+        }
+
         if (
             str_contains($haystack, 'zamboanga city') ||
             str_contains($haystack, 'zamboanga del sur') ||
