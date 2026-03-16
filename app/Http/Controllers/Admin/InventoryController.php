@@ -17,6 +17,16 @@ class InventoryController extends Controller
     }
 
     /**
+     * Build redirect to inventory index preserving auth_token.
+     */
+    private function redirectToIndex(): RedirectResponse
+    {
+        $token = request('auth_token');
+        $params = $token ? ['auth_token' => $token] : [];
+        return redirect()->route('admin.inventory.index', $params);
+    }
+
+    /**
      * Display a listing of the inventory.
      */
     public function index(Request $request): View
@@ -137,7 +147,7 @@ class InventoryController extends Controller
 
         Inventory::create($inventoryData);
 
-        return redirect()->route('admin.inventory.index')
+        return $this->redirectToIndex()
             ->with('success', 'Inventory record created successfully for ' . $product->name . '.');
     }
 
@@ -179,7 +189,7 @@ class InventoryController extends Controller
 
         $inventory->update($validated);
 
-        return redirect()->route('admin.inventory.index')
+        return $this->redirectToIndex()
             ->with('success', 'Inventory record updated successfully.');
     }
 
@@ -206,7 +216,7 @@ class InventoryController extends Controller
 
         \Cache::flush();
 
-        return redirect()->route('admin.inventory.index')
+        return $this->redirectToIndex()
             ->with('success', "Successfully restocked {$validated['quantity']} units.");
     }
 
@@ -221,7 +231,7 @@ class InventoryController extends Controller
         ]);
 
         if ($validated['quantity'] > $inventory->quantity) {
-            return redirect()->route('admin.inventory.index')
+            return $this->redirectToIndex()
                 ->with('error', "Cannot remove {$validated['quantity']} units. Available stock is only {$inventory->quantity}.");
         }
 
@@ -240,7 +250,7 @@ class InventoryController extends Controller
 
         \Cache::flush();
 
-        return redirect()->route('admin.inventory.index')
+        return $this->redirectToIndex()
             ->with('success', "Successfully removed {$validated['quantity']} units from stock.");
     }
 
@@ -330,7 +340,7 @@ class InventoryController extends Controller
     {
         $inventory->delete();
 
-        return redirect()->route('admin.inventory.index')
+        return $this->redirectToIndex()
             ->with('success', 'Inventory record deleted successfully.');
     }
 
