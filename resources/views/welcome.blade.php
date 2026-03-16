@@ -20,7 +20,7 @@
         content: '';
         position: absolute;
         inset: 0;
-        background: rgba(0, 0, 0, 0.45);
+        background: linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(60,0,0,0.65) 100%);
         pointer-events: none;
     }
 
@@ -34,6 +34,7 @@
     .hero-content {
         position: relative;
         z-index: 10;
+        text-shadow: 0 2px 12px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.9);
     }
 
     .hero-badge {
