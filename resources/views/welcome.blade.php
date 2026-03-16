@@ -234,7 +234,7 @@
     @endif
 
     <!-- Hero Section -->
-    <section class="hero-section text-white" style="background-image: url('{{ asset('images/jus.jpg') }}');">
+    <section class="hero-section text-white" style="background-image: url('https://raw.githubusercontent.com/Jaslemkaril/Yakan-WebApp/main/public/images/jus.jpg');">
         <div class="hero-content w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-36 text-center">
 
             <!-- Badge -->
