@@ -1,368 +1,360 @@
-@extends('layouts.admin')
+﻿@extends('layouts.admin')
 
 @section('title', 'Inventory Management')
 
 @section('content')
 <div class="space-y-6">
-    <!-- Inventory Header -->
-    <div class="bg-gradient-to-r from-red-600 to-red-700 rounded-2xl p-8 text-white shadow-xl">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+
+    {{-- ===== HEADER ===== --}}
+    <div class="bg-gradient-to-r from-red-700 to-[#800000] rounded-2xl p-8 text-white shadow-xl">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-                <h1 class="text-3xl font-bold mb-2 flex items-center">
+                <h1 class="text-3xl font-bold mb-1 flex items-center">
                     <i class="fas fa-warehouse mr-3"></i>
                     Inventory Management
                 </h1>
-                <p class="text-red-100 text-lg">Monitor and manage your product inventory</p>
+                <p class="text-red-200 text-sm">Monitor and manage your product inventory</p>
             </div>
-            <div class="mt-4 md:mt-0 flex space-x-3">
-                <a href="{{ route('admin.inventory.history') }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
-                    <i class="fas fa-history mr-2"></i>Stock History
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('admin.inventory.history') }}"
+                   class="inline-flex items-center gap-2 bg-white/15 border border-white/30 text-white text-sm px-4 py-2 rounded-lg hover:bg-white/25 transition-colors">
+                    <i class="fas fa-history"></i> Stock History
                 </a>
-                <a href="{{ route('admin.products.create') }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
-                    <i class="fas fa-plus mr-2"></i>Create Product
+                <a href="{{ route('admin.products.create') }}"
+                   class="inline-flex items-center gap-2 bg-white/15 border border-white/30 text-white text-sm px-4 py-2 rounded-lg hover:bg-white/25 transition-colors">
+                    <i class="fas fa-plus"></i> New Product
                 </a>
-                <a href="{{ route('admin.inventory.low-stock') }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
-                    <i class="fas fa-exclamation-triangle mr-2 animate-pulse"></i>Low Stock ({{ $lowStockCount }})
+                @if($lowStockCount > 0)
+                <a href="{{ route('admin.inventory.low-stock') }}"
+                   class="inline-flex items-center gap-2 bg-yellow-400/90 text-yellow-900 text-sm px-4 py-2 rounded-lg font-semibold hover:bg-yellow-300 transition-colors">
+                    <i class="fas fa-exclamation-triangle animate-pulse"></i> Low Stock ({{ $lowStockCount }})
                 </a>
-                <a href="{{ route('admin.inventory.create') }}" class="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-gray-100 font-medium transition-colors">
-                    <i class="fas fa-plus mr-2"></i>Add Inventory
+                @endif
+                <a href="{{ route('admin.inventory.create') }}"
+                   class="inline-flex items-center gap-2 bg-white text-red-700 text-sm px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow">
+                    <i class="fas fa-plus-circle"></i> Add Inventory
                 </a>
             </div>
         </div>
     </div>
 
-    <!-- Stats Overview -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="bg-white rounded-lg shadow p-4 border-l-4 border-red-500 hover:shadow-lg transition-shadow">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500">Total Products</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ $totalProducts }}</p>
-                    </div>
-                    <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-box text-red-500 text-xl"></i>
-                    </div>
+    {{-- ===== STATS CARDS ===== --}}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Total Products</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-1">{{ $totalProducts }}</p>
+                </div>
+                <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-boxes text-red-600 text-lg"></i>
                 </div>
             </div>
+        </div>
 
-            <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500 hover:shadow-lg transition-shadow">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500">Total Value</p>
-                        <p class="text-2xl font-bold text-gray-900">₱{{ number_format($totalValue, 2) }}</p>
-                    </div>
-                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-dollar-sign text-green-500 text-xl"></i>
-                    </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Total Value</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-1">&#8369;{{ number_format($totalValue, 2) }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-coins text-green-600 text-lg"></i>
                 </div>
             </div>
+        </div>
 
-            <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500">Low Stock Items</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ $lowStockCount }}</p>
-                    </div>
-                    <i class="fas fa-exclamation-triangle text-yellow-500 text-2xl"></i>
+        <div class="bg-white rounded-xl shadow-sm border border-orange-100 p-5 hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-orange-500 uppercase tracking-wide font-medium">Low Stock</p>
+                    <p class="text-3xl font-bold text-orange-600 mt-1">{{ $lowStockCount }}</p>
+                </div>
+                <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-exclamation-triangle text-orange-500 text-lg"></i>
                 </div>
             </div>
+        </div>
 
-            <div class="bg-white rounded-lg shadow p-4 border-l-4 border-[#800000]">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500">Total Items</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ $products->total() }}</p>
-                    </div>
-                    <i class="fas fa-chart-bar text-[#800000] text-2xl"></i>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Total Items</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-1">{{ $products->total() }}</p>
+                </div>
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background-color: rgba(128,0,0,0.1)">
+                    <i class="fas fa-chart-bar text-lg" style="color: #800000"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Stock In Record Summary -->
-    <div class="bg-white rounded-lg shadow p-6">
+    {{-- ===== STOCK IN RECORDS ===== --}}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-gray-900 flex items-center">
-                <i class="fas fa-history mr-2 text-[#800000]"></i>
+            <h2 class="text-base font-semibold text-gray-800 flex items-center gap-2">
+                <i class="fas fa-history" style="color: #800000"></i>
                 Stock In Records
             </h2>
-            <span class="text-xs text-gray-500">Auto-calculated from stock logs</span>
+            <span class="text-xs text-gray-400 italic">Auto-calculated from stock logs</span>
         </div>
-
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                <p class="text-xs text-blue-600 font-semibold uppercase tracking-wide">Today</p>
-                <p class="text-2xl font-bold text-blue-800">+{{ $stockInToday ?? 0 }}</p>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
+                <p class="text-xs text-blue-500 font-semibold uppercase tracking-wider mb-1">Today</p>
+                <p class="text-2xl font-bold text-blue-700">+{{ $stockInToday ?? 0 }}</p>
             </div>
-            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-                <p class="text-xs text-purple-600 font-semibold uppercase tracking-wide">This Week</p>
-                <p class="text-2xl font-bold text-purple-800">+{{ $stockInWeek ?? 0 }}</p>
+            <div class="bg-purple-50 border border-purple-100 rounded-xl p-4 text-center">
+                <p class="text-xs text-purple-500 font-semibold uppercase tracking-wider mb-1">This Week</p>
+                <p class="text-2xl font-bold text-purple-700">+{{ $stockInWeek ?? 0 }}</p>
             </div>
-            <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                <p class="text-xs text-green-600 font-semibold uppercase tracking-wide">This Year</p>
-                <p class="text-2xl font-bold text-green-800">+{{ $stockInYear ?? 0 }}</p>
+            <div class="bg-green-50 border border-green-100 rounded-xl p-4 text-center">
+                <p class="text-xs text-green-500 font-semibold uppercase tracking-wider mb-1">This Year</p>
+                <p class="text-2xl font-bold text-green-700">+{{ $stockInYear ?? 0 }}</p>
             </div>
-            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
-                <p class="text-xs text-amber-600 font-semibold uppercase tracking-wide">Overall</p>
-                <p class="text-2xl font-bold text-amber-800">+{{ $stockInOverall ?? 0 }}</p>
+            <div class="bg-amber-50 border border-amber-100 rounded-xl p-4 text-center">
+                <p class="text-xs text-amber-500 font-semibold uppercase tracking-wider mb-1">Overall</p>
+                <p class="text-2xl font-bold text-amber-700">+{{ $stockInOverall ?? 0 }}</p>
             </div>
         </div>
     </div>
 
-    <!-- Filters and Search -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <form method="GET" action="{{ route('admin.inventory.index') }}" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Search Products</label>
-                    <input type="text" name="search" value="{{ request('search') }}" 
-                           placeholder="Search by product name..." 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+    {{-- ===== SEARCH & FILTERS ===== --}}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <form method="GET" action="{{ route('admin.inventory.index') }}">
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="flex-1">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input type="text" name="search" value="{{ request('search') }}"
+                               placeholder="Search by product name..."
+                               class="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Stock Status</label>
-                    <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                <div class="sm:w-48">
+                    <select name="status" class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none">
                         <option value="">All Status</option>
-                        <option value="low_stock" {{ request('status') == 'low_stock' ? 'selected' : '' }}>Low Stock</option>
-                        <option value="normal" {{ request('status') == 'normal' ? 'selected' : '' }}>Normal</option>
-                        <option value="overstock" {{ request('status') == 'overstock' ? 'selected' : '' }}>Overstock</option>
+                        <option value="low_stock"  {{ request('status') == 'low_stock'  ? 'selected' : '' }}>Low Stock</option>
+                        <option value="normal"     {{ request('status') == 'normal'     ? 'selected' : '' }}>Normal</option>
+                        <option value="overstock"  {{ request('status') == 'overstock'  ? 'selected' : '' }}>Overstock</option>
                     </select>
                 </div>
-                <div class="flex items-end">
-                    <button type="submit" class="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors">
-                        <i class="fas fa-search mr-2"></i>Search
-                    </button>
-                </div>
+                <button type="submit"
+                        class="inline-flex items-center gap-2 px-5 py-2.5 text-white text-sm font-medium rounded-lg transition-colors" style="background-color: #800000">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                @if(request('search') || request('status'))
+                    <a href="{{ route('admin.inventory.index') }}"
+                       class="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors">
+                        <i class="fas fa-times"></i> Clear
+                    </a>
+                @endif
             </div>
         </form>
     </div>
 
-    <!-- Inventory Table -->
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-        <!-- Action Legend -->
-        <div class="px-6 py-3 bg-gray-50 border-b border-gray-200">
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs text-gray-600">
-                <!-- Inventory Actions Group -->
-                <div class="sm:col-span-3 lg:col-span-3">
-                    <div class="font-medium text-gray-700 mb-2 sm:mb-1">Inventory Actions:</div>
-                    <div class="flex flex-wrap gap-2 sm:gap-3">
-                        <div class="flex items-center gap-1">
-                            <i class="fas fa-box text-red-600"></i>
-                            <span>View</span>
-                        </div>
-                        <div class="flex items-center gap-1">
-                            <i class="fas fa-edit text-[#800000]"></i>
-                            <span>Edit</span>
-                        </div>
-                        <div class="flex items-center gap-1">
-                            <i class="fas fa-plus text-green-600"></i>
-                            <span>Restock</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Product Actions Group -->
-                <div class="sm:col-span-3 lg:col-span-3">
-                    <div class="font-medium text-gray-700 mb-2 sm:mb-1">Product Actions:</div>
-                    <div class="flex flex-wrap gap-2 sm:gap-3">
-                        <div class="flex items-center gap-1">
-                            <i class="fas fa-eye text-[#800000]"></i>
-                            <span>View</span>
-                        </div>
-                        <div class="flex items-center gap-1">
-                            <i class="fas fa-tag text-orange-600"></i>
-                            <span>Edit</span>
-                        </div>
-                        <div class="flex items-center gap-1">
-                            <i class="fas fa-plus-circle text-white bg-red-600 px-1 py-0.5 rounded"></i>
-                            <span>Create</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
+    {{-- ===== INVENTORY TABLE ===== --}}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
+            <table class="min-w-full divide-y divide-gray-100">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Min/Max Level</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Sold</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Product</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Quantity</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Min / Max</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Sold</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Revenue</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody class="bg-white divide-y divide-gray-100">
                     @forelse($products as $product)
-                        @php
-                            $inventory = $product->inventory;
-                        @endphp
-                        <tr class="hover:bg-gray-50 transition-colors {{ !$inventory ? 'bg-yellow-50' : '' }}">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
+                        @php $inventory = $product->inventory; @endphp
+                        <tr class="hover:bg-gray-50 transition-colors {{ !$inventory ? 'bg-yellow-50/50' : '' }}">
+
+                            {{-- Product --}}
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
                                     @if($product->image)
-                                        <img class="h-10 w-10 rounded-lg object-cover" src="{{ $product->image_src }}" alt="">
+                                        <img class="h-10 w-10 rounded-lg object-cover border border-gray-100 shadow-sm"
+                                             src="{{ $product->image_src }}" alt="{{ $product->name }}">
                                     @else
-                                        <div class="h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center">
-                                            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                                            </svg>
+                                        <div class="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                                            <i class="fas fa-image text-gray-400"></i>
                                         </div>
                                     @endif
-                                    <div class="ml-4">
-                                        <div class="text-sm font-medium text-gray-900">{{ $product->name }}</div>
-                                        <div class="text-sm text-gray-500">{{ $product->category->name ?? 'No Category' }}</div>
+                                    <div>
+                                        <div class="text-sm font-semibold text-gray-900">{{ $product->name }}</div>
+                                        <div class="text-xs text-gray-400">{{ $product->category->name ?? 'No Category' }}</div>
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+
+                            {{-- Quantity --}}
+                            <td class="px-6 py-4">
                                 @if($inventory)
-                                    <div class="text-sm font-medium {{ $inventory->isLowStock() ? 'text-red-600' : 'text-gray-900' }}">
+                                    <span class="text-lg font-bold {{ $inventory->isLowStock() ? 'text-red-600' : 'text-gray-800' }}">
                                         {{ $inventory->quantity }}
-                                    </div>
+                                    </span>
                                 @else
-                                    <div class="text-sm text-gray-400 italic">{{ $product->stock ?? 0 }}</div>
-                                    <div class="text-xs text-orange-600">No inventory</div>
+                                    <span class="text-sm text-gray-400">{{ $product->stock ?? 0 }}</span>
+                                    <div class="text-xs text-orange-500 font-medium mt-0.5">No tracking</div>
                                 @endif
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+
+                            {{-- Min/Max --}}
+                            <td class="px-6 py-4 text-sm text-gray-600">
                                 @if($inventory)
-                                    <div class="text-sm text-gray-900">
-                                        <span class="font-medium">{{ $inventory->min_stock_level }}</span> / 
-                                        <span class="font-medium">{{ $inventory->max_stock_level }}</span>
-                                    </div>
+                                    <span class="font-medium">{{ $inventory->min_stock_level }}</span>
+                                    <span class="text-gray-400 mx-1">/</span>
+                                    <span class="font-medium">{{ $inventory->max_stock_level }}</span>
                                 @else
-                                    <div class="text-sm text-gray-400">-</div>
+                                    <span class="text-gray-400">-</span>
                                 @endif
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+
+                            {{-- Status --}}
+                            <td class="px-6 py-4">
                                 @if($inventory)
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $inventory->stock_status_color }}">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $inventory->stock_status_color }}">
                                         {{ $inventory->stock_status }}
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
                                         No Tracking
                                     </span>
                                 @endif
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+
+                            {{-- Total Sold --}}
+                            <td class="px-6 py-4">
                                 @if($inventory)
-                                    <div class="font-medium">{{ $inventory->total_sold ?? 0 }}</div>
+                                    <div class="text-sm font-semibold text-gray-800">{{ $inventory->total_sold ?? 0 }}</div>
                                     @if($inventory->last_sale_at)
-                                        <div class="text-xs text-gray-500">{{ $inventory->last_sale_at->format('M d, Y') }}</div>
+                                        <div class="text-xs text-gray-400">{{ $inventory->last_sale_at->format('M d, Y') }}</div>
                                     @endif
                                 @else
-                                    <div class="text-gray-400">-</div>
+                                    <span class="text-gray-400">-</span>
                                 @endif
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+
+                            {{-- Revenue --}}
+                            <td class="px-6 py-4 text-sm">
                                 @if($inventory)
-                                    <div class="font-medium">₱{{ number_format($inventory->total_revenue ?? 0, 2) }}</div>
+                                    <span class="font-semibold text-gray-800">&#8369;{{ number_format($inventory->total_revenue ?? 0, 2) }}</span>
                                 @else
-                                    <div class="text-gray-400">-</div>
+                                    <span class="text-gray-400">-</span>
                                 @endif
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <div class="flex items-center space-x-2">
+
+                            {{-- Actions --}}
+                            <td class="px-6 py-4">
+                                <div class="flex flex-wrap items-center gap-1.5">
                                     @if($inventory)
-                                        <!-- Inventory Actions -->
-                                        <a href="{{ route('admin.inventory.show', $inventory) }}" class="text-red-600 hover:text-red-900" title="View Inventory">
-                                            <i class="fas fa-box"></i>
+                                        <a href="{{ route('admin.inventory.show', $inventory) }}"
+                                           class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors" title="View Inventory">
+                                            <i class="fas fa-eye"></i> View
                                         </a>
-                                        <a href="{{ route('admin.inventory.edit', $inventory) }}" class="text-[#800000] hover:text-[#600000]" title="Edit Inventory">
-                                            <i class="fas fa-edit"></i>
+                                        <a href="{{ route('admin.inventory.edit', $inventory) }}"
+                                           class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md text-white transition-colors" title="Edit Inventory" style="background-color: rgba(128,0,0,0.15); color: #800000">
+                                            <i class="fas fa-edit"></i> Edit
                                         </a>
-                                        <button onclick="restockModal({{ $inventory->id }}, '{{ addslashes($product->name) }}')" class="text-green-600 hover:text-green-900" title="Stock In">
-                                            <i class="fas fa-plus"></i>
+                                        <button onclick="restockModal({{ $inventory->id }}, '{{ addslashes($product->name) }}')"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200 transition-colors" title="Stock In">
+                                            <i class="fas fa-plus"></i> Stock In
                                         </button>
                                         @if($inventory->quantity > 0)
-                                            <button onclick="stockOutModal({{ $inventory->id }}, '{{ addslashes($product->name) }}', {{ $inventory->quantity }})" class="text-red-600 hover:text-red-900" title="Stock Out">
-                                                <i class="fas fa-minus"></i>
-                                            </button>
+                                        <button onclick="stockOutModal({{ $inventory->id }}, '{{ addslashes($product->name) }}', {{ $inventory->quantity }})"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-red-100 text-red-700 hover:bg-red-200 transition-colors" title="Stock Out">
+                                            <i class="fas fa-minus"></i> Stock Out
+                                        </button>
                                         @endif
-                                        
-                                        <!-- Divider -->
-                                        <div class="w-px h-4 bg-gray-300"></div>
                                     @else
-                                        <!-- Create Inventory Action -->
-            
-            <!-- Pagination -->
-            @if($products->hasPages())
-                <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-                    {{ $products->links() }}
-                </div>
-            @endif                      
-                                        <!-- Divider -->
-                                        <div class="w-px h-4 bg-gray-300"></div>
+                                        <a href="{{ route('admin.inventory.create') }}?product_id={{ $product->id }}"
+                                           class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors">
+                                            <i class="fas fa-plus-circle"></i> Add Tracking
+                                        </a>
                                     @endif
-                                    
-                                    <!-- Product Actions -->
-                                    <a href="{{ route('products.show', $product->id) }}" class="text-[#800000] hover:text-[#600000]" title="View Product">
-                                        <i class="fas fa-eye"></i>
+                                    <a href="{{ route('products.show', $product->id) }}"
+                                       class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="View Product Page">
+                                        <i class="fas fa-store"></i>
                                     </a>
-                                    <a href="{{ route('admin.products.edit', $product->id) }}" class="text-orange-600 hover:text-orange-900" title="Edit Product">
+                                    <a href="{{ route('admin.products.edit', $product->id) }}"
+                                       class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors" title="Edit Product">
                                         <i class="fas fa-tag"></i>
                                     </a>
                                 </div>
                             </td>
+
                         </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="px-6 py-12 text-center">
-                                    <div class="flex flex-col items-center">
-                                        <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-                                        </svg>
-                                        <p class="text-gray-500 font-medium">No products found</p>
-                                        <a href="{{ route('admin.products.create') }}" class="mt-4 inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors">
-                                            Add First Product
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- Pagination -->
-            @if($products->hasPages())
-                <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-                    {{ $products->links() }}
-                </div>
-            @endif
+                    @empty
+                        <tr>
+                            <td colspan="7" class="px-6 py-16 text-center">
+                                <div class="flex flex-col items-center gap-3 text-gray-400">
+                                    <i class="fas fa-box-open text-5xl"></i>
+                                    <p class="font-medium text-gray-500">No products found</p>
+                                    <a href="{{ route('admin.products.create') }}"
+                                       class="mt-2 inline-flex items-center gap-2 px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors" style="background-color: #800000">
+                                        <i class="fas fa-plus"></i> Add First Product
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
+
+        {{-- Pagination --}}
+        @if($products->hasPages())
+            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50">
+                {{ $products->links() }}
+            </div>
+        @endif
     </div>
+
 </div>
 
-<!-- Restock Modal -->
-<div id="restockModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
-    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-xl bg-white">
-        <div class="mt-3">
-            <h3 class="text-lg font-medium text-gray-900">Stock In Inventory</h3>
-            <p class="text-sm text-gray-500 mt-1" id="restockProductLabel">Product</p>
-            <form id="restockForm" method="POST" action="#" class="mt-4 space-y-4">
+{{-- ===== STOCK IN MODAL ===== --}}
+<div id="restockModal" class="fixed inset-0 bg-black/50 hidden overflow-y-auto h-full w-full z-50">
+    <div class="flex items-center justify-center min-h-full p-4">
+        <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <span class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-plus text-green-600 text-sm"></i>
+                    </span>
+                    Stock In
+                </h3>
+                <button onclick="closeRestockModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 mb-4" id="restockProductLabel"></p>
+            <form id="restockForm" method="POST" action="#" class="space-y-4">
                 @csrf
                 @method('PATCH')
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Quantity to Add</label>
-                    <input type="number" name="quantity" min="1" max="1000" required
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-maroon-500 focus:border-maroon-500">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">
+                        Quantity to Add <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="quantity" min="1" max="9999" required
+                           class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Note (optional)</label>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">
+                        Note <span class="text-gray-400 font-normal">(optional)</span>
+                    </label>
                     <input type="text" name="note" placeholder="e.g. New delivery batch"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-maroon-500 focus:border-maroon-500">
+                           class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
                 </div>
-                <div class="flex gap-3">
-                    <button type="submit" class="flex-1 px-4 py-2 bg-maroon-600 hover:bg-maroon-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all">
-                        Stock In
+                <div class="flex gap-3 pt-2">
+                    <button type="submit"
+                            class="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm">
+                        <i class="fas fa-plus mr-1"></i> Confirm Stock In
                     </button>
-                    <button type="button" onclick="closeRestockModal()" class="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold rounded-lg transition-all">
+                    <button type="button" onclick="closeRestockModal()"
+                            class="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-colors">
                         Cancel
                     </button>
                 </div>
@@ -371,31 +363,47 @@
     </div>
 </div>
 
-<!-- Stock Out Modal -->
-<div id="stockOutModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
-    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-xl bg-white">
-        <div class="mt-3">
-            <h3 class="text-lg font-medium text-gray-900">Stock Out Inventory</h3>
-            <p class="text-sm text-gray-500 mt-1" id="stockOutProductLabel">Product</p>
-            <p class="text-sm text-gray-500" id="stockOutAvailableLabel">Available: 0</p>
-            <form id="stockOutForm" method="POST" action="#" class="mt-4 space-y-4">
+{{-- ===== STOCK OUT MODAL ===== --}}
+<div id="stockOutModal" class="fixed inset-0 bg-black/50 hidden overflow-y-auto h-full w-full z-50">
+    <div class="flex items-center justify-center min-h-full p-4">
+        <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <span class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-minus text-red-600 text-sm"></i>
+                    </span>
+                    Stock Out
+                </h3>
+                <button onclick="closeStockOutModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 mb-1" id="stockOutProductLabel"></p>
+            <p class="text-sm font-medium text-gray-700 mb-4" id="stockOutAvailableLabel"></p>
+            <form id="stockOutForm" method="POST" action="#" class="space-y-4">
                 @csrf
                 @method('PATCH')
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Quantity to Remove</label>
-                    <input type="number" name="quantity" id="stockOutQty" min="1" max="1000" required
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">
+                        Quantity to Remove <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="quantity" id="stockOutQty" min="1" max="9999" required
+                           class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none">
                 </div>
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Note (optional)</label>
-                    <input type="text" name="note" placeholder="e.g. Damaged item, manual adjustment"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">
+                        Reason <span class="text-gray-400 font-normal">(optional)</span>
+                    </label>
+                    <input type="text" name="note" placeholder="e.g. Damaged, manual adjustment"
+                           class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none">
                 </div>
-                <div class="flex gap-3">
-                    <button type="submit" class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all">
-                        Stock Out
+                <div class="flex gap-3 pt-2">
+                    <button type="submit"
+                            class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm">
+                        <i class="fas fa-minus mr-1"></i> Confirm Stock Out
                     </button>
-                    <button type="button" onclick="closeStockOutModal()" class="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold rounded-lg transition-all">
+                    <button type="button" onclick="closeStockOutModal()"
+                            class="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-colors">
                         Cancel
                     </button>
                 </div>
@@ -406,34 +414,23 @@
 
 <script>
 function restockModal(inventoryId, productName) {
-    const modal = document.getElementById('restockModal');
-    const form = document.getElementById('restockForm');
-    const label = document.getElementById('restockProductLabel');
-    form.action = `/admin/inventory/${inventoryId}/restock`;
-    if (label) label.textContent = `Product: ${productName}`;
-    modal.classList.remove('hidden');
+    document.getElementById('restockForm').action = `/admin/inventory/${inventoryId}/restock`;
+    document.getElementById('restockProductLabel').textContent = `Product: ${productName}`;
+    document.getElementById('restockModal').classList.remove('hidden');
 }
-
 function closeRestockModal() {
     document.getElementById('restockModal').classList.add('hidden');
 }
 
 function stockOutModal(inventoryId, productName, availableQty) {
-    const modal = document.getElementById('stockOutModal');
-    const form = document.getElementById('stockOutForm');
     const qtyInput = document.getElementById('stockOutQty');
-    const productLabel = document.getElementById('stockOutProductLabel');
-    const availableLabel = document.getElementById('stockOutAvailableLabel');
-
-    form.action = `/admin/inventory/${inventoryId}/stock-out`;
+    document.getElementById('stockOutForm').action = `/admin/inventory/${inventoryId}/stock-out`;
     qtyInput.value = 1;
     qtyInput.max = Math.max(1, availableQty);
-    if (productLabel) productLabel.textContent = `Product: ${productName}`;
-    if (availableLabel) availableLabel.textContent = `Available: ${availableQty}`;
-
-    modal.classList.remove('hidden');
+    document.getElementById('stockOutProductLabel').textContent = `Product: ${productName}`;
+    document.getElementById('stockOutAvailableLabel').textContent = `Available stock: ${availableQty}`;
+    document.getElementById('stockOutModal').classList.remove('hidden');
 }
-
 function closeStockOutModal() {
     document.getElementById('stockOutModal').classList.add('hidden');
 }
