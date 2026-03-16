@@ -362,6 +362,11 @@ class InventoryController extends Controller
             \Log::warning('Could not write stock log: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Remove the specified inventory record.
+     */
+    public function destroy(Inventory $inventory): RedirectResponse
     {
         $inventory->delete();
 
