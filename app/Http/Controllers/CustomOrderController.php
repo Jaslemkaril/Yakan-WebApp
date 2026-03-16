@@ -541,6 +541,92 @@ class CustomOrderController extends Controller
     }
 
     /**
+     * Compute shipping fee from delivery location using the same zone model shown in step4 UI.
+     */
+    private function resolveAddressBasedShippingFee(
+        ?string $deliveryType,
+        ?string $city,
+        ?string $province,
+        ?string $fullAddress = null
+    ): float {
+        if (($deliveryType ?? 'delivery') === 'pickup') {
+            return 0.0;
+        }
+
+        $haystack = strtolower(trim((string) ($fullAddress ?? '')) . ' ' . trim((string) ($city ?? '')) . ' ' . trim((string) ($province ?? '')));
+
+        // Zone 0: Within Zamboanga City
+        if (
+            str_contains($haystack, 'zamboanga city') ||
+            str_contains($haystack, 'zamboanga del sur') ||
+            str_contains($haystack, 'zamboanga del norte') ||
+            str_contains($haystack, 'zamboanga sibugay')
+        ) {
+            return 100.0;
+        }
+
+        // Zone 1: Zamboanga Peninsula + BARMM
+        if (
+            str_contains($haystack, 'barmm') ||
+            str_contains($haystack, 'bangsamoro') ||
+            str_contains($haystack, 'basilan') ||
+            str_contains($haystack, 'sulu') ||
+            str_contains($haystack, 'tawi') ||
+            str_contains($haystack, 'zamboanga peninsula')
+        ) {
+            return 100.0;
+        }
+
+        // Zone 2: Other Mindanao regions
+        if (
+            str_contains($haystack, 'mindanao') ||
+            str_contains($haystack, 'davao') ||
+            str_contains($haystack, 'cagayan de oro') ||
+            str_contains($haystack, 'iligan') ||
+            str_contains($haystack, 'cotabato') ||
+            str_contains($haystack, 'caraga') ||
+            str_contains($haystack, 'general santos') ||
+            str_contains($haystack, 'soccsksargen')
+        ) {
+            return 180.0;
+        }
+
+        // Zone 3: Visayas
+        if (
+            str_contains($haystack, 'visaya') ||
+            str_contains($haystack, 'cebu') ||
+            str_contains($haystack, 'iloilo') ||
+            str_contains($haystack, 'bacolod') ||
+            str_contains($haystack, 'tacloban') ||
+            str_contains($haystack, 'leyte') ||
+            str_contains($haystack, 'samar') ||
+            str_contains($haystack, 'bohol') ||
+            str_contains($haystack, 'negros')
+        ) {
+            return 250.0;
+        }
+
+        // Zone 4: NCR + nearby Luzon
+        if (
+            str_contains($haystack, 'ncr') ||
+            str_contains($haystack, 'metro manila') ||
+            str_contains($haystack, 'manila') ||
+            str_contains($haystack, 'quezon city') ||
+            str_contains($haystack, 'makati') ||
+            str_contains($haystack, 'calabarzon') ||
+            str_contains($haystack, 'central luzon') ||
+            str_contains($haystack, 'laguna') ||
+            str_contains($haystack, 'cavite') ||
+            str_contains($haystack, 'bulacan')
+        ) {
+            return 300.0;
+        }
+
+        // Zone 5: Far Luzon / remote
+        return 350.0;
+    }
+
+    /**
      * List custom orders for the logged-in user
      */
     public function userIndex()
@@ -1457,7 +1543,7 @@ class CustomOrderController extends Controller
         $basePrice  = 0;
         $patternFee = 0;
         $fabricCost = 0;
-        $shippingFee = 100;
+        $shippingFee = 0;
 
         if ($isProductFlow) {
             $product = \App\Models\Product::find($wizardData['product']['id'] ?? null);
@@ -1484,28 +1570,11 @@ class CustomOrderController extends Controller
                 $pp = \App\Models\YakanPattern::find($patternIds[0]);
                 $fabricCost = $meters * ($pp ? ($pp->price_per_meter ?? 0) : 0);
             }
-            // Shipping fee based on resolved city
             $deliveryCity = $formData['resolved_delivery_city'] ?? null;
             $deliveryProvince = $formData['resolved_delivery_province'] ?? null;
-            if ($deliveryCity) {
-                $city     = strtolower($deliveryCity);
-                $province = strtolower($deliveryProvince ?? '');
-                if (str_contains($city, 'zamboanga') && !str_contains($province, 'del norte') && !str_contains($province, 'del sur') && !str_contains($province, 'sibugay')) {
-                    $shippingFee = 0;
-                } elseif (str_contains($province, 'zamboanga') || in_array($city, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
-                    $shippingFee = 100;
-                } elseif (in_array($city, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) || str_contains($province, 'barmm') || str_contains($province, 'armm')) {
-                    $shippingFee = 120;
-                } elseif (str_contains($province, 'mindanao') || in_array($city, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan'])) {
-                    $shippingFee = 150;
-                } elseif (str_contains($province, 'visayas') || in_array($city, ['cebu', 'iloilo', 'bacolod', 'tacloban'])) {
-                    $shippingFee = 180;
-                } elseif (str_contains($city, 'manila') || str_contains($province, 'ncr') || in_array($city, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan'])) {
-                    $shippingFee = 220;
-                } else {
-                    $shippingFee = 280;
-                }
-            }
+            $deliveryType = $formData['delivery_type'] ?? 'delivery';
+            $deliveryAddress = $formData['resolved_delivery_address'] ?? null;
+            $shippingFee = $this->resolveAddressBasedShippingFee($deliveryType, $deliveryCity, $deliveryProvince, $deliveryAddress);
             $basePrice = ($patternFee + $fabricCost) * $formQuantity + $shippingFee;
         }
 
@@ -1568,6 +1637,7 @@ class CustomOrderController extends Controller
             $order->delivery_address   = $formDeliveryAddr ?: ($details['delivery_address'] ?? null);
             $order->delivery_city      = $formDeliveryCity;
             $order->delivery_province  = $formDeliveryProv;
+            $order->shipping_fee       = $shippingFee;
             $order->phone              = $details['customer_phone'] ?? null;
             $order->email              = $details['customer_email'] ?? null;
             if (!empty($patternsArray)) $order->patterns = $patternsArray;
@@ -1616,6 +1686,7 @@ class CustomOrderController extends Controller
                 'delivery_address'       => $formDeliveryAddr ?: ($details['delivery_address'] ?? null),
                 'delivery_city'          => $formDeliveryCity,
                 'delivery_province'      => $formDeliveryProv,
+                'shipping_fee'           => $shippingFee,
                 'phone'                  => $details['customer_phone'] ?? null,
                 'email'                  => $details['customer_email'] ?? null,
             ], $batchColumnExists ? ['batch_order_number' => $batchOrderNumber] : []));
@@ -1764,14 +1835,10 @@ class CustomOrderController extends Controller
                     ]);
                 }
                 
-                // 3. Calculate shipping fee based on delivery address
-                $shippingFee = 100; // default
-                
-                // Get delivery address from form
+                // 3. Calculate shipping fee based on delivery address (aligned with step4 zones)
                 $deliveryCity = $addrCity ?? null;
                 $deliveryProvince = $addrProvince ?? null;
-                
-                // If no form delivery address, use user's default address
+
                 if (!$deliveryCity) {
                     $defaultAddress = auth()->user()->addresses->where('is_default', true)->first();
                     if ($defaultAddress) {
@@ -1779,51 +1846,13 @@ class CustomOrderController extends Controller
                         $deliveryProvince = $defaultAddress->province ?? $defaultAddress->region;
                     }
                 }
-                
-                // Determine shipping based on location (from Zamboanga City origin)
-                if ($deliveryCity) {
-                    $city = strtolower($deliveryCity);
-                    $province = strtolower($deliveryProvince ?? '');
-                    
-                    // ₱0 - Zamboanga City proper
-                    if (str_contains($city, 'zamboanga')) {
-                        $shippingFee = 0;
-                    }
-                    // ₱100 - Zamboanga Peninsula & nearby
-                    elseif (str_contains($province, 'zamboanga') || 
-                            in_array($city, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
-                        $shippingFee = 100;
-                    }
-                    // ₱120 - Western Mindanao
-                    elseif (in_array($city, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) ||
-                            str_contains($province, 'barmm') || str_contains($province, 'armm')) {
-                        $shippingFee = 120;
-                    }
-                    // ₱150 - Other Mindanao regions
-                    elseif (str_contains($province, 'mindanao') ||
-                            in_array($city, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'])) {
-                        $shippingFee = 150;
-                    }
-                    // ₱180 - Visayas
-                    elseif (str_contains($province, 'visayas') ||
-                            in_array($city, ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'])) {
-                        $shippingFee = 180;
-                    }
-                    // ₱220 - Metro Manila & nearby
-                    elseif (str_contains($city, 'manila') || str_contains($province, 'ncr') ||
-                            in_array($city, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'])) {
-                        $shippingFee = 220;
-                    }
-                    // ₱250 - Northern Luzon
-                    elseif (str_contains($province, 'luzon') ||
-                            in_array($city, ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'])) {
-                        $shippingFee = 250;
-                    }
-                    // ₱280 - Remote islands & far areas
-                    else {
-                        $shippingFee = 280;
-                    }
-                }
+
+                $shippingFee = $this->resolveAddressBasedShippingFee(
+                    $validated['delivery_type'] ?? 'delivery',
+                    $deliveryCity,
+                    $deliveryProvince,
+                    null
+                );
                 
                 // Calculate total from components
                 // Pattern fee and fabric cost are per unit, so multiply by quantity
@@ -1924,6 +1953,7 @@ class CustomOrderController extends Controller
             $formQuantity       = (int) ($validated['quantity'] ?? 1);
             $formSpecifications = $validated['specifications'] ?? null;
             $formDeliveryType   = $validated['delivery_type'];
+            $selectedAddressId  = $validated['address_id'] ?? null;
             // Structured delivery fields from step4
             $addrHouse     = $validated['delivery_house'] ?? null;
             $addrStreet    = $validated['delivery_street'] ?? null;
@@ -1932,6 +1962,15 @@ class CustomOrderController extends Controller
             $addrProvince  = $validated['delivery_province'] ?? null;
             $addrZip       = $validated['delivery_zip'] ?? null;
             $addrLandmark  = $validated['delivery_landmark'] ?? null;
+
+            // If user picked a saved address (radio), resolve city/province from that address.
+            if ($formDeliveryType === 'delivery' && !$addrCity && !empty($selectedAddressId)) {
+                $selectedAddress = auth()->user()->addresses()->find($selectedAddressId);
+                if ($selectedAddress) {
+                    $addrCity = $selectedAddress->city;
+                    $addrProvince = $selectedAddress->province ?? $selectedAddress->region;
+                }
+            }
             
             // Extract customization settings
             $customizationSettings = $wizardData['pattern']['customization_settings'] ?? null;
@@ -1950,6 +1989,21 @@ class CustomOrderController extends Controller
                 if (!empty($parts)) {
                     $formDeliveryAddr = implode(', ', $parts);
                 }
+
+                if (!$formDeliveryAddr && !empty($selectedAddressId)) {
+                    $selectedAddress = auth()->user()->addresses()->find($selectedAddressId);
+                    if ($selectedAddress) {
+                        $formDeliveryAddr = implode(', ', array_filter([
+                            $selectedAddress->house_number,
+                            $selectedAddress->street_name,
+                            $selectedAddress->barangay,
+                            $selectedAddress->city,
+                            $selectedAddress->province,
+                            $selectedAddress->zip_code ? 'ZIP ' . $selectedAddress->zip_code : null,
+                            $selectedAddress->landmark ? 'Landmark: ' . $selectedAddress->landmark : null,
+                        ]));
+                    }
+                }
             }
 
             // Create custom order
@@ -1967,8 +2021,9 @@ class CustomOrderController extends Controller
                 // Contact and delivery info
                 $order->delivery_type = $formDeliveryType ?: ($details['delivery_type'] ?? null);
                 $order->delivery_address = $formDeliveryAddr ?: ($details['delivery_address'] ?? null);
-                $order->delivery_city = $details['delivery_city'] ?? null;
-                $order->delivery_province = $details['delivery_province'] ?? null;
+                $order->delivery_city = $addrCity ?? ($details['delivery_city'] ?? null);
+                $order->delivery_province = $addrProvince ?? ($details['delivery_province'] ?? null);
+                $order->shipping_fee = $shippingFee;
                 $order->phone = $details['customer_phone'] ?? null;
                 $order->email = $details['customer_email'] ?? null;
                 if (!empty($patternsArray)) {
@@ -2034,8 +2089,9 @@ class CustomOrderController extends Controller
                     // Contact and delivery info
                     'delivery_type' => $formDeliveryType ?: ($details['delivery_type'] ?? null),
                     'delivery_address' => $formDeliveryAddr ?: ($details['delivery_address'] ?? null),
-                    'delivery_city' => $details['delivery_city'] ?? null,
-                    'delivery_province' => $details['delivery_province'] ?? null,
+                    'delivery_city' => $addrCity ?? ($details['delivery_city'] ?? null),
+                    'delivery_province' => $addrProvince ?? ($details['delivery_province'] ?? null),
+                    'shipping_fee' => $shippingFee,
                     'phone' => $details['customer_phone'] ?? null,
                     'email' => $details['customer_email'] ?? null,
                 ];

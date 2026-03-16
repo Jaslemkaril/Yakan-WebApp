@@ -5,7 +5,77 @@
     $batchOrders = $batchOrders ?? collect();
     $customOrderEstimatedDays = (int) \App\Models\SystemSetting::get('custom_order_estimated_days', 14);
     $estimatedCompletionDate = $order->created_at ? $order->created_at->copy()->addDays($customOrderEstimatedDays) : null;
-    $getAdminPriceParts = function ($item) {
+    $resolveShippingFromAddress = function ($item) {
+        $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+        if ($deliveryType === 'pickup') {
+            return 0.0;
+        }
+
+        $city = strtolower((string) ($item->delivery_city ?? ''));
+        $province = strtolower((string) ($item->delivery_province ?? ''));
+        $address = strtolower((string) ($item->delivery_address ?? ''));
+        $haystack = trim($address . ' ' . $city . ' ' . $province);
+
+        if (
+            str_contains($haystack, 'zamboanga city') ||
+            str_contains($haystack, 'zamboanga del sur') ||
+            str_contains($haystack, 'zamboanga del norte') ||
+            str_contains($haystack, 'zamboanga sibugay') ||
+            str_contains($haystack, 'barmm') ||
+            str_contains($haystack, 'bangsamoro') ||
+            str_contains($haystack, 'basilan') ||
+            str_contains($haystack, 'sulu') ||
+            str_contains($haystack, 'tawi') ||
+            str_contains($haystack, 'zamboanga peninsula')
+        ) {
+            return 100.0;
+        }
+
+        if (
+            str_contains($haystack, 'mindanao') ||
+            str_contains($haystack, 'davao') ||
+            str_contains($haystack, 'cagayan de oro') ||
+            str_contains($haystack, 'iligan') ||
+            str_contains($haystack, 'cotabato') ||
+            str_contains($haystack, 'caraga') ||
+            str_contains($haystack, 'general santos') ||
+            str_contains($haystack, 'soccsksargen')
+        ) {
+            return 180.0;
+        }
+
+        if (
+            str_contains($haystack, 'visaya') ||
+            str_contains($haystack, 'cebu') ||
+            str_contains($haystack, 'iloilo') ||
+            str_contains($haystack, 'bacolod') ||
+            str_contains($haystack, 'tacloban') ||
+            str_contains($haystack, 'leyte') ||
+            str_contains($haystack, 'samar') ||
+            str_contains($haystack, 'bohol') ||
+            str_contains($haystack, 'negros')
+        ) {
+            return 250.0;
+        }
+
+        if (
+            str_contains($haystack, 'ncr') ||
+            str_contains($haystack, 'metro manila') ||
+            str_contains($haystack, 'manila') ||
+            str_contains($haystack, 'quezon city') ||
+            str_contains($haystack, 'makati') ||
+            str_contains($haystack, 'calabarzon') ||
+            str_contains($haystack, 'central luzon') ||
+            str_contains($haystack, 'laguna') ||
+            str_contains($haystack, 'cavite') ||
+            str_contains($haystack, 'bulacan')
+        ) {
+            return 300.0;
+        }
+
+        return 350.0;
+    };
+    $getAdminPriceParts = function ($item) use ($resolveShippingFromAddress) {
         $quoted = (float) ($item->final_price ?? $item->estimated_price ?? 0);
         $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
         if ($deliveryType === 'pickup') {
@@ -17,6 +87,9 @@
             return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
         }
         $shipping = (float) ($item->shipping_fee ?? 0);
+        if ($shipping <= 0) {
+            $shipping = $resolveShippingFromAddress($item);
+        }
         return ['quoted' => $quoted, 'shipping' => $shipping, 'total' => $quoted + $shipping];
     };
 
@@ -535,7 +608,7 @@
                 <div class="space-y-3">
                     @if($isGroupedContext)
                         @php
-                            $groupPriceRows = $batchItems->map(function ($item) {
+                            $groupPriceRows = $batchItems->map(function ($item) use ($getAdminPriceParts) {
                                 $quoted = (float) ($item->final_price ?? $item->estimated_price ?? 0);
                                 $breakdownData = method_exists($item, 'getPriceBreakdown') ? ($item->getPriceBreakdown() ?? []) : [];
                                 $breakdown = $breakdownData['breakdown'] ?? [];
@@ -543,9 +616,7 @@
                                 $material = (float) ($breakdown['material_cost'] ?? 0);
                                 $pattern = (float) ($breakdown['pattern_fee'] ?? 0);
                                 $itemSubtotal = ($material + $pattern) > 0 ? ($material + $pattern) : $quoted;
-
-                                $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
-                                $itemShipping = $deliveryType === 'pickup' ? 0 : (float) ($item->shipping_fee ?? 0);
+                                $itemShipping = (float) ($getAdminPriceParts($item)['shipping'] ?? 0);
 
                                 return [
                                     'id' => $item->id,
