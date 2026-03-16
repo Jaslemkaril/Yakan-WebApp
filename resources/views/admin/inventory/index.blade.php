@@ -3,6 +3,7 @@
 @section('title', 'Inventory Management')
 
 @section('content')
+@php $authQ = request('auth_token') ? '?auth_token=' . request('auth_token') : ''; @endphp
 <div class="space-y-6">
 
     {{-- ===== HEADER ===== --}}
@@ -16,21 +17,21 @@
                 <p class="text-red-200 text-sm">Monitor and manage your product inventory</p>
             </div>
             <div class="flex flex-wrap gap-2">
-                <a href="{{ route('admin.inventory.history') }}"
+                <a href="{{ route('admin.inventory.history') . $authQ }}"
                    class="inline-flex items-center gap-2 bg-white/15 border border-white/30 text-white text-sm px-4 py-2 rounded-lg hover:bg-white/25 transition-colors">
                     <i class="fas fa-history"></i> Stock History
                 </a>
-                <a href="{{ route('admin.products.create') }}"
+                <a href="{{ route('admin.products.create') . $authQ }}"
                    class="inline-flex items-center gap-2 bg-white/15 border border-white/30 text-white text-sm px-4 py-2 rounded-lg hover:bg-white/25 transition-colors">
                     <i class="fas fa-plus"></i> New Product
                 </a>
                 @if($lowStockCount > 0)
-                <a href="{{ route('admin.inventory.low-stock') }}"
+                <a href="{{ route('admin.inventory.low-stock') . $authQ }}"
                    class="inline-flex items-center gap-2 bg-yellow-400/90 text-yellow-900 text-sm px-4 py-2 rounded-lg font-semibold hover:bg-yellow-300 transition-colors">
                     <i class="fas fa-exclamation-triangle animate-pulse"></i> Low Stock ({{ $lowStockCount }})
                 </a>
                 @endif
-                <a href="{{ route('admin.inventory.create') }}"
+                <a href="{{ route('admin.inventory.create') . $authQ }}"
                    class="inline-flex items-center gap-2 bg-white text-red-700 text-sm px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow">
                     <i class="fas fa-plus-circle"></i> Add Inventory
                 </a>
@@ -121,6 +122,9 @@
     {{-- ===== SEARCH & FILTERS ===== --}}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <form method="GET" action="{{ route('admin.inventory.index') }}">
+            @if(request('auth_token'))
+                <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+            @endif
             <div class="flex flex-col sm:flex-row gap-3">
                 <div class="flex-1">
                     <div class="relative">
@@ -143,7 +147,7 @@
                     <i class="fas fa-search"></i> Search
                 </button>
                 @if(request('search') || request('status'))
-                    <a href="{{ route('admin.inventory.index') }}"
+                    <a href="{{ route('admin.inventory.index') . $authQ }}"
                        class="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors">
                         <i class="fas fa-times"></i> Clear
                     </a>
@@ -251,11 +255,11 @@
                             <td class="px-6 py-4">
                                 <div class="flex flex-wrap items-center gap-1.5">
                                     @if($inventory)
-                                        <a href="{{ route('admin.inventory.show', $inventory) }}"
+                                        <a href="{{ route('admin.inventory.show', $inventory) . $authQ }}"
                                            class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors" title="View Inventory">
                                             <i class="fas fa-eye"></i> View
                                         </a>
-                                        <a href="{{ route('admin.inventory.edit', $inventory) }}"
+                                        <a href="{{ route('admin.inventory.edit', $inventory) . $authQ }}"
                                            class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md text-white transition-colors" title="Edit Inventory" style="background-color: rgba(128,0,0,0.15); color: #800000">
                                             <i class="fas fa-edit"></i> Edit
                                         </a>
@@ -270,7 +274,7 @@
                                         </button>
                                         @endif
                                     @else
-                                        <a href="{{ route('admin.inventory.create') }}?product_id={{ $product->id }}"
+                                        <a href="{{ route('admin.inventory.create') }}?product_id={{ $product->id }}{{ request('auth_token') ? '&auth_token=' . request('auth_token') : '' }}"
                                            class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors">
                                             <i class="fas fa-plus-circle"></i> Add Tracking
                                         </a>
@@ -279,7 +283,7 @@
                                        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="View Product Page">
                                         <i class="fas fa-store"></i>
                                     </a>
-                                    <a href="{{ route('admin.products.edit', $product->id) }}"
+                                    <a href="{{ route('admin.products.edit', $product->id) . $authQ }}"
                                        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors" title="Edit Product">
                                         <i class="fas fa-tag"></i>
                                     </a>
@@ -334,6 +338,7 @@
             <form id="restockForm" method="POST" action="#" class="space-y-4">
                 @csrf
                 @method('PATCH')
+                <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">
                         Quantity to Add <span class="text-red-500">*</span>
@@ -383,6 +388,7 @@
             <form id="stockOutForm" method="POST" action="#" class="space-y-4">
                 @csrf
                 @method('PATCH')
+                <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">
                         Quantity to Remove <span class="text-red-500">*</span>
@@ -413,8 +419,11 @@
 </div>
 
 <script>
+const authToken = '{{ request('auth_token') }}';
+const authSuffix = authToken ? `?auth_token=${authToken}` : '';
+
 function restockModal(inventoryId, productName) {
-    document.getElementById('restockForm').action = `/admin/inventory/${inventoryId}/restock`;
+    document.getElementById('restockForm').action = `/admin/inventory/${inventoryId}/restock${authSuffix}`;
     document.getElementById('restockProductLabel').textContent = `Product: ${productName}`;
     document.getElementById('restockModal').classList.remove('hidden');
 }
@@ -424,7 +433,7 @@ function closeRestockModal() {
 
 function stockOutModal(inventoryId, productName, availableQty) {
     const qtyInput = document.getElementById('stockOutQty');
-    document.getElementById('stockOutForm').action = `/admin/inventory/${inventoryId}/stock-out`;
+    document.getElementById('stockOutForm').action = `/admin/inventory/${inventoryId}/stock-out${authSuffix}`;
     qtyInput.value = 1;
     qtyInput.max = Math.max(1, availableQty);
     document.getElementById('stockOutProductLabel').textContent = `Product: ${productName}`;

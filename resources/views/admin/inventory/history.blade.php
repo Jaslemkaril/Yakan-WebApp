@@ -14,7 +14,7 @@
                 <p class="text-red-100 text-lg">Audit all stock in and stock out activities</p>
             </div>
             <div class="flex gap-3">
-                <a href="{{ route('admin.inventory.index') }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
+                <a href="{{ route('admin.inventory.index') }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
                     <i class="fas fa-warehouse mr-2"></i>Back to Inventory
                 </a>
             </div>
