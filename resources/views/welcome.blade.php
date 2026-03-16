@@ -5,12 +5,15 @@
 @push('styles')
 <style>
     .hero-section {
-        background: url("{{ asset('images/jus.jpg') }}") center center / cover no-repeat;
+        background-color: #3a0000;
         position: relative;
         overflow: hidden;
         min-height: 80vh;
         display: flex;
         align-items: center;
+        background-size: cover;
+        background-position: center center;
+        background-repeat: no-repeat;
     }
 
     .hero-section::before {
@@ -231,7 +234,7 @@
     @endif
 
     <!-- Hero Section -->
-    <section class="hero-section text-white">
+    <section class="hero-section text-white" style="background-image: url('{{ asset('images/jus.jpg') }}');">
         <div class="hero-content w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-36 text-center">
 
             <!-- Badge -->
