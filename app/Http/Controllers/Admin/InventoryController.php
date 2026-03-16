@@ -63,7 +63,9 @@ class InventoryController extends Controller
         $stockInYear = 0;
         $stockInOverall = 0;
 
-        if (\Schema::hasTable('stock_logs')) {
+        $this->ensureStockLogsTable();
+
+        try {
             $stockInToday = \App\Models\StockLog::where('quantity', '>', 0)
                 ->whereDate('created_at', today())
                 ->sum('quantity');
@@ -77,6 +79,8 @@ class InventoryController extends Controller
                 ->whereYear('created_at', now()->year)
                 ->sum('quantity');
             $stockInOverall = \App\Models\StockLog::where('quantity', '>', 0)->sum('quantity');
+        } catch (\Exception $e) {
+            // table still unavailable — leave at 0
         }
 
         return view('admin.inventory.index', compact(
@@ -205,14 +209,11 @@ class InventoryController extends Controller
 
         $inventory->restock($validated['quantity']);
 
-        if (\Schema::hasTable('stock_logs')) {
-            \App\Models\StockLog::create([
-                'product_id' => $inventory->product_id,
-                'quantity' => $validated['quantity'],
-                'note' => $validated['note'] ?? 'Restock from inventory page',
-                'created_by' => auth()->id(),
-            ]);
-        }
+        $this->logStockMovement(
+            $inventory->product_id,
+            $validated['quantity'],
+            $validated['note'] ?? 'Restock from inventory page'
+        );
 
         \Cache::flush();
 
@@ -239,19 +240,39 @@ class InventoryController extends Controller
         $inventory->low_stock_alert = $inventory->quantity <= $inventory->min_stock_level;
         $inventory->save();
 
-        if (\Schema::hasTable('stock_logs')) {
-            \App\Models\StockLog::create([
-                'product_id' => $inventory->product_id,
-                'quantity' => -$validated['quantity'],
-                'note' => $validated['note'] ?? 'Stock out from inventory page',
-                'created_by' => auth()->id(),
-            ]);
-        }
+        $this->logStockMovement(
+            $inventory->product_id,
+            -$validated['quantity'],
+            $validated['note'] ?? 'Stock out from inventory page'
+        );
 
         \Cache::flush();
 
         return $this->redirectToIndex()
             ->with('success', "Successfully removed {$validated['quantity']} units from stock.");
+    }
+
+    /**
+     * Create stock_logs table if it doesn't exist yet (self-healing).
+     */
+    private function ensureStockLogsTable(): void
+    {
+        if (\Schema::hasTable('stock_logs')) {
+            return;
+        }
+        try {
+            \Schema::create('stock_logs', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('product_id');
+                $table->integer('quantity');
+                $table->string('note')->nullable();
+                $table->unsignedBigInteger('created_by')->nullable();
+                $table->timestamps();
+                $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
+            });
+        } catch (\Exception $e) {
+            \Log::warning('Could not create stock_logs table: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -265,62 +286,53 @@ class InventoryController extends Controller
         $summaryIn = 0;
         $summaryOut = 0;
         $summaryNet = 0;
+        $hasStockLogsTable = true;
 
-        $hasStockLogsTable = \Schema::hasTable('stock_logs');
-        if (!$hasStockLogsTable) {
-            $stockLogs = collect();
-            return view('admin.inventory.history', compact(
-                'stockLogs',
-                'products',
-                'users',
-                'summaryIn',
-                'summaryOut',
-                'summaryNet',
-                'hasStockLogsTable'
-            ));
-        }
+        $this->ensureStockLogsTable();
 
-        $baseQuery = \App\Models\StockLog::with([
-            'product:id,name',
-            'creator:id,name',
-        ])->orderBy('created_at', 'desc');
+        try {
+            $baseQuery = \App\Models\StockLog::with([
+                'product:id,name',
+                'creator:id,name',
+            ])->orderBy('created_at', 'desc');
 
-        if ($request->filled('product_id')) {
-            $baseQuery->where('product_id', (int) $request->product_id);
-        }
-
-        if ($request->filled('movement')) {
-            if ($request->movement === 'in') {
-                $baseQuery->where('quantity', '>', 0);
-            } elseif ($request->movement === 'out') {
-                $baseQuery->where('quantity', '<', 0);
+            if ($request->filled('product_id')) {
+                $baseQuery->where('product_id', (int) $request->product_id);
             }
+
+            if ($request->filled('movement')) {
+                if ($request->movement === 'in') {
+                    $baseQuery->where('quantity', '>', 0);
+                } elseif ($request->movement === 'out') {
+                    $baseQuery->where('quantity', '<', 0);
+                }
+            }
+
+            if ($request->filled('date_from')) {
+                $baseQuery->whereDate('created_at', '>=', $request->date_from);
+            }
+
+            if ($request->filled('date_to')) {
+                $baseQuery->whereDate('created_at', '<=', $request->date_to);
+            }
+
+            if ($request->filled('created_by')) {
+                $baseQuery->where('created_by', (int) $request->created_by);
+            }
+
+            $stockLogs = (clone $baseQuery)->paginate(20)->withQueryString();
+
+            $summaryIn  = (clone $baseQuery)->where('quantity', '>', 0)->sum('quantity');
+            $summaryOut = abs((clone $baseQuery)->where('quantity', '<', 0)->sum('quantity'));
+            $summaryNet = $summaryIn - $summaryOut;
+
+            $userIds = \App\Models\StockLog::whereNotNull('created_by')->distinct()->pluck('created_by');
+            $users = \App\Models\User::whereIn('id', $userIds)->orderBy('name')->get(['id', 'name']);
+        } catch (\Exception $e) {
+            $stockLogs = collect();
+            $hasStockLogsTable = false;
+            \Log::warning('stock_logs query failed: ' . $e->getMessage());
         }
-
-        if ($request->filled('date_from')) {
-            $baseQuery->whereDate('created_at', '>=', $request->date_from);
-        }
-
-        if ($request->filled('date_to')) {
-            $baseQuery->whereDate('created_at', '<=', $request->date_to);
-        }
-
-        if ($request->filled('created_by')) {
-            $baseQuery->where('created_by', (int) $request->created_by);
-        }
-
-        $stockLogs = (clone $baseQuery)->paginate(20)->withQueryString();
-
-        $summaryIn = (clone $baseQuery)->where('quantity', '>', 0)->sum('quantity');
-        $summaryOut = abs((clone $baseQuery)->where('quantity', '<', 0)->sum('quantity'));
-        $summaryNet = $summaryIn - $summaryOut;
-
-        $userIds = \App\Models\StockLog::whereNotNull('created_by')
-            ->distinct()
-            ->pluck('created_by');
-        $users = \App\Models\User::whereIn('id', $userIds)
-            ->orderBy('name')
-            ->get(['id', 'name']);
 
         return view('admin.inventory.history', compact(
             'stockLogs',
@@ -334,9 +346,22 @@ class InventoryController extends Controller
     }
 
     /**
-     * Remove the specified inventory record.
+     * Create stock log entries (called from restock/stockOut).
      */
-    public function destroy(Inventory $inventory): RedirectResponse
+    private function logStockMovement(int $productId, int $qty, string $note): void
+    {
+        $this->ensureStockLogsTable();
+        try {
+            \App\Models\StockLog::create([
+                'product_id' => $productId,
+                'quantity'   => $qty,
+                'note'       => $note,
+                'created_by' => auth()->id(),
+            ]);
+        } catch (\Exception $e) {
+            \Log::warning('Could not write stock log: ' . $e->getMessage());
+        }
+    }
     {
         $inventory->delete();
 
