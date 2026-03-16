@@ -335,22 +335,20 @@
                 </button>
             </div>
             <p class="text-sm text-gray-500 mb-4" id="restockProductLabel"></p>
-            <form id="restockForm" method="POST" action="#" class="space-y-4">
-                @csrf
-                @method('PATCH')
+            <form id="restockForm" class="space-y-4">
                 <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">
                         Quantity to Add <span class="text-red-500">*</span>
                     </label>
-                    <input type="number" name="quantity" min="1" max="9999" required
+                    <input type="number" name="quantity" id="restockQtyInput" min="1" max="9999" required
                            class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">
                         Note <span class="text-gray-400 font-normal">(optional)</span>
                     </label>
-                    <input type="text" name="note" placeholder="e.g. New delivery batch"
+                    <input type="text" name="note" id="restockNoteInput" placeholder="e.g. New delivery batch"
                            class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
                 </div>
                 <div class="flex gap-3 pt-2">
@@ -385,9 +383,7 @@
             </div>
             <p class="text-sm text-gray-500 mb-1" id="stockOutProductLabel"></p>
             <p class="text-sm font-medium text-gray-700 mb-4" id="stockOutAvailableLabel"></p>
-            <form id="stockOutForm" method="POST" action="#" class="space-y-4">
-                @csrf
-                @method('PATCH')
+            <form id="stockOutForm" class="space-y-4">
                 <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">
@@ -400,7 +396,7 @@
                     <label class="block text-sm font-semibold text-gray-700 mb-1">
                         Reason <span class="text-gray-400 font-normal">(optional)</span>
                     </label>
-                    <input type="text" name="note" placeholder="e.g. Damaged, manual adjustment"
+                    <input type="text" name="note" id="stockOutNoteInput" placeholder="e.g. Damaged, manual adjustment"
                            class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none">
                 </div>
                 <div class="flex gap-3 pt-2">
@@ -421,19 +417,88 @@
 <script>
 const authToken = '{{ request('auth_token') }}';
 const authSuffix = authToken ? `?auth_token=${authToken}` : '';
+const csrfToken = '{{ csrf_token() }}';
+
+// ── helpers ──────────────────────────────────────────────────────────
+function showToast(message, type = 'success') {
+    const existing = document.getElementById('inv-toast');
+    if (existing) existing.remove();
+    const color = type === 'success' ? 'bg-green-600' : 'bg-red-600';
+    const toast = document.createElement('div');
+    toast.id = 'inv-toast';
+    toast.className = `fixed top-5 right-5 z-[9999] px-5 py-3 rounded-xl text-white text-sm font-semibold shadow-xl flex items-center gap-2 ${color}`;
+    toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
+}
+
+async function submitAjax(url, formData, btn, originalText) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Saving...';
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
+            body: formData,
+            redirect: 'follow',
+        });
+        // Any 2xx or redirect to inventory = success
+        if (res.ok || res.redirected) {
+            return true;
+        }
+        return false;
+    } catch (e) {
+        return false;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+// ── Stock In ─────────────────────────────────────────────────────────
+let currentRestockId = null;
 
 function restockModal(inventoryId, productName) {
-    document.getElementById('restockForm').action = `/admin/inventory/${inventoryId}/restock${authSuffix}`;
+    currentRestockId = inventoryId;
     document.getElementById('restockProductLabel').textContent = `Product: ${productName}`;
+    document.getElementById('restockQtyInput').value = '';
+    document.getElementById('restockNoteInput').value = '';
     document.getElementById('restockModal').classList.remove('hidden');
 }
 function closeRestockModal() {
     document.getElementById('restockModal').classList.add('hidden');
 }
 
+document.getElementById('restockForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const qty = document.getElementById('restockQtyInput').value;
+    if (!qty || qty < 1) { showToast('Please enter a valid quantity.', 'error'); return; }
+
+    const fd = new FormData();
+    fd.append('_method', 'PATCH');
+    fd.append('_token', csrfToken);
+    if (authToken) fd.append('auth_token', authToken);
+    fd.append('quantity', qty);
+    fd.append('note', document.getElementById('restockNoteInput').value);
+
+    const btn = this.querySelector('button[type="submit"]');
+    const ok = await submitAjax(`/admin/inventory/${currentRestockId}/restock${authSuffix}`, fd, btn, '<i class="fas fa-plus mr-1"></i> Confirm Stock In');
+
+    closeRestockModal();
+    if (ok) {
+        showToast('Stock added successfully!');
+        setTimeout(() => window.location.reload(), 800);
+    } else {
+        showToast('Something went wrong. Please try again.', 'error');
+    }
+});
+
+// ── Stock Out ────────────────────────────────────────────────────────
+let currentStockOutId = null;
+
 function stockOutModal(inventoryId, productName, availableQty) {
+    currentStockOutId = inventoryId;
     const qtyInput = document.getElementById('stockOutQty');
-    document.getElementById('stockOutForm').action = `/admin/inventory/${inventoryId}/stock-out${authSuffix}`;
     qtyInput.value = 1;
     qtyInput.max = Math.max(1, availableQty);
     document.getElementById('stockOutProductLabel').textContent = `Product: ${productName}`;
@@ -443,5 +508,29 @@ function stockOutModal(inventoryId, productName, availableQty) {
 function closeStockOutModal() {
     document.getElementById('stockOutModal').classList.add('hidden');
 }
+
+document.getElementById('stockOutForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const qty = document.getElementById('stockOutQty').value;
+    if (!qty || qty < 1) { showToast('Please enter a valid quantity.', 'error'); return; }
+
+    const fd = new FormData();
+    fd.append('_method', 'PATCH');
+    fd.append('_token', csrfToken);
+    if (authToken) fd.append('auth_token', authToken);
+    fd.append('quantity', qty);
+    fd.append('note', document.getElementById('stockOutNoteInput').value);
+
+    const btn = this.querySelector('button[type="submit"]');
+    const ok = await submitAjax(`/admin/inventory/${currentStockOutId}/stock-out${authSuffix}`, fd, btn, '<i class="fas fa-minus mr-1"></i> Confirm Stock Out');
+
+    closeStockOutModal();
+    if (ok) {
+        showToast('Stock removed successfully!');
+        setTimeout(() => window.location.reload(), 800);
+    } else {
+        showToast('Something went wrong. Please try again.', 'error');
+    }
+});
 </script>
 @endsection
