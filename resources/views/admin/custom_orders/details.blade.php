@@ -231,13 +231,7 @@
                         </div>
                     </summary>
                     <div class="px-3 pb-3 pt-1 border-t" style="border-color:#f1d1d8;">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                            <form action="{{ route('admin.custom-orders.quote_price', $item) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" class="md:col-span-2 grid grid-cols-2 gap-2">
-                                @csrf
-                                <input type="number" name="price" step="0.01" min="0" value="{{ number_format($itemPrice['quoted'], 2, '.', '') }}" class="border border-gray-300 rounded px-2 py-1 text-xs" placeholder="Quote">
-                                <button type="submit" class="text-xs font-semibold text-white rounded px-2 py-1" style="background-color:#800000;">Save Quote</button>
-                                <input type="hidden" name="notes" value="Item-level quote update from compact batch panel">
-                            </form>
+                        <div class="grid grid-cols-1 gap-2">
                             <div class="grid grid-cols-3 gap-2">
                                 <form action="{{ route('admin.custom-orders.approve', $item) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
                                     @csrf
