@@ -105,7 +105,7 @@ export default function PaymentScreen({ navigation, route }) {
     {
       id: 'maya',
       name: 'Maya',
-      description: 'Fast & secure e-wallet payment',
+      description: 'Redirects to Maya secure checkout',
       logo: MAYA_LOGO,
       fee: 0,
     },
@@ -143,7 +143,13 @@ export default function PaymentScreen({ navigation, route }) {
       return;
     }
     
-    // Show payment instructions for Maya and Bank Transfer
+    // For Maya: skip instructions and go directly to sandbox checkout
+    if (selectedPaymentMethod === 'maya') {
+      handleConfirmPayment();
+      return;
+    }
+
+    // For Bank Transfer: show payment instructions
     setShowPaymentInstructions(true);
   };
 
@@ -220,18 +226,34 @@ export default function PaymentScreen({ navigation, route }) {
         }
       }
 
-      // For Maya, try hosted checkout — but if it fails, fall through gracefully
-      // (the order is already created on the backend so it will still show in admin)
+      // For Maya: open sandbox checkout in browser; fail gracefully if API is unavailable
       if (isMaya && backendId) {
         try {
           const mayaCheckout = await ApiService.createMayaCheckout(backendId);
-          const checkoutUrl = mayaCheckout?.data?.data?.checkout_url;
-          if (mayaCheckout?.success && checkoutUrl) {
+          const checkoutUrl = mayaCheckout?.data?.data?.checkout_url
+            ?? mayaCheckout?.data?.checkout_url
+            ?? mayaCheckout?.checkout_url;
+          if (checkoutUrl) {
+            setIsProcessing(false);
             await WebBrowser.openBrowserAsync(checkoutUrl);
+            // After browser closes, go straight to order details
+            await updateOrderInStorage(finalOrderData);
+            clearCart();
+            notifyOrderCreated(orderData.orderRef);
+            navigation.navigate('OrderDetails', { orderData: finalOrderData });
+            return;
+          } else {
+            throw new Error('No checkout URL returned from Maya API.');
           }
-          // If no checkout URL, fall through — order is saved, user sees instructions
         } catch (mayaErr) {
-          console.warn('Maya hosted checkout unavailable, continuing with manual flow:', mayaErr?.message || mayaErr);
+          console.warn('Maya checkout failed:', mayaErr?.message || mayaErr);
+          setIsProcessing(false);
+          Alert.alert(
+            'Maya Checkout Unavailable',
+            'Could not connect to Maya checkout. Please try Bank Transfer or contact support.',
+            [{ text: 'OK' }]
+          );
+          return;
         }
       }
 
