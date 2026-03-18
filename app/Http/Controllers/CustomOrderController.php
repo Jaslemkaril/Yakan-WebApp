@@ -2577,7 +2577,7 @@ class CustomOrderController extends Controller
             }
 
             $request->validate([
-                'payment_method' => 'required|in:online_banking,gcash,bank_transfer',
+                'payment_method' => 'required|in:bank_transfer',
                 'shipping_fee'   => 'nullable|numeric|min:0',
                 'delivery_city'  => 'nullable|string|max:255',
                 'delivery_province' => 'nullable|string|max:255',
@@ -2602,11 +2602,6 @@ class CustomOrderController extends Controller
             $shippingFee = (float) ($request->shipping_fee ?? $order->shipping_fee ?? 0);
 
             $generatedTransactionId = null;
-            if ($selectedPaymentMethod === 'gcash') {
-                $generatedTransactionId = 'GCASH_' . strtoupper(uniqid());
-            } elseif ($selectedPaymentMethod === 'online_banking') {
-                $generatedTransactionId = 'BANK_' . strtoupper(uniqid());
-            }
 
             foreach ($paymentOrders as $paymentOrder) {
                 $paymentOrder->payment_method = $selectedPaymentMethod;
@@ -2632,17 +2627,7 @@ class CustomOrderController extends Controller
 
             $order->refresh();
             
-            // Handle different payment methods
-            switch ($selectedPaymentMethod) {
-                case 'gcash':
-                    return $this->redirectToRouteWithToken('custom_orders.payment.instructions', $order);
-                
-                case 'online_banking':
-                    return $this->redirectToRouteWithToken('custom_orders.payment.instructions', $order);
-                
-                case 'bank_transfer':
-                    return $this->redirectToRouteWithToken('custom_orders.payment.instructions', $order);
-            }
+            return $this->redirectToRouteWithToken('custom_orders.payment.instructions', $order);
 
             return back()->with('error', 'Payment initialization failed');
             
