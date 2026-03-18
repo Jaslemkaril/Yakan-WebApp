@@ -16,6 +16,26 @@
         background-repeat: no-repeat;
     }
 
+    /* Subtle Yakan pattern overlay for non-hero sections */
+    .yakan-pattern-bg {
+        position: relative;
+    }
+    .yakan-pattern-bg::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: url('/images/jus.jpg');
+        background-size: 320px auto;
+        background-repeat: repeat;
+        opacity: 0.06;
+        pointer-events: none;
+        z-index: 0;
+    }
+    .yakan-pattern-bg > * {
+        position: relative;
+        z-index: 1;
+    }
+
     .hero-section::before {
         content: '';
         position: absolute;
@@ -184,10 +204,20 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: 
-            radial-gradient(circle at 20% 50%, rgba(139, 0, 0, 0.15) 0%, transparent 50%),
-            radial-gradient(circle at 80% 50%, rgba(139, 0, 0, 0.15) 0%, transparent 50%),
-            url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="white" opacity="0.05"/><circle cx="80" cy="80" r="2" fill="white" opacity="0.05"/><circle cx="50" cy="50" r="1" fill="white" opacity="0.05"/></svg>');
+        background-image: url('/images/jus.jpg');
+        background-size: 300px auto;
+        background-repeat: repeat;
+        opacity: 0.08;
+    }
+
+    .cta-section::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(circle at 20% 50%, rgba(139, 0, 0, 0.25) 0%, transparent 50%),
+            radial-gradient(circle at 80% 50%, rgba(139, 0, 0, 0.25) 0%, transparent 50%);
+        pointer-events: none;
     }
 
     @keyframes float {
@@ -235,7 +265,7 @@
     @endif
 
     <!-- Hero Section -->
-    <section class="hero-section text-white" style="background-image: url('https://raw.githubusercontent.com/Jaslemkaril/Yakan-WebApp/main/public/images/jus.jpg');">
+    <section class="hero-section text-white" style="background-image: url('/images/jus.jpg');">
         <div class="hero-content w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-36 text-center">
 
             <!-- Badge -->
@@ -388,7 +418,7 @@
     </section>
 
     <!-- Product Showcase -->
-    <section class="py-12 md:py-16 lg:py-20 bg-gradient-to-b from-white via-red-50/30 to-white">
+    <section class="py-12 md:py-16 lg:py-20 bg-gradient-to-b from-white via-red-50/30 to-white yakan-pattern-bg">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="product-showcase relative">
                 <div class="text-center mb-8 md:mb-12 relative z-10">
@@ -528,9 +558,7 @@
     </section>
 
     <!-- Testimonials -->
-    <section class="py-12 md:py-16 lg:py-20 bg-gray-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-10 md:mb-16">
+    <section class="py-12 md:py-16 lg:py-20 bg-gray-50 yakan-pattern-bg">
                 <h2 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gradient mb-3 md:mb-4">What Our Customers Say</h2>
                 <p class="text-base sm:text-lg md:text-xl text-gray-600 px-4">Real experiences from real customers</p>
             </div>
