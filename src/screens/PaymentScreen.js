@@ -98,26 +98,21 @@ export default function PaymentScreen({ navigation, route }) {
     fetchPaymentInfo();
   }, []);
 
+  const PRODUCTION_URL = 'https://yakan-webapp-production.up.railway.app';
+
   const paymentMethods = [
-    {
-      id: 'gcash',
-      name: 'GCash',
-      description: 'Pay securely with GCash mobile wallet',
-      icon: '📱',
-      fee: 0,
-    },
     {
       id: 'maya',
       name: 'Maya',
-      description: 'Pay securely with Maya wallet',
-      icon: '💚',
+      description: 'Fast & secure e-wallet payment',
+      logo: { uri: `${PRODUCTION_URL}/images/payment/maya-logo.jpg` },
       fee: 0,
     },
     {
       id: 'bank_transfer',
       name: 'Bank Transfer',
       description: 'Direct transfer to our bank account',
-      icon: '🏦',
+      logo: { uri: `${PRODUCTION_URL}/images/payment/bank-transfer.svg` },
       fee: 0,
     },
   ];
@@ -147,7 +142,7 @@ export default function PaymentScreen({ navigation, route }) {
       return;
     }
     
-    // Show payment instructions for GCash and Bank Transfer
+    // Show payment instructions for Maya and Bank Transfer
     setShowPaymentInstructions(true);
   };
 
@@ -321,9 +316,9 @@ export default function PaymentScreen({ navigation, route }) {
   const finalTotal = total + (selectedMethod?.fee || 0);
   const isMaya = selectedPaymentMethod === 'maya';
   const isBankTransfer = selectedPaymentMethod === 'bank_transfer';
-  const walletLabel = selectedPaymentMethod === 'maya' ? 'Maya' : 'GCash';
-  const walletNumber = selectedPaymentMethod === 'maya' ? paymentAccounts.maya.number : paymentAccounts.gcash.number;
-  const walletName = selectedPaymentMethod === 'maya' ? paymentAccounts.maya.name : paymentAccounts.gcash.name;
+  const walletLabel = 'Maya';
+  const walletNumber = paymentAccounts.maya.number;
+  const walletName = paymentAccounts.maya.name;
 
   // Payment Instructions Screen
   if (showPaymentInstructions && selectedPaymentMethod) {
@@ -742,7 +737,11 @@ export default function PaymentScreen({ navigation, route }) {
               onPress={() => handleSelectPaymentMethod(method.id)}
             >
               <View style={styles.paymentMethodIcon}>
-                <Text style={styles.methodIcon}>{method.icon}</Text>
+                <Image
+                  source={method.logo}
+                  style={styles.methodLogoImage}
+                  resizeMode="contain"
+                />
               </View>
               
               <View style={styles.paymentMethodInfo}>
@@ -1411,6 +1410,11 @@ const styles = StyleSheet.create({
   },
   methodIcon: {
     fontSize: 28,
+  },
+  methodLogoImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
   },
   paymentMethodInfo: {
     flex: 1,
