@@ -380,21 +380,6 @@ export default function HomeScreen({ navigation }) {
                 </TouchableOpacity>
               </View>
 
-              {/* Download APK button */}
-              <TouchableOpacity
-                style={styles.heroApkBtn}
-                onPress={() => Linking.openURL('https://yakan-webapp-production.up.railway.app')}
-                activeOpacity={0.85}
-              >
-                <MaterialCommunityIcons name="android" size={18} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.heroApkBtnText}>Download Android App</Text>
-                <MaterialCommunityIcons name="download" size={16} color="#fff" style={{ marginLeft: 6 }} />
-                <View style={styles.heroApkTag}>
-                  <Text style={styles.heroApkTagText}>APK</Text>
-                </View>
-              </TouchableOpacity>
-              <Text style={styles.heroApkCaption}>Free · Android · v1.0</Text>
-
               {/* Badge pills */}
               <View style={styles.heroBadgePillRow}>
                 <View style={styles.heroBadgePill}>
@@ -750,51 +735,14 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  // APK download button
-  heroApkBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 28,
-    paddingVertical: 11,
-    paddingHorizontal: 20,
-    marginBottom: 6,
-    alignSelf: 'center',
-  },
-  heroApkBtnText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  heroApkTag: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginLeft: 6,
-  },
-  heroApkTagText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  heroApkCaption: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
   // Badge pills row
   heroBadgePillRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 4,
+    marginTop: 12,
+    marginBottom: 4,
   },
   heroBadgePill: {
     flexDirection: 'row',
