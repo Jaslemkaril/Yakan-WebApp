@@ -2607,15 +2607,38 @@ class CustomOrderController extends Controller
                             \DB::table('auth_tokens')
                                 ->where('token', $token)
                                 ->update(['expires_at' => now()->addDays(30), 'updated_at' => now()]);
+                            
+                            \Log::info('Payment processing - authenticated via token', [
+                                'user_id' => $user->id,
+                                'order_id' => $id
+                            ]);
                         }
                     }
+                }
+                
+                // If still not authenticated after token check, redirect to login
+                if (!Auth::check()) {
+                    \Log::warning('Payment processing failed - not authenticated', [
+                        'order_id' => $id,
+                        'has_token' => !empty($token)
+                    ]);
+                    
+                    return redirect()->route('login.user.form')
+                        ->with('error', 'Please login to continue with payment.')
+                        ->with('redirect_to', route('custom_orders.payment', $id));
                 }
             }
             
             $order = CustomOrder::findOrFail($id);
             
+            // Verify ownership
             if ($order->user_id !== Auth::id()) {
-                abort(403, 'Unauthorized');
+                \Log::error('Payment processing - unauthorized access attempt', [
+                    'order_id' => $id,
+                    'order_user_id' => $order->user_id,
+                    'current_user_id' => Auth::id()
+                ]);
+                abort(403, 'Unauthorized access to this order.');
             }
 
             $request->validate([
@@ -2817,6 +2840,40 @@ class CustomOrderController extends Controller
      */
     public function confirmPayment(Request $request, CustomOrder $order)
     {
+        // Handle auth_token authentication if not already authenticated
+        if (!Auth::check()) {
+            $token = $request->input('auth_token') 
+                ?? $request->query('auth_token') 
+                ?? session('auth_token');
+            
+            if ($token) {
+                $authToken = \DB::table('auth_tokens')
+                    ->where('token', $token)
+                    ->where('expires_at', '>', now())
+                    ->first();
+                
+                if ($authToken) {
+                    $user = User::find($authToken->user_id);
+                    if ($user) {
+                        Auth::login($user, true);
+                        session(['auth_token' => $token]);
+                        
+                        // Keep token alive
+                        \DB::table('auth_tokens')
+                            ->where('token', $token)
+                            ->update(['expires_at' => now()->addDays(30), 'updated_at' => now()]);
+                    }
+                }
+            }
+            
+            // If still not authenticated after token check, redirect to login
+            if (!Auth::check()) {
+                return redirect()->route('login.user.form')
+                    ->with('error', 'Please login to continue.')
+                    ->with('redirect_to', route('custom_orders.payment.confirm', $order->id));
+            }
+        }
+        
         if ($order->user_id !== Auth::id()) {
             abort(403, 'Unauthorized');
         }

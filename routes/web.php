@@ -953,9 +953,8 @@ Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->gr
     Route::post('/{order}/accept', [\App\Http\Controllers\CustomOrderController::class, 'acceptQuote'])->name('accept');
     Route::post('/{order}/reject', [\App\Http\Controllers\CustomOrderController::class, 'rejectQuote'])->name('reject');
     
-    // Payment routes
+    // Payment routes - GET routes require auth middleware
     Route::get('/{order}/payment', [\App\Http\Controllers\CustomOrderController::class, 'payment'])->name('payment');
-    Route::post('/{order}/payment', [\App\Http\Controllers\CustomOrderController::class, 'processPayment'])->name('payment.process');
     Route::get('/{order}/payment/instructions', [\App\Http\Controllers\CustomOrderController::class, 'paymentInstructions'])->name('payment.instructions');
     Route::get('/{order}/payment/confirm', [\App\Http\Controllers\CustomOrderController::class, 'paymentConfirm'])->name('payment.confirm');
     Route::get('/{order}/payment/maya-success', [\App\Http\Controllers\CustomOrderController::class, 'mayaPaymentSuccess'])->name('payment.maya.success');
@@ -963,7 +962,6 @@ Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->gr
     
     // Confirm order received
     Route::post('/{order}/confirm-received', [\App\Http\Controllers\CustomOrderController::class, 'confirmReceived'])->name('confirm_received');
-    Route::post('/{order}/payment/confirm', [\App\Http\Controllers\CustomOrderController::class, 'paymentConfirmProcess'])->name('payment.confirm.process');
     
     // Legacy routes
     Route::patch('/{order}/respond', [\App\Http\Controllers\CustomOrderController::class, 'respondToQuote'])->name('respond');
@@ -995,6 +993,11 @@ Route::prefix('chats')->name('chats.')->group(function () {
 // Order payment method selection (for chat-based custom orders)
 Route::post('/custom-orders/{customOrder}/set-payment-method', [\App\Http\Controllers\ChatController::class, 'setPaymentMethod'])->name('orders.set_payment_method')->middleware('auth');
 Route::post('/custom-orders/{customOrder}/upload-receipt', [\App\Http\Controllers\ChatController::class, 'uploadReceipt'])->name('orders.upload_receipt')->middleware('auth');
+
+// Payment processing routes - Outside auth middleware to allow token-based authentication
+// Controller handles auth verification internally with auth_token support
+Route::post('/custom-orders/{order}/payment', [\App\Http\Controllers\CustomOrderController::class, 'processPayment'])->name('custom_orders.payment.process');
+Route::post('/custom-orders/{order}/payment/confirm', [\App\Http\Controllers\CustomOrderController::class, 'paymentConfirmProcess'])->name('custom_orders.payment.confirm.process');
 
 // Track Order - Redirect old routes to new implementation
 Route::get('/track', function() {
