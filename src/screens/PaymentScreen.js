@@ -220,16 +220,19 @@ export default function PaymentScreen({ navigation, route }) {
         }
       }
 
-      // For Maya, create hosted checkout and open in browser
+      // For Maya, try hosted checkout — but if it fails, fall through gracefully
+      // (the order is already created on the backend so it will still show in admin)
       if (isMaya && backendId) {
-        const mayaCheckout = await ApiService.createMayaCheckout(backendId);
-        const checkoutUrl = mayaCheckout?.data?.data?.checkout_url;
-
-        if (!mayaCheckout?.success || !checkoutUrl) {
-          throw new Error(mayaCheckout?.error || 'Unable to initialize Maya checkout.');
+        try {
+          const mayaCheckout = await ApiService.createMayaCheckout(backendId);
+          const checkoutUrl = mayaCheckout?.data?.data?.checkout_url;
+          if (mayaCheckout?.success && checkoutUrl) {
+            await WebBrowser.openBrowserAsync(checkoutUrl);
+          }
+          // If no checkout URL, fall through — order is saved, user sees instructions
+        } catch (mayaErr) {
+          console.warn('Maya hosted checkout unavailable, continuing with manual flow:', mayaErr?.message || mayaErr);
         }
-
-        await WebBrowser.openBrowserAsync(checkoutUrl);
       }
 
       await updateOrderInStorage(finalOrderData);
