@@ -434,7 +434,8 @@
         </div>
 
         {{-- ===== PAYMENT FORM ===== --}}
-        <form method="POST" action="{{ route('custom_orders.payment.process', $order->id) }}" id="customPaymentForm" class="payment-card p-8 mb-8">
+        @php $authToken = request('auth_token') ?? session('auth_token'); @endphp
+        <form method="POST" action="{{ route('custom_orders.payment.process', $order->id) }}{{ $authToken ? '?auth_token=' . urlencode($authToken) : '' }}" id="customPaymentForm" class="payment-card p-8 mb-8">
             @csrf
             <!-- Hidden shipping fields -->
             <input type="hidden" name="shipping_fee"      id="hiddenShippingFee"      value="{{ $isBatchPayment ? 0 : ($calcShippingFee ?? 0) }}">
