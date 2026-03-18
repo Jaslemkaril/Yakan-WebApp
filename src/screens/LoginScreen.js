@@ -298,7 +298,7 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#800020',
+    backgroundColor: '#5A0808',
   },
   flex: {
     flex: 1,
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     paddingTop: 64,
     paddingBottom: 36,
     paddingHorizontal: 24,
-    backgroundColor: 'rgba(100, 10, 10, 0.82)',
+    backgroundColor: 'rgba(90, 8, 8, 0.58)',
   },
   logoIconContainer: {
     width: 62,

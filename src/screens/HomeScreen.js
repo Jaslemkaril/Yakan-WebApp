@@ -558,7 +558,7 @@ const getStyles = (theme) => StyleSheet.create({
     width: '100%',
   },
   heroOverlay: {
-    backgroundColor: 'rgba(100, 10, 10, 0.82)',
+    backgroundColor: 'rgba(90, 8, 8, 0.58)',
     paddingTop: 16,
     paddingBottom: 22,
     paddingHorizontal: 20,
