@@ -7,7 +7,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build": "expo export",
+    "build": "npx vite build",
+    "mobile:build": "expo export",
     "lint": "eslint src resources/js --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint src resources/js --ext .js,.jsx,.ts,.tsx --fix"
   },
@@ -43,7 +44,9 @@
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.0.0",
-    "eslint-plugin-react": "^7.33.0"
+    "eslint-plugin-react": "^7.33.0",
+    "vite": "^6.0.0",
+    "laravel-vite-plugin": "^1.0.0"
   },
   "private": true
 }

@@ -1,7 +1,11 @@
 {
   "schema": "...",
   "builder": "nixpacks",
+  "build": {
+    "buildCommand": "composer install --no-dev --optimize-autoloader --no-interaction && npm ci && npx vite build"
+  },
   "deploy": {
+    "startCommand": "bash railway.sh ; php -S 0.0.0.0:${PORT:-8080} server.php",
     "restart_policy": "always"
   }
 }
