@@ -885,6 +885,17 @@ Route::get('/test-auth', function() {
     return 'Auth test - User ID: ' . (auth()->check() ? auth()->id() : 'Not authenticated') . ' - Session ID: ' . session()->getId();
 });
 
+// ============================================================================
+// CUSTOM ORDER PAYMENT ROUTES - Must be BEFORE the auth middleware group
+// These routes handle token-based authentication internally
+// ============================================================================
+Route::post('/custom-orders/{order}/payment', [\App\Http\Controllers\CustomOrderController::class, 'processPayment'])
+    ->name('custom_orders.payment.process')
+    ->withoutMiddleware(['auth']);
+
+Route::post('/custom-orders/{order}/payment/confirm', [\App\Http\Controllers\CustomOrderController::class, 'paymentConfirmProcess'])
+    ->name('custom_orders.payment.confirm.process')
+    ->withoutMiddleware(['auth']);
 
 
 // Custom Orders (Enhanced) - Require Authentication
@@ -993,11 +1004,6 @@ Route::prefix('chats')->name('chats.')->group(function () {
 // Order payment method selection (for chat-based custom orders)
 Route::post('/custom-orders/{customOrder}/set-payment-method', [\App\Http\Controllers\ChatController::class, 'setPaymentMethod'])->name('orders.set_payment_method')->middleware('auth');
 Route::post('/custom-orders/{customOrder}/upload-receipt', [\App\Http\Controllers\ChatController::class, 'uploadReceipt'])->name('orders.upload_receipt')->middleware('auth');
-
-// Payment processing routes - Outside auth middleware to allow token-based authentication
-// Controller handles auth verification internally with auth_token support
-Route::post('/custom-orders/{order}/payment', [\App\Http\Controllers\CustomOrderController::class, 'processPayment'])->name('custom_orders.payment.process');
-Route::post('/custom-orders/{order}/payment/confirm', [\App\Http\Controllers\CustomOrderController::class, 'paymentConfirmProcess'])->name('custom_orders.payment.confirm.process');
 
 // Track Order - Redirect old routes to new implementation
 Route::get('/track', function() {
