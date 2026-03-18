@@ -495,12 +495,8 @@
                                             
                                             {{-- Payment Method Buttons --}}
                                             <p class="text-sm font-semibold text-gray-800 mb-3">Choose your payment method:</p>
-                                            <div class="grid grid-cols-2 gap-3">
-                                                <button onclick="selectPaymentMethod('{{ $chatOrder->id }}', 'gcash')" class="payment-method-btn flex flex-col items-center gap-2 bg-white hover:bg-blue-50 border-2 border-blue-300 hover:border-blue-500 rounded-xl p-4 transition-all hover:shadow-md">
-                                                    <span class="text-3xl">📱</span>
-                                                    <span class="font-bold text-sm text-gray-900">GCash</span>
-                                                </button>
-                                                <button onclick="selectPaymentMethod('{{ $chatOrder->id }}', 'bank_transfer')" class="payment-method-btn flex flex-col items-center gap-2 bg-white hover:bg-green-50 border-2 border-green-300 hover:border-green-500 rounded-xl p-4 transition-all hover:shadow-md">
+                                            <div class="grid grid-cols-1 gap-3">
+                                                <button onclick="selectPaymentMethod('{{ $chatOrder->id }}', 'bank_transfer')" class="payment-method-btn flex items-center gap-3 bg-white hover:bg-green-50 border-2 border-green-300 hover:border-green-500 rounded-xl p-4 transition-all hover:shadow-md">
                                                     <span class="text-3xl">🏦</span>
                                                     <span class="font-bold text-sm text-gray-900">Bank Transfer</span>
                                                 </button>
@@ -517,42 +513,7 @@
                                                 <p class="text-lg font-bold text-gray-900">#{{ $chatOrder->id }}</p>
                                             </div>
                                             
-                                            @if($chatOrder->payment_method === 'gcash')
-                                                {{-- GCash Payment Details --}}
-                                                <div class="bg-white/70 backdrop-blur rounded-xl p-4 mb-4">
-                                                    <div class="flex items-center gap-2 mb-3">
-                                                        <span class="text-2xl">📱</span>
-                                                        <h4 class="text-lg font-bold text-gray-900">GCash Payment</h4>
-                                                    </div>
-                                                    
-                                                    <div class="space-y-2">
-                                                        <div class="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
-                                                            <span class="text-sm font-semibold text-gray-700">GCash Number:</span>
-                                                            <span class="font-bold text-blue-600 text-lg">{{ \App\Models\SystemSetting::get('gcash_number', '—') }}</span>
-                                                        </div>
-                                                        <div class="flex justify-between items-center bg-blue-50 p-3 rounded-lg">
-                                                            <span class="text-sm font-semibold text-gray-700">Account Name:</span>
-                                                            <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('gcash_name', 'Tuwas Yakan') }}</span>
-                                                        </div>
-                                                        <div class="flex justify-between items-center bg-green-100 p-3 rounded-lg border-2 border-green-300">
-                                                            <span class="text-sm font-bold text-gray-800">Amount to Pay:</span>
-                                                            <span class="font-bold text-green-700 text-xl">₱{{ number_format($chatOrder->final_price, 2) }}</span>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                                        <p class="text-xs font-semibold text-yellow-800 mb-1">📝 Instructions:</p>
-                                                        <ol class="text-xs text-yellow-900 space-y-1 list-decimal list-inside">
-                                                            <li>Open your GCash app</li>
-                                                            <li>Select "Send Money"</li>
-                                                            <li>Enter the GCash number above</li>
-                                                            <li>Send the exact amount shown</li>
-                                                            <li>Take a screenshot of the receipt</li>
-                                                            <li>Upload it below</li>
-                                                        </ol>
-                                                    </div>
-                                                </div>
-                                            @elseif($chatOrder->payment_method === 'bank_transfer')
+                                            @if($chatOrder->payment_method === 'bank_transfer')
                                                 {{-- Bank Transfer Payment Details --}}
                                                 <div class="bg-white/70 backdrop-blur rounded-xl p-4 mb-4">
                                                     <div class="flex items-center gap-2 mb-3">
@@ -775,15 +736,6 @@
                                     <div class="mb-5">
                                         <label class="block text-sm font-semibold text-gray-700 mb-3">Select Payment Method</label>
                                         <div class="space-y-3">
-                                            <!-- GCash -->
-                                            <label class="flex items-center p-4 border-2 border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition {{ old('payment_method') === 'online_banking' ? 'border-blue-500 bg-blue-50' : '' }}">
-                                                <input type="radio" name="payment_method" value="online_banking" {{ old('payment_method') === 'online_banking' ? 'checked' : '' }} class="w-5 h-5 text-blue-600">
-                                                <span class="ml-3 flex-1">
-                                                    <span class="font-bold text-gray-900">💳 GCash</span>
-                                                    <p class="text-sm text-gray-600">Pay using GCash e-wallet - Fast & Secure</p>
-                                                </span>
-                                            </label>
-                                            
                                             <!-- Bank Transfer -->
                                             <label class="flex items-center p-4 border-2 border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition {{ old('payment_method') === 'bank_transfer' ? 'border-blue-500 bg-blue-50' : '' }}">
                                                 <input type="radio" name="payment_method" value="bank_transfer" {{ old('payment_method') === 'bank_transfer' ? 'checked' : '' }} class="w-5 h-5 text-blue-600">
