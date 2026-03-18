@@ -17,10 +17,15 @@ class MayaCheckoutService
         }
 
         $secretKey = config('services.maya.secret_key');
+        $publicKey = config('services.maya.public_key');
         $baseUrl = rtrim(config('services.maya.base_url', 'https://pg-sandbox.paymaya.com'), '/');
 
         if (empty($secretKey)) {
             throw new \RuntimeException('Maya secret key is not configured.');
+        }
+
+        if (empty($publicKey)) {
+            throw new \RuntimeException('Maya public key is not configured.');
         }
 
         $amount = (float) ($order->total_amount ?? $order->total ?? 0);
