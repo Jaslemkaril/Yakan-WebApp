@@ -7,6 +7,7 @@ use App\Models\CustomOrder;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\YakanPattern;
+use App\Models\User;
 use App\Services\CloudinaryService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -2584,6 +2585,33 @@ class CustomOrderController extends Controller
     public function processPayment(Request $request, $id)
     {
         try {
+            // Handle auth_token authentication if not already authenticated
+            if (!Auth::check()) {
+                $token = $request->input('auth_token') 
+                    ?? $request->query('auth_token') 
+                    ?? session('auth_token');
+                
+                if ($token) {
+                    $authToken = \DB::table('auth_tokens')
+                        ->where('token', $token)
+                        ->where('expires_at', '>', now())
+                        ->first();
+                    
+                    if ($authToken) {
+                        $user = User::find($authToken->user_id);
+                        if ($user) {
+                            Auth::login($user, true);
+                            session(['auth_token' => $token]);
+                            
+                            // Keep token alive
+                            \DB::table('auth_tokens')
+                                ->where('token', $token)
+                                ->update(['expires_at' => now()->addDays(30), 'updated_at' => now()]);
+                        }
+                    }
+                }
+            }
+            
             $order = CustomOrder::findOrFail($id);
             
             if ($order->user_id !== Auth::id()) {
