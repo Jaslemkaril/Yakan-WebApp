@@ -2577,7 +2577,7 @@ class CustomOrderController extends Controller
             }
 
             $request->validate([
-                'payment_method' => 'required|in:bank_transfer',
+                'payment_method' => 'required|in:online_banking,bank_transfer',
                 'shipping_fee'   => 'nullable|numeric|min:0',
                 'delivery_city'  => 'nullable|string|max:255',
                 'delivery_province' => 'nullable|string|max:255',
@@ -2602,6 +2602,67 @@ class CustomOrderController extends Controller
             $shippingFee = (float) ($request->shipping_fee ?? $order->shipping_fee ?? 0);
 
             $generatedTransactionId = null;
+
+            // Handle Maya redirect checkout
+            if ($selectedPaymentMethod === 'online_banking' && config('services.maya.enabled', false)) {
+                try {
+                    $publicKey  = config('services.maya.public_key');
+                    $baseUrl    = rtrim(config('services.maya.base_url', 'https://pg-sandbox.paymaya.com'), '/');
+                    $amount     = (float) $this->calculateOrdersTotal($paymentOrders);
+                    $buyer      = $order->user ?? \App\Models\User::find($order->user_id);
+                    $successUrl = route('custom_orders.payment.maya.success', $order->id);
+                    $failureUrl = route('custom_orders.payment.maya.failed', $order->id);
+
+                    $payload = [
+                        'totalAmount' => ['value' => number_format($amount, 2, '.', ''), 'currency' => 'PHP'],
+                        'requestReferenceNumber' => 'ORD-CO-' . $order->id,
+                        'redirectUrl' => ['success' => $successUrl, 'failure' => $failureUrl, 'cancel' => $failureUrl],
+                        'buyer' => [
+                            'firstName' => $buyer ? explode(' ', $buyer->name)[0] : 'Customer',
+                            'lastName'  => $buyer ? (explode(' ', $buyer->name, 2)[1] ?? '-') : '-',
+                            'contact'   => ['email' => $buyer->email ?? ''],
+                        ],
+                        'items' => [[
+                            'name'        => 'Custom Order #' . $order->id,
+                            'quantity'    => 1,
+                            'totalAmount' => ['value' => number_format($amount, 2, '.', ''), 'currency' => 'PHP'],
+                        ]],
+                    ];
+
+                    $response = \Illuminate\Support\Facades\Http::withBasicAuth($publicKey, '')
+                        ->acceptJson()
+                        ->post($baseUrl . '/checkout/v1/checkouts', $payload);
+
+                    if ($response->successful()) {
+                        $data        = $response->json() ?? [];
+                        $checkoutId  = $data['checkoutId'] ?? $data['id'] ?? null;
+                        $checkoutUrl = $data['redirectUrl'] ?? $data['checkoutUrl'] ?? $data['url'] ?? null;
+
+                        if ($checkoutId && $checkoutUrl) {
+                            foreach ($paymentOrders as $paymentOrder) {
+                                $paymentOrder->payment_method = 'online_banking';
+                                $paymentOrder->transaction_id = $checkoutId;
+                                $paymentOrder->payment_status = 'pending';
+                                if ($request->filled('shipping_fee') && $paymentOrder->id === $order->id) {
+                                    $paymentOrder->shipping_fee = (float) $request->shipping_fee;
+                                }
+                                $paymentOrder->save();
+                            }
+                            return redirect($checkoutUrl);
+                        }
+                    }
+
+                    \Log::error('Maya checkout failed for custom order', [
+                        'order_id' => $order->id,
+                        'status'   => $response->status(),
+                        'body'     => $response->body(),
+                    ]);
+                } catch (\Throwable $e) {
+                    \Log::error('Maya checkout exception for custom order: ' . $e->getMessage());
+                }
+                // Fall through to bank transfer instructions on failure
+                $selectedPaymentMethod = 'bank_transfer';
+            }
 
             foreach ($paymentOrders as $paymentOrder) {
                 $paymentOrder->payment_method = $selectedPaymentMethod;
@@ -2660,6 +2721,51 @@ class CustomOrderController extends Controller
 
         $order->load('product');
         return view('custom_orders.payment_confirm', compact('order'));
+    }
+
+    public function mayaPaymentSuccess(Request $request, $id)
+    {
+        $order = CustomOrder::findOrFail($id);
+        if ($order->user_id !== Auth::id()) abort(403);
+
+        $checkoutId = $request->query('checkoutId') ?? $request->query('id') ?? $order->transaction_id;
+
+        if ($checkoutId) {
+            try {
+                $secretKey = config('services.maya.secret_key');
+                $baseUrl   = rtrim(config('services.maya.base_url', 'https://pg-sandbox.paymaya.com'), '/');
+                $response  = \Illuminate\Support\Facades\Http::withBasicAuth($secretKey, '')
+                    ->acceptJson()
+                    ->get($baseUrl . '/checkout/v1/checkouts/' . urlencode($checkoutId));
+
+                if ($response->successful()) {
+                    $gatewayStatus = strtolower((string) ($response->json()['status'] ?? 'pending'));
+                    if (str_contains($gatewayStatus, 'paid') || str_contains($gatewayStatus, 'success') || str_contains($gatewayStatus, 'complete')) {
+                        $order->payment_status    = 'paid';
+                        $order->payment_verified_at = now();
+                        $order->status            = 'processing';
+                        $order->transaction_id    = $checkoutId;
+                        $order->save();
+                        return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                            ->with('success', 'Maya payment confirmed! Your custom order is now being processed.');
+                    }
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Maya status check failed for custom order: ' . $e->getMessage());
+            }
+        }
+
+        return $this->redirectToRouteWithToken('custom_orders.show', $order)
+            ->with('info', 'Maya checkout completed. Payment verification is in progress.');
+    }
+
+    public function mayaPaymentFailed(Request $request, $id)
+    {
+        $order = CustomOrder::findOrFail($id);
+        if ($order->user_id !== Auth::id()) abort(403);
+
+        return $this->redirectToRouteWithToken('custom_orders.payment', $order)
+            ->with('error', 'Maya payment was not completed. Please try again or choose Bank Transfer.');
     }
 
     /**
