@@ -565,7 +565,19 @@ class CustomOrderController extends Controller
                 return 0.0;
             }
 
-            return (float) ($item->shipping_fee ?? 0);
+            // Use stored shipping_fee if available, otherwise calculate from address
+            $storedShipping = (float) ($item->shipping_fee ?? 0);
+            if ($storedShipping > 0) {
+                return $storedShipping;
+            }
+            
+            // Calculate shipping from delivery address
+            return $this->resolveAddressBasedShippingFee(
+                $deliveryType,
+                $item->delivery_city ?? '',
+                $item->delivery_province ?? '',
+                $item->delivery_address ?? ''
+            );
         })->max() ?? 0);
 
         return $quotedSubtotal + $sharedShipping;
