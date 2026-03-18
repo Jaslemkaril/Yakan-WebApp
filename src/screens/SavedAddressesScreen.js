@@ -942,9 +942,6 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-    marginBottom: 8,
-    fontWeight: '500',
-  },
   defaultBadge: {
     backgroundColor: '#27AE60',
     paddingHorizontal: 8,
