@@ -888,7 +888,7 @@ Route::get('/test-auth', function() {
 
 
 // Custom Orders (Enhanced) - Require Authentication
-Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->group(function () {
+Route::middleware(['token.auth', 'auth'])->prefix('custom-orders')->name('custom_orders.')->group(function () {
     Route::get('/', [\App\Http\Controllers\CustomOrderController::class, 'userIndex'])->name('index');
     
     // Redirect /create to fabric selection (step 1) — show loading screen

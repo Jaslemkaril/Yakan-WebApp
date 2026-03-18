@@ -2517,17 +2517,26 @@ class CustomOrderController extends Controller
 
             $notApproved = $paymentOrders->where('status', '!=', 'approved')->values();
             if ($notApproved->isNotEmpty()) {
-                \Log::info('showPayment - Order not yet approved', [
-                    'order_id' => $order->id,
-                    'status' => $order->status,
-                    'not_approved_count' => $notApproved->count(),
-                ]);
-                if ($isBatchPayment) {
+                // If the anchor order itself is approved, filter to only approved orders and proceed
+                if ($order->status === 'approved') {
+                    $paymentOrders = $paymentOrders->where('status', 'approved')->values();
+                    if ($paymentOrders->isEmpty()) {
+                        return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                            ->with('info', 'Payment is only available after admin approval.');
+                    }
+                } else {
+                    \Log::info('showPayment - Order not yet approved', [
+                        'order_id' => $order->id,
+                        'status' => $order->status,
+                        'not_approved_count' => $notApproved->count(),
+                    ]);
+                    if ($isBatchPayment) {
+                        return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                            ->with('info', 'Payment for this batch will be available once all items are approved by admin.');
+                    }
                     return $this->redirectToRouteWithToken('custom_orders.show', $order)
-                        ->with('info', 'Payment for this batch will be available once all items are approved by admin.');
+                        ->with('info', 'Payment is only available after admin approval. Your order is currently ' . $order->status . '.');
                 }
-                return $this->redirectToRouteWithToken('custom_orders.show', $order)
-                    ->with('info', 'Payment is only available after admin approval. Your order is currently ' . $order->status . '.');
             }
 
             \Log::info('showPayment - Loading relationships', [
