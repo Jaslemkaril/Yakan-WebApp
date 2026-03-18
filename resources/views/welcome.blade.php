@@ -24,7 +24,7 @@
         content: '';
         position: absolute;
         inset: 0;
-        background-image: url('/images/jus.jpg');
+        background-image: var(--yakan-pattern-url);
         background-size: 320px auto;
         background-repeat: repeat;
         opacity: 0.06;
@@ -204,7 +204,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background-image: url('/images/jus.jpg');
+        background-image: var(--yakan-pattern-url);
         background-size: 300px auto;
         background-repeat: repeat;
         opacity: 0.08;
@@ -232,6 +232,7 @@
 @endpush
 
 @section('content')
+    <style>:root { --yakan-pattern-url: url('{{ asset('images/jus.jpg') }}'); }</style>
     <!-- Success Messages -->
     @if(session('success') || session('status'))
         <div id="success-message" class="fixed top-20 right-4 z-50 max-w-sm animate-fade-in-up">
@@ -265,7 +266,7 @@
     @endif
 
     <!-- Hero Section -->
-    <section class="hero-section text-white" style="background-image: url('/images/jus.jpg');">
+    <section class="hero-section text-white" style="background-image: url('{{ asset('images/jus.jpg') }}');">
         <div class="hero-content w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-36 text-center">
 
             <!-- Badge -->
