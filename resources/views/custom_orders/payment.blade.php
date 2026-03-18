@@ -433,11 +433,12 @@
             </div>
         </div>
 
+        @php $authToken = $authToken ?? request('auth_token') ?? session('auth_token') ?? ''; @endphp
         {{-- ===== PAYMENT FORM ===== --}}
-        <form method="POST" action="{{ route('custom_orders.payment.process', $order->id) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" id="customPaymentForm" class="payment-card p-8 mb-8">
+        <form method="POST" action="{{ route('custom_orders.payment.process', $order->id) }}{{ $authToken ? '?auth_token=' . urlencode($authToken) : '' }}" id="customPaymentForm" class="payment-card p-8 mb-8">
             @csrf
-            @if(request('auth_token'))
-                <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+            @if($authToken)
+                <input type="hidden" name="auth_token" value="{{ $authToken }}">
             @endif
             <!-- Hidden shipping fields -->
             <input type="hidden" name="shipping_fee"      id="hiddenShippingFee"      value="{{ $isBatchPayment ? 0 : ($calcShippingFee ?? 0) }}">
@@ -513,7 +514,7 @@
 
         <!-- Back Link -->
         <div class="text-center mb-8">
-            <a href="{{ route('custom_orders.show', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" class="back-link text-lg">
+            <a href="{{ route('custom_orders.show', $order) }}{{ $authToken ? '?auth_token=' . urlencode($authToken) : '' }}" class="back-link text-lg">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                 </svg>

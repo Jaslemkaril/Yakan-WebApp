@@ -2561,7 +2561,12 @@ class CustomOrderController extends Controller
                 'payment_total' => $paymentTotal,
             ]);
 
-            return view('custom_orders.payment', compact('order', 'paymentOrders', 'isBatchPayment', 'paymentTotal'));
+            $authToken = request()->input('auth_token')
+                ?? request()->query('auth_token')
+                ?? session('auth_token')
+                ?? '';
+
+            return view('custom_orders.payment', compact('order', 'paymentOrders', 'isBatchPayment', 'paymentTotal', 'authToken'));
             
         } catch (\Exception $e) {
             \Log::error('showPayment error', [
@@ -2619,8 +2624,10 @@ class CustomOrderController extends Controller
                     $baseUrl    = rtrim(config('services.maya.base_url', 'https://pg-sandbox.paymaya.com'), '/');
                     $amount     = (float) $this->calculateOrdersTotal($paymentOrders);
                     $buyer      = $order->user ?? \App\Models\User::find($order->user_id);
-                    $successUrl = route('custom_orders.payment.maya.success', $order->id);
-                    $failureUrl = route('custom_orders.payment.maya.failed', $order->id);
+                    $authTokenForCallback = $request->input('auth_token') ?? $request->query('auth_token') ?? session('auth_token');
+                    $tokenQuery = $authTokenForCallback ? '?auth_token=' . urlencode($authTokenForCallback) : '';
+                    $successUrl = route('custom_orders.payment.maya.success', $order->id) . $tokenQuery;
+                    $failureUrl = route('custom_orders.payment.maya.failed', $order->id) . $tokenQuery;
 
                     $payload = [
                         'totalAmount' => ['value' => number_format($amount, 2, '.', ''), 'currency' => 'PHP'],
