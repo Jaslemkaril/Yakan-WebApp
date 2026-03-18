@@ -21,6 +21,9 @@ import * as ImagePicker from 'expo-image-picker';
 import * as WebBrowser from 'expo-web-browser';
 import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+
+const MAYA_LOGO = require('../assets/images/maya-logo.jpg');
 
 // Payment account details — fetched from API at runtime, these are fallback defaults
 const DEFAULT_PAYMENT_ACCOUNTS = {
@@ -98,21 +101,19 @@ export default function PaymentScreen({ navigation, route }) {
     fetchPaymentInfo();
   }, []);
 
-  const PRODUCTION_URL = 'https://yakan-webapp-production.up.railway.app';
-
   const paymentMethods = [
     {
       id: 'maya',
       name: 'Maya',
       description: 'Fast & secure e-wallet payment',
-      logo: { uri: `${PRODUCTION_URL}/images/payment/maya-logo.jpg` },
+      logo: MAYA_LOGO,
       fee: 0,
     },
     {
       id: 'bank_transfer',
       name: 'Bank Transfer',
       description: 'Direct transfer to our bank account',
-      logo: { uri: `${PRODUCTION_URL}/images/payment/bank-transfer.svg` },
+      logo: null,
       fee: 0,
     },
   ];
@@ -737,11 +738,17 @@ export default function PaymentScreen({ navigation, route }) {
               onPress={() => handleSelectPaymentMethod(method.id)}
             >
               <View style={styles.paymentMethodIcon}>
-                <Image
-                  source={method.logo}
-                  style={styles.methodLogoImage}
-                  resizeMode="contain"
-                />
+                {method.logo ? (
+                  <Image
+                    source={method.logo}
+                    style={styles.methodLogoImage}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View style={styles.bankIconCircle}>
+                    <MaterialCommunityIcons name="bank" size={26} color="#8B1A1A" />
+                  </View>
+                )}
               </View>
               
               <View style={styles.paymentMethodInfo}>
@@ -1415,6 +1422,14 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 8,
+  },
+  bankIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: '#FFF0F0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   paymentMethodInfo: {
     flex: 1,
