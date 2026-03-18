@@ -23,6 +23,36 @@ class CustomOrderController extends Controller
     private function redirectToRouteWithToken(string $routeName, $routeParams = [], array $queryParams = []): \Illuminate\Http\RedirectResponse
     {
         $token = request()->input('auth_token') ?? request()->query('auth_token') ?? session('auth_token');
+        
+        // If no token exists but user is authenticated, create/retrieve one from DB
+        if (!$token && auth()->check()) {
+            // Try to get existing valid token from DB
+            $token = \DB::table('auth_tokens')
+                ->where('user_id', auth()->id())
+                ->where('expires_at', '>', now())
+                ->orderByDesc('updated_at')
+                ->value('token');
+            
+            // If no valid token exists, create a new one
+            if (!$token) {
+                $token = \Illuminate\Support\Str::random(64);
+                \DB::table('auth_tokens')->insert([
+                    'user_id' => auth()->id(),
+                    'token' => $token,
+                    'expires_at' => now()->addDays(30),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                \Log::info('Created new auth_token for user during redirect', [
+                    'user_id' => auth()->id(),
+                    'route' => $routeName
+                ]);
+            }
+            
+            // Store in session for subsequent requests
+            session(['auth_token' => $token]);
+        }
+        
         if ($token) {
             $queryParams['auth_token'] = $token;
         }
@@ -2566,6 +2596,33 @@ class CustomOrderController extends Controller
                 ?? request()->query('auth_token')
                 ?? session('auth_token')
                 ?? '';
+            
+            // If no token exists but user is authenticated, create/retrieve one
+            // This ensures the payment form will have a valid token for submission
+            if (!$authToken && auth()->check()) {
+                $authToken = \DB::table('auth_tokens')
+                    ->where('user_id', auth()->id())
+                    ->where('expires_at', '>', now())
+                    ->orderByDesc('updated_at')
+                    ->value('token');
+                
+                if (!$authToken) {
+                    $authToken = \Illuminate\Support\Str::random(64);
+                    \DB::table('auth_tokens')->insert([
+                        'user_id' => auth()->id(),
+                        'token' => $authToken,
+                        'expires_at' => now()->addDays(30),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                    \Log::info('Created new auth_token for payment page', [
+                        'user_id' => auth()->id(),
+                        'order_id' => $order->id
+                    ]);
+                }
+                
+                session(['auth_token' => $authToken]);
+            }
 
             return view('custom_orders.payment', compact('order', 'paymentOrders', 'isBatchPayment', 'paymentTotal', 'authToken'));
             
@@ -2584,12 +2641,29 @@ class CustomOrderController extends Controller
      */
     public function processPayment(Request $request, $id)
     {
+        // Debug log - this should appear if the request reaches this method
+        \Log::info('=== CUSTOM ORDER PAYMENT PROCESS STARTED ===', [
+            'order_id' => $id,
+            'method' => $request->method(),
+            'path' => $request->path(),
+            'has_auth_token_query' => $request->has('auth_token'),
+            'has_auth_token_input' => $request->filled('auth_token'),
+            'auth_check_before' => Auth::check(),
+            'auth_id_before' => Auth::id(),
+            'session_id' => session()->getId()
+        ]);
+        
         try {
             // Handle auth_token authentication if not already authenticated
             if (!Auth::check()) {
                 $token = $request->input('auth_token') 
                     ?? $request->query('auth_token') 
                     ?? session('auth_token');
+                
+                \Log::info('processPayment: Attempting token auth', [
+                    'has_token' => !empty($token),
+                    'token_prefix' => $token ? substr($token, 0, 10) . '...' : null
+                ]);
                 
                 if ($token) {
                     $authToken = \DB::table('auth_tokens')
