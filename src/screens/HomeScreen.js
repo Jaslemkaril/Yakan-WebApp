@@ -325,6 +325,7 @@ export default function HomeScreen({ navigation }) {
             resizeMode="cover"
           >
             <View style={styles.heroOverlay}>
+              {/* Search bar */}
               <View style={[styles.heroSearchContainer, isSearchFocused && styles.heroSearchContainerFocused]}>
                 <Ionicons name="search" size={20} color={isSearchFocused ? "#fff" : "rgba(255,255,255,0.8)"} style={styles.heroSearchIcon} />
                 <TextInput
@@ -343,10 +344,71 @@ export default function HomeScreen({ navigation }) {
                 )}
               </View>
 
+              {/* Heritage badge */}
+              <View style={styles.heritageBadge}>
+                <View style={styles.heritageBadgeDot} />
+                <Text style={styles.heritageBadgeText}>PHILIPPINE HERITAGE CRAFT</Text>
+              </View>
+
+              {/* Main heading */}
               <View style={styles.logoContainer}>
-                <Text style={styles.logoMain}>TUWAS</Text>
-                <Text style={styles.logoSub}>#YAKAN</Text>
-                <Text style={styles.tagline}>weaving through generations</Text>
+                <Text style={styles.logoMain}>TUWAS YAKAN</Text>
+                <Text style={styles.tagline}>Weaving Through Generations</Text>
+                <Text style={styles.heroDescription}>
+                  Authentic handcrafted products with traditional artistry passed down through generations of skilled Yakan weavers from Basilan, Philippines.
+                </Text>
+              </View>
+
+              {/* CTA Buttons */}
+              <View style={styles.heroCTARow}>
+                <TouchableOpacity
+                  style={styles.heroShopBtn}
+                  onPress={() => navigation.navigate('Products')}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="grid-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
+                  <Text style={styles.heroShopBtnText}>Shop Products</Text>
+                  <Text style={styles.heroShopBtnArrow}> →</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.heroCustomBtn}
+                  onPress={() => navigation.navigate('CustomOrder')}
+                  activeOpacity={0.85}
+                >
+                  <MaterialCommunityIcons name="star-four-points" size={14} color="#8B1A1A" style={{ marginRight: 5 }} />
+                  <Text style={styles.heroCustomBtnText}>Custom Orders</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Download APK button */}
+              <TouchableOpacity
+                style={styles.heroApkBtn}
+                onPress={() => Linking.openURL('https://yakan-webapp-production.up.railway.app')}
+                activeOpacity={0.85}
+              >
+                <MaterialCommunityIcons name="android" size={18} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.heroApkBtnText}>Download Android App</Text>
+                <MaterialCommunityIcons name="download" size={16} color="#fff" style={{ marginLeft: 6 }} />
+                <View style={styles.heroApkTag}>
+                  <Text style={styles.heroApkTagText}>APK</Text>
+                </View>
+              </TouchableOpacity>
+              <Text style={styles.heroApkCaption}>Free · Android · v1.0</Text>
+
+              {/* Badge pills */}
+              <View style={styles.heroBadgePillRow}>
+                <View style={styles.heroBadgePill}>
+                  <Text style={styles.heroBadgePillDot}>✦ </Text>
+                  <Text style={styles.heroBadgePillText}>100% Authentic</Text>
+                </View>
+                <View style={styles.heroBadgePill}>
+                  <Text style={styles.heroBadgePillDot}>★ </Text>
+                  <Text style={styles.heroBadgePillText}>Handcrafted with Pride</Text>
+                </View>
+                <View style={styles.heroBadgePill}>
+                  <Text style={styles.heroBadgePillDot}>📍 </Text>
+                  <Text style={styles.heroBadgePillText}>Basilan, Philippines</Text>
+                </View>
               </View>
             </View>
           </ImageBackground>
@@ -505,17 +567,15 @@ const getStyles = (theme) => StyleSheet.create({
   // HERO SECTION
   heroSection: {
     width: '100%',
-    height: 400,
     marginBottom: 20,
   },
   heroBackground: {
     width: '100%',
-    height: '100%',
   },
   heroOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(139, 26, 26, 0.7)',
-    paddingTop: 50,
+    backgroundColor: 'rgba(100, 10, 10, 0.82)',
+    paddingTop: 16,
+    paddingBottom: 22,
     paddingHorizontal: 20,
   },
   topBar: {
@@ -564,7 +624,7 @@ const getStyles = (theme) => StyleSheet.create({
     borderRadius: 30,
     paddingHorizontal: 20,
     paddingVertical: 14,
-    marginBottom: 40,
+    marginBottom: 16,
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.35)',
     shadowColor: '#000',
@@ -593,29 +653,167 @@ const getStyles = (theme) => StyleSheet.create({
     padding: 4,
     marginLeft: 8,
   },
+  // Heritage badge
+  heritageBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    borderRadius: 20,
+    paddingVertical: 5,
+    paddingHorizontal: 14,
+    marginBottom: 14,
+    marginTop: 8,
+  },
+  heritageBadgeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#f87171',
+    marginRight: 7,
+  },
+  heritageBadgeText: {
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
   logoContainer: {
     alignItems: 'center',
-    marginTop: 20,
+    marginBottom: 20,
   },
   logoMain: {
-    fontSize: 52,
-    fontWeight: 'bold',
-    color: '#fff',
-    letterSpacing: 4,
-  },
-  logoSub: {
-    fontSize: 40,
-    fontWeight: 'bold',
+    fontSize: 42,
+    fontWeight: '900',
     color: '#fff',
     letterSpacing: 3,
-    marginTop: -5,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
   },
   tagline: {
-    fontSize: 16,
+    fontSize: 17,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 6,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    textAlign: 'center',
+  },
+  heroDescription: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.78)',
+    marginTop: 10,
+    lineHeight: 20,
+    textAlign: 'center',
+    paddingHorizontal: 8,
+  },
+  // CTA buttons row
+  heroCTARow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  heroShopBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.5)',
+    borderRadius: 28,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+  },
+  heroShopBtnText: {
     color: '#fff',
-    marginTop: 8,
-    fontStyle: 'italic',
-    letterSpacing: 1,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  heroShopBtnArrow: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  heroCustomBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 28,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+  },
+  heroCustomBtnText: {
+    color: '#8B1A1A',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  // APK download button
+  heroApkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 28,
+    paddingVertical: 11,
+    paddingHorizontal: 20,
+    marginBottom: 6,
+    alignSelf: 'center',
+  },
+  heroApkBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  heroApkTag: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 6,
+  },
+  heroApkTagText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  heroApkCaption: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  // Badge pills row
+  heroBadgePillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  heroBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 20,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+  },
+  heroBadgePillDot: {
+    fontSize: 11,
+    color: '#fca5a5',
+  },
+  heroBadgePillText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 12,
+    fontWeight: '500',
   },
   // FEATURED SECTION
   featuredSection: {

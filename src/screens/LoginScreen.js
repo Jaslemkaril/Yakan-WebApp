@@ -12,6 +12,7 @@ import {
   Alert,
   ActivityIndicator,
   StatusBar,
+  ImageBackground,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -145,15 +146,29 @@ export default function LoginScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header Background */}
-          <View style={styles.header}>
-            {/* Y Logo Icon */}
-            <View style={styles.logoIconContainer}>
-              <Text style={styles.logoIconText}>Y</Text>
+          {/* Header Background — Yakan textile pattern, same as web hero */}
+          <ImageBackground
+            source={require('../assets/images/TUWASYAKAN.jpg')}
+            style={styles.headerBg}
+            resizeMode="cover"
+          >
+            <View style={styles.headerOverlay}>
+              {/* Y Logo Icon */}
+              <View style={styles.logoIconContainer}>
+                <Text style={styles.logoIconText}>Y</Text>
+              </View>
+              <Text style={styles.brandName}>Yakan</Text>
+
+              {/* Heritage badge */}
+              <View style={styles.loginHeritageBadge}>
+                <View style={styles.loginHeritageDot} />
+                <Text style={styles.loginHeritageBadgeText}>PHILIPPINE HERITAGE CRAFT</Text>
+              </View>
+
+              <Text style={styles.heroTitle}>TUWAS YAKAN</Text>
+              <Text style={styles.tagline}>Weaving Through Generations</Text>
             </View>
-            <Text style={styles.brandName}>Yakan</Text>
-            <Text style={styles.tagline}>weaving through generations</Text>
-          </View>
+          </ImageBackground>
 
           {/* Card */}
           <View style={styles.card}>
@@ -292,42 +307,85 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: 40,
   },
-  header: {
+  headerBg: {
+    width: '100%',
+  },
+  headerOverlay: {
     alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingTop: 64,
+    paddingBottom: 36,
     paddingHorizontal: 24,
+    backgroundColor: 'rgba(100, 10, 10, 0.82)',
   },
   logoIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: '#dc2626',
+    width: 62,
+    height: 62,
+    borderRadius: 18,
+    backgroundColor: 'rgba(220,38,38,0.9)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 10,
   },
   logoIconText: {
     color: '#fff',
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 30,
+    fontWeight: '900',
   },
   brandName: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.85)',
+    letterSpacing: 2,
+    marginBottom: 12,
+  },
+  loginHeritageBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    borderRadius: 20,
+    paddingVertical: 5,
+    paddingHorizontal: 14,
+    marginBottom: 14,
+  },
+  loginHeritageDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#f87171',
+    marginRight: 7,
+  },
+  loginHeritageBadgeText: {
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
+  heroTitle: {
+    fontSize: 36,
+    fontWeight: '900',
     color: '#fff',
-    letterSpacing: 1,
-    marginBottom: 4,
+    letterSpacing: 3,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
+    marginBottom: 6,
   },
   tagline: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.75)',
-    fontStyle: 'italic',
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
+    letterSpacing: 0.3,
+    textAlign: 'center',
   },
   card: {
     marginHorizontal: 20,
