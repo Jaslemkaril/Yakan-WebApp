@@ -221,18 +221,6 @@ const AccountScreen = ({ navigation }) => {
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={() => navigation.navigate('PaymentMethods')}
-            activeOpacity={0.6}
-          >
-            <View style={styles.menuItemLeft}>
-              <MaterialCommunityIcons name="credit-card-multiple" size={24} color="#27AE60" style={styles.menuIcon} />
-              <Text style={styles.menuText}>Payment Methods</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={theme.iconMuted} />
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
             style={[styles.menuItem, styles.lastMenuItem]}
             onPress={() => navigation.navigate('Settings')}
             activeOpacity={0.6}
@@ -248,9 +236,9 @@ const AccountScreen = ({ navigation }) => {
         <TouchableOpacity 
           style={styles.logoutButton}
           onPress={handleLogout}
-          activeOpacity={0.7}
+          activeOpacity={0.8}
         >
-          <MaterialCommunityIcons name="logout" size={20} color="#FF6B6B" style={{ marginRight: 8 }} />
+          <MaterialCommunityIcons name="logout" size={20} color="#fff" style={{ marginRight: 10 }} />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -529,28 +517,26 @@ const getStyles = (theme) => StyleSheet.create({
     flex: 1,
   },
   logoutButton: {
-    backgroundColor: theme.dangerBg,
+    backgroundColor: '#8B1A1A',
     padding: 16,
     alignItems: 'center',
     marginHorizontal: 15,
     marginVertical: 20,
     marginBottom: 30,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: theme.dangerBorder,
+    borderRadius: 14,
     flexDirection: 'row',
     justifyContent: 'center',
-    elevation: 2,
-    shadowColor: '#FF6B6B',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
+    elevation: 4,
+    shadowColor: '#8B1A1A',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
   logoutText: {
-    color: theme.dangerText,
+    color: '#fff',
     fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
   // Modal Styles
   modalOverlay: {

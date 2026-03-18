@@ -342,60 +342,68 @@ export default function SavedAddressesScreen({ navigation }) {
     console.log(`[Address ${item.id}] is_default value:`, item.is_default, 'isDefault:', isDefault);
 
     return (
-      <View style={styles.addressCard}>
+      <View style={[styles.addressCard, isDefault && styles.addressCardDefault]}>
+        {/* Header row: icon + label + default badge */}
         <View style={styles.addressHeader}>
-          <View style={styles.addressHeaderLeft}>
+          <View style={[styles.addressIconCircle, { backgroundColor: getIconColor(item.label) + '18' }]}>
             <MaterialCommunityIcons 
               name={getAddressIcon(item.label)} 
-              size={24} 
+              size={22} 
               color={getIconColor(item.label)}
-              style={styles.addressTypeIcon}
             />
-            <View>
-              <Text style={styles.addressLabel}>{item.label}</Text>
-              {isDefault && (
-                <View style={styles.defaultBadge}>
-                  <MaterialCommunityIcons name="check-circle" size={12} color="#fff" style={{ marginRight: 4 }} />
-                  <Text style={styles.defaultBadgeText}>Default</Text>
-                </View>
-              )}
-            </View>
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={styles.addressLabel}>{item.label}</Text>
+            {isDefault && (
+              <View style={styles.defaultBadge}>
+                <MaterialCommunityIcons name="check-circle" size={11} color="#fff" style={{ marginRight: 3 }} />
+                <Text style={styles.defaultBadgeText}>Default</Text>
+              </View>
+            )}
+          </View>
+          {!isDefault && (
+            <TouchableOpacity
+              style={styles.setDefaultPill}
+              onPress={() => handleSetDefault(item.id)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.setDefaultPillText}>Set Default</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Contact + address info */}
+        <View style={styles.addressInfoBlock}>
+          <View style={styles.addressInfoRow}>
+            <MaterialCommunityIcons name="account" size={15} color={theme.textMuted} style={styles.infoIcon} />
+            <Text style={styles.addressInfoText}>{item.full_name}</Text>
+          </View>
+          <View style={styles.addressInfoRow}>
+            <Ionicons name="call" size={14} color={theme.textMuted} style={styles.infoIcon} />
+            <Text style={styles.addressInfoText}>{item.phone_number}</Text>
+          </View>
+          <View style={styles.addressInfoRow}>
+            <MaterialCommunityIcons name="map-marker" size={15} color="#3498DB" style={styles.infoIcon} />
+            <Text style={[styles.addressInfoText, { flex: 1 }]}>{formattedAddress}</Text>
           </View>
         </View>
-        <Text style={styles.addressName}>
-          <MaterialCommunityIcons name="account-circle" size={16} color="#2C3E50" /> {item.full_name}
-        </Text>
-        <Text style={styles.addressPhone}>
-          <Ionicons name="call" size={14} color="#7F8C8D" /> {item.phone_number}
-        </Text>
-        <Text style={styles.addressText}>
-          <MaterialCommunityIcons name="map-marker" size={16} color="#3498DB" /> {formattedAddress}
-        </Text>
+
+        {/* Action buttons */}
         <View style={styles.addressActions}>
           <TouchableOpacity 
             style={styles.editBtn}
             onPress={() => openEditModal(item)}
             activeOpacity={0.7}
           >
-            <MaterialCommunityIcons name="pencil-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
+            <MaterialCommunityIcons name="pencil" size={16} color="#fff" style={{ marginRight: 5 }} />
             <Text style={styles.actionText}>Edit</Text>
           </TouchableOpacity>
-          {!isDefault && (
-            <TouchableOpacity 
-              style={styles.setDefaultBtn}
-              onPress={() => handleSetDefault(item.id)}
-              activeOpacity={0.7}
-            >
-              <MaterialCommunityIcons name="check-circle-outline" size={18} color={colors.primary} style={{ marginRight: 6 }} />
-              <Text style={styles.setDefaultText}>Set Default</Text>
-            </TouchableOpacity>
-          )}
           <TouchableOpacity 
             style={styles.deleteBtn}
             onPress={() => handleDeleteAddress(item.id)}
             activeOpacity={0.7}
           >
-            <MaterialCommunityIcons name="trash-can-outline" size={18} color="#E74C3C" style={{ marginRight: 6 }} />
+            <MaterialCommunityIcons name="trash-can-outline" size={16} color="#E74C3C" style={{ marginRight: 5 }} />
             <Text style={styles.deleteText}>Delete</Text>
           </TouchableOpacity>
         </View>
@@ -859,20 +867,31 @@ const getStyles = (theme) => StyleSheet.create({
     backgroundColor: theme.cardBackground,
     borderRadius: 16,
     padding: 16,
-    marginBottom: 15,
-    borderLeftWidth: 5,
+    marginBottom: 14,
+    borderLeftWidth: 4,
     borderLeftColor: theme.primary,
-    elevation: 4,
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+  },
+  addressCardDefault: {
+    borderLeftColor: '#27AE60',
+    borderWidth: 1,
+    borderColor: '#e8f5e9',
   },
   addressHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 12,
+  },
+  addressIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addressHeaderLeft: {
     flexDirection: 'row',
@@ -884,35 +903,60 @@ const getStyles = (theme) => StyleSheet.create({
     marginTop: 2,
   },
   addressLabel: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: theme.text,
-    marginBottom: 4,
+    marginBottom: 3,
   },
-  addressName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.text,
-    marginBottom: 6,
+  addressInfoBlock: {
+    backgroundColor: theme.surfaceBg,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    gap: 7,
   },
-  addressPhone: {
+  addressInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  infoIcon: {
+    marginRight: 8,
+    marginTop: 1,
+  },
+  addressInfoText: {
     fontSize: 14,
-    color: theme.textSecondary,
+    color: theme.text,
+    fontWeight: '500',
+    lineHeight: 20,
+  },
+  setDefaultPill: {
+    backgroundColor: theme.surfaceBg,
+    borderWidth: 1.5,
+    borderColor: '#27AE60',
+    borderRadius: 20,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+  },
+  setDefaultPillText: {
+    color: '#27AE60',
+    fontSize: 12,
+    fontWeight: '700',
+  },
     marginBottom: 8,
     fontWeight: '500',
   },
   defaultBadge: {
-    backgroundColor: theme.primary,
+    backgroundColor: '#27AE60',
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 3,
+    borderRadius: 10,
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
   },
   defaultBadgeText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
   addressText: {
@@ -925,27 +969,25 @@ const getStyles = (theme) => StyleSheet.create({
   addressActions: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 12,
-    flexWrap: 'wrap',
   },
   editBtn: {
     flex: 1,
     backgroundColor: theme.primary,
-    padding: 12,
+    paddingVertical: 11,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    elevation: 3,
+    elevation: 2,
     shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
   setDefaultBtn: {
     flex: 1,
     backgroundColor: theme.cardBackground,
-    padding: 12,
+    paddingVertical: 11,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -960,14 +1002,14 @@ const getStyles = (theme) => StyleSheet.create({
   },
   deleteBtn: {
     flex: 1,
-    backgroundColor: theme.dangerBg,
-    padding: 12,
+    backgroundColor: '#FFF5F5',
+    paddingVertical: 11,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: theme.dangerBorder,
+    borderColor: '#FFE5E5',
   },
   actionText: {
     color: '#fff',
@@ -975,7 +1017,7 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 14,
   },
   deleteText: {
-    color: theme.dangerText,
+    color: '#E74C3C',
     fontWeight: '700',
     fontSize: 14,
   },
