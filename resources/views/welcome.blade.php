@@ -232,7 +232,7 @@
 @endpush
 
 @section('content')
-    <style>:root { --yakan-pattern-url: url('{{ asset('images/jus.jpg') }}'); }</style>
+    <style>:root { --yakan-pattern-url: url('https://raw.githubusercontent.com/Jaslemkaril/Yakan-WebApp/main/public/images/jus.jpg'); }</style>
     <!-- Success Messages -->
     @if(session('success') || session('status'))
         <div id="success-message" class="fixed top-20 right-4 z-50 max-w-sm animate-fade-in-up">
@@ -266,7 +266,7 @@
     @endif
 
     <!-- Hero Section -->
-    <section class="hero-section text-white" style="background-image: url('{{ asset('images/jus.jpg') }}');">
+    <section class="hero-section text-white" style="background-image: url('https://raw.githubusercontent.com/Jaslemkaril/Yakan-WebApp/main/public/images/jus.jpg');">
         <div class="hero-content w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-36 text-center">
 
             <!-- Badge -->
