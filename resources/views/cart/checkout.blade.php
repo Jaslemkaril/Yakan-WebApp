@@ -415,29 +415,14 @@
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                     </svg>
                                 </label>
-                                <!-- Bank Details (shown on select) -->
+                                <!-- Bank Transfer notice (shown on select) -->
                                 <div id="bank-details" class="hidden px-4 pb-4">
-                                    <div class="bg-green-50 border border-green-200 rounded-xl p-4 space-y-2">
-                                        <p class="text-xs font-bold text-green-800 uppercase tracking-wide mb-2">Transfer to:</p>
-                                        <div class="flex justify-between items-center">
-                                            <span class="text-sm text-gray-600 font-medium">Bank</span>
-                                            <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('bank_name', '—') }}</span>
+                                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+                                        <span class="text-2xl">🏦</span>
+                                        <div>
+                                            <p class="text-sm font-semibold text-blue-800">Bank account details shown after order</p>
+                                            <p class="text-xs text-blue-700 mt-1">After placing your order, you'll see the full bank account details and a form to upload your payment receipt for verification.</p>
                                         </div>
-                                        <div class="flex justify-between items-center">
-                                            <span class="text-sm text-gray-600 font-medium">Account Name</span>
-                                            <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('bank_account_name', 'Tuwas Yakan') }}</span>
-                                        </div>
-                                        <div class="flex justify-between items-center">
-                                            <span class="text-sm text-gray-600 font-medium">Account Number</span>
-                                            <span class="font-bold text-green-700 text-base font-mono">{{ \App\Models\SystemSetting::get('bank_account_number', '—') }}</span>
-                                        </div>
-                                        @if(\App\Models\SystemSetting::get('bank_branch'))
-                                        <div class="flex justify-between items-center">
-                                            <span class="text-sm text-gray-600 font-medium">Branch</span>
-                                            <span class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('bank_branch') }}</span>
-                                        </div>
-                                        @endif
-                                        <p class="text-xs text-green-700 mt-2 pt-2 border-t border-green-200">Upload your bank receipt on the order confirmation page.</p>
                                     </div>
                                 </div>
                             </div>
