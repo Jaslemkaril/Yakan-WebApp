@@ -10,13 +10,15 @@
             </div>
         @endif
 
+        @php $isMaya = ($order->payment_method === 'maya'); @endphp
+
         <!-- Header -->
         <div class="mb-8">
             <h1 class="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-                <span class="text-[#800000]">🏦</span>
-                Bank Transfer Payment
+                <span class="text-[#800000]">{{ $isMaya ? '💚' : '🏦' }}</span>
+                {{ $isMaya ? 'Maya Payment' : 'Bank Transfer Payment' }}
             </h1>
-            <p class="text-gray-600">Transfer payment to complete your order</p>
+            <p class="text-gray-600">{{ $isMaya ? 'Send payment via Maya to complete your order' : 'Transfer payment to complete your order' }}</p>
         </div>
 
         <div class="grid lg:grid-cols-3 gap-8">
@@ -25,55 +27,97 @@
                 <!-- Instructions Card -->
                 <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
                     <h2 class="text-xl font-bold text-gray-900 mb-6 pb-4 border-b border-gray-200">
-                        Bank Transfer Instructions
+                        {{ $isMaya ? 'Maya Payment Instructions' : 'Bank Transfer Instructions' }}
                     </h2>
 
                     <div class="space-y-6">
-                        <!-- Step 1 -->
+                        @if($isMaya)
+                        <!-- Maya Step 1 -->
                         <div class="flex gap-4">
-                            <div class="flex-shrink-0 w-10 h-10 bg-red-100 text-[#800000] rounded-full flex items-center justify-center font-bold">
-                                1
+                            <div class="flex-shrink-0 w-10 h-10 bg-red-100 text-[#800000] rounded-full flex items-center justify-center font-bold">1</div>
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-900 mb-2">Open your Maya App</h3>
+                                <p class="text-gray-600 text-sm">Launch the Maya mobile application on your phone.</p>
                             </div>
+                        </div>
+                        <!-- Maya Step 2 -->
+                        <div class="flex gap-4">
+                            <div class="flex-shrink-0 w-10 h-10 bg-red-100 text-[#800000] rounded-full flex items-center justify-center font-bold">2</div>
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-900 mb-2">Send Money to this Maya Number</h3>
+                                <p class="text-gray-600 text-sm">Use the Maya account details shown below.</p>
+                            </div>
+                        </div>
+                        <!-- Maya Step 3 -->
+                        <div class="flex gap-4">
+                            <div class="flex-shrink-0 w-10 h-10 bg-red-100 text-[#800000] rounded-full flex items-center justify-center font-bold">3</div>
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-900 mb-2">Include your Order ID in the message</h3>
+                                <p class="text-gray-600 text-sm">Include Order ID: <span class="font-bold text-gray-900">#{{ $order->id }}</span> in the payment message/notes.</p>
+                            </div>
+                        </div>
+                        <!-- Maya Step 4 -->
+                        <div class="flex gap-4">
+                            <div class="flex-shrink-0 w-10 h-10 bg-red-100 text-[#800000] rounded-full flex items-center justify-center font-bold">4</div>
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-900 mb-2">Upload screenshot of payment</h3>
+                                <p class="text-gray-600 text-sm">Upload your Maya transfer screenshot below to confirm your payment.</p>
+                            </div>
+                        </div>
+                        @else
+                        <!-- Bank Step 1 -->
+                        <div class="flex gap-4">
+                            <div class="flex-shrink-0 w-10 h-10 bg-red-100 text-[#800000] rounded-full flex items-center justify-center font-bold">1</div>
                             <div class="flex-1">
                                 <h3 class="font-semibold text-gray-900 mb-2">Transfer to our bank account</h3>
                                 <p class="text-gray-600 text-sm">Use the bank details provided below to make your payment.</p>
                             </div>
                         </div>
-
-                        <!-- Step 2 -->
+                        <!-- Bank Step 2 -->
                         <div class="flex gap-4">
-                            <div class="flex-shrink-0 w-10 h-10 bg-red-100 text-[#800000] rounded-full flex items-center justify-center font-bold">
-                                2
-                            </div>
+                            <div class="flex-shrink-0 w-10 h-10 bg-red-100 text-[#800000] rounded-full flex items-center justify-center font-bold">2</div>
                             <div class="flex-1">
                                 <h3 class="font-semibold text-gray-900 mb-2">Include your Order ID in reference</h3>
                                 <p class="text-gray-600 text-sm">Make sure to include Order ID: <span class="font-bold text-gray-900">#{{ $order->id }}</span> in your transfer reference.</p>
                             </div>
                         </div>
-
-                        <!-- Step 3 -->
+                        <!-- Bank Step 3 -->
                         <div class="flex gap-4">
-                            <div class="flex-shrink-0 w-10 h-10 bg-red-100 text-[#800000] rounded-full flex items-center justify-center font-bold">
-                                3
-                            </div>
+                            <div class="flex-shrink-0 w-10 h-10 bg-red-100 text-[#800000] rounded-full flex items-center justify-center font-bold">3</div>
                             <div class="flex-1">
                                 <h3 class="font-semibold text-gray-900 mb-2">Upload proof of payment</h3>
-                                <p class="text-gray-600 text-sm">Upload your payment receipt or screenshot below. Your payment will be verified automatically and your order will start processing immediately!</p>
+                                <p class="text-gray-600 text-sm">Upload your payment receipt or screenshot below.</p>
                             </div>
                         </div>
+                        @endif
                     </div>
                 </div>
 
-                <!-- Bank Details Card -->
+                <!-- Payment Details Card -->
                 <div class="bg-red-50 rounded-2xl shadow-lg p-6 border-2 border-red-200">
                     <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        @if($isMaya)
+                        <span class="text-2xl">💚</span>
+                        Maya Account Details
+                        @else
                         <svg class="w-6 h-6 text-[#800000]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
                         </svg>
                         Bank Account Details
+                        @endif
                     </h2>
-                    
+
                     <div class="space-y-3">
+                        @if($isMaya)
+                        <div class="bg-white rounded-xl p-4">
+                            <div class="text-sm text-gray-600 mb-1">Maya Number</div>
+                            <div class="font-bold text-gray-900 text-xl">{{ \App\Models\SystemSetting::get('maya_number', \App\Models\SystemSetting::get('gcash_number', '—')) }}</div>
+                        </div>
+                        <div class="bg-white rounded-xl p-4">
+                            <div class="text-sm text-gray-600 mb-1">Account Name</div>
+                            <div class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('maya_name', \App\Models\SystemSetting::get('gcash_name', 'Tuwas Yakan')) }}</div>
+                        </div>
+                        @else
                         <div class="bg-white rounded-xl p-4">
                             <div class="text-sm text-gray-600 mb-1">Bank Name</div>
                             <div class="font-bold text-gray-900">{{ \App\Models\SystemSetting::get('bank_name', '—') }}</div>
@@ -86,8 +130,9 @@
                             <div class="text-sm text-gray-600 mb-1">Account Number</div>
                             <div class="font-bold text-gray-900 text-xl">{{ \App\Models\SystemSetting::get('bank_account_number', '—') }}</div>
                         </div>
+                        @endif
                         <div class="bg-white rounded-xl p-4">
-                            <div class="text-sm text-gray-600 mb-1">Amount to Transfer</div>
+                            <div class="text-sm text-gray-600 mb-1">Amount to Send</div>
                             <div class="font-bold text-[#800000] text-2xl">₱{{ number_format($order->total_amount, 2) }}</div>
                         </div>
                     </div>
@@ -150,7 +195,7 @@
                         </div>
                         <div class="flex justify-between">
                             <span>Payment Method:</span>
-                            <span class="font-medium text-gray-900">Bank Transfer</span>
+                            <span class="font-medium text-gray-900">{{ $isMaya ? 'Maya' : 'Bank Transfer' }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span>Status:</span>

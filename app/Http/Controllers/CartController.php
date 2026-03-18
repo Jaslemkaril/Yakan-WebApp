@@ -920,22 +920,13 @@ class CartController extends Controller
                 $redirectUrl = $mayaCheckoutUrl;
                 $paymentLabel = 'Opening Maya Checkout';
             } catch (\Throwable $exception) {
-                \Log::error('Maya checkout redirect failed.', [
+                \Log::error('Maya checkout redirect failed — falling back to bank transfer page.', [
                     'order_id' => $order->id,
                     'error' => $exception->getMessage(),
-                    'trace' => $exception->getTraceAsString(),
                 ]);
-
-                $orderUrl = $this->appendAuthToken(route('orders.show', $order->id), $authToken);
-
-                return $this->renderTransitionPage(
-                    'Payment Setup Issue',
-                    'We couldn\'t open Maya checkout right now.',
-                    'Your order is saved. We\'ll take you to your order details so you can retry payment.',
-                    $orderUrl,
-                    'Go to Order Details',
-                    '#b91c1c'
-                );
+                // Maya not configured — fall back to bank transfer payment page
+                $redirectUrl = $this->appendAuthToken(route('payment.bank', $order->id), $authToken);
+                $paymentLabel = 'Complete Payment';
             }
         }
 
