@@ -2841,6 +2841,214 @@ class CustomOrderController extends Controller
         }
     }
 
+    /**
+     * AJAX endpoint to initiate payment and return redirect URL as JSON
+     */
+    public function initiatePaymentAjax(Request $request, $id)
+    {
+        try {
+            \Log::info('=== INITIATE PAYMENT AJAX ===', [
+                'order_id' => $id,
+                'has_auth_token' => !empty($request->input('auth_token') ?? $request->header('X-Auth-Token'))
+            ]);
+            
+            // Handle auth_token authentication
+            if (!Auth::check()) {
+                $token = $request->input('auth_token') 
+                    ?? $request->header('X-Auth-Token')
+                    ?? $request->query('auth_token') 
+                    ?? session('auth_token');
+                
+                if ($token) {
+                    $authToken = \DB::table('auth_tokens')
+                        ->where('token', $token)
+                        ->where('expires_at', '>', now())
+                        ->first();
+                    
+                    if ($authToken) {
+                        $user = User::find($authToken->user_id);
+                        if ($user) {
+                            Auth::login($user, true);
+                            session(['auth_token' => $token]);
+                            
+                            \DB::table('auth_tokens')
+                                ->where('token', $token)
+                                ->update(['expires_at' => now()->addDays(30), 'updated_at' => now()]);
+                        }
+                    }
+                }
+            }
+            
+            if (!Auth::check()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Authentication required. Please login and try again.'
+                ], 401);
+            }
+            
+            $order = CustomOrder::findOrFail($id);
+            
+            if ($order->user_id !== Auth::id()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized access to this order.'
+                ], 403);
+            }
+            
+            $paymentMethod = $request->input('payment_method');
+            if (!in_array($paymentMethod, ['online_banking', 'bank_transfer'])) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Invalid payment method selected.'
+                ], 400);
+            }
+            
+            $paymentOrders = $this->getUserBatchOrders($order, Auth::id())
+                ->where('payment_status', '!=', 'paid')
+                ->values();
+                
+            if ($paymentOrders->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'This order is already paid.'
+                ], 400);
+            }
+            
+            $notApproved = $paymentOrders->where('status', '!=', 'approved')->values();
+            if ($notApproved->isNotEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Payment is only available after admin approval.'
+                ], 400);
+            }
+            
+            $shippingFee = (float) ($request->input('shipping_fee') ?? $order->shipping_fee ?? 0);
+            $authTokenForCallback = $request->input('auth_token') ?? $request->header('X-Auth-Token') ?? session('auth_token') ?? '';
+            
+            // Handle Maya checkout
+            if ($paymentMethod === 'online_banking' && config('services.maya.enabled', false)) {
+                try {
+                    $publicKey  = config('services.maya.public_key');
+                    $baseUrl    = rtrim(config('services.maya.base_url', 'https://pg-sandbox.paymaya.com'), '/');
+                    $amount     = (float) $this->calculateOrdersTotal($paymentOrders);
+                    $buyer      = $order->user ?? User::find($order->user_id);
+                    
+                    $tokenQuery = $authTokenForCallback ? '?auth_token=' . urlencode($authTokenForCallback) : '';
+                    $successUrl = route('custom_orders.payment.maya.success', $order->id) . $tokenQuery;
+                    $failureUrl = route('custom_orders.payment.maya.failed', $order->id) . $tokenQuery;
+
+                    $payload = [
+                        'totalAmount' => ['value' => number_format($amount, 2, '.', ''), 'currency' => 'PHP'],
+                        'requestReferenceNumber' => 'ORD-CO-' . $order->id . '-' . time(),
+                        'redirectUrl' => ['success' => $successUrl, 'failure' => $failureUrl, 'cancel' => $failureUrl],
+                        'buyer' => [
+                            'firstName' => $buyer ? explode(' ', $buyer->name)[0] : 'Customer',
+                            'lastName'  => $buyer ? (explode(' ', $buyer->name, 2)[1] ?? '-') : '-',
+                            'contact'   => ['email' => $buyer->email ?? ''],
+                        ],
+                        'items' => [[
+                            'name'        => 'Custom Order #' . $order->id,
+                            'quantity'    => 1,
+                            'totalAmount' => ['value' => number_format($amount, 2, '.', ''), 'currency' => 'PHP'],
+                        ]],
+                    ];
+
+                    \Log::info('Maya checkout request', ['order_id' => $order->id, 'amount' => $amount]);
+
+                    $response = \Illuminate\Support\Facades\Http::withBasicAuth($publicKey, '')
+                        ->acceptJson()
+                        ->post($baseUrl . '/checkout/v1/checkouts', $payload);
+
+                    if ($response->successful()) {
+                        $data = $response->json() ?? [];
+                        $checkoutId  = $data['checkoutId'] ?? $data['id'] ?? null;
+                        $checkoutUrl = $data['redirectUrl'] ?? $data['checkoutUrl'] ?? $data['url'] ?? null;
+
+                        if ($checkoutId && $checkoutUrl) {
+                            // Update orders
+                            foreach ($paymentOrders as $paymentOrder) {
+                                $paymentOrder->payment_method = 'online_banking';
+                                $paymentOrder->transaction_id = $checkoutId;
+                                $paymentOrder->payment_status = 'pending';
+                                if ($paymentOrder->id === $order->id) {
+                                    $paymentOrder->shipping_fee = $shippingFee;
+                                    if ($request->filled('delivery_city')) {
+                                        $paymentOrder->delivery_city = $request->input('delivery_city');
+                                    }
+                                    if ($request->filled('delivery_province')) {
+                                        $paymentOrder->delivery_province = $request->input('delivery_province');
+                                    }
+                                }
+                                $paymentOrder->save();
+                            }
+                            
+                            \Log::info('Maya checkout success', [
+                                'order_id' => $order->id,
+                                'checkout_id' => $checkoutId,
+                                'redirect_url' => $checkoutUrl
+                            ]);
+                            
+                            return response()->json([
+                                'success' => true,
+                                'redirect_url' => $checkoutUrl,
+                                'checkout_id' => $checkoutId
+                            ]);
+                        }
+                    }
+                    
+                    \Log::error('Maya checkout failed', [
+                        'order_id' => $order->id,
+                        'status' => $response->status(),
+                        'body' => $response->body()
+                    ]);
+                    
+                    // Fall back to bank transfer on Maya failure
+                    $paymentMethod = 'bank_transfer';
+                    
+                } catch (\Throwable $e) {
+                    \Log::error('Maya checkout exception: ' . $e->getMessage());
+                    $paymentMethod = 'bank_transfer';
+                }
+            }
+            
+            // Handle Bank Transfer
+            foreach ($paymentOrders as $paymentOrder) {
+                $paymentOrder->payment_method = $paymentMethod;
+                if ($paymentOrder->id === $order->id) {
+                    $paymentOrder->shipping_fee = $shippingFee;
+                    if ($request->filled('delivery_city')) {
+                        $paymentOrder->delivery_city = $request->input('delivery_city');
+                    }
+                    if ($request->filled('delivery_province')) {
+                        $paymentOrder->delivery_province = $request->input('delivery_province');
+                    }
+                }
+                $paymentOrder->save();
+            }
+            
+            $tokenQuery = $authTokenForCallback ? '?auth_token=' . urlencode($authTokenForCallback) : '';
+            $instructionsUrl = route('custom_orders.payment.instructions', $order->id) . $tokenQuery;
+            
+            return response()->json([
+                'success' => true,
+                'redirect_url' => $instructionsUrl,
+                'payment_method' => $paymentMethod
+            ]);
+            
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Order not found.'
+            ], 404);
+        } catch (\Exception $e) {
+            \Log::error('Payment initiation failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Payment initialization failed. Please try again.'
+            ], 500);
+        }
+    }
+
     public function showPaymentConfirm(CustomOrder $order)
     {
         if ($order->user_id !== Auth::id()) {

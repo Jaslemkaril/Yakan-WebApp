@@ -897,6 +897,11 @@ Route::post('/custom-orders/{order}/payment/confirm', [\App\Http\Controllers\Cus
     ->name('custom_orders.payment.confirm.process')
     ->withoutMiddleware(['auth']);
 
+// AJAX endpoint for payment initiation - returns JSON with Maya checkout URL
+Route::post('/api/custom-orders/{order}/initiate-payment', [\App\Http\Controllers\CustomOrderController::class, 'initiatePaymentAjax'])
+    ->name('custom_orders.payment.initiate.ajax')
+    ->withoutMiddleware(['auth']);
+
 
 // Custom Orders (Enhanced) - Require Authentication
 Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->group(function () {

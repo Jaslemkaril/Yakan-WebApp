@@ -504,13 +504,25 @@
                 </div>
             @enderror
 
-            <button type="submit" class="payment-btn w-full text-lg py-4 justify-center">
+            <button type="button" id="continuePaymentBtn" class="payment-btn w-full text-lg py-4 justify-center">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                 </svg>
                 Continue to Payment
             </button>
         </form>
+
+        <!-- Loading Overlay -->
+        <div id="paymentLoadingOverlay" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+            <div class="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl">
+                <div class="mb-6">
+                    <div class="w-16 h-16 mx-auto border-4 border-red-200 border-t-red-700 rounded-full animate-spin"></div>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Proceeding to Payment...</h3>
+                <p class="text-gray-600 text-sm">Please wait while we connect you to the payment gateway.</p>
+                <p class="text-xs text-gray-400 mt-4">Do not close or refresh this page.</p>
+            </div>
+        </div>
 
         <!-- Back Link -->
         <div class="text-center mb-8">
@@ -883,6 +895,75 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (storedProvince || storedCity) payCalcShipping();
+});
+
+// ===== AJAX Payment Handler =====
+document.addEventListener('DOMContentLoaded', function() {
+    const continueBtn = document.getElementById('continuePaymentBtn');
+    const loadingOverlay = document.getElementById('paymentLoadingOverlay');
+    const paymentForm = document.getElementById('customPaymentForm');
+    
+    if (continueBtn && paymentForm) {
+        continueBtn.addEventListener('click', async function(e) {
+            e.preventDefault();
+            
+            // Validate payment method selection
+            const selectedMethod = document.querySelector('input[name="payment_method"]:checked');
+            if (!selectedMethod) {
+                alert('Please select a payment method');
+                return;
+            }
+            
+            // Show loading overlay
+            if (loadingOverlay) {
+                loadingOverlay.classList.remove('hidden');
+            }
+            
+            // Collect form data
+            const formData = new FormData(paymentForm);
+            const authToken = formData.get('auth_token') || '{{ $authToken ?? "" }}';
+            
+            // Add CSRF token
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
+                             document.querySelector('input[name="_token"]')?.value || '';
+            
+            try {
+                const response = await fetch('/api/custom-orders/{{ $order->id }}/initiate-payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Auth-Token': authToken
+                    },
+                    body: JSON.stringify({
+                        payment_method: selectedMethod.value,
+                        shipping_fee: formData.get('shipping_fee') || 0,
+                        delivery_city: formData.get('delivery_city') || '',
+                        delivery_province: formData.get('delivery_province') || '',
+                        auth_token: authToken
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.redirect_url) {
+                    // Redirect to Maya checkout or payment instructions
+                    window.location.href = data.redirect_url;
+                } else if (data.error) {
+                    if (loadingOverlay) loadingOverlay.classList.add('hidden');
+                    alert(data.error || 'Payment initiation failed. Please try again.');
+                } else {
+                    if (loadingOverlay) loadingOverlay.classList.add('hidden');
+                    alert('Unexpected response. Please try again.');
+                }
+            } catch (error) {
+                console.error('Payment error:', error);
+                if (loadingOverlay) loadingOverlay.classList.add('hidden');
+                alert('Connection error. Please check your internet and try again.');
+            }
+        });
+    }
 });
 </script>
 @endsection
