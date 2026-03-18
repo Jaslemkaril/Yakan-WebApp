@@ -2923,6 +2923,17 @@ class CustomOrderController extends Controller
             }
             
             $shippingFee = (float) ($request->input('shipping_fee') ?? $order->shipping_fee ?? 0);
+            
+            // If shipping fee not provided, calculate from user's address
+            if ($shippingFee <= 0 && $order->delivery_type !== 'pickup') {
+                $shippingFee = $this->resolveAddressBasedShippingFee(
+                    $order->delivery_type ?? 'delivery',
+                    $request->input('delivery_city') ?? $order->delivery_city ?? '',
+                    $request->input('delivery_province') ?? $order->delivery_province ?? '',
+                    $order->delivery_address ?? ''
+                );
+            }
+            
             $authTokenForCallback = $request->input('auth_token') ?? $request->header('X-Auth-Token') ?? session('auth_token') ?? '';
             
             // Handle Maya checkout
@@ -2930,12 +2941,29 @@ class CustomOrderController extends Controller
                 try {
                     $publicKey  = config('services.maya.public_key');
                     $baseUrl    = rtrim(config('services.maya.base_url', 'https://pg-sandbox.paymaya.com'), '/');
-                    $amount     = (float) $this->calculateOrdersTotal($paymentOrders);
+                    $itemsSubtotal = (float) $this->calculateOrdersTotal($paymentOrders);
+                    $amount     = $itemsSubtotal + $shippingFee; // Include shipping in total
                     $buyer      = $order->user ?? User::find($order->user_id);
                     
                     $tokenQuery = $authTokenForCallback ? '?auth_token=' . urlencode($authTokenForCallback) : '';
                     $successUrl = route('custom_orders.payment.maya.success', $order->id) . $tokenQuery;
                     $failureUrl = route('custom_orders.payment.maya.failed', $order->id) . $tokenQuery;
+                    
+                    // Build items array
+                    $items = [[
+                        'name'        => 'Custom Order #' . $order->id . ($paymentOrders->count() > 1 ? ' (Batch)' : ''),
+                        'quantity'    => 1,
+                        'totalAmount' => ['value' => number_format($itemsSubtotal, 2, '.', ''), 'currency' => 'PHP'],
+                    ]];
+                    
+                    // Add shipping as separate item if applicable
+                    if ($shippingFee > 0) {
+                        $items[] = [
+                            'name'        => 'Shipping Fee',
+                            'quantity'    => 1,
+                            'totalAmount' => ['value' => number_format($shippingFee, 2, '.', ''), 'currency' => 'PHP'],
+                        ];
+                    }
 
                     $payload = [
                         'totalAmount' => ['value' => number_format($amount, 2, '.', ''), 'currency' => 'PHP'],
@@ -2946,14 +2974,15 @@ class CustomOrderController extends Controller
                             'lastName'  => $buyer ? (explode(' ', $buyer->name, 2)[1] ?? '-') : '-',
                             'contact'   => ['email' => $buyer->email ?? ''],
                         ],
-                        'items' => [[
-                            'name'        => 'Custom Order #' . $order->id,
-                            'quantity'    => 1,
-                            'totalAmount' => ['value' => number_format($amount, 2, '.', ''), 'currency' => 'PHP'],
-                        ]],
+                        'items' => $items,
                     ];
 
-                    \Log::info('Maya checkout request', ['order_id' => $order->id, 'amount' => $amount]);
+                    \Log::info('Maya checkout request', [
+                        'order_id' => $order->id, 
+                        'items_subtotal' => $itemsSubtotal,
+                        'shipping_fee' => $shippingFee,
+                        'total_amount' => $amount
+                    ]);
 
                     $response = \Illuminate\Support\Facades\Http::withBasicAuth($publicKey, '')
                         ->acceptJson()
