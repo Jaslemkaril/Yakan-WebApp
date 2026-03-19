@@ -637,11 +637,10 @@ class CustomOrderController extends Controller
             ];
         }
         
-        // Add shipping as separate line item if applicable
+        // Add shipping as separate line item if applicable (no quantity to hide "Quantity: 1" in Maya)
         if ($shippingFee > 0) {
             $items[] = [
                 'name'        => 'Shipping Fee',
-                'quantity'    => 1,
                 'totalAmount' => ['value' => number_format($shippingFee, 2, '.', ''), 'currency' => 'PHP'],
             ];
         }
