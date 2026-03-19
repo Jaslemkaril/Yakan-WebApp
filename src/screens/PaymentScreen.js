@@ -1,4 +1,4 @@
-﻿// src/screens/PaymentScreen.js
+// src/screens/PaymentScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -201,7 +201,13 @@ export default function PaymentScreen({ navigation, route }) {
       console.log('ðŸ”µ Sending order to API:', apiOrderData);
 
       const response = await ApiService.createOrder(apiOrderData);
-      
+
+      if (!response.success) {
+        setIsProcessing(false);
+        Alert.alert('Order Failed', response.error || 'Could not create order. Please try again.');
+        return;
+      }
+
       console.log('ðŸ”µ Order created successfully:', response);
 
       // Extract backend order ID from various possible response structures
