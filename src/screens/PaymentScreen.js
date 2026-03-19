@@ -222,9 +222,8 @@ export default function PaymentScreen({ navigation, route }) {
       console.log('[Payment] backendId:', backendId, 'orderRef:', orderRef);
 
       if (!backendId) {
-        // Show exact response for debugging
         setIsProcessing(false);
-        Alert.alert('Debug: Order Created', 'Response: ' + JSON.stringify(resBody).substring(0, 300));
+        Alert.alert('Order Error', 'Order was placed but we could not retrieve the order ID. Please check My Orders for your order status.');
         return;
       }
 

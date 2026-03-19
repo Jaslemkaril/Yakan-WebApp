@@ -280,6 +280,24 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Order Reference Header */}
+        <View style={styles.orderRefHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.orderRefHeaderNumber}>
+              {order.orderRef ? `Order #${order.orderRef}` : 'Your Order'}
+            </Text>
+            {(order.createdAt || order.date) ? (
+              <Text style={styles.orderRefHeaderDate}>{formatDate(order.createdAt || order.date)}</Text>
+            ) : null}
+          </View>
+          <View style={[styles.orderRefStatusPill, { backgroundColor: (trackingStages[displayStageIndex]?.color || colors.primary) + '22' }]}>
+            <View style={[styles.orderRefStatusDot, { backgroundColor: trackingStages[displayStageIndex]?.color || colors.primary }]} />
+            <Text style={[styles.orderRefStatusPillText, { color: trackingStages[displayStageIndex]?.color || colors.primary }]}>
+              {trackingStages[displayStageIndex]?.label || 'Pending'}
+            </Text>
+          </View>
+        </View>
+
         {/* Status Summary Card */}
         <View style={styles.statusSummaryCard}>
           <View style={styles.statusSummaryItem}>
@@ -603,10 +621,13 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '800',
     color: colors.text,
-    marginBottom: 15,
+    marginBottom: 16,
+    paddingLeft: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
   },
   timeline: {
     paddingVertical: 10,
@@ -618,19 +639,20 @@ const styles = StyleSheet.create({
   },
   timelineLine: {
     position: 'absolute',
-    left: 20,
-    top: 50,
+    left: 23,
+    top: 52,
     width: 3,
-    height: 60,
-    backgroundColor: '#DDD',
+    height: 58,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
   },
   timelineLineCompleted: {
     backgroundColor: colors.primary,
   },
   stageIndicator: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     borderWidth: 3,
     justifyContent: 'center',
     alignItems: 'center',
@@ -641,11 +663,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   stageIndicatorCurrent: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    elevation: 5,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    elevation: 10,
   },
   stageIcon: {
     fontSize: 18,
@@ -660,8 +685,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stageLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.textLight,
     marginBottom: 4,
   },
@@ -669,25 +694,31 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   stageLabelPending: {
-    color: '#9E9E9E',
+    color: '#BDBDBD',
   },
   stageDescription: {
     fontSize: 12,
     color: colors.textLight,
+    lineHeight: 18,
   },
   stageDescriptionPending: {
-    color: '#BDBDBD',
+    color: '#C8C8C8',
   },
   itemsSection: {
     marginBottom: 20,
   },
   itemCard: {
     backgroundColor: colors.white,
-    borderRadius: 10,
+    borderRadius: 14,
     padding: 15,
     marginBottom: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
   },
   itemRow: {
     flexDirection: 'row',
@@ -751,11 +782,16 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 15,
+    borderRadius: 18,
+    padding: 18,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.09,
+    shadowRadius: 8,
+    borderTopWidth: 4,
+    borderTopColor: colors.primary,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -780,13 +816,13 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   summaryTotalLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '800',
     color: colors.text,
   },
   summaryTotalValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '800',
     color: colors.primary,
   },
   addressSection: {
@@ -794,10 +830,13 @@ const styles = StyleSheet.create({
   },
   addressCard: {
     backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: 14,
+    padding: 16,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
   },
   addressLabel: {
     fontSize: 14,
@@ -880,10 +919,13 @@ const styles = StyleSheet.create({
   },
   courierCard: {
     backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: 14,
+    padding: 16,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
   },
   courierRow: {
     flexDirection: 'row',
@@ -917,36 +959,45 @@ const styles = StyleSheet.create({
   },
   orderReceivedButton: {
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 14,
+    padding: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
-    marginHorizontal: 15,
+    elevation: 4,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
   },
   orderReceivedText: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     marginLeft: 10,
+    letterSpacing: 0.3,
   },
   orderCompletedButton: {
-    backgroundColor: '#F0F9FF',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#F0FFF4',
+    borderRadius: 14,
+    padding: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
-    marginHorizontal: 15,
     borderWidth: 2,
     borderColor: '#4CAF50',
+    elevation: 2,
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
   orderCompletedText: {
-    color: '#4CAF50',
+    color: '#388E3C',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     marginLeft: 10,
   },
   // Missing styles for enhanced UI
@@ -983,43 +1034,54 @@ const styles = StyleSheet.create({
   },
   statusSummaryCard: {
     backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 15,
+    borderRadius: 18,
+    padding: 20,
     marginBottom: 20,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
+    elevation: 6,
+    shadowColor: '#8B1A1A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    borderTopWidth: 4,
+    borderTopColor: colors.primary,
   },
   statusSummaryItem: {
     alignItems: 'center',
     flex: 1,
+    paddingVertical: 4,
   },
   statusSummaryIconStyle: {
     marginBottom: 8,
   },
   statusSummaryLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textLight,
-    marginBottom: 4,
+    marginBottom: 5,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   statusSummaryValue: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.text,
   },
   statusSummaryDivider: {
     width: 1,
-    height: 50,
+    height: 55,
     backgroundColor: colors.border,
   },
   stageInfoCurrent: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: '#FFF0F0',
     padding: 10,
-    borderRadius: 8,
-    marginLeft: -10,
+    borderRadius: 10,
+    marginLeft: -8,
     paddingLeft: 10,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.primary,
   },
   itemNumberBadge: {
     width: 28,
@@ -1039,10 +1101,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   summaryTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '800',
     color: colors.text,
-    marginBottom: 10,
+    marginBottom: 14,
+    paddingLeft: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
   },
   addressHeader: {
     flexDirection: 'row',
@@ -1094,6 +1159,48 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textLight,
     marginTop: 2,
+  },
+  // Order Reference Header
+  orderRefHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+  },
+  orderRefHeaderNumber: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  orderRefHeaderDate: {
+    fontSize: 12,
+    color: colors.textLight,
+    fontWeight: '500',
+  },
+  orderRefStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    gap: 6,
+  },
+  orderRefStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  orderRefStatusPillText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
 });
 
