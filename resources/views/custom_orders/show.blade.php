@@ -1070,7 +1070,8 @@
                                                 $summarySubtotal = $batchItemsSubtotal;
                                                 $summaryTotal = $deliveryType === 'pickup' ? $summarySubtotal : $batchPaymentTotal;
                                             } else {
-                                                $summaryShippingFee = $deliveryType === 'pickup' ? 0 : (float) ($order->shipping_fee ?? 0);
+                                                $singleShipping = $getPriceParts($order)['shipping'];
+                                                $summaryShippingFee = $deliveryType === 'pickup' ? 0 : $singleShipping;
                                                 $summarySubtotal = (float) $order->final_price;
                                                 $summaryTotal = $summarySubtotal + $summaryShippingFee;
                                             }
@@ -1082,85 +1083,92 @@
                                         <p class="text-xs mt-1 font-semibold text-emerald-600">✓ Quote accepted</p>
                                         @else
                                         <p class="text-sm font-medium text-gray-700 mb-1">Agreed Price</p>
-                                        <p class="text-xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
+                                        <p class="text-xl font-bold" style="color:#800000;">₱{{ number_format($summaryTotal, 2) }}</p>
                                         <p class="text-xs mt-1 font-semibold text-emerald-600">✓ Quote accepted</p>
                                         @endif
 
-                                        <div class="mt-3 bg-gray-50 rounded-lg p-3 border border-gray-200 text-sm space-y-2">
-                                            @if($isBatchOrder)
-                                                {{-- Batch order breakdown --}}
-                                                @foreach($batchOrders as $batchItem)
-                                                <div class="flex justify-between">
-                                                    <span class="text-gray-600">Order #{{ $batchItem->id }}</span>
-                                                    <span class="font-semibold text-gray-900">₱{{ number_format((float) $batchItem->final_price, 2) }}</span>
+                                        {{-- Professional Admin-Style Price Breakdown --}}
+                                        <div class="mt-3 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-3 border-2 border-gray-300">
+                                            <h3 class="text-xs font-bold text-gray-800 mb-2 flex items-center gap-1">
+                                                <svg class="w-3 h-3" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                                </svg>
+                                                💰 Price Breakdown
+                                            </h3>
+
+                                            <div class="space-y-2 text-xs">
+                                                @if($isBatchOrder)
+                                                    @foreach($batchOrders as $batchItem)
+                                                        @php
+                                                            $itemBreakdown = $batchItem->getPriceBreakdown();
+                                                            $itemBreakdownData = $itemBreakdown['breakdown'] ?? [];
+                                                            $itemMaterial = (float) ($itemBreakdownData['material_cost'] ?? 0);
+                                                            $itemPattern = (float) ($itemBreakdownData['pattern_fee'] ?? 0);
+                                                            $itemSubtotal = ($itemMaterial + $itemPattern) > 0 ? ($itemMaterial + $itemPattern) : (float) ($batchItem->final_price ?? $batchItem->estimated_price ?? 0);
+                                                        @endphp
+                                                        <div class="rounded-lg border border-gray-200 bg-white p-2">
+                                                            <div class="font-bold mb-1" style="color:#800000;">Custom Order #{{ $batchItem->id }}</div>
+                                                            <div class="space-y-0.5">
+                                                                @if($itemMaterial > 0)
+                                                                <div class="flex justify-between items-center">
+                                                                    <span class="text-gray-600">Material Cost:</span>
+                                                                    <span class="font-semibold text-gray-900">₱{{ number_format($itemMaterial, 2) }}</span>
+                                                                </div>
+                                                                @endif
+                                                                @if($itemPattern > 0)
+                                                                <div class="flex justify-between items-center">
+                                                                    <span class="text-gray-600">Pattern Fee:</span>
+                                                                    <span class="font-semibold text-gray-900">₱{{ number_format($itemPattern, 2) }}</span>
+                                                                </div>
+                                                                @endif
+                                                                <div class="border-t border-gray-200 pt-0.5 flex justify-between items-center">
+                                                                    <span class="text-gray-600 font-medium">Subtotal:</span>
+                                                                    <span class="font-bold text-gray-900">₱{{ number_format($itemSubtotal, 2) }}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+
+                                                    <div class="border-t border-gray-300 pt-1 flex justify-between items-center">
+                                                        <span class="text-gray-600 font-medium">Subtotal (All Items):</span>
+                                                        <span class="font-bold text-gray-900">₱{{ number_format($summarySubtotal, 2) }}</span>
+                                                    </div>
+                                                @else
+                                                    {{-- Single order breakdown --}}
+                                                    @php
+                                                        $singleBreakdown = $order->getPriceBreakdown();
+                                                        $singleBreakdownData = $singleBreakdown['breakdown'] ?? [];
+                                                        $singleMaterial = (float) ($singleBreakdownData['material_cost'] ?? 0);
+                                                        $singlePattern = (float) ($singleBreakdownData['pattern_fee'] ?? 0);
+                                                    @endphp
+                                                    @if($singleMaterial > 0)
+                                                    <div class="flex justify-between items-center">
+                                                        <span class="text-gray-600">Material Cost:</span>
+                                                        <span class="font-semibold text-gray-900">₱{{ number_format($singleMaterial, 2) }}</span>
+                                                    </div>
+                                                    @endif
+                                                    @if($singlePattern > 0)
+                                                    <div class="flex justify-between items-center">
+                                                        <span class="text-gray-600">Pattern Fee:</span>
+                                                        <span class="font-semibold text-gray-900">₱{{ number_format($singlePattern, 2) }}</span>
+                                                    </div>
+                                                    @endif
+                                                    <div class="border-t border-gray-200 pt-1 flex justify-between items-center">
+                                                        <span class="text-gray-600 font-medium">Items Subtotal:</span>
+                                                        <span class="font-bold text-gray-900">₱{{ number_format($summarySubtotal, 2) }}</span>
+                                                    </div>
+                                                @endif
+                                                
+                                                <div class="flex justify-between items-center">
+                                                    <span class="text-gray-600">Shipping Fee:</span>
+                                                    <span class="font-semibold text-gray-900">₱{{ number_format($summaryShippingFee, 2) }}</span>
                                                 </div>
-                                                @endforeach
-                                                <div class="flex justify-between pt-1 border-t border-gray-200">
-                                                    <span class="text-gray-600">Items Subtotal</span>
-                                                    <span class="font-semibold text-gray-900">₱{{ number_format($summarySubtotal, 2) }}</span>
+                                                <div class="border-t-2 pt-1 mt-1 flex justify-between items-center" style="border-color:#800000;">
+                                                    <span class="text-gray-900 font-bold">Total:</span>
+                                                    <span class="font-bold text-green-600">₱{{ number_format($summaryTotal, 2) }}</span>
                                                 </div>
-                                            @else
-                                            <div class="flex justify-between">
-                                                <span class="text-gray-600">Agreed Price</span>
-                                                <span class="font-semibold text-gray-900">₱{{ number_format((float) $order->final_price, 2) }}</span>
-                                            </div>
-                                            @endif
-                                            <div class="flex justify-between">
-                                                <span class="text-gray-600">Shipping Fee</span>
-                                                <span class="font-semibold text-gray-900">₱{{ number_format($summaryShippingFee, 2) }}</span>
-                                            </div>
-                                            <div class="pt-2 border-t border-gray-300 flex justify-between">
-                                                <span class="font-semibold text-gray-900">Total</span>
-                                                <span class="text-base font-extrabold" style="color:#800000;">₱{{ number_format($summaryTotal, 2) }}</span>
                                             </div>
                                         </div>
-                                        
-                                        {{-- Price Breakdown from Admin --}}
-                                        @php
-                                            $approvedBreakdown = $order->getPriceBreakdown();
-                                        @endphp
-                                        
-                                        @if($approvedBreakdown && isset($approvedBreakdown['breakdown']) && count($approvedBreakdown['breakdown']) > 0)
-                                        <div class="mt-3 bg-gray-50 rounded-lg p-3 border border-gray-200 text-xs">
-                                            <p class="font-semibold text-gray-700 mb-2">Price Breakdown:</p>
-                                            <div class="space-y-1 text-gray-600">
-                                                @if(isset($approvedBreakdown['breakdown']['material_cost']) && $approvedBreakdown['breakdown']['material_cost'] > 0)
-                                                <div class="flex justify-between">
-                                                    <span>Material Cost:</span>
-                                                    <span class="font-semibold">₱{{ number_format($approvedBreakdown['breakdown']['material_cost'], 2) }}</span>
-                                                </div>
-                                                @endif
-                                                @if(isset($approvedBreakdown['breakdown']['pattern_fee']) && $approvedBreakdown['breakdown']['pattern_fee'] > 0)
-                                                <div class="flex justify-between">
-                                                    <span>Pattern Fee:</span>
-                                                    <span class="font-semibold">₱{{ number_format($approvedBreakdown['breakdown']['pattern_fee'], 2) }}</span>
-                                                </div>
-                                                @endif
-                                                @if(isset($approvedBreakdown['breakdown']['labor_cost']) && $approvedBreakdown['breakdown']['labor_cost'] > 0)
-                                                <div class="flex justify-between">
-                                                    <span>Labor Cost:</span>
-                                                    <span class="font-semibold">₱{{ number_format($approvedBreakdown['breakdown']['labor_cost'], 2) }}</span>
-                                                </div>
-                                                @endif
-                                                @if(isset($approvedBreakdown['breakdown']['delivery_fee']) && $approvedBreakdown['breakdown']['delivery_fee'] > 0)
-                                                <div class="flex justify-between">
-                                                    <span>Delivery Fee:</span>
-                                                    <span class="font-semibold">₱{{ number_format($approvedBreakdown['breakdown']['delivery_fee'], 2) }}</span>
-                                                </div>
-                                                @endif
-                                                @if(isset($approvedBreakdown['breakdown']['discount']) && $approvedBreakdown['breakdown']['discount'] > 0)
-                                                <div class="flex justify-between text-green-600">
-                                                    <span>Discount:</span>
-                                                    <span class="font-semibold">-₱{{ number_format($approvedBreakdown['breakdown']['discount'], 2) }}</span>
-                                                </div>
-                                                @endif
-                                                <div class="border-t border-gray-300 pt-1 mt-1 flex justify-between font-bold" style="color:#800000;">
-                                                    <span>Total:</span>
-                                                    <span>₱{{ number_format($order->final_price, 2) }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        @endif
                                         
                                         {{-- Admin Notes --}}
                                         @if($order->getAdminNotesText() || $order->approved_at)
@@ -1482,125 +1490,6 @@
                                     Order #{{ $order->id }}
                                 @endif
                             </p>
-                            
-                            {{-- Price Breakdown for Batch - Professional admin-style format --}}
-                            @if($isBatchOrder)
-                                <div class="border-t-2 border-gray-200 pt-4 mt-4">
-                                    <h3 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                        <svg class="w-4 h-4" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                                        </svg>
-                                        💰 Price Breakdown
-                                    </h3>
-                                    
-                                    <div class="space-y-3 text-sm">
-                                        @foreach($batchUnpaidOrders as $batchItem)
-                                            @php
-                                                $itemBreakdown = $batchItem->getPriceBreakdown();
-                                                $itemBreakdownData = $itemBreakdown['breakdown'] ?? [];
-                                                $itemMaterial = (float) ($itemBreakdownData['material_cost'] ?? 0);
-                                                $itemPattern = (float) ($itemBreakdownData['pattern_fee'] ?? 0);
-                                                $itemSubtotal = ($itemMaterial + $itemPattern) > 0 ? ($itemMaterial + $itemPattern) : (float) ($batchItem->final_price ?? $batchItem->estimated_price ?? 0);
-                                            @endphp
-                                            <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                                <div class="font-bold mb-2" style="color:#800000;">Custom Order #{{ $batchItem->id }}</div>
-                                                <div class="space-y-1">
-                                                    @if($itemMaterial > 0)
-                                                    <div class="flex justify-between items-center">
-                                                        <span class="text-gray-600">Material Cost:</span>
-                                                        <span class="font-semibold text-gray-900">₱{{ number_format($itemMaterial, 2) }}</span>
-                                                    </div>
-                                                    @endif
-                                                    @if($itemPattern > 0)
-                                                    <div class="flex justify-between items-center">
-                                                        <span class="text-gray-600">Pattern Fee:</span>
-                                                        <span class="font-semibold text-gray-900">₱{{ number_format($itemPattern, 2) }}</span>
-                                                    </div>
-                                                    @endif
-                                                    <div class="border-t border-gray-200 pt-1 flex justify-between items-center">
-                                                        <span class="text-gray-600 font-medium">Subtotal:</span>
-                                                        <span class="font-bold text-gray-900">₱{{ number_format($itemSubtotal, 2) }}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                        
-                                        <div class="border-t border-gray-300 pt-2 flex justify-between items-center">
-                                            <span class="text-gray-600 font-medium">Subtotal (All Items):</span>
-                                            <span class="font-bold text-gray-900">₱{{ number_format($batchItemsSubtotal, 2) }}</span>
-                                        </div>
-                                        <div class="flex justify-between items-center">
-                                            <span class="text-gray-600">Shipping Fee (Based on Delivery Address):</span>
-                                            <span class="font-semibold text-gray-900">₱{{ number_format($batchShippingFee, 2) }}</span>
-                                        </div>
-                                        <div class="border-t-2 pt-2 mt-2 flex justify-between items-center" style="border-color:#800000;">
-                                            <span class="text-gray-900 font-bold text-base">TOTAL PRICE (ALL ITEMS):</span>
-                                            <span class="font-bold text-lg text-green-600">₱{{ number_format($batchPaymentTotal, 2) }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            @else
-                                {{-- Single Order Price Breakdown --}}
-                                @php
-                                    $priceBreakdown = $order->getPriceBreakdown();
-                                    $breakdown = $priceBreakdown['breakdown'] ?? [];
-                                    $hasBreakdown = !empty($breakdown);
-                                @endphp
-                                
-                                @if($hasBreakdown)
-                                <div class="border-t-2 border-gray-200 pt-4 mt-4">
-                                    <h3 class="text-sm font-bold text-gray-700 mb-3">Price Breakdown</h3>
-                                    
-                                    {{-- Material Cost --}}
-                                    @if(isset($breakdown['material_cost']) && $breakdown['material_cost'] > 0)
-                                        <div class="flex justify-between py-2 text-sm">
-                                            <span class="text-gray-600">Material Cost</span>
-                                            <span class="font-semibold text-gray-900">₱{{ number_format($breakdown['material_cost'], 2) }}</span>
-                                        </div>
-                                    @endif
-                                    
-                                    {{-- Pattern/Design Fee --}}
-                                    @if(isset($breakdown['pattern_fee']) && $breakdown['pattern_fee'] > 0)
-                                        <div class="flex justify-between py-2 text-sm">
-                                            <span class="text-gray-600">Pattern/Design Fee</span>
-                                            <span class="font-semibold text-gray-900">₱{{ number_format($breakdown['pattern_fee'], 2) }}</span>
-                                        </div>
-                                    @endif
-                                    
-                                    {{-- Labor Cost --}}
-                                    @if(isset($breakdown['labor_cost']) && $breakdown['labor_cost'] > 0)
-                                        <div class="flex justify-between py-2 text-sm">
-                                            <span class="text-gray-600">Labor Cost</span>
-                                            <span class="font-semibold text-gray-900">₱{{ number_format($breakdown['labor_cost'], 2) }}</span>
-                                        </div>
-                                    @endif
-                                    
-                                    {{-- Delivery Fee --}}
-                                    @if(isset($breakdown['delivery_fee']) && $breakdown['delivery_fee'] > 0)
-                                        <div class="flex justify-between py-2 text-sm">
-                                            <span class="text-gray-600">Delivery Fee</span>
-                                            <span class="font-semibold text-gray-900">₱{{ number_format($breakdown['delivery_fee'], 2) }}</span>
-                                        </div>
-                                    @endif
-                                    
-                                    {{-- Discount (if applicable) --}}
-                                    @if(isset($breakdown['discount']) && $breakdown['discount'] > 0)
-                                        <div class="flex justify-between py-2 text-sm">
-                                            <span class="text-gray-600">Discount</span>
-                                            <span class="font-semibold text-red-600">- ₱{{ number_format($breakdown['discount'], 2) }}</span>
-                                        </div>
-                                    @endif
-                                    
-                                    {{-- Admin Pricing Notes --}}
-                                    @if(!empty($priceBreakdown['notes']))
-                                        <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                            <p class="text-xs text-gray-600 font-medium mb-1">📝 Admin Note:</p>
-                                            <p class="text-sm text-gray-800">{{ $priceBreakdown['notes'] }}</p>
-                                        </div>
-                                    @endif
-                                </div>
-                            @endif
-                            @endif
                         </div>
                     @endif
 
