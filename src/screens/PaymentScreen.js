@@ -243,18 +243,24 @@ export default function PaymentScreen({ navigation, route }) {
             navigation.navigate('OrderDetails', { orderData: finalOrderData });
             return;
           } else {
-            throw new Error('No checkout URL returned from Maya API.');
+            throw new Error('No checkout URL in Maya response: ' + JSON.stringify(mayaCheckout?.data));
           }
         } catch (mayaErr) {
           console.warn('Maya checkout failed:', mayaErr?.message || mayaErr);
           setIsProcessing(false);
           Alert.alert(
-            'Maya Checkout Unavailable',
-            'Could not connect to Maya checkout. Please try Bank Transfer or contact support.',
+            'Maya Checkout Failed',
+            mayaErr?.message || 'Could not connect to Maya. Please try Bank Transfer or contact support.',
             [{ text: 'OK' }]
           );
           return;
         }
+      }
+
+      if (isMaya && !backendId) {
+        setIsProcessing(false);
+        Alert.alert('Error', 'Order was created but ID could not be retrieved. Please contact support.');
+        return;
       }
 
       await updateOrderInStorage(finalOrderData);
