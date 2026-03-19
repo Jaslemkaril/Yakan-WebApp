@@ -614,6 +614,42 @@ class CustomOrderController extends Controller
     }
 
     /**
+     * Build Maya checkout items array with each batch order as separate line item.
+     */
+    private function buildMayaItemsArray(\Illuminate\Support\Collection $orders, float $shippingFee = 0): array
+    {
+        $items = [];
+        
+        foreach ($orders as $order) {
+            // Calculate item price from breakdown if available
+            $breakdown = $order->getPriceBreakdown();
+            $breakdownData = $breakdown['breakdown'] ?? [];
+            $material = (float) ($breakdownData['material_cost'] ?? 0);
+            $pattern = (float) ($breakdownData['pattern_fee'] ?? 0);
+            $labor = (float) ($breakdownData['labor_cost'] ?? 0);
+            $fromBreakdown = $material + $pattern + $labor;
+            $itemPrice = $fromBreakdown > 0 ? $fromBreakdown : (float) ($order->final_price ?? $order->estimated_price ?? 0);
+            
+            $items[] = [
+                'name'        => 'Custom Order #' . $order->id,
+                'quantity'    => 1,
+                'totalAmount' => ['value' => number_format($itemPrice, 2, '.', ''), 'currency' => 'PHP'],
+            ];
+        }
+        
+        // Add shipping as separate line item if applicable
+        if ($shippingFee > 0) {
+            $items[] = [
+                'name'        => 'Shipping Fee',
+                'quantity'    => 1,
+                'totalAmount' => ['value' => number_format($shippingFee, 2, '.', ''), 'currency' => 'PHP'],
+            ];
+        }
+        
+        return $items;
+    }
+
+    /**
      * Compute shipping fee from delivery location using the same zone model shown in step4 UI.
      */
     private function resolveAddressBasedShippingFee(
@@ -2801,11 +2837,7 @@ class CustomOrderController extends Controller
                             'lastName'  => $buyer ? (explode(' ', $buyer->name, 2)[1] ?? '-') : '-',
                             'contact'   => ['email' => $buyer->email ?? ''],
                         ],
-                        'items' => [[
-                            'name'        => 'Custom Order #' . $order->id,
-                            'quantity'    => 1,
-                            'totalAmount' => ['value' => number_format($amount, 2, '.', ''), 'currency' => 'PHP'],
-                        ]],
+                        'items' => $this->buildMayaItemsArray($paymentOrders, 0),
                     ];
 
                     $response = \Illuminate\Support\Facades\Http::withBasicAuth($publicKey, '')
@@ -3007,21 +3039,8 @@ class CustomOrderController extends Controller
                     $successUrl = route('custom_orders.payment.maya.success', $order->id) . $tokenQuery;
                     $failureUrl = route('custom_orders.payment.maya.failed', $order->id) . $tokenQuery;
                     
-                    // Build items array
-                    $items = [[
-                        'name'        => 'Custom Order #' . $order->id . ($paymentOrders->count() > 1 ? ' (Batch)' : ''),
-                        'quantity'    => 1,
-                        'totalAmount' => ['value' => number_format($itemsSubtotal, 2, '.', ''), 'currency' => 'PHP'],
-                    ]];
-                    
-                    // Add shipping as separate item if applicable
-                    if ($shippingFee > 0) {
-                        $items[] = [
-                            'name'        => 'Shipping Fee',
-                            'quantity'    => 1,
-                            'totalAmount' => ['value' => number_format($shippingFee, 2, '.', ''), 'currency' => 'PHP'],
-                        ];
-                    }
+                    // Build items array - each batch order as separate line item
+                    $items = $this->buildMayaItemsArray($paymentOrders, $shippingFee);
 
                     $payload = [
                         'totalAmount' => ['value' => number_format($amount, 2, '.', ''), 'currency' => 'PHP'],
