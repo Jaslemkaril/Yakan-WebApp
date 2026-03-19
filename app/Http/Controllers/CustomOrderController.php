@@ -559,6 +559,61 @@ class CustomOrderController extends Controller
     }
 
     /**
+     * Sum payable amount with shipping for display purposes (user list, admin list).
+     */
+    private function calculateOrdersTotalWithShipping(\Illuminate\Support\Collection $orders): float
+    {
+        $itemsSubtotal = $this->calculateOrdersTotal($orders);
+        
+        // Calculate shared shipping (max of all orders' shipping fees)
+        $sharedShipping = (float) ($orders->map(function (CustomOrder $item) {
+            $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+            if ($deliveryType === 'pickup') {
+                return 0.0;
+            }
+
+            $breakdown = $item->getPriceBreakdown();
+            $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
+            if ($deliveryFeeInBreakdown > 0) {
+                return 0.0; // Already included in price
+            }
+
+            // Calculate from address
+            return $this->resolveAddressBasedShippingFeeForOrder($item);
+        })->max() ?? 0);
+
+        return $itemsSubtotal + $sharedShipping;
+    }
+
+    /**
+     * Helper to resolve shipping fee for a single order, with user address fallback.
+     */
+    private function resolveAddressBasedShippingFeeForOrder(CustomOrder $order): float
+    {
+        $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
+        $city = $order->delivery_city ?? '';
+        $province = $order->delivery_province ?? '';
+        $address = $order->delivery_address ?? '';
+        
+        // Fallback to user's default address
+        if (!$city && !$province && !$address && $order->user) {
+            $userAddr = $order->user->addresses()->where('is_default', true)->first();
+            if ($userAddr) {
+                $city = $userAddr->city ?? '';
+                $province = $userAddr->province ?? ($userAddr->region ?? '');
+                $address = implode(' ', array_filter([
+                    $userAddr->street_name ?? null,
+                    $userAddr->barangay ?? null,
+                    $userAddr->city ?? null,
+                    $userAddr->province ?? ($userAddr->region ?? null),
+                ]));
+            }
+        }
+        
+        return $this->resolveAddressBasedShippingFee($deliveryType, $city, $province, $address);
+    }
+
+    /**
      * Compute shipping fee from delivery location using the same zone model shown in step4 UI.
      */
     private function resolveAddressBasedShippingFee(
@@ -687,7 +742,7 @@ class CustomOrderController extends Controller
 
             $fallbackBatchMeta[$group->minute_key] = [
                 'item_count' => (int) $group->cnt,
-                'batch_total' => $this->calculateOrdersTotal($groupOrders),
+                'batch_total' => $this->calculateOrdersTotalWithShipping($groupOrders),
             ];
 
             $memberIds = $groupOrders
@@ -708,7 +763,7 @@ class CustomOrderController extends Controller
                 ->groupBy('batch_order_number')
                 ->pluck('primary_id');
 
-            $query = CustomOrder::with('product')
+            $query = CustomOrder::with(['product', 'user'])
                 ->where('user_id', Auth::id())
                 ->where(function ($q) use ($batchPrimaryIds) {
                     $q->whereNull('batch_order_number')
@@ -718,7 +773,7 @@ class CustomOrderController extends Controller
                 ->when($implicitExcludeIds->isNotEmpty(), fn($q) => $q->whereNotIn('id', $implicitExcludeIds))
                 ->orderByDesc('created_at');
         } else {
-            $query = CustomOrder::with('product')
+            $query = CustomOrder::with(['product', 'user'])
                 ->where('user_id', Auth::id())
                 ->when($implicitExcludeIds->isNotEmpty(), fn($q) => $q->whereNotIn('id', $implicitExcludeIds))
                 ->orderByDesc('created_at');
@@ -745,7 +800,7 @@ class CustomOrderController extends Controller
                     ->map(function ($rows) {
                         return [
                             'item_count' => $rows->count(),
-                            'batch_total' => $this->calculateOrdersTotal($rows),
+                            'batch_total' => $this->calculateOrdersTotalWithShipping($rows),
                         ];
                     })
                     ->toArray();

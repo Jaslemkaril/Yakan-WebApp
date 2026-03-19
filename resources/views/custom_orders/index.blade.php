@@ -410,12 +410,46 @@
                                     @php
                                         $displayPrice = (float) ($order->final_price ?? $order->estimated_price ?? 0);
                                         $displayDeliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
-                                        $displayShippingFee = $displayDeliveryType === 'pickup' ? 0 : (float) ($order->shipping_fee ?? 0);
                                         $displayBreakdown = $order->getPriceBreakdown();
                                         $displayDeliveryFeeInBreakdown = (float) (($displayBreakdown['breakdown']['delivery_fee'] ?? 0));
                                         $displayShippingAlreadyIncluded = $displayDeliveryFeeInBreakdown > 0;
 
-                                        if ($displayShippingFee > 0 && !$displayShippingAlreadyIncluded) {
+                                        // Calculate shipping with user address fallback
+                                        $displayShippingFee = 0;
+                                        if ($displayDeliveryType !== 'pickup' && !$displayShippingAlreadyIncluded) {
+                                            $city = $order->delivery_city ?? '';
+                                            $province = $order->delivery_province ?? '';
+                                            $address = $order->delivery_address ?? '';
+                                            
+                                            // Fallback to user's default address if order has none
+                                            if (!$city && !$province && !$address && $order->user) {
+                                                $userAddr = $order->user->addresses()->where('is_default', true)->first();
+                                                if ($userAddr) {
+                                                    $city = $userAddr->city ?? '';
+                                                    $province = $userAddr->province ?? ($userAddr->region ?? '');
+                                                    $address = implode(' ', array_filter([
+                                                        $userAddr->street_name ?? null,
+                                                        $userAddr->barangay ?? null,
+                                                        $userAddr->city ?? null,
+                                                        $userAddr->province ?? ($userAddr->region ?? null),
+                                                    ]));
+                                                }
+                                            }
+                                            
+                                            // Calculate zone-based shipping
+                                            $haystack = strtolower($address . ' ' . $city . ' ' . $province);
+                                            if (str_contains($haystack, 'zamboanga') || str_contains($haystack, 'barmm') || str_contains($haystack, 'basilan') || str_contains($haystack, 'sulu') || str_contains($haystack, 'tawi')) {
+                                                $displayShippingFee = 100;
+                                            } elseif (str_contains($haystack, 'mindanao') || str_contains($haystack, 'davao') || str_contains($haystack, 'cagayan de oro') || str_contains($haystack, 'general santos') || str_contains($haystack, 'caraga') || str_contains($haystack, 'soccsksargen')) {
+                                                $displayShippingFee = 180;
+                                            } elseif (str_contains($haystack, 'visaya') || str_contains($haystack, 'cebu') || str_contains($haystack, 'iloilo') || str_contains($haystack, 'bacolod') || str_contains($haystack, 'tacloban') || str_contains($haystack, 'leyte')) {
+                                                $displayShippingFee = 250;
+                                            } elseif (str_contains($haystack, 'ncr') || str_contains($haystack, 'metro manila') || str_contains($haystack, 'manila') || str_contains($haystack, 'calabarzon') || str_contains($haystack, 'central luzon')) {
+                                                $displayShippingFee = 300;
+                                            } elseif ($haystack !== '') {
+                                                $displayShippingFee = 350;
+                                            }
+                                            
                                             $displayPrice += $displayShippingFee;
                                         }
                                     @endphp
