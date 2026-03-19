@@ -224,9 +224,7 @@
         ? $batchComputedTotal
         : (float) ($order->final_price ?? 0);
 
-    if ($isBatchPayment) {
-        $displayShippingFee = 0;
-    } elseif (!$isDelivery || $adminDeliveryFee > 0) {
+    if (!$isDelivery || $adminDeliveryFee > 0) {
         $displayShippingFee = 0;
     } else {
         $displayShippingFee = (float) ($calcShippingFee ?? 0);
@@ -408,7 +406,7 @@
                 </div>
 
                 <!-- Shipping Fee row -->
-                @if($isDelivery && !$isBatchPayment)
+                @if($isDelivery)
                     <div class="flex justify-between py-3 border-b border-gray-200 items-center">
                         <span class="text-gray-700 font-medium">Shipping Fee</span>
                         <span class="font-bold text-lg" id="payShippingDisplay">
@@ -422,11 +420,6 @@
                                 <span class="text-gray-900">₱{{ number_format($displayShippingFee, 2) }}</span>
                             @endif
                         </span>
-                    </div>
-                @elseif($isBatchPayment)
-                    <div class="flex justify-between py-3 border-b border-gray-200 items-center">
-                        <span class="text-gray-700 font-medium">Shipping Fee</span>
-                        <span class="font-semibold text-gray-700">Included in item totals</span>
                     </div>
                 @endif
 
@@ -448,7 +441,7 @@
                 <input type="hidden" name="auth_token" value="{{ $authToken }}">
             @endif
             <!-- Hidden shipping fields -->
-            <input type="hidden" name="shipping_fee"      id="hiddenShippingFee"      value="{{ $isBatchPayment ? 0 : ($calcShippingFee ?? 0) }}">
+            <input type="hidden" name="shipping_fee"      id="hiddenShippingFee"      value="{{ $calcShippingFee ?? 0 }}">
             <input type="hidden" name="delivery_city"     id="hiddenDeliveryCity"     value="{{ $storedCity }}">
             <input type="hidden" name="delivery_province" id="hiddenDeliveryProvince" value="{{ $storedProvince }}">
 

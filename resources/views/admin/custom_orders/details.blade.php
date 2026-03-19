@@ -37,17 +37,18 @@
             }
         }
 
+        // Zone 0: Zamboanga area (₱100)
+        if (str_contains($haystack, 'zamboanga')) {
+            return 100.0;
+        }
+
+        // Zone 1: BARMM (₱100)
         if (
-            str_contains($haystack, 'zamboanga city') ||
-            str_contains($haystack, 'zamboanga del sur') ||
-            str_contains($haystack, 'zamboanga del norte') ||
-            str_contains($haystack, 'zamboanga sibugay') ||
             str_contains($haystack, 'barmm') ||
             str_contains($haystack, 'bangsamoro') ||
             str_contains($haystack, 'basilan') ||
             str_contains($haystack, 'sulu') ||
-            str_contains($haystack, 'tawi') ||
-            str_contains($haystack, 'zamboanga peninsula')
+            str_contains($haystack, 'tawi')
         ) {
             return 100.0;
         }
