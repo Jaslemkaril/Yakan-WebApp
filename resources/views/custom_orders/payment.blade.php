@@ -178,24 +178,31 @@
         $calcShippingFee = 0;
     } elseif ($storedShippingFee > 0) {
         $calcShippingFee = $storedShippingFee;
-    } elseif ($storedCity || $storedProvince) {
-        // Calculate from stored city/province using same zone logic
+    } elseif ($storedCity || $storedProvince || $deliveryAddressRaw) {
+        // Calculate from stored city/province/address using same zone logic
         $cityL = strtolower($storedCity);
         $regionL = strtolower($storedProvince);
-        if (str_contains($cityL, 'zamboanga') || str_contains($regionL, 'zamboanga') ||
+        $haystack = $deliveryAddressRaw . ' ' . $cityL . ' ' . $regionL;
+        
+        // Zone 0: Zamboanga area (₱100)
+        if (str_contains($haystack, 'zamboanga') ||
             str_contains($regionL, 'barmm') || str_contains($regionL, 'bangsamoro') ||
             in_array($cityL, ['dipolog city','dapitan city','pagadian city','isabela city',
                               'zamboanga del norte (dipolog city)','jolo (sulu)','bongao (tawi-tawi)',
                               'cotabato city','marawi city','lamitan city (basilan)'])) {
             $calcShippingFee = 100;
-        } elseif (str_contains($regionL, 'mindanao') || str_contains($regionL, 'davao') ||
-                  str_contains($regionL, 'soccsksargen') || str_contains($regionL, 'caraga') ||
-                  str_contains($regionL, 'northern mindanao')) {
+        } elseif (str_contains($haystack, 'mindanao') || str_contains($haystack, 'davao') ||
+                  str_contains($haystack, 'soccsksargen') || str_contains($haystack, 'caraga') ||
+                  str_contains($haystack, 'northern mindanao') || str_contains($haystack, 'cagayan de oro') ||
+                  str_contains($haystack, 'general santos')) {
             $calcShippingFee = 180;
-        } elseif (str_contains($regionL, 'visayas')) {
+        } elseif (str_contains($haystack, 'visayas') || str_contains($haystack, 'cebu') ||
+                  str_contains($haystack, 'iloilo') || str_contains($haystack, 'bacolod') ||
+                  str_contains($haystack, 'tacloban') || str_contains($haystack, 'leyte')) {
             $calcShippingFee = 250;
-        } elseif (str_contains($regionL, 'ncr') || str_contains($regionL, 'metro manila') ||
-                  str_contains($regionL, 'calabarzon') || str_contains($regionL, 'central luzon')) {
+        } elseif (str_contains($haystack, 'ncr') || str_contains($haystack, 'metro manila') ||
+                  str_contains($haystack, 'manila') || str_contains($haystack, 'calabarzon') || 
+                  str_contains($haystack, 'central luzon')) {
             $calcShippingFee = 300;
         } else {
             $calcShippingFee = 350;

@@ -553,34 +553,9 @@ class CustomOrderController extends Controller
             fn(CustomOrder $item) => (float) ($item->final_price ?? $item->estimated_price ?? 0)
         );
 
-        $sharedShipping = (float) ($orders->map(function (CustomOrder $item) {
-            $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
-            if ($deliveryType === 'pickup') {
-                return 0.0;
-            }
-
-            $breakdown = $item->getPriceBreakdown();
-            $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
-            if ($deliveryFeeInBreakdown > 0) {
-                return 0.0;
-            }
-
-            // Use stored shipping_fee if available, otherwise calculate from address
-            $storedShipping = (float) ($item->shipping_fee ?? 0);
-            if ($storedShipping > 0) {
-                return $storedShipping;
-            }
-            
-            // Calculate shipping from delivery address
-            return $this->resolveAddressBasedShippingFee(
-                $deliveryType,
-                $item->delivery_city ?? '',
-                $item->delivery_province ?? '',
-                $item->delivery_address ?? ''
-            );
-        })->max() ?? 0);
-
-        return $quotedSubtotal + $sharedShipping;
+        // NOTE: Shipping is calculated separately in initiatePaymentAjax() to avoid double-counting
+        // This method returns ONLY the items subtotal (no shipping)
+        return $quotedSubtotal;
     }
 
     /**
@@ -598,24 +573,20 @@ class CustomOrderController extends Controller
 
         $haystack = strtolower(trim((string) ($fullAddress ?? '')) . ' ' . trim((string) ($city ?? '')) . ' ' . trim((string) ($province ?? '')));
 
-        // Zone 0: Within Zamboanga City
+        // Zone 0: Within Zamboanga area (₱100)
         if (
-            str_contains($haystack, 'zamboanga city') ||
-            str_contains($haystack, 'zamboanga del sur') ||
-            str_contains($haystack, 'zamboanga del norte') ||
-            str_contains($haystack, 'zamboanga sibugay')
+            str_contains($haystack, 'zamboanga') // Catch any zamboanga variant
         ) {
             return 100.0;
         }
 
-        // Zone 1: Zamboanga Peninsula + BARMM
+        // Zone 1: BARMM (₱100)
         if (
             str_contains($haystack, 'barmm') ||
             str_contains($haystack, 'bangsamoro') ||
             str_contains($haystack, 'basilan') ||
             str_contains($haystack, 'sulu') ||
-            str_contains($haystack, 'tawi') ||
-            str_contains($haystack, 'zamboanga peninsula')
+            str_contains($haystack, 'tawi')
         ) {
             return 100.0;
         }
