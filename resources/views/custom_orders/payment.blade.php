@@ -114,9 +114,21 @@
     $isBatchPayment = $isBatchPayment ?? ($paymentOrders->count() > 1);
     $batchOrderNumber = $order->batch_order_number ?? null;
     $batchItemsCount = $paymentOrders->count();
+    
+    // Calculate batch total using breakdown data (more accurate)
+    $calculateItemSubtotal = function($item) {
+        $breakdownData = method_exists($item, 'getPriceBreakdown') ? ($item->getPriceBreakdown() ?? []) : [];
+        $bd = $breakdownData['breakdown'] ?? [];
+        $material = (float) ($bd['material_cost'] ?? 0);
+        $pattern = (float) ($bd['pattern_fee'] ?? 0);
+        $labor = (float) ($bd['labor_cost'] ?? 0);
+        $fromBreakdown = $material + $pattern + $labor;
+        return $fromBreakdown > 0 ? $fromBreakdown : (float) ($item->final_price ?? $item->estimated_price ?? 0);
+    };
+    
     $batchComputedTotal = isset($paymentTotal)
         ? (float) $paymentTotal
-        : (float) $paymentOrders->sum(fn($item) => (float) ($item->final_price ?? $item->estimated_price ?? 0));
+        : (float) $paymentOrders->sum($calculateItemSubtotal);
 
     $mayaLogoPath = public_path('images/payment/maya-logo.jpg');
     $mayaLogoDataUri = file_exists($mayaLogoPath)
@@ -302,10 +314,20 @@
                             <span class="text-xs font-bold text-blue-700">{{ $batchItemsCount }} items</span>
                         </div>
                         <div class="space-y-1 max-h-44 overflow-y-auto pr-1">
-                            @foreach($paymentOrders as $item)
+                            @foreach($paymentOrders as $payItem)
+                                @php
+                                    $itemBreakdownList = $payItem->getPriceBreakdown();
+                                    $itemBreakdownListData = $itemBreakdownList['breakdown'] ?? [];
+                                    $itemMaterialList = (float) ($itemBreakdownListData['material_cost'] ?? 0);
+                                    $itemPatternList = (float) ($itemBreakdownListData['pattern_fee'] ?? 0);
+                                    $itemLaborList = (float) ($itemBreakdownListData['labor_cost'] ?? 0);
+                                    $itemPriceCalc = ($itemMaterialList + $itemPatternList + $itemLaborList) > 0 
+                                        ? ($itemMaterialList + $itemPatternList + $itemLaborList) 
+                                        : (float) ($payItem->final_price ?? $payItem->estimated_price ?? 0);
+                                @endphp
                                 <div class="flex justify-between text-xs text-blue-900">
-                                    <span>#{{ $item->id }} {{ $item->fabric_type_name ?? ($item->product->name ?? 'Custom item') }}</span>
-                                    <span class="font-semibold">₱{{ number_format((float) ($item->final_price ?? $item->estimated_price ?? 0), 2) }}</span>
+                                    <span>#{{ $payItem->id }} {{ $payItem->fabric_type ?? ($payItem->product->name ?? 'Custom item') }}</span>
+                                    <span class="font-semibold">₱{{ number_format($itemPriceCalc, 2) }}</span>
                                 </div>
                             @endforeach
                         </div>
@@ -370,7 +392,60 @@
                     </div>
                 @endif
 
-                @if($hasBreakdown)
+                {{-- Price Breakdown Section - Admin Style --}}
+                @if($isBatchPayment)
+                    {{-- Batch Order Breakdown - show each order's breakdown --}}
+                    <div class="border-t-2 border-gray-200 pt-4 mt-4">
+                        <h3 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                            <svg class="w-4 h-4" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                            💰 Price Breakdown
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            @foreach($paymentOrders as $payItem)
+                                @php
+                                    $itemBreakdown = $payItem->getPriceBreakdown();
+                                    $itemBreakdownData = $itemBreakdown['breakdown'] ?? [];
+                                    $itemMaterial = (float) ($itemBreakdownData['material_cost'] ?? 0);
+                                    $itemPattern = (float) ($itemBreakdownData['pattern_fee'] ?? 0);
+                                    $itemLabor = (float) ($itemBreakdownData['labor_cost'] ?? 0);
+                                    $itemSubtotal = ($itemMaterial + $itemPattern + $itemLabor) > 0 
+                                        ? ($itemMaterial + $itemPattern + $itemLabor) 
+                                        : (float) ($payItem->final_price ?? $payItem->estimated_price ?? 0);
+                                @endphp
+                                <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                    <div class="font-bold mb-2" style="color:#800000;">Custom Order #{{ $payItem->id }}</div>
+                                    <div class="space-y-1 text-sm">
+                                        @if($itemMaterial > 0)
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-600">Material Cost:</span>
+                                            <span class="font-semibold text-gray-900">₱{{ number_format($itemMaterial, 2) }}</span>
+                                        </div>
+                                        @endif
+                                        @if($itemPattern > 0)
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-600">Pattern Fee:</span>
+                                            <span class="font-semibold text-gray-900">₱{{ number_format($itemPattern, 2) }}</span>
+                                        </div>
+                                        @endif
+                                        @if($itemLabor > 0)
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-600">Labor Cost:</span>
+                                            <span class="font-semibold text-gray-900">₱{{ number_format($itemLabor, 2) }}</span>
+                                        </div>
+                                        @endif
+                                        <div class="border-t border-gray-200 pt-1 flex justify-between items-center">
+                                            <span class="text-gray-600 font-medium">Subtotal:</span>
+                                            <span class="font-bold text-gray-900">₱{{ number_format($itemSubtotal, 2) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @elseif($hasBreakdown)
                     <div class="border-t-2 border-gray-200 pt-4 mt-4">
                         <h3 class="text-sm font-bold text-gray-700 mb-3">📋 Price Breakdown (by Admin)</h3>
                         @if(isset($breakdown['material_cost']) && $breakdown['material_cost'] > 0)
@@ -412,9 +487,15 @@
                     </div>
                 @endif
 
-                <!-- Order Price (before shipping) -->
+                <!-- Order Price / Subtotal (before shipping) -->
                 <div class="flex justify-between py-3 border-b border-gray-200">
-                    <span class="text-gray-700 font-medium">Order Price</span>
+                    <span class="text-gray-700 font-medium">
+                        @if($isBatchPayment)
+                            Subtotal (All Items)
+                        @else
+                            Order Price
+                        @endif
+                    </span>
                     <span class="font-bold text-gray-900">₱{{ number_format($quotedOrderPrice, 2) }}</span>
                 </div>
 
