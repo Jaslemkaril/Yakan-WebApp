@@ -148,7 +148,7 @@ export default function LoginScreen({ navigation }) {
         >
           {/* Header Background — Yakan textile pattern, same as web hero */}
           <ImageBackground
-            source={require('../assets/images/TUWASYAKAN.jpg')}
+            source={require('../assets/images/jus.jpg')}
             style={styles.headerBg}
             resizeMode="cover"
           >

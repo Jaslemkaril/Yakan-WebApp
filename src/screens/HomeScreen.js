@@ -320,7 +320,7 @@ export default function HomeScreen({ navigation }) {
         {/* HERO SECTION */}
         <View style={styles.heroSection}>
           <ImageBackground
-            source={require('../assets/images/TUWASYAKAN.jpg')}
+            source={require('../assets/images/jus.jpg')}
             style={styles.heroBackground}
             resizeMode="cover"
           >
