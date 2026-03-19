@@ -26,7 +26,7 @@ class OrderController extends Controller
                 'customer_phone' => 'required|string|max:20',
                 'shipping_address' => 'required|string',
                 'delivery_address' => 'required|string',
-                'payment_method' => 'required|string|in:gcash,maya,bank_transfer,cash',
+                'payment_method' => 'required|string|in:gcash,maya,bank_transfer,cash,online_banking',
                 'payment_status' => 'nullable|string|in:pending,paid,verified,failed',
                 'payment_reference' => 'nullable|string',
                 'subtotal' => 'required|numeric|min:0',
@@ -60,9 +60,12 @@ class OrderController extends Controller
             $paymentStatus = ($validated['payment_status'] ?? null) === 'paid'
                 ? 'paid'
                 : ($isPrepaid ? 'paid' : ($validated['payment_status'] ?? 'pending'));
-            
-            // If payment is paid (from mobile), set status to processing immediately
-            $orderStatus = $paymentStatus === 'paid' ? 'processing' : 'pending';
+
+            // Normalise payment_method: 'online_banking' → 'maya'
+            $dbPaymentMethod = $validated['payment_method'] === 'online_banking' ? 'maya' : $validated['payment_method'];
+
+            // status ENUM: pending_confirmation, confirmed, processing, shipped, delivered, cancelled, refunded
+            $orderStatus = $paymentStatus === 'paid' ? 'processing' : 'pending_confirmation';
 
             $orderRef = 'ORD-' . strtoupper(uniqid());
 
@@ -79,7 +82,7 @@ class OrderController extends Controller
                 'customer_phone' => $validated['customer_phone'],
                 'shipping_address' => $validated['shipping_address'],
                 'delivery_address' => $validated['delivery_address'],
-                'payment_method' => $validated['payment_method'],
+                'payment_method' => $dbPaymentMethod,
                 'payment_status' => $paymentStatus,
                 'payment_reference' => $validated['payment_reference'] ?? null,
                 'subtotal' => $validated['subtotal'],
