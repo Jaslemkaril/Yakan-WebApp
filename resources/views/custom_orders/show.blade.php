@@ -5,7 +5,59 @@
     $batchOrders = $batchOrders ?? collect([$order]);
     $isBatchOrder = $isBatchOrder ?? ($batchOrders->count() > 1);
     $batchUnpaidOrders = $batchOrders->where('payment_status', '!=', 'paid')->values();
-    $batchPaymentTotal = $batchPaymentTotal ?? (function () use ($batchUnpaidOrders) {
+    
+    // Helper function to calculate shipping from address with user default fallback
+    $calculateShippingFromAddress = function ($item) {
+        $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+        if ($deliveryType === 'pickup') {
+            return 0.0;
+        }
+        
+        $breakdown = method_exists($item, 'getPriceBreakdown') ? ($item->getPriceBreakdown() ?? []) : [];
+        $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
+        if ($deliveryFeeInBreakdown > 0) {
+            return 0.0;
+        }
+        
+        // Get address fields
+        $city = $item->delivery_city ?? '';
+        $province = $item->delivery_province ?? '';
+        $address = $item->delivery_address ?? '';
+        
+        // Fallback to user's default address if order has none
+        if (!$city && !$province && !$address && $item->user) {
+            $userAddr = $item->user->addresses()->where('is_default', true)->first();
+            if ($userAddr) {
+                $city = $userAddr->city ?? '';
+                $province = $userAddr->province ?? ($userAddr->region ?? '');
+                $address = implode(' ', array_filter([
+                    $userAddr->street_name ?? null,
+                    $userAddr->barangay ?? null,
+                    $userAddr->city ?? null,
+                    $userAddr->province ?? ($userAddr->region ?? null),
+                ]));
+            }
+        }
+        
+        // Calculate zone-based shipping
+        $haystack = strtolower($address . ' ' . $city . ' ' . $province);
+        if ($haystack === '' || $haystack === '  ') {
+            return 100.0; // Default
+        }
+        
+        if (str_contains($haystack, 'zamboanga') || str_contains($haystack, 'barmm') || str_contains($haystack, 'basilan') || str_contains($haystack, 'sulu') || str_contains($haystack, 'tawi')) {
+            return 100.0;
+        } elseif (str_contains($haystack, 'mindanao') || str_contains($haystack, 'davao') || str_contains($haystack, 'cagayan de oro') || str_contains($haystack, 'general santos') || str_contains($haystack, 'caraga') || str_contains($haystack, 'soccsksargen')) {
+            return 180.0;
+        } elseif (str_contains($haystack, 'visaya') || str_contains($haystack, 'cebu') || str_contains($haystack, 'iloilo') || str_contains($haystack, 'bacolod') || str_contains($haystack, 'tacloban') || str_contains($haystack, 'leyte')) {
+            return 250.0;
+        } elseif (str_contains($haystack, 'ncr') || str_contains($haystack, 'metro manila') || str_contains($haystack, 'manila') || str_contains($haystack, 'calabarzon') || str_contains($haystack, 'central luzon')) {
+            return 300.0;
+        }
+        return 350.0;
+    };
+    
+    $batchPaymentTotal = $batchPaymentTotal ?? (function () use ($batchUnpaidOrders, $calculateShippingFromAddress) {
         $quotedSubtotal = (float) $batchUnpaidOrders->sum(fn($item) => (float) ($item->final_price ?? $item->estimated_price ?? 0));
 
         if ($batchUnpaidOrders->count() <= 1) {
@@ -13,33 +65,17 @@
             if (!$single) {
                 return 0;
             }
-
-            $deliveryType = $single->delivery_type ?? ($single->delivery_address ? 'delivery' : 'pickup');
-            if ($deliveryType === 'pickup') {
-                return $quotedSubtotal;
-            }
-
-            $breakdown = method_exists($single, 'getPriceBreakdown') ? ($single->getPriceBreakdown() ?? []) : [];
-            $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
-            $shipping = $deliveryFeeInBreakdown > 0 ? 0 : (float) ($single->shipping_fee ?? 0);
-
-            return $quotedSubtotal + $shipping;
+            return $quotedSubtotal + $calculateShippingFromAddress($single);
         }
 
-        $sharedShipping = (float) ($batchUnpaidOrders->map(function ($item) {
-            $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
-            if ($deliveryType === 'pickup') {
-                return 0;
-            }
-
-            $breakdown = method_exists($item, 'getPriceBreakdown') ? ($item->getPriceBreakdown() ?? []) : [];
-            $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
-
-            return $deliveryFeeInBreakdown > 0 ? 0 : (float) ($item->shipping_fee ?? 0);
-        })->max() ?? 0);
-
+        $sharedShipping = (float) ($batchUnpaidOrders->map(fn($item) => $calculateShippingFromAddress($item))->max() ?? 0);
         return $quotedSubtotal + $sharedShipping;
     })();
+    
+    // Calculate batch items subtotal (without shipping) for display
+    $batchItemsSubtotal = (float) $batchUnpaidOrders->sum(fn($item) => (float) ($item->final_price ?? $item->estimated_price ?? 0));
+    $batchShippingFee = $batchPaymentTotal - $batchItemsSubtotal;
+    
     $customOrderEstimatedDays = (int) \App\Models\SystemSetting::get('custom_order_estimated_days', 14);
     $estimatedCompletionDate = $order->created_at ? $order->created_at->copy()->addDays($customOrderEstimatedDays) : null;
     $authToken = request('auth_token') ?? session('auth_token') ?? request()->cookie('auth_token');
@@ -1027,18 +1063,47 @@
                                 @elseif($order->status === 'approved' && $order->final_price)
                                     <div>
                                         @php
-                                            $summaryShippingFee = $deliveryType === 'pickup' ? 0 : (float) ($order->shipping_fee ?? 0);
-                                            $summaryTotal = (float) $order->final_price + $summaryShippingFee;
+                                            // Use batch totals if this is a batch order
+                                            if ($isBatchOrder) {
+                                                $summaryShippingFee = $deliveryType === 'pickup' ? 0 : $batchShippingFee;
+                                                $summarySubtotal = $batchItemsSubtotal;
+                                                $summaryTotal = $deliveryType === 'pickup' ? $summarySubtotal : $batchPaymentTotal;
+                                            } else {
+                                                $summaryShippingFee = $deliveryType === 'pickup' ? 0 : (float) ($order->shipping_fee ?? 0);
+                                                $summarySubtotal = (float) $order->final_price;
+                                                $summaryTotal = $summarySubtotal + $summaryShippingFee;
+                                            }
                                         @endphp
+                                        
+                                        @if($isBatchOrder)
+                                        <p class="text-sm font-medium text-gray-700 mb-1">Batch Order ({{ count($batchOrders) }} items)</p>
+                                        <p class="text-xl font-bold" style="color:#800000;">₱{{ number_format($summaryTotal, 2) }}</p>
+                                        <p class="text-xs mt-1 font-semibold text-emerald-600">✓ Quote accepted</p>
+                                        @else
                                         <p class="text-sm font-medium text-gray-700 mb-1">Agreed Price</p>
                                         <p class="text-xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
                                         <p class="text-xs mt-1 font-semibold text-emerald-600">✓ Quote accepted</p>
+                                        @endif
 
                                         <div class="mt-3 bg-gray-50 rounded-lg p-3 border border-gray-200 text-sm space-y-2">
+                                            @if($isBatchOrder)
+                                                {{-- Batch order breakdown --}}
+                                                @foreach($batchOrders as $batchItem)
+                                                <div class="flex justify-between">
+                                                    <span class="text-gray-600">Order #{{ $batchItem->id }}</span>
+                                                    <span class="font-semibold text-gray-900">₱{{ number_format((float) $batchItem->final_price, 2) }}</span>
+                                                </div>
+                                                @endforeach
+                                                <div class="flex justify-between pt-1 border-t border-gray-200">
+                                                    <span class="text-gray-600">Items Subtotal</span>
+                                                    <span class="font-semibold text-gray-900">₱{{ number_format($summarySubtotal, 2) }}</span>
+                                                </div>
+                                            @else
                                             <div class="flex justify-between">
                                                 <span class="text-gray-600">Agreed Price</span>
                                                 <span class="font-semibold text-gray-900">₱{{ number_format((float) $order->final_price, 2) }}</span>
                                             </div>
+                                            @endif
                                             <div class="flex justify-between">
                                                 <span class="text-gray-600">Shipping Fee</span>
                                                 <span class="font-semibold text-gray-900">₱{{ number_format($summaryShippingFee, 2) }}</span>
@@ -1408,17 +1473,43 @@
                     @if($order->final_price)
                         <div class="bg-white rounded-2xl p-6 border-2 mb-6 max-w-md mx-auto shadow-lg" style="border-color:#e0b0b0;">
                             <p class="text-sm font-semibold text-gray-600 mb-2 uppercase tracking-wide">Total Amount to Pay</p>
-                            <p class="text-5xl font-black mb-3" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
-                            <p class="text-xs text-gray-500">Order #{{ $order->id }}</p>
+                            <p class="text-5xl font-black mb-3" style="color:#800000;">₱{{ number_format($batchPaymentTotal, 2) }}</p>
+                            <p class="text-xs text-gray-500">
+                                @if($isBatchOrder)
+                                    Batch Order ({{ $batchUnpaidOrders->count() }} items)
+                                @else
+                                    Order #{{ $order->id }}
+                                @endif
+                            </p>
                             
-                            {{-- Price Breakdown --}}
-                            @php
-                                $priceBreakdown = $order->getPriceBreakdown();
-                                $breakdown = $priceBreakdown['breakdown'] ?? [];
-                                $hasBreakdown = !empty($breakdown);
-                            @endphp
-                            
-                            @if($hasBreakdown)
+                            {{-- Price Breakdown for Batch --}}
+                            @if($isBatchOrder)
+                                <div class="border-t-2 border-gray-200 pt-4 mt-4">
+                                    <h3 class="text-sm font-bold text-gray-700 mb-3">Price Breakdown</h3>
+                                    @foreach($batchUnpaidOrders as $batchItem)
+                                        <div class="flex justify-between py-2 text-sm">
+                                            <span class="text-gray-600">Order #{{ $batchItem->id }}</span>
+                                            <span class="font-semibold text-gray-900">₱{{ number_format($batchItem->final_price ?? $batchItem->estimated_price ?? 0, 2) }}</span>
+                                        </div>
+                                    @endforeach
+                                    <div class="flex justify-between py-2 text-sm">
+                                        <span class="text-gray-600">Shipping Fee</span>
+                                        <span class="font-semibold text-gray-900">₱{{ number_format($batchShippingFee, 2) }}</span>
+                                    </div>
+                                    <div class="border-t border-gray-300 pt-2 mt-2 flex justify-between text-sm">
+                                        <span class="font-bold text-gray-900">Total</span>
+                                        <span class="font-bold" style="color:#800000;">₱{{ number_format($batchPaymentTotal, 2) }}</span>
+                                    </div>
+                                </div>
+                            @else
+                                {{-- Single Order Price Breakdown --}}
+                                @php
+                                    $priceBreakdown = $order->getPriceBreakdown();
+                                    $breakdown = $priceBreakdown['breakdown'] ?? [];
+                                    $hasBreakdown = !empty($breakdown);
+                                @endphp
+                                
+                                @if($hasBreakdown)
                                 <div class="border-t-2 border-gray-200 pt-4 mt-4">
                                     <h3 class="text-sm font-bold text-gray-700 mb-3">Price Breakdown</h3>
                                     
@@ -1470,6 +1561,7 @@
                                         </div>
                                     @endif
                                 </div>
+                            @endif
                             @endif
                         </div>
                     @endif
