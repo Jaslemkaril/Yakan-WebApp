@@ -124,10 +124,25 @@
         : null;
 
     // Determine shipping fee
-    // Priority: stored shipping_fee > calculate from stored city/province > infer from address > 0 (pickup)
+    // Priority: stored shipping_fee > calculate from stored city/province > user default address > default fee
     $storedCity = $order->delivery_city ?? '';
     $storedProvince = $order->delivery_province ?? '';
     $deliveryAddressRaw = strtolower((string) ($order->delivery_address ?? ''));
+
+    // Fallback to user's default address if order has no address data
+    if (!$storedCity && !$storedProvince && $deliveryAddressRaw === '' && $order->user) {
+        $userDefaultAddr = $order->user->addresses()->where('is_default', true)->first();
+        if ($userDefaultAddr) {
+            $storedCity = $userDefaultAddr->city ?? '';
+            $storedProvince = $userDefaultAddr->province ?? ($userDefaultAddr->region ?? '');
+            $deliveryAddressRaw = strtolower(implode(' ', array_filter([
+                $userDefaultAddr->street_name ?? null,
+                $userDefaultAddr->barangay ?? null,
+                $userDefaultAddr->city ?? null,
+                $userDefaultAddr->province ?? ($userDefaultAddr->region ?? null),
+            ])));
+        }
+    }
 
     if (!$storedCity && !$storedProvince && $deliveryAddressRaw !== '') {
         $addressHints = [

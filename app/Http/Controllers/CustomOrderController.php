@@ -2909,11 +2909,31 @@ class CustomOrderController extends Controller
             
             // If shipping fee not provided, calculate from user's address
             if ($shippingFee <= 0 && $order->delivery_type !== 'pickup') {
+                // Get address fields, falling back to user's default address if order has none
+                $city = $request->input('delivery_city') ?? $order->delivery_city ?? '';
+                $province = $request->input('delivery_province') ?? $order->delivery_province ?? '';
+                $address = $order->delivery_address ?? '';
+                
+                // Fallback to user's default address
+                if (!$city && !$province && !$address && $order->user) {
+                    $userAddr = $order->user->addresses()->where('is_default', true)->first();
+                    if ($userAddr) {
+                        $city = $userAddr->city ?? '';
+                        $province = $userAddr->province ?? ($userAddr->region ?? '');
+                        $address = implode(' ', array_filter([
+                            $userAddr->street_name ?? null,
+                            $userAddr->barangay ?? null,
+                            $userAddr->city ?? null,
+                            $userAddr->province ?? ($userAddr->region ?? null),
+                        ]));
+                    }
+                }
+                
                 $shippingFee = $this->resolveAddressBasedShippingFee(
                     $order->delivery_type ?? 'delivery',
-                    $request->input('delivery_city') ?? $order->delivery_city ?? '',
-                    $request->input('delivery_province') ?? $order->delivery_province ?? '',
-                    $order->delivery_address ?? ''
+                    $city,
+                    $province,
+                    $address
                 );
             }
             
