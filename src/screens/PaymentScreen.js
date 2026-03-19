@@ -210,8 +210,24 @@ export default function PaymentScreen({ navigation, route }) {
 
       console.log('ðŸ”µ Order created successfully:', response);
 
-      // Extract backend order ID from various possible response structures
-      const backendId = response.data?.data?.id || response.data?.id || response.data?.order?.id;
+      // Extract backend order ID - try all possible response structures
+      const resBody = response.data || {};
+      const backendId = resBody?.data?.id
+        ?? resBody?.id
+        ?? resBody?.order?.id
+        ?? resBody?.data?.order_id
+        ?? null;
+      const orderRef = resBody?.data?.order_ref ?? resBody?.order_ref ?? null;
+      console.log('[Payment] Full response:', JSON.stringify(resBody).substring(0, 400));
+      console.log('[Payment] backendId:', backendId, 'orderRef:', orderRef);
+
+      if (!backendId) {
+        // Show exact response for debugging
+        setIsProcessing(false);
+        Alert.alert('Debug: Order Created', 'Response: ' + JSON.stringify(resBody).substring(0, 300));
+        return;
+      }
+
       console.log('ðŸ”µ Backend order ID:', backendId);
 
       const finalOrderData = {
