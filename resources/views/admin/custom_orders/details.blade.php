@@ -108,10 +108,8 @@
         if ($deliveryFeeInBreakdown > 0) {
             return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
         }
-        $shipping = (float) ($item->shipping_fee ?? 0);
-        if ($shipping <= 0) {
-            $shipping = $resolveShippingFromAddress($item);
-        }
+        // Always recalculate from address to ensure correct zone-based pricing
+        $shipping = $resolveShippingFromAddress($item);
         return ['quoted' => $quoted, 'shipping' => $shipping, 'total' => $quoted + $shipping];
     };
 

@@ -191,10 +191,8 @@
 
     if (!$isDelivery) {
         $calcShippingFee = 0;
-    } elseif ($storedShippingFee > 0) {
-        $calcShippingFee = $storedShippingFee;
     } elseif ($storedCity || $storedProvince || $deliveryAddressRaw) {
-        // Calculate from stored city/province/address using same zone logic
+        // Always calculate from address to ensure correct zone-based pricing
         $cityL = strtolower($storedCity);
         $regionL = strtolower($storedProvince);
         $haystack = $deliveryAddressRaw . ' ' . $cityL . ' ' . $regionL;
