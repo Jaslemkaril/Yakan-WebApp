@@ -429,37 +429,10 @@
 </div><!-- /wrap -->
 
 <script>
-    // ─── Viewport Height Fix ───────────────────────────────────────────────
-    // Makes the chat fill the available screen space instead of extending
-    // the page indefinitely (which caused the large blank space below messages).
+    // ─── Scroll to bottom on load ──────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
-        const cw = document.getElementById('adminContentWrap');
-        if (!cw || !document.querySelector('.cs-wrap')) return;
-        cw.style.overflow      = 'hidden';
-        cw.style.padding       = '0';
-        cw.style.display       = 'flex';
-        cw.style.flexDirection = 'column';
-        // The last direct child of adminContentWrap is the div wrapping @yield('content')
-        const children = cw.children;
-        const last = children[children.length - 1];
-        if (last) {
-            last.style.flex          = '1';
-            last.style.minHeight     = '0';
-            last.style.overflow      = 'hidden';
-            last.style.display       = 'flex';
-            last.style.flexDirection = 'column';
-        }
-        const wrap = document.querySelector('.cs-wrap');
-        if (wrap) {
-            wrap.style.flex      = '1';
-            wrap.style.minHeight = '0';
-            wrap.style.margin    = '0';
-        }
-        // Scroll messages to bottom after layout is settled
-        setTimeout(function () {
-            const mc = document.getElementById('messagesContainer');
-            if (mc) mc.scrollTop = mc.scrollHeight;
-        }, 0);
+        var mc = document.getElementById('messagesContainer');
+        if (mc) mc.scrollTop = mc.scrollHeight;
     });
 
     // ─── Image Preview ─────────────────────────────────────────────────────
