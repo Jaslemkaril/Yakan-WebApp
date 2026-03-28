@@ -116,10 +116,25 @@ class MayaPaymentController extends Controller
             ], fn($v) => $v !== null && $v !== '');
             $addrFields['countryCode'] = 'PH'; // always include countryCode
 
-            $nameParts = explode(' ', trim($order->customer_name ?? 'Customer'), 2);
+            // Clean and split the customer name.
+            // Names stored as "LASTNAME, FIRSTNAME MIDDLE" → split on comma first.
+            $rawName = trim($order->customer_name ?? '');
+            if (str_contains($rawName, ',')) {
+                // "TINGKAHAN., JASLIM" or "LASTNAME, FIRSTNAME" format
+                [$last, $first] = array_pad(explode(',', $rawName, 2), 2, '');
+                $firstName = trim(preg_replace('/[\.,]+$/', '', trim($first)));
+                $lastName  = trim(preg_replace('/[\.,]+$/', '', trim($last)));
+            } else {
+                $parts     = explode(' ', $rawName, 2);
+                $firstName = trim(preg_replace('/[\.,]+$/', '', $parts[0]));
+                $lastName  = trim(preg_replace('/[\.,]+$/', '', $parts[1] ?? ''));
+            }
+            $firstName = $firstName ?: 'Customer';
+            $lastName  = $lastName  ?: '-';
+
             $buyer = [
-                'firstName' => $nameParts[0] ?: 'Customer',
-                'lastName'  => $nameParts[1] ?? '-',
+                'firstName' => $firstName,
+                'lastName'  => $lastName,
             ];
 
             $contactArray = array_filter([

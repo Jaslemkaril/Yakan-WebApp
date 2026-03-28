@@ -333,24 +333,33 @@ class MayaCheckoutService
         }
     }
 
-    private function firstName(?string $fullName): string
+    private function parseName(?string $fullName): array
     {
         $name = trim((string) $fullName);
         if ($name === '') {
-            return 'Customer';
+            return ['Customer', '-'];
         }
+        // Handle "LASTNAME, FIRSTNAME" or "LASTNAME, FIRSTNAME MIDDLE" format
+        if (str_contains($name, ',')) {
+            [$last, $first] = array_pad(explode(',', $name, 2), 2, '');
+            return [
+                trim(preg_replace('/[,\.]+$/', '', trim($first))) ?: 'Customer',
+                trim(preg_replace('/[,\.]+$/', '', trim($last)))  ?: '-',
+            ];
+        }
+        $parts = preg_split('/\s+/', $name);
+        $first = trim(preg_replace('/[,\.]+$/', '', $parts[0] ?? ''));
+        $last  = trim(preg_replace('/[,\.]+$/', '', end($parts)));
+        return [$first ?: 'Customer', count($parts) > 1 ? ($last ?: '-') : '-'];
+    }
 
-        return explode(' ', $name)[0] ?: 'Customer';
+    private function firstName(?string $fullName): string
+    {
+        return $this->parseName($fullName)[0];
     }
 
     private function lastName(?string $fullName): string
     {
-        $name = trim((string) $fullName);
-        if ($name === '') {
-            return 'Yakan';
-        }
-
-        $parts = preg_split('/\s+/', $name) ?: [];
-        return count($parts) > 1 ? end($parts) : 'Yakan';
+        return $this->parseName($fullName)[1];
     }
 }
