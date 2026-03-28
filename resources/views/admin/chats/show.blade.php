@@ -278,6 +278,8 @@
 
             <!-- Messages -->
             <div class="cs-messages" id="messagesContainer">
+                {{-- Spacer: grows to fill empty space, pushing messages to the bottom --}}
+                <div style="flex:1; min-height:0;"></div>
                 @php $messagesArr = $messages->values(); @endphp
                 @forelse($messagesArr as $message)
                     @php
