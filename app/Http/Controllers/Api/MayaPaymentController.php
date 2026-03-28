@@ -83,13 +83,38 @@ class MayaPaymentController extends Controller
                 ? $order->customer_email
                 : ($order->user?->email ?? '');
 
-            $shippingAddress = [
+            // Last-resort: parse city/province/zip from the concatenated shipping_address string
+            // when dedicated columns are null. The mobile app stores addresses like:
+            // "Street, Barangay, City, Province ZIPCODE"
+            if ((empty($addressCity) || empty($addressProvince)) && !empty($order->shipping_address)) {
+                $parts = preg_split('/\s*,\s*/', trim($order->shipping_address));
+                $count = count($parts);
+                if ($count >= 3) {
+                    // Last segment may be "Province 8000" or just "Province"
+                    $lastPart = $parts[$count - 1];
+                    if (preg_match('/^(.+?)\s+(\d{4,5})\s*$/', $lastPart, $m)) {
+                        if (empty($addressProvince)) $addressProvince = trim($m[1]);
+                        if (empty($addressZip))      $addressZip      = $m[2];
+                    } else {
+                        if (empty($addressProvince)) $addressProvince = trim($lastPart);
+                    }
+                    if (empty($addressCity)) $addressCity = trim($parts[$count - 2]);
+                    // line1 = everything except the last two parts (city, province)
+                    $addressStreet = trim(implode(', ', array_slice($parts, 0, $count - 2))) ?: $addressStreet;
+                } elseif ($count === 2) {
+                    if (empty($addressCity))    $addressCity    = trim($parts[0]);
+                    if (empty($addressProvince)) $addressProvince = trim($parts[1]);
+                }
+            }
+
+            $addrFields = array_filter([
                 'line1'       => $addressStreet,
                 'city'        => $addressCity,
                 'state'       => $addressProvince,
                 'zipCode'     => $addressZip,
                 'countryCode' => 'PH',
-            ];
+            ], fn($v) => $v !== null && $v !== '');
+            $addrFields['countryCode'] = 'PH'; // always include countryCode
 
             $nameParts = explode(' ', trim($order->customer_name ?? 'Customer'), 2);
             $buyer = [
@@ -106,9 +131,9 @@ class MayaPaymentController extends Controller
             }
 
             // Always include shippingAddress/billingAddress if we have at least a line1 or city.
-            if (!empty($shippingAddress['line1']) || !empty($shippingAddress['city'])) {
-                $buyer['shippingAddress'] = $shippingAddress;
-                $buyer['billingAddress']  = $shippingAddress;
+            if (!empty($addrFields['line1']) || !empty($addrFields['city'])) {
+                $buyer['shippingAddress'] = $addrFields;
+                $buyer['billingAddress']  = $addrFields;
             }
 
             $payload = [
