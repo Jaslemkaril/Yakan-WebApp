@@ -74,7 +74,7 @@
                     </div>
                 </div>
                 <h1 class="text-5xl lg:text-6xl font-bold text-white mb-4">Track Your Order</h1>
-                <p class="text-xl text-white/90 max-w-2xl mx-auto">Enter your tracking number, order ID, or email to get real-time updates on your delivery</p>
+                <p class="text-xl text-white/90 max-w-2xl mx-auto">Click below to view real-time updates on your orders and deliveries</p>
             </div>
         </div>
     </section>
@@ -93,40 +93,18 @@
                 </div>
             @endif
 
-            <form action="{{ route('track-order.search') }}" method="POST" id="trackForm">
-                @csrf
-                
-                <!-- Hidden search type - always tracking number -->
-                <input type="hidden" name="search_type" value="tracking_number">
-
-                <!-- Search Input -->
-                <div class="mb-6">
-                    <label for="search_value" class="block text-sm font-semibold text-gray-700 mb-2">
-                        Enter Order Reference Number
-                    </label>
-                    <input type="text" 
-                           name="search_value" 
-                           id="search_value" 
-                           class="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:ring-4 transition-all text-lg"
-                           style="--tw-ring-color: rgba(128, 0, 0, 0.2);" onfocus="this.style.borderColor='#800000'"
-                           placeholder="YAK-XXXXXXXXXX"
-                           required>
-                </div>
-
-                <!-- Submit Button -->
-                <button type="submit" class="w-full text-white px-8 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl font-semibold text-lg flex items-center justify-center" style="background: linear-gradient(to right, #800000, #600000);" onmouseover="this.style.background='linear-gradient(to right, #600000, #400000)'" onmouseout="this.style.background='linear-gradient(to right, #800000, #600000)'">
-                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
-                    Track My Order
-                </button>
-            </form>
+            <a href="#recent-orders" class="w-full text-white px-8 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl font-semibold text-lg flex items-center justify-center" style="background: linear-gradient(to right, #800000, #600000);" onmouseover="this.style.background='linear-gradient(to right, #600000, #400000)'" onmouseout="this.style.background='linear-gradient(to right, #800000, #600000)'">
+                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                Track My Order
+            </a>
 
         </div>
     </div>
 
     <!-- Recent Orders Section -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 bg-gray-50">
+    <section id="recent-orders" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 bg-gray-50">
         <div class="mb-12">
             <h2 class="text-4xl font-bold text-gray-900 mb-2">Your Recent Orders</h2>
             <p class="text-lg text-gray-600">Quick links to your orders and tracking information</p>
