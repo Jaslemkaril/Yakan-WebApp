@@ -1142,48 +1142,50 @@
                             ];
                             
                             $statuses = [
-                                'price_quoted' => ['svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>', 'label' => 'Quoted', 'color' => 'maroon'],
-                                'approved' => ['svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>', 'label' => 'Paid', 'color' => 'maroon'],
-                                'in_production' => ['svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>', 'label' => 'Production', 'color' => 'maroon'],
-                                'production_complete' => ['svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>', 'label' => 'Complete', 'color' => 'maroon'],
-                                'out_for_delivery' => ['svg' => '<path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>', 'label' => 'Shipping', 'color' => 'maroon'],
-                                'delivered' => ['svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>', 'label' => 'Delivered', 'color' => 'maroon']
+                                'price_quoted'       => ['svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>',  'label' => 'Quoted',     'color' => 'maroon'],
+                                'approved'           => ['svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>',                                                                                                                                                                                                                                                                                                                                                                                                                                       'label' => 'Paid',       'color' => 'maroon'],
+                                'in_production'      => ['svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>',                                                                                                                                              'label' => 'Prod.',      'color' => 'maroon'],
+                                'production_complete'=> ['svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>',                                                                                                                                                                                                                                                                                                                                                                                                                                       'label' => 'Done',       'color' => 'maroon'],
+                                'out_for_delivery'   => ['svg' => '<path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>',                                                                                                                                                   'label' => 'Shipped',    'color' => 'maroon'],
+                                'delivered'          => ['svg' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>',                                                                                                                                                                                                                                                                                                                                                                                                                                                               'label' => 'Delivered',  'color' => 'maroon'],
                             ];
-                            // If order is marked completed, treat it as delivered for display so earlier steps gray out correctly.
-                            // If order is processing with payment confirmed (chat orders), treat as approved/paid
-                            if ($order->status === 'completed') {
+                            // 'completed' is treated the same as 'delivered' for display
+                            if (in_array($order->status, ['delivered', 'completed'])) {
                                 $currentStatus = 'delivered';
                             } elseif ($order->status === 'processing' && ($order->payment_confirmed_at || $order->payment_status === 'paid')) {
                                 $currentStatus = 'approved';
                             } else {
                                 $currentStatus = $order->status;
                             }
-                            $statusKeys = array_keys($statuses);
-                            $currentIndex = array_search($currentStatus, $statusKeys);
+                            $statusKeys    = array_keys($statuses);
+                            $currentIndex  = array_search($currentStatus, $statusKeys);
                         @endphp
                         
-                        <div class="flex items-center justify-between mb-5">
+                        {{-- Horizontally scrollable stepper so labels never get clipped --}}
+                        <div class="overflow-x-auto -mx-1 px-1 pb-1">
+                            <div class="flex items-center justify-between min-w-[320px] mb-5">
                             @foreach($statuses as $key => $status)
                                 @php
-                                    $index = array_search($key, $statusKeys);
+                                    $index      = array_search($key, $statusKeys);
                                     $isComplete = $index <= $currentIndex;
-                                    $isCurrent = $key === $currentStatus;
+                                    $isCurrent  = $key === $currentStatus;
                                 @endphp
-                                <div class="flex flex-col items-center flex-1">
-                                    <div class="w-10 h-10 rounded-full flex items-center justify-center mb-1 transition-all @if($isCurrent) scale-110 @endif"
-                                         style="@if($isComplete) background-color: {{ $colorMap[$status['color']]['bg'] }}; color: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); @else background-color: #E5E7EB; color: #9CA3AF; @endif @if($isCurrent) box-shadow: 0 0 0 4px {{ $colorMap[$status['color']]['ring'] }}; @endif">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div class="flex flex-col items-center" style="min-width:44px;">
+                                    <div class="w-9 h-9 rounded-full flex items-center justify-center mb-1 transition-all {{ $isCurrent ? 'scale-110' : '' }}"
+                                         style="{{ $isComplete ? 'background-color:'.$colorMap[$status['color']]['bg'].';color:white;box-shadow:0 2px 6px rgba(0,0,0,.18);' : 'background-color:#E5E7EB;color:#9CA3AF;' }}{{ $isCurrent ? 'box-shadow:0 0 0 3px '.$colorMap[$status['color']]['ring'].';' : '' }}">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             {!! $status['svg'] !!}
                                         </svg>
                                     </div>
-                                    <span class="text-xs font-medium @if($isComplete) text-gray-800 @else text-gray-400 @endif">
+                                    <span class="text-[10px] font-medium text-center leading-tight {{ $isComplete ? 'text-gray-800' : 'text-gray-400' }}">
                                         {{ $status['label'] }}
                                     </span>
                                 </div>
                                 @if(!$loop->last)
-                                <div class="flex-1 h-1 mx-1 rounded" style="background-color: @if($index < $currentIndex) {{ $colorMap[$status['color']]['line'] }} @else #E5E7EB @endif"></div>
+                                <div class="flex-1 h-0.5 mx-0.5 rounded" style="background-color:{{ $index < $currentIndex ? $colorMap[$status['color']]['line'] : '#E5E7EB' }};min-width:8px;"></div>
                                 @endif
                             @endforeach
+                            </div>
                         </div>
                         
                         {{-- Next Action Button --}}
@@ -1219,7 +1221,7 @@
                                 </svg>
                             </button>
                         </form>
-                        @elseif($order->status === 'delivered')
+                        @elseif(in_array($order->status, ['delivered', 'completed']))
                         <div class="bg-gradient-to-r from-red-50 to-red-100 border-2 border-red-300 rounded-lg p-4 text-center">
                             <div class="flex justify-center mb-2">
                                 <svg class="w-12 h-12 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">

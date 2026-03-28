@@ -25,7 +25,7 @@ class MayaPaymentController extends Controller
             'cancel_url' => 'nullable|url',
         ]);
 
-        $order = Order::with('items.product')->findOrFail($validated['order_id']);
+        $order = Order::with(['items.product', 'user'])->findOrFail($validated['order_id']);
 
         if ((int) $order->user_id !== (int) $request->user()->id) {
             return response()->json([
@@ -62,35 +62,50 @@ class MayaPaymentController extends Controller
             })->values()->all();
 
             // Resolve the best available address for pre-filling the Maya checkout form.
-            $userAddress = $order->user_address_id
-                ? UserAddress::find($order->user_address_id)
-                : null;
+            // Priority: order.user_address_id → user's default address → any address for the user.
+            $userAddress = null;
+            if ($order->user_address_id) {
+                $userAddress = UserAddress::find($order->user_address_id);
+            }
+            if (!$userAddress && $order->user_id) {
+                $userAddress = UserAddress::where('user_id', $order->user_id)
+                    ->orderByDesc('is_default')
+                    ->first();
+            }
 
-            $addressLine1 = $order->shipping_address
+            $addressStreet   = $order->shipping_address
                 ?? ($userAddress ? trim(implode(', ', array_filter([$userAddress->street, $userAddress->barangay]))) : '');
             $addressCity     = $order->shipping_city     ?? $userAddress?->city     ?? '';
             $addressProvince = $order->shipping_province ?? $userAddress?->province ?? '';
             $addressZip      = $userAddress?->postal_code ?? '';
             $contactPhone    = $order->customer_phone    ?? $userAddress?->phone_number ?? '';
+            $contactEmail    = ($order->customer_email && $order->customer_email !== 'mobile@user.com')
+                ? $order->customer_email
+                : ($order->user?->email ?? '');
 
-            $shippingAddress = array_filter([
-                'line1'       => $addressLine1,
+            $shippingAddress = [
+                'line1'       => $addressStreet,
                 'city'        => $addressCity,
                 'state'       => $addressProvince,
                 'zipCode'     => $addressZip,
                 'countryCode' => 'PH',
-            ]);
-
-            $nameParts = explode(' ', $order->customer_name ?? 'Customer -', 2);
-            $buyer = [
-                'firstName' => $nameParts[0],
-                'lastName'  => $nameParts[1] ?? '-',
-                'contact'   => array_filter([
-                    'email' => $order->customer_email ?? '',
-                    'phone' => $contactPhone,
-                ]),
             ];
 
+            $nameParts = explode(' ', trim($order->customer_name ?? 'Customer'), 2);
+            $buyer = [
+                'firstName' => $nameParts[0] ?: 'Customer',
+                'lastName'  => $nameParts[1] ?? '-',
+            ];
+
+            $contactArray = array_filter([
+                'email' => $contactEmail,
+                'phone' => $contactPhone,
+            ]);
+            if (!empty($contactArray)) {
+                $buyer['contact'] = $contactArray;
+            }
+
+            // Always include shippingAddress/billingAddress if we have at least a line1 or city.
             if (!empty($shippingAddress['line1']) || !empty($shippingAddress['city'])) {
                 $buyer['shippingAddress'] = $shippingAddress;
                 $buyer['billingAddress']  = $shippingAddress;

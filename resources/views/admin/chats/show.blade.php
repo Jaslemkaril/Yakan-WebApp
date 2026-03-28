@@ -5,7 +5,7 @@
 @section('content')
 <style>
     /* ─── Layout ─────────────────────────────────── */
-    .cs-wrap { background: #f8f7f5; min-height: 100vh; margin: -24px; display: flex; flex-direction: column; }
+    .cs-wrap { background: #f8f7f5; display: flex; flex-direction: column; overflow: hidden; }
 
     /* Top bar */
     .cs-topbar { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: #fff; border-bottom: 1px solid #e9e5e0; gap: 16px; flex-wrap: wrap; }
@@ -130,6 +130,18 @@
         .cs-body { flex-direction: column; }
         .cs-sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e9e5e0; overflow-y: visible; }
     }
+
+    /* ─── Grouped messages ──────────────────────── */
+    .cs-msg { margin-bottom: 3px; }
+    .cs-msg.last-in-group { margin-bottom: 14px; }
+    .cs-avatar-spacer { width: 32px; flex-shrink: 0; }
+    .cs-msg.user  .cs-msg-bubble.no-tail { border-bottom-left-radius: 16px; }
+    .cs-msg.admin .cs-msg-bubble.no-tail { border-bottom-right-radius: 16px; }
+
+    /* ─── Date separator ───────────────────────── */
+    .cs-date-sep { display: flex; align-items: center; gap: 10px; margin: 10px 0 6px; }
+    .cs-date-sep::before, .cs-date-sep::after { content: ''; flex: 1; height: 1px; background: #e5e7eb; }
+    .cs-date-sep span { font-size: 0.67rem; font-weight: 700; color: #9ca3af; white-space: nowrap; padding: 2px 8px; background: #f8f7f5; border-radius: 10px; border: 1px solid #e5e7eb; letter-spacing: 0.03em; text-transform: uppercase; }
 
 </style>
 
@@ -266,41 +278,71 @@
 
             <!-- Messages -->
             <div class="cs-messages" id="messagesContainer">
-                @forelse($messages as $message)
-                    @php $isAdmin = $message->sender_type !== 'user'; @endphp
-                    <div class="cs-msg {{ $isAdmin ? 'admin' : 'user' }}">
-                        <div class="cs-avatar">
-                            {{ $isAdmin ? 'A' : strtoupper(substr($message->user?->name ?? 'C', 0, 1)) }}
-                        </div>
+                @php $messagesArr = $messages->values(); @endphp
+                @forelse($messagesArr as $message)
+                    @php
+                        $isAdmin     = $message->sender_type !== 'user';
+                        $senderKey   = $isAdmin ? 'admin' : 'user';
+                        $prevMsg     = $loop->index > 0 ? $messagesArr[$loop->index - 1] : null;
+                        $nextMsg     = !$loop->last ? $messagesArr[$loop->index + 1] : null;
+                        $prevKey     = $prevMsg ? ($prevMsg->sender_type !== 'user' ? 'admin' : 'user') : null;
+                        $nextKey     = $nextMsg ? ($nextMsg->sender_type !== 'user' ? 'admin' : 'user') : null;
+                        $isGrouped      = $prevKey === $senderKey;
+                        $isLastInGroup  = $nextKey !== $senderKey || $loop->last;
+                        $showDateSep    = !$prevMsg || !$message->created_at->isSameDay($prevMsg->created_at);
+                        $msgTs = $message->created_at;
+                        if ($msgTs->isToday())         { $timeLabel = $msgTs->format('g:i A'); }
+                        elseif ($msgTs->isYesterday()) { $timeLabel = 'Yesterday ' . $msgTs->format('g:i A'); }
+                        else                           { $timeLabel = $msgTs->format('M j, g:i A'); }
+                        if ($isAdmin) {
+                            $initials = 'AD';
+                        } else {
+                            $name     = $message->user?->name ?? $chat->user_name ?? 'C';
+                            $parts    = preg_split('/\s+/', trim($name));
+                            $initials = strtoupper(substr($parts[0], 0, 1) . (isset($parts[1]) ? substr($parts[1], 0, 1) : ''));
+                        }
+                        $imageUrl = null;
+                        if ($message->image_path) {
+                            $ip = $message->image_path;
+                            if (str_starts_with($ip, 'http://') || str_starts_with($ip, 'https://') || str_starts_with($ip, 'data:image')) {
+                                $imageUrl = $ip;
+                            } elseif (str_starts_with($ip, 'storage/')) {
+                                $imageUrl = asset($ip);
+                            } else {
+                                $imageUrl = asset('storage/' . $ip);
+                            }
+                        }
+                    @endphp
+
+                    @if($showDateSep)
+                    <div class="cs-date-sep">
+                        <span>{{ $msgTs->isToday() ? 'Today' : ($msgTs->isYesterday() ? 'Yesterday' : $msgTs->format('F j, Y')) }}</span>
+                    </div>
+                    @endif
+
+                    <div class="cs-msg {{ $senderKey }}{{ $isGrouped ? ' grouped' : '' }}{{ $isLastInGroup ? ' last-in-group' : '' }}">
+                        @if(!$isGrouped)
+                        <div class="cs-avatar">{{ $initials }}</div>
+                        @else
+                        <div class="cs-avatar-spacer"></div>
+                        @endif
                         <div class="cs-msg-body">
-                            <div class="cs-msg-sender">
-                                {{ $isAdmin ? 'Admin' : ($message->user?->name ?? 'Customer') }}
-                            </div>
-                            <div class="cs-msg-bubble">
-                                @if($message->image_path)
-                                    @php
-                                        $imagePath = $message->image_path;
-                                        if (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://') || str_starts_with($imagePath, 'data:image')) {
-                                            $imageUrl = $imagePath;
-                                        } elseif (str_starts_with($imagePath, 'storage/')) {
-                                            $imageUrl = asset($imagePath);
-                                        } elseif (str_starts_with($imagePath, 'chat_images/')) {
-                                            $imageUrl = asset('storage/' . $imagePath);
-                                        } else {
-                                            $imageUrl = asset('storage/' . $imagePath);
-                                        }
-                                    @endphp
-                                    <a href="{{ $imageUrl }}" target="_blank" style="display:block; margin-bottom:8px;">
+                            @if(!$isGrouped)
+                            <div class="cs-msg-sender">{{ $isAdmin ? 'Admin' : ($message->user?->name ?? $chat->user_name ?? 'Customer') }}</div>
+                            @endif
+                            <div class="cs-msg-bubble{{ $isLastInGroup ? '' : ' no-tail' }}">
+                                @if($imageUrl)
+                                    <a href="{{ $imageUrl }}" target="_blank" style="display:block; margin-bottom:{{ $message->message ? '8px' : '0' }};">
                                         <img src="{{ $imageUrl }}" alt="Chat image"
-                                             style="max-width:220px; max-height:180px; border-radius:10px; object-fit:cover; border:2px solid rgba(255,255,255,0.25); box-shadow:0 2px 6px rgba(0,0,0,0.12); transition:transform 0.2s;"
+                                             style="max-width:220px; max-height:180px; border-radius:10px; object-fit:cover; border:2px solid rgba(255,255,255,0.25); box-shadow:0 2px 6px rgba(0,0,0,0.12); transition:transform 0.2s; display:block;"
                                              onmouseover="this.style.transform='scale(1.02)'"
                                              onmouseout="this.style.transform='scale(1)'"
                                              onerror="this.style.display='none'">
                                     </a>
                                     @if(!$isAdmin)
-                                        <button type="button" class="cs-req-btn" onclick="requestCustomOrderDetails({{ $message->id }})">
-                                            <i class="fas fa-clipboard-list"></i> Request Details
-                                        </button>
+                                    <button type="button" class="cs-req-btn" onclick="requestCustomOrderDetails({{ $message->id }})">
+                                        <i class="fas fa-clipboard-list"></i> Request Details
+                                    </button>
                                     @endif
                                 @endif
                                 @if($message->message)
@@ -321,13 +363,22 @@
                                     </div>
                                 @endif
                             </div>
-                            <div class="cs-msg-time">{{ $message->created_at->format('M d, H:i') }}</div>
+                            @if($isLastInGroup)
+                            <div class="cs-msg-time">{{ $timeLabel }}</div>
+                            @endif
                         </div>
                     </div>
                 @empty
                     <div class="cs-empty-msgs">
-                        <i class="fas fa-inbox"></i>
-                        <p style="font-size:0.9rem;">No messages yet</p>
+                        <svg viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:52px;height:52px;opacity:0.28;margin-bottom:4px;">
+                            <rect x="6" y="12" width="46" height="34" rx="9" fill="#800000"/>
+                            <path d="M6 36 L6 46 L18 46 Z" fill="#800000" opacity="0.6"/>
+                            <circle cx="22" cy="29" r="3" fill="white"/><circle cx="33" cy="29" r="3" fill="white"/><circle cx="44" cy="29" r="3" fill="white"/>
+                            <rect x="28" y="36" width="38" height="28" rx="7" fill="#800000" opacity="0.45"/>
+                            <circle cx="39" cy="50" r="2.5" fill="white" opacity="0.8"/><circle cx="47" cy="50" r="2.5" fill="white" opacity="0.8"/><circle cx="55" cy="50" r="2.5" fill="white" opacity="0.8"/>
+                        </svg>
+                        <p style="font-size:0.88rem;font-weight:600;color:#6b7280;margin:0 0 2px;">No messages yet</p>
+                        <p style="font-size:0.76rem;color:#9ca3af;margin:0;">Start the conversation below</p>
                     </div>
                 @endforelse
             </div><!-- /messages -->
@@ -378,6 +429,40 @@
 </div><!-- /wrap -->
 
 <script>
+    // ─── Viewport Height Fix ───────────────────────────────────────────────
+    // Makes the chat fill the available screen space instead of extending
+    // the page indefinitely (which caused the large blank space below messages).
+    document.addEventListener('DOMContentLoaded', function () {
+        const cw = document.getElementById('adminContentWrap');
+        if (!cw || !document.querySelector('.cs-wrap')) return;
+        cw.style.overflow      = 'hidden';
+        cw.style.padding       = '0';
+        cw.style.display       = 'flex';
+        cw.style.flexDirection = 'column';
+        // The last direct child of adminContentWrap is the div wrapping @yield('content')
+        const children = cw.children;
+        const last = children[children.length - 1];
+        if (last) {
+            last.style.flex          = '1';
+            last.style.minHeight     = '0';
+            last.style.overflow      = 'hidden';
+            last.style.display       = 'flex';
+            last.style.flexDirection = 'column';
+        }
+        const wrap = document.querySelector('.cs-wrap');
+        if (wrap) {
+            wrap.style.flex      = '1';
+            wrap.style.minHeight = '0';
+            wrap.style.margin    = '0';
+        }
+        // Scroll messages to bottom after layout is settled
+        setTimeout(function () {
+            const mc = document.getElementById('messagesContainer');
+            if (mc) mc.scrollTop = mc.scrollHeight;
+        }, 0);
+    });
+
+    // ─── Image Preview ─────────────────────────────────────────────────────
     function updateImagePreview(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
@@ -392,30 +477,31 @@
         document.getElementById('image').value = '';
         document.getElementById('imagePreview').style.display = 'none';
     }
-    function autoResize(textarea) {
-        textarea.style.height = 'auto';
-        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
-    }
-    const mc = document.getElementById('messagesContainer');
-    if (mc) mc.scrollTop = mc.scrollHeight;
 
-    function showQuoteModal() { document.getElementById('quoteModal').classList.remove('hidden'); }
+    // ─── Auto-resize textarea ──────────────────────────────────────────────
+    function autoResize(ta) {
+        ta.style.height = 'auto';
+        ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+    }
+
+    // ─── Quote Modal ───────────────────────────────────────────────────────
+    function showQuoteModal()  { document.getElementById('quoteModal').classList.remove('hidden'); }
     function closeQuoteModal() { document.getElementById('quoteModal').classList.add('hidden'); }
     function calculateQuoteTotal() {
-        const mat = parseFloat(document.getElementById('quoteMaterialCost').value) || 0;
-        const pat = parseFloat(document.getElementById('quotePatternFee').value) || 0;
-        const dis = parseFloat(document.getElementById('quoteDiscount').value) || 0;
+        const mat   = parseFloat(document.getElementById('quoteMaterialCost').value) || 0;
+        const pat   = parseFloat(document.getElementById('quotePatternFee').value)   || 0;
+        const dis   = parseFloat(document.getElementById('quoteDiscount').value)     || 0;
         const total = mat + pat - dis;
         document.getElementById('quoteTotalDisplay').textContent = '₱' + total.toFixed(2);
         document.getElementById('quoteTotal').value = total;
         return total;
     }
     function sendQuote() {
-        const mat = parseFloat(document.getElementById('quoteMaterialCost').value) || 0;
-        const pat = parseFloat(document.getElementById('quotePatternFee').value) || 0;
-        const dis = parseFloat(document.getElementById('quoteDiscount').value) || 0;
+        const mat   = parseFloat(document.getElementById('quoteMaterialCost').value) || 0;
+        const pat   = parseFloat(document.getElementById('quotePatternFee').value)   || 0;
+        const dis   = parseFloat(document.getElementById('quoteDiscount').value)     || 0;
         const total = calculateQuoteTotal();
-        const desc = document.getElementById('quoteDescription').value;
+        const desc  = document.getElementById('quoteDescription').value;
         if (total <= 0) { alert('Please enter valid pricing amounts'); return; }
         const customerImages = [];
         document.querySelectorAll('.cs-msg.user img').forEach(img => {
@@ -431,21 +517,25 @@
             });
         }
         let msg = `📋 PRICE QUOTE\n\n`;
-        if (mat > 0) msg += `Material Cost: ₱${mat.toLocaleString('en-PH',{minimumFractionDigits:2})}\n`;
-        if (pat > 0) msg += `Pattern Fee:   ₱${pat.toLocaleString('en-PH',{minimumFractionDigits:2})}\n`;
-        if (dis > 0) msg += `Discount:      -₱${dis.toLocaleString('en-PH',{minimumFractionDigits:2})}\n`;
-        msg += `\n━━━━━━━━━━━━━━━━\nTotal: ₱${total.toLocaleString('en-PH',{minimumFractionDigits:2})}`;
+        if (mat > 0) msg += `Material Cost: ₱${mat.toLocaleString('en-PH', {minimumFractionDigits: 2})}\n`;
+        if (pat > 0) msg += `Pattern Fee:   ₱${pat.toLocaleString('en-PH', {minimumFractionDigits: 2})}\n`;
+        if (dis > 0) msg += `Discount:      -₱${dis.toLocaleString('en-PH', {minimumFractionDigits: 2})}\n`;
+        msg += `\n━━━━━━━━━━━━━━━━\nTotal: ₱${total.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
         if (desc.trim()) msg += `\n\nNotes:\n${desc}`;
         msg += `\n\nPlease review and let us know if you'd like to proceed.`;
-        document.getElementById('messageInput').value = msg;
+        const ta = document.getElementById('messageInput');
+        ta.value = msg;
+        autoResize(ta);
         closeQuoteModal();
         document.getElementById('quoteMaterialCost').value = '';
-        document.getElementById('quotePatternFee').value = '';
-        document.getElementById('quoteDiscount').value = '';
-        document.getElementById('quoteDescription').value = '';
+        document.getElementById('quotePatternFee').value   = '';
+        document.getElementById('quoteDiscount').value     = '';
+        document.getElementById('quoteDescription').value  = '';
         calculateQuoteTotal();
         document.querySelector('.cs-reply')?.scrollIntoView({ behavior: 'smooth' });
     }
+
+    // ─── Request Custom Order Details ──────────────────────────────────────
     function requestCustomOrderDetails(messageId) {
         if (!confirm('Send a details request form to the customer for this design?')) return;
         const urlParams = new URLSearchParams(window.location.search);
@@ -463,7 +553,7 @@
             credentials: 'include'
         })
         .then(r => {
-            if (!r.ok) return r.text().then(t => { throw new Error(`HTTP ${r.status}: ${t.substring(0,200)}`); });
+            if (!r.ok) return r.text().then(t => { throw new Error(`HTTP ${r.status}: ${t.substring(0, 200)}`); });
             return r.json();
         })
         .then(data => {

@@ -1104,7 +1104,7 @@
             </header>
 
             <!-- Content Area -->
-            <div class="flex-1 overflow-auto p-4 pt-16 sm:pt-6 sm:p-6">
+            <div id="adminContentWrap" class="flex-1 overflow-auto p-4 pt-16 sm:pt-6 sm:p-6">
                 <!-- Session Messages -->
                 @if(session('success'))
                     <div class="bg-green-50 border-l-4 border-green-500 text-green-700 p-4 rounded-r-lg mb-6 shadow-sm flex items-start">

@@ -178,10 +178,14 @@ export default function PaymentScreen({ navigation, route }) {
     try {
       const apiOrderData = {
         customer_name: orderData.shippingAddress.fullName,
-        customer_email: 'mobile@user.com',
         customer_phone: orderData.shippingAddress.phoneNumber,
-        shipping_address: `${orderData.shippingAddress.street}, ${orderData.shippingAddress.city}, ${orderData.shippingAddress.province} ${orderData.shippingAddress.postalCode}`,
-        delivery_address: `${orderData.shippingAddress.street}, ${orderData.shippingAddress.city}, ${orderData.shippingAddress.province} ${orderData.shippingAddress.postalCode}`,
+        shipping_address: `${orderData.shippingAddress.street}, ${orderData.shippingAddress.barangay || ''}, ${orderData.shippingAddress.city}, ${orderData.shippingAddress.province} ${orderData.shippingAddress.postalCode}`.replace(/,\s*,/g, ',').trim(),
+        delivery_address: `${orderData.shippingAddress.street}, ${orderData.shippingAddress.barangay || ''}, ${orderData.shippingAddress.city}, ${orderData.shippingAddress.province} ${orderData.shippingAddress.postalCode}`.replace(/,\s*,/g, ',').trim(),
+        shipping_city: orderData.shippingAddress.city || '',
+        shipping_province: orderData.shippingAddress.province || '',
+        shipping_zip: orderData.shippingAddress.postalCode || '',
+        shipping_barangay: orderData.shippingAddress.barangay || '',
+        shipping_street: orderData.shippingAddress.street || '',
         payment_method: selectedPaymentMethod,
         payment_status: 'pending',
         payment_reference: referenceNumber || null,
