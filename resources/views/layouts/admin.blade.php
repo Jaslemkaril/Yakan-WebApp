@@ -11,7 +11,7 @@
     <!-- Static Assets (Vite build disabled for Expo frontend) -->
     
     <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVJkEZSMUkrQ6usKu8zIvxUsvypLcXdAawO/PzWJNSQsizuX7937ekip6qq3R4gKbjwQZLiqy+EQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     
     <!-- Simple CSS instead of Vite -->
     <style>
@@ -141,11 +141,10 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-image: url('/images/pattern1.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: repeat;
-            opacity: 0.08;
+            background-image:
+                repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 10px),
+                repeating-linear-gradient(-45deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 10px);
+            background-size: 14px 14px;
             pointer-events: none;
             z-index: 0;
             border-radius: 0;
@@ -1105,7 +1104,7 @@
             </header>
 
             <!-- Content Area -->
-            <div class="flex-1 overflow-auto p-6">
+            <div class="flex-1 overflow-auto p-4 pt-16 sm:pt-6 sm:p-6">
                 <!-- Session Messages -->
                 @if(session('success'))
                     <div class="bg-green-50 border-l-4 border-green-500 text-green-700 p-4 rounded-r-lg mb-6 shadow-sm flex items-start">

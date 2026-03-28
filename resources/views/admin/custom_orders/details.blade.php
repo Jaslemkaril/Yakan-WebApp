@@ -131,24 +131,24 @@
 @endphp
 <div class="container mx-auto px-4 py-6">
     {{-- Header --}}
-    <div class="flex items-center justify-between mb-6">
-        <div>
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-6 gap-3">
+        <div class="min-w-0">
             <a href="{{ route('admin.custom-orders.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-2">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                 </svg>
                 Back to Orders
             </a>
-            <h1 class="text-3xl font-bold text-gray-900">Order #{{ $order->id }} - Details</h1>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 break-words">Order #{{ $order->id }} - Details</h1>
             <p class="text-gray-600 mt-1">Created {{ $order->created_at->format('M d, Y \a\t h:i A') }}</p>
             <p class="text-sm font-semibold mt-1" style="color:#800000;">
                 Estimated Turnaround: {{ $customOrderEstimatedDays }} day{{ $customOrderEstimatedDays === 1 ? '' : 's' }}
                 @if($estimatedCompletionDate)
-                    • Target Date: {{ $estimatedCompletionDate->format('M d, Y') }}
+                    &bull; Target Date: {{ $estimatedCompletionDate->format('M d, Y') }}
                 @endif
             </p>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
             {{-- Status Badge --}}
             @php
                 $displayStatusLabel = $order->status === 'completed' ? 'Delivered' : ucfirst(str_replace('_', ' ', $order->status));
@@ -1597,44 +1597,25 @@ document.addEventListener('DOMContentLoaded', function() {
     // Smart Workflow Form (replaces old status dropdown)
     const workflowForm = document.getElementById('workflowForm');
     
-    console.log('=== Workflow Form Initialization ===');
-    console.log('Form element found:', workflowForm);
-    
     if (workflowForm) {
-        console.log('Form data-order-id:', workflowForm.dataset.orderId);
-        console.log('Form data-next-status:', workflowForm.dataset.nextStatus);
-        
         workflowForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            
-            console.log('=== Workflow Form Submit Event ===');
-            console.log('Event triggered at:', new Date().toISOString());
             
             const button = document.getElementById('workflowBtn');
             const orderId = this.dataset.orderId;
             const nextStatus = this.dataset.nextStatus;
             
-            console.log('Button element:', button);
-            console.log('Order ID:', orderId);
-            console.log('Next Status:', nextStatus);
-            console.log('Current button text:', button ? button.textContent : 'BUTTON NOT FOUND');
-            
             if (!button) {
-                console.error('ERROR: workflowBtn button not found!');
                 showMessage('❌ Button not found. Please refresh the page.', 'error');
                 return;
             }
             
             if (!orderId || !nextStatus) {
-                console.error('ERROR: Missing orderId or nextStatus');
                 showMessage('❌ Invalid form configuration. Please refresh the page.', 'error');
                 return;
             }
             
             setButtonLoading(button, true);
-            
-            console.log('Sending request to:', `/admin/custom-orders/${orderId}/update-status`);
-            console.log('With body:', { status: nextStatus });
             
             try {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -1652,27 +1633,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                 });
                 
-                console.log('Response received!');
-                console.log('Response status:', response.status);
-                console.log('Response ok:', response.ok);
-                
                 const responseText = await response.text();
-                console.log('Response text:', responseText);
                 
                 let data;
                 try {
                     data = JSON.parse(responseText);
-                    console.log('Parsed JSON successfully:', data);
                 } catch (parseError) {
                     console.error('JSON parse error:', parseError);
-                    console.error('Raw response was:', responseText);
                     showMessage('❌ Server returned invalid response', 'error');
                     setButtonLoading(button, false);
                     return;
                 }
-                
-                console.log('Data success:', data.success);
-                console.log('Data message:', data.message);
                 
                 if (data.success) {
                     const statusLabels = {
@@ -1682,33 +1653,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         'delivered': 'Order delivered'
                     };
                     const message = `${statusLabels[nextStatus] || 'Status updated'} successfully! Customer has been notified.`;
-                    console.log('Showing success message:', message);
                     showMessage(message, 'success');
-                    
-                    console.log('Reloading page in 100ms...');
-                    setTimeout(() => {
-                        console.log('Executing window.location.reload()');
-                        window.location.reload();
-                    }, 100);
+                    setTimeout(() => { window.location.reload(); }, 100);
                 } else {
-                    console.error('Update failed:', data);
                     showMessage('❌ ' + (data.message || 'Failed to update status'), 'error');
                     setButtonLoading(button, false);
                 }
             } catch (error) {
-                console.error('Fetch error:', error);
-                console.error('Error type:', error.constructor.name);
-                console.error('Error message:', error.message);
-                console.error('Error stack:', error.stack);
+                console.error('Workflow update error:', error.message);
                 showMessage('❌ Network error: ' + error.message, 'error');
                 setButtonLoading(button, false);
             }
         });
-        
-        console.log('Event listener attached successfully');
-    } else {
-        console.error('ERROR: workflowForm element not found in DOM!');
     }
+    // workflowForm is conditionally rendered only when a next workflow action exists for this order
     
     // Delay Notification Form
     const delayForm = document.getElementById('delayForm');

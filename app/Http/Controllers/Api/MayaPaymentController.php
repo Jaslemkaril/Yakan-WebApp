@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\UserAddress;
 use App\Services\Payment\MayaCheckoutService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -60,15 +61,46 @@ class MayaPaymentController extends Controller
                 ];
             })->values()->all();
 
+            // Resolve the best available address for pre-filling the Maya checkout form.
+            $userAddress = $order->user_address_id
+                ? UserAddress::find($order->user_address_id)
+                : null;
+
+            $addressLine1 = $order->shipping_address
+                ?? ($userAddress ? trim(implode(', ', array_filter([$userAddress->street, $userAddress->barangay]))) : '');
+            $addressCity     = $order->shipping_city     ?? $userAddress?->city     ?? '';
+            $addressProvince = $order->shipping_province ?? $userAddress?->province ?? '';
+            $addressZip      = $userAddress?->postal_code ?? '';
+            $contactPhone    = $order->customer_phone    ?? $userAddress?->phone_number ?? '';
+
+            $shippingAddress = array_filter([
+                'line1'       => $addressLine1,
+                'city'        => $addressCity,
+                'state'       => $addressProvince,
+                'zipCode'     => $addressZip,
+                'countryCode' => 'PH',
+            ]);
+
+            $nameParts = explode(' ', $order->customer_name ?? 'Customer -', 2);
+            $buyer = [
+                'firstName' => $nameParts[0],
+                'lastName'  => $nameParts[1] ?? '-',
+                'contact'   => array_filter([
+                    'email' => $order->customer_email ?? '',
+                    'phone' => $contactPhone,
+                ]),
+            ];
+
+            if (!empty($shippingAddress['line1']) || !empty($shippingAddress['city'])) {
+                $buyer['shippingAddress'] = $shippingAddress;
+                $buyer['billingAddress']  = $shippingAddress;
+            }
+
             $payload = [
                 'totalAmount'            => ['value' => number_format($amount, 2, '.', ''), 'currency' => 'PHP'],
                 'requestReferenceNumber' => $order->order_ref,
                 'redirectUrl'            => ['success' => $successUrl, 'failure' => $failureUrl, 'cancel' => $cancelUrl],
-                'buyer' => [
-                    'firstName' => explode(' ', $order->customer_name ?? 'Customer')[0],
-                    'lastName'  => explode(' ', $order->customer_name ?? 'Customer -', 2)[1] ?? '-',
-                    'contact'   => ['email' => $order->customer_email ?? ''],
-                ],
+                'buyer' => $buyer,
                 'items' => $items ?: [[
                     'name'     => 'Order #' . $order->id,
                     'quantity' => 1,
