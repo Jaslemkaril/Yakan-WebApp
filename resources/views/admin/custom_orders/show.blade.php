@@ -260,6 +260,19 @@
                     </div>
                 </div>
 
+                {{-- Mark Maya Payment as Paid (shows when payment is pending via Maya) --}}
+                @if($order->payment_status === 'pending' && in_array($order->payment_method, ['maya', 'online_banking']))
+                <div class="mt-4 p-4 bg-blue-50 border-2 border-blue-300 rounded-xl">
+                    <p class="text-sm font-bold text-blue-800 mb-3">⚠️ Maya payment completed but not confirmed — mark it as paid:</p>
+                    <form action="{{ route('admin.custom-orders.confirmPayment', $order) }}" method="POST" onsubmit="return confirm('Mark this Maya payment as paid?')">
+                        @csrf
+                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">
+                            ✓ Mark Maya Payment as Paid
+                        </button>
+                    </form>
+                </div>
+                @endif
+
                 {{-- Payment Receipt Image --}}
                 @if($order->payment_receipt)
                 <div>
