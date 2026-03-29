@@ -1075,7 +1075,7 @@
                     @endif
                     
                     {{-- 2. Maya Pending Verification fix --}}
-                    @if($order->payment_status === 'pending_verification' && $order->payment_method === 'maya')
+                    @if(in_array($order->payment_status, ['pending', 'pending_verification']) && $order->payment_method === 'maya')
                     <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-5 border-2 border-blue-200 shadow-sm">
                         <div class="flex items-center gap-2 mb-3">
                             <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

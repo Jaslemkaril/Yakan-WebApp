@@ -595,7 +595,7 @@ class AdminCustomOrderController extends Controller
         
         try {
             // Also handle Maya pending_verification orders
-            if ($order->payment_status === 'pending_verification' && $order->payment_method === 'maya') {
+            if (in_array($order->payment_status, ['pending', 'pending_verification']) && $order->payment_method === 'maya') {
                 $order->payment_status      = 'paid';
                 $order->payment_verified_at = now();
                 $order->payment_confirmed_at = now();
