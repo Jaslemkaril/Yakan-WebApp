@@ -2570,7 +2570,8 @@ class CustomOrderController extends Controller
         ]);
 
         if ($request->action === 'accept') {
-            $order->status = 'processing';
+            $order->status = 'approved';
+            $order->approved_at = now();
             $order->payment_status = 'unpaid';
             $order->save();
             $message = 'You have accepted the price quote. Please complete your payment.';
