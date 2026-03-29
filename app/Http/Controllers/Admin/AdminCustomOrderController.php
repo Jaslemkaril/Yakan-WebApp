@@ -591,11 +591,16 @@ class AdminCustomOrderController extends Controller
     {
         // Extract auth_token for redirect preservation
         $authToken = request()->input('auth_token') ?? request()->query('auth_token');
-        $redirectUrl = $authToken ? url()->previous() . (strpos(url()->previous(), '?') !== false ? '&' : '?') . 'auth_token=' . urlencode($authToken) : url()->previous();
+        $prevUrl = url()->previous();
+        if ($authToken && strpos($prevUrl, 'auth_token=') === false) {
+            $redirectUrl = $prevUrl . (strpos($prevUrl, '?') !== false ? '&' : '?') . 'auth_token=' . urlencode($authToken);
+        } else {
+            $redirectUrl = $prevUrl;
+        }
         
         try {
-            // Also handle Maya pending_verification orders
-            if (in_array($order->payment_status, ['pending', 'pending_verification']) && $order->payment_method === 'maya') {
+            // Also handle Maya/online_banking pending_verification orders
+            if (in_array($order->payment_status, ['pending', 'pending_verification']) && in_array($order->payment_method, ['maya', 'online_banking'])) {
                 $order->payment_status      = 'paid';
                 $order->payment_verified_at = now();
                 $order->payment_confirmed_at = now();
