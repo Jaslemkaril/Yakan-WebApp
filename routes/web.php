@@ -893,6 +893,10 @@ Route::post('/custom-orders/{order}/payment', [\App\Http\Controllers\CustomOrder
     ->name('custom_orders.payment.process')
     ->withoutMiddleware(['auth']);
 
+Route::post('/custom-orders/{order}/payment/simulate-success', [\App\Http\Controllers\CustomOrderController::class, 'simulateMayaSuccess'])
+    ->name('custom_orders.payment.simulate')
+    ->withoutMiddleware(['auth']);
+
 Route::post('/custom-orders/{order}/payment/confirm', [\App\Http\Controllers\CustomOrderController::class, 'paymentConfirmProcess'])
     ->name('custom_orders.payment.confirm.process')
     ->withoutMiddleware(['auth']);
