@@ -3262,6 +3262,12 @@ class CustomOrderController extends Controller
         return $this->redirectToRouteWithToken('custom_orders.show', $order)
             ->with('success', 'Demo payment successful! Your custom order is now being processed.');
     }
+
+    /**
+     * Process payment confirmation with receipt/transaction ID
+     */
+    public function confirmPayment(Request $request, CustomOrder $order)
+    {
         // Handle auth_token authentication if not already authenticated
         if (!Auth::check()) {
             $token = $request->input('auth_token') 
