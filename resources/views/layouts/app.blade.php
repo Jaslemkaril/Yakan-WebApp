@@ -646,6 +646,24 @@
 </head>
 <body class="antialiased">
     <style>
+        /* Auth refresh overlay shown only while rehydrating token auth on hard refresh */
+        .auth-refresh-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 100000;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(160deg, #6b0000 0%, #8b0000 45%, #3d0000 100%);
+        }
+        html.auth-refreshing .auth-refresh-overlay {
+            display: flex;
+        }
+        html.auth-refreshing #desktopGuestAuthButtons,
+        html.auth-refreshing #mobileGuestAuthButtons {
+            visibility: hidden;
+        }
+
         /* Navigation link loading indicator */
         .nav-loading-indicator {
             position: fixed;
@@ -665,6 +683,54 @@
             100% { background-position: -200% 0; }
         }
     </style>
+
+    <script>
+    (function() {
+        var isServerAuth = {{ auth()->check() ? 'true' : 'false' }};
+        var path = window.location.pathname.toLowerCase();
+        var skipPaths = ['/login', '/register', '/logout', '/admin/login', '/password', '/forgot-password', '/reset-password', '/verify-otp'];
+        var shouldSkip = skipPaths.some(function(p) { return path === p || path.startsWith(p); });
+
+        try {
+            var retryKey = 'auth_hydration_retry:' + path;
+
+            if (isServerAuth) {
+                sessionStorage.removeItem(retryKey);
+                return;
+            }
+
+            if (shouldSkip) return;
+
+            var params = new URLSearchParams(window.location.search);
+            if (params.has('auth_token')) return;
+
+            var token = localStorage.getItem('yakan_auth_token') || sessionStorage.getItem('auth_token');
+            if (!token) return;
+
+            // Avoid infinite loops when token is invalid/expired.
+            if (sessionStorage.getItem(retryKey) === '1') return;
+            sessionStorage.setItem(retryKey, '1');
+
+            document.documentElement.classList.add('auth-refreshing');
+            params.set('auth_token', token);
+
+            var nextUrl = window.location.pathname + '?' + params.toString() + window.location.hash;
+            window.location.replace(nextUrl);
+        } catch (e) {
+            // Fail open: keep current rendering if storage access is blocked.
+        }
+    })();
+    </script>
+
+    <div class="auth-refresh-overlay" aria-live="polite" aria-busy="true">
+        <div style="text-align:center;color:#fff;">
+            <div style="width:56px;height:56px;background:linear-gradient(135deg,#800000,#a00000);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 8px 24px rgba(0,0,0,0.3);">
+                <span style="font-weight:800;font-size:26px;">Y</span>
+            </div>
+            <div style="width:44px;height:44px;border:3px solid rgba(255,255,255,0.2);border-top-color:rgba(255,255,255,0.85);border-radius:50%;animation:ptospin 0.75s linear infinite;margin:0 auto 18px;"></div>
+            <p style="color:rgba(255,220,220,0.9);font-size:0.9rem;font-weight:500;">Restoring your session...</p>
+        </div>
+    </div>
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -861,8 +927,10 @@
                         </div>
                     @else
                         <!-- Login/Register Buttons -->
-                        <a href="{{ route('login') }}" class="px-3 py-1.5 lg:px-4 lg:py-2 text-xs sm:text-sm lg:text-base font-semibold border-2 rounded-lg transition-all hover:bg-gray-50 whitespace-nowrap" style="border-color: #800000; color: #800000;">Login</a>
-                        <a href="{{ route('register') }}" class="px-3 py-1.5 lg:px-4 lg:py-2 text-xs sm:text-sm lg:text-base font-semibold rounded-lg text-white transition-all hover:opacity-90 whitespace-nowrap" style="background-color: #800000;">Sign Up</a>
+                        <div id="desktopGuestAuthButtons" class="flex items-center space-x-1 sm:space-x-2">
+                            <a href="{{ route('login') }}" class="px-3 py-1.5 lg:px-4 lg:py-2 text-xs sm:text-sm lg:text-base font-semibold border-2 rounded-lg transition-all hover:bg-gray-50 whitespace-nowrap" style="border-color: #800000; color: #800000;">Login</a>
+                            <a href="{{ route('register') }}" class="px-3 py-1.5 lg:px-4 lg:py-2 text-xs sm:text-sm lg:text-base font-semibold rounded-lg text-white transition-all hover:opacity-90 whitespace-nowrap" style="background-color: #800000;">Sign Up</a>
+                        </div>
                     @endauth
 
                     <!-- Mobile Search Toggle -->
@@ -950,7 +1018,7 @@
                     </form>
                 </div>
                 @else
-                <div class="mx-4 mb-3 flex gap-2">
+                <div id="mobileGuestAuthButtons" class="mx-4 mb-3 flex gap-2">
                     <a href="{{ route('login') }}" class="flex-1 text-center py-2.5 text-sm font-semibold rounded-xl border-2 transition-all" style="border-color:#800000;color:#800000;">Login</a>
                     <a href="{{ route('register') }}" class="flex-1 text-center py-2.5 text-sm font-semibold rounded-xl text-white transition-all" style="background:#800000;">Sign Up</a>
                 </div>
