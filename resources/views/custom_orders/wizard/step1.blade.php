@@ -50,7 +50,7 @@
             <input type="hidden" name="auth_token" id="step1AuthToken" value="{{ request('auth_token') }}">
             
             <!-- Fabric Type Selection -->
-            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 mb-8">
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 mb-8 max-w-4xl mx-auto">
                 <div class="flex items-center justify-center mb-6 text-center">
                     <svg class="w-6 h-6 mr-3" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
