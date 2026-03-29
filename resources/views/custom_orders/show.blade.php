@@ -1171,7 +1171,7 @@
                                         </div>
                                         
                                         {{-- Admin Notes --}}
-                                        @if($order->getAdminNotesText() || $order->approved_at)
+                                        @if($order->getAdminNotesText() || $order->price_quoted_at || $order->approved_at)
                                         <div class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs">
                                             <div class="flex items-start gap-2">
                                                 <svg class="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -1179,10 +1179,12 @@
                                                 </svg>
                                                 <div class="flex-1">
                                                     <p class="font-semibold text-blue-900 mb-1">Admin Notes on Quote</p>
-                                                    @if($order->admin_notes)
-                                                        <p class="text-blue-800 mb-2 italic">{{ $order->admin_notes }}</p>
+                                                    @if($order->getAdminNotesText())
+                                                        <p class="text-blue-800 mb-2 italic">{{ $order->getAdminNotesText() }}</p>
                                                     @endif
-                                                    @if($order->approved_at)
+                                                    @if($order->price_quoted_at)
+                                                        <p class="text-xs text-blue-700">Quote provided on {{ $order->price_quoted_at->format('M d, Y \a\t h:i A') }}</p>
+                                                    @elseif($order->approved_at)
                                                         <p class="text-xs text-blue-700">Quote provided on {{ $order->approved_at->format('M d, Y \a\t h:i A') }}</p>
                                                     @endif
                                                 </div>

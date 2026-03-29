@@ -581,9 +581,9 @@
                         <p class="text-gray-700">
                             <span class="font-semibold">Quoted Price:</span> ₱{{ number_format($order->final_price, 2) }}
                         </p>
-                        @if($order->admin_notes)
+                        @if($order->getAdminNotesText())
                         <p class="text-gray-700">
-                            <span class="font-semibold">Your Notes:</span> {{ $order->admin_notes }}
+                            <span class="font-semibold">Your Notes:</span> {{ $order->getAdminNotesText() }}
                         </p>
                         @endif
                         <p class="text-gray-700">
