@@ -1496,6 +1496,18 @@
     (function() {
         const STORAGE_KEY = 'yakan_auth_token';
 
+        function persistTokenCookie(token) {
+            if (!token) return;
+            const secureAttr = window.location.protocol === 'https:' ? '; Secure' : '';
+            // 30-day persistence so hard refresh on protected pages can re-auth server-side.
+            document.cookie = 'auth_token=' + encodeURIComponent(token) + '; Path=/; Max-Age=' + (60 * 60 * 24 * 30) + '; SameSite=Lax' + secureAttr;
+        }
+
+        function clearTokenCookie() {
+            const secureAttr = window.location.protocol === 'https:' ? '; Secure' : '';
+            document.cookie = 'auth_token=; Path=/; Max-Age=0; SameSite=Lax' + secureAttr;
+        }
+
         // Paths that must NEVER get auth_token appended (auth flow pages)
         const AUTH_PATHS = ['/login', '/register', '/logout', '/auth/', '/password/', '/forgot-password', '/reset-password', '/verify-otp', '/admin/login'];
         function isAuthPath(pathname) {
@@ -1512,6 +1524,8 @@
         const urlToken = params.get('auth_token');
         if (urlToken) {
             localStorage.setItem(STORAGE_KEY, urlToken);
+            sessionStorage.setItem('auth_token', urlToken);
+            persistTokenCookie(urlToken);
 
             // Clean URL without reloading (remove auth_token from address bar)
             // except on custom-order wizard routes where refresh needs token in URL.
@@ -1523,8 +1537,11 @@
             }
         }
 
-        const token = localStorage.getItem(STORAGE_KEY);
+        const token = localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem('auth_token');
         if (!token) return; // No token, nothing to do
+
+        // Keep cookie in sync so Ctrl+R on protected routes does not drop into login redirect.
+        persistTokenCookie(token);
 
         // 2. Append auth_token to all internal <a> links EXCEPT auth pages
         function appendTokenToLinks() {
@@ -1593,8 +1610,16 @@
 
         // 6. Clear token on logout
         document.querySelectorAll('a[href*="logout"], form[action*="logout"]').forEach(function(el) {
-            el.addEventListener('click', function() { localStorage.removeItem(STORAGE_KEY); });
-            el.addEventListener('submit', function() { localStorage.removeItem(STORAGE_KEY); });
+            el.addEventListener('click', function() {
+                localStorage.removeItem(STORAGE_KEY);
+                sessionStorage.removeItem('auth_token');
+                clearTokenCookie();
+            });
+            el.addEventListener('submit', function() {
+                localStorage.removeItem(STORAGE_KEY);
+                sessionStorage.removeItem('auth_token');
+                clearTokenCookie();
+            });
         });
     })();
     </script>
