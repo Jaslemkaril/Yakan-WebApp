@@ -1074,6 +1074,31 @@
                     </div>
                     @endif
                     
+                    {{-- 2. Maya Pending Verification fix --}}
+                    @if($order->payment_status === 'pending_verification' && $order->payment_method === 'maya')
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-5 border-2 border-blue-200 shadow-sm">
+                        <div class="flex items-center gap-2 mb-3">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                            </svg>
+                            <h3 class="text-sm font-bold text-gray-800">Maya Payment Pending</h3>
+                        </div>
+                        <p class="text-xs text-gray-600 mb-3">Customer completed Maya checkout. Confirm to mark as paid.</p>
+                        <form action="{{ route('admin.custom-orders.confirmPayment', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
+                            @csrf
+                            @if(request('auth_token'))
+                            <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+                            @endif
+                            <button type="submit" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span>Mark Maya Payment as Paid</span>
+                            </button>
+                        </form>
+                    </div>
+                    @endif
+
                     {{-- 2. Payment Verification (Only shows when payment proof uploaded) --}}
                     @if($order->payment_receipt && $order->payment_status === 'paid' && empty($order->payment_confirmed_at))
                     <div class="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-lg p-5 border-2 border-yellow-200 shadow-sm">

@@ -594,6 +594,16 @@ class AdminCustomOrderController extends Controller
         $redirectUrl = $authToken ? url()->previous() . (strpos(url()->previous(), '?') !== false ? '&' : '?') . 'auth_token=' . urlencode($authToken) : url()->previous();
         
         try {
+            // Also handle Maya pending_verification orders
+            if ($order->payment_status === 'pending_verification' && $order->payment_method === 'maya') {
+                $order->payment_status      = 'paid';
+                $order->payment_verified_at = now();
+                $order->payment_confirmed_at = now();
+                $order->status             = 'processing';
+                $order->save();
+                return redirect($redirectUrl)->with('success', 'Maya payment verified and confirmed. Order is now processing.');
+            }
+
             // Verify the order is in the correct state for payment confirmation
             // Accept both 'approved' and 'processing' statuses (processing is set when payment proof uploaded)
             if (!in_array($order->status, ['approved', 'processing'])) {
