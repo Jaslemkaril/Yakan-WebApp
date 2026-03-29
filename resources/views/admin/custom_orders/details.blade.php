@@ -272,6 +272,14 @@
     </div>
     @endif
 
+    {{-- Payment confirmed banner (shown via URL param to survive token-auth session resets) --}}
+    @if(request('paid') == '1')
+    <div class="mb-4 bg-green-100 border border-green-400 text-green-800 rounded-lg px-4 py-3 flex items-center gap-2">
+        <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+        <span class="font-semibold">Maya payment marked as paid. Order is now processing.</span>
+    </div>
+    @endif
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {{-- Main Content - Left Column --}}
         <div class="lg:col-span-2 space-y-6">

@@ -601,12 +601,13 @@ class AdminCustomOrderController extends Controller
         try {
             // Also handle Maya/online_banking pending_verification orders
             if (in_array($order->payment_status, ['pending', 'pending_verification']) && in_array($order->payment_method, ['maya', 'online_banking'])) {
-                $order->payment_status      = 'paid';
-                $order->payment_verified_at = now();
+                $order->payment_status       = 'paid';
                 $order->payment_confirmed_at = now();
-                $order->status             = 'processing';
+                $order->status              = 'processing';
                 $order->save();
-                return redirect($redirectUrl)->with('success', 'Maya payment verified and confirmed. Order is now processing.');
+                // Append ?paid=1 to ensure feedback survives token-auth session resets
+                $sep = strpos($redirectUrl, '?') !== false ? '&' : '?';
+                return redirect($redirectUrl . $sep . 'paid=1');
             }
 
             // Verify the order is in the correct state for payment confirmation
