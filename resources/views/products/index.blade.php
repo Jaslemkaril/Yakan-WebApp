@@ -356,14 +356,19 @@
                         <!-- Price Range -->
                         <div class="mb-6">
                             <h3 class="font-semibold text-gray-900 mb-3">Price Range</h3>
+                            @php
+                                $actualMin = isset($priceStats) ? (int) floor($priceStats->min_p) : 0;
+                                $actualMax = isset($priceStats) ? (int) ceil($priceStats->max_p) : 10000;
+                            @endphp
+                            <div class="text-xs text-gray-400 mb-2">Range: ₱{{ number_format($actualMin) }} – ₱{{ number_format($actualMax) }}</div>
                             <div class="space-y-3">
                                 <div>
                                     <label class="text-xs text-gray-600">Min Price</label>
-                                    <input type="number" name="min_price" value="{{ request('min_price') }}" placeholder="₱0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                    <input type="number" name="min_price" value="{{ request('min_price') }}" placeholder="₱{{ $actualMin }}" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                                 </div>
                                 <div>
                                     <label class="text-xs text-gray-600">Max Price</label>
-                                    <input type="number" name="max_price" value="{{ request('max_price') }}" placeholder="₱10000" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                    <input type="number" name="max_price" value="{{ request('max_price') }}" placeholder="₱{{ number_format($actualMax) }}" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                                 </div>
                                 <button type="submit" class="w-full py-2 bg-maroon-600 text-white rounded-lg hover:bg-maroon-700 transition-colors text-sm" style="background-color: #800000;">
                                     Apply

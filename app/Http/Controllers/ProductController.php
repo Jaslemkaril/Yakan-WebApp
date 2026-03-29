@@ -15,87 +15,76 @@ class ProductController extends Controller
      */
     public function shopIndex(Request $request)
     {
-        try {
-            // Get all categories with product counts
-            $categories = Category::withCount(['products' => function($query) {
-                $query->where('status', 'active');
-            }])->orderBy('name')->get();
-            
-            // Start with base query for active products
-            $query = Product::where('status', 'active');
-            
-            // Filter by category if specified
-            $selectedCategory = null;
-            if ($request->has('category') && !empty($request->category)) {
-                $query->where('category_id', $request->category);
-                $selectedCategory = Category::find($request->category);
-            }
-            
-            // Filter by price range
-            if ($request->has('min_price') && !empty($request->min_price)) {
-                $query->where('price', '>=', $request->min_price);
-            }
-            if ($request->has('max_price') && !empty($request->max_price)) {
-                $query->where('price', '<=', $request->max_price);
-            }
-            
-            // Sorting
-            $sort = $request->input('sort', 'newest');
-            switch ($sort) {
-                case 'price_low':
-                    $query->orderBy('price', 'asc');
-                    break;
-                case 'price_high':
-                    $query->orderBy('price', 'desc');
-                    break;
-                case 'name_asc':
-                    $query->orderBy('name', 'asc');
-                    break;
-                case 'name_desc':
-                    $query->orderBy('name', 'desc');
-                    break;
-                case 'newest':
-                default:
-                    $query->orderBy('created_at', 'desc');
-                    break;
-            }
-            
-            // Fetch products with pagination and category relationship
-            $products = $query->with(['category', 'inventory'])->withCount('reviews')->paginate(12)->appends($request->all());
+        // Get all categories with product counts
+        $categories = Category::withCount(['products' => function($query) {
+            $query->where('status', 'active');
+        }])->orderBy('name')->get();
 
-            // Get wishlist items if user is authenticated
-            $wishlistProductIds = [];
-            if (auth()->check()) {
-                $wishlist = auth()->user()->wishlists()->default()->first();
-                if ($wishlist) {
-                    $wishlistProductIds = $wishlist->items()
-                        ->where('item_type', 'App\Models\Product')
-                        ->pluck('item_id')
-                        ->toArray();
-                }
-            }
+        // Start with base query for active products
+        $query = Product::where('status', 'active');
 
-            // Return the products view with products, categories, and selected category
-            return view('products.index', compact('products', 'categories', 'selectedCategory', 'wishlistProductIds'));
-        } catch (\Exception $e) {
-            // Log the error and return a simple response
-            \Log::error('ProductController::shopIndex error: ' . $e->getMessage());
-            
-            // Fallback to simple products query
-            $products = Product::withCount('reviews')->paginate(12);
-            $categories = Category::withCount('products')->orderBy('name')->get();
-            $wishlistProductIds = [];
-            if (auth()->check()) {
-                $wishlist = auth()->user()->wishlists()->default()->first();
-                if ($wishlist) {
-                    $wishlistProductIds = $wishlist->items()
-                        ->where('item_type', 'App\Models\Product')
-                        ->pluck('item_id')
-                        ->toArray();
-                }
-            }
-            return view('products.index', compact('products', 'categories', 'wishlistProductIds'));
+        // Filter by category if specified
+        $selectedCategory = null;
+        if ($request->filled('category')) {
+            $query->where('category_id', $request->category);
+            $selectedCategory = Category::find($request->category);
         }
+
+        // Filter by price range — cast to float so comparisons are always numeric
+        $minPrice = $request->filled('min_price') ? (float) $request->min_price : null;
+        $maxPrice = $request->filled('max_price') ? (float) $request->max_price : null;
+        if ($minPrice !== null) {
+            $query->where('price', '>=', $minPrice);
+        }
+        if ($maxPrice !== null) {
+            $query->where('price', '<=', $maxPrice);
+        }
+
+        // Sorting
+        $sort = $request->input('sort', 'newest');
+        switch ($sort) {
+            case 'price_low':
+                $query->orderBy('price', 'asc');
+                break;
+            case 'price_high':
+                $query->orderBy('price', 'desc');
+                break;
+            case 'name_asc':
+                $query->orderBy('name', 'asc');
+                break;
+            case 'name_desc':
+                $query->orderBy('name', 'desc');
+                break;
+            case 'newest':
+            default:
+                $query->orderBy('created_at', 'desc');
+                break;
+        }
+
+        // Fetch products with pagination and category relationship
+        $products = $query->with(['category', 'inventory'])->withCount('reviews')->paginate(12)->appends($request->all());
+
+        // Get wishlist items if user is authenticated
+        $wishlistProductIds = [];
+        try {
+            if (auth()->check()) {
+                $wishlist = auth()->user()->wishlists()->default()->first();
+                if ($wishlist) {
+                    $wishlistProductIds = $wishlist->items()
+                        ->where('item_type', 'App\Models\Product')
+                        ->pluck('item_id')
+                        ->toArray();
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::warning('ProductController: wishlist load failed: ' . $e->getMessage());
+        }
+
+        // Pass actual product price bounds so the view can show accurate range hints
+        $priceStats = Product::where('status', 'active')->selectRaw('MIN(price) as min_p, MAX(price) as max_p')->first();
+
+        // Return the products view with products, categories, and selected category
+        return view('products.index', compact('products', 'categories', 'selectedCategory', 'wishlistProductIds', 'priceStats'));
     }
 
     /**
