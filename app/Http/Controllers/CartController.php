@@ -282,7 +282,11 @@ class CartController extends Controller
             ]);
         }
 
-        return view('cart.index', compact('cartItems'));
+        // Use the same delivery zoning baseline shown on checkout for cart summary.
+        $defaultAddress = \App\Models\UserAddress::forUser($userId)->default()->first();
+        $shippingFee = $this->calculateShippingFeeForAddress($defaultAddress, 'delivery');
+
+        return view('cart.index', compact('cartItems', 'shippingFee'));
     }
 
     /**
@@ -719,44 +723,7 @@ class CartController extends Controller
 
             $deliveryAddress = implode(', ', array_filter($addressParts));
 
-            // Server-side shipping fee calculation (mirror frontend tiers)
-            $cityLower = strtolower($userAddress->city ?? '');
-            $regionLower = strtolower($userAddress->province ?? $userAddress->region ?? '');
-            $postalCode = $userAddress->postal_code ?? '';
-
-            // Zone 1 — ₱100: Zamboanga City + Peninsula + BARMM
-            if (str_contains($cityLower, 'zamboanga') || str_contains($regionLower, 'zamboanga') || str_contains($regionLower, 'barmm') || str_contains($regionLower, 'bangsamoro') ||
-                      in_array($cityLower, ['dipolog city', 'dapitan city', 'pagadian city', 'isabela city',
-                                            'zamboanga del norte', 'zamboanga del sur', 'zamboanga sibugay',
-                                            'ipil', 'jolo', 'bongao', 'cotabato city', 'marawi city', 'lamitan city'])) {
-                $shippingFee = 100;
-            // Zone 2 — ₱180: Other Mindanao
-            } elseif (str_contains($regionLower, 'mindanao') || str_contains($regionLower, 'davao') ||
-                      str_contains($regionLower, 'soccsksargen') || str_contains($regionLower, 'caraga') ||
-                      str_contains($regionLower, 'northern mindanao') ||
-                      in_array($cityLower, ['davao city', 'digos city', 'tagum city', 'panabo city',
-                                            'general santos city', 'koronadal city', 'kidapawan city',
-                                            'cagayan de oro city', 'iligan city', 'ozamiz city',
-                                            'butuan city', 'surigao city', 'malaybalay city'])) {
-                $shippingFee = 180;
-            // Zone 3 — ₱250: Visayas
-            } elseif (str_contains($regionLower, 'visayas') ||
-                      in_array($cityLower, ['cebu city', 'iloilo city', 'bacolod city',
-                                            'tacloban city', 'dumaguete city', 'tagbilaran city',
-                                            'ormoc city', 'calbayog city', 'roxas city'])) {
-                $shippingFee = 250;
-            // Zone 4 — ₱300: NCR + nearby Luzon
-            } elseif (str_contains($regionLower, 'ncr') || str_contains($regionLower, 'metro manila') ||
-                      str_contains($cityLower, 'manila') || str_contains($regionLower, 'calabarzon') ||
-                      str_contains($regionLower, 'central luzon') ||
-                      in_array($cityLower, ['quezon city', 'makati city', 'pasig city', 'taguig city',
-                                            'caloocan city', 'antipolo city', 'angeles city',
-                                            'san fernando city', 'batangas city', 'lucena city'])) {
-                $shippingFee = 300;
-            // Zone 5 — ₱350: Far Luzon / remote
-            } else {
-                $shippingFee = 350;
-            }
+            $shippingFee = $this->calculateShippingFeeForAddress($userAddress, $request->input('delivery_type', 'delivery'));
         } else {
             $deliveryAddress = 'Store Pickup';
             $shippingFee = 0;
@@ -1015,6 +982,79 @@ HTML
         }
 
         return $paymentMethod;
+    }
+
+    private function calculateShippingFeeForAddress($address, string $deliveryType = 'delivery'): int
+    {
+        if ($deliveryType !== 'delivery' || !$address) {
+            return 0;
+        }
+
+        $cityLower = strtolower((string) ($address->city ?? ''));
+        $regionLower = strtolower((string) ($address->province ?? $address->region ?? ''));
+
+        // Zone 1 — ₱100: Zamboanga City + Peninsula + BARMM
+        if (
+            str_contains($cityLower, 'zamboanga') ||
+            str_contains($regionLower, 'zamboanga') ||
+            str_contains($regionLower, 'barmm') ||
+            str_contains($regionLower, 'bangsamoro') ||
+            in_array($cityLower, [
+                'dipolog city', 'dapitan city', 'pagadian city', 'isabela city',
+                'zamboanga del norte', 'zamboanga del sur', 'zamboanga sibugay',
+                'ipil', 'jolo', 'bongao', 'cotabato city', 'marawi city', 'lamitan city'
+            ])
+        ) {
+            return 100;
+        }
+
+        // Zone 2 — ₱180: Other Mindanao
+        if (
+            str_contains($regionLower, 'mindanao') ||
+            str_contains($regionLower, 'davao') ||
+            str_contains($regionLower, 'soccsksargen') ||
+            str_contains($regionLower, 'caraga') ||
+            str_contains($regionLower, 'northern mindanao') ||
+            in_array($cityLower, [
+                'davao city', 'digos city', 'tagum city', 'panabo city',
+                'general santos city', 'koronadal city', 'kidapawan city',
+                'cagayan de oro city', 'iligan city', 'ozamiz city',
+                'butuan city', 'surigao city', 'malaybalay city'
+            ])
+        ) {
+            return 180;
+        }
+
+        // Zone 3 — ₱250: Visayas
+        if (
+            str_contains($regionLower, 'visayas') ||
+            in_array($cityLower, [
+                'cebu city', 'iloilo city', 'bacolod city',
+                'tacloban city', 'dumaguete city', 'tagbilaran city',
+                'ormoc city', 'calbayog city', 'roxas city'
+            ])
+        ) {
+            return 250;
+        }
+
+        // Zone 4 — ₱300: NCR + nearby Luzon
+        if (
+            str_contains($regionLower, 'ncr') ||
+            str_contains($regionLower, 'metro manila') ||
+            str_contains($cityLower, 'manila') ||
+            str_contains($regionLower, 'calabarzon') ||
+            str_contains($regionLower, 'central luzon') ||
+            in_array($cityLower, [
+                'quezon city', 'makati city', 'pasig city', 'taguig city',
+                'caloocan city', 'antipolo city', 'angeles city',
+                'san fernando city', 'batangas city', 'lucena city'
+            ])
+        ) {
+            return 300;
+        }
+
+        // Zone 5 — ₱350: Far Luzon / remote
+        return 350;
     }
 
     private function ordersPaymentMethodSupports(string $method): bool

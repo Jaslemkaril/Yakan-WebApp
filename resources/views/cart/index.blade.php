@@ -463,8 +463,9 @@
                                     $subtotal += $item->product->price * $item->quantity;
                                 }
                             }
-                            $total = $subtotal;
                             $itemCount = count($cartItems);
+                            $shippingFee = (float) ($shippingFee ?? 0);
+                            $total = $subtotal + ($itemCount > 0 ? $shippingFee : 0);
                         @endphp
 
                         <div class="space-y-0 mb-6 pb-6 border-b-2 border-gray-200">
@@ -474,12 +475,13 @@
                             </div>
                             <div class="summary-row">
                                 <span class="text-gray-600">Shipping</span>
-                                <span class="font-semibold text-green-600">Free</span>
+                                <span class="font-semibold {{ $shippingFee > 0 ? 'text-gray-900' : 'text-green-600' }}" id="shippingDisplay">{{ $shippingFee > 0 ? '₱' . number_format($shippingFee, 2) : 'Free' }}</span>
                             </div>
                             <div class="summary-row total">
                                 <span class="label">Total</span>
                                 <span class="value" id="totalDisplay">₱{{ number_format($total, 2) }}</span>
                             </div>
+                            <input type="hidden" id="baseShippingFee" value="{{ $shippingFee }}">
                         </div>
 
                         <button onclick="proceedToCheckout()" class="btn-primary w-full text-lg py-4 justify-center mb-4">
@@ -612,6 +614,7 @@
         function updateSelection() {
             const itemCheckboxes = document.querySelectorAll('.item-checkbox');
             const selectAllCheckbox = document.getElementById('selectAll');
+            const baseShippingFee = parseFloat(document.getElementById('baseShippingFee')?.value || '0');
             
             // Update select all checkbox
             const allChecked = Array.from(itemCheckboxes).every(cb => cb.checked);
@@ -639,10 +642,21 @@
                     selectedCount++;
                 }
             });
+
+            const applicableShipping = selectedCount > 0 ? baseShippingFee : 0;
+            const finalTotal = selectedSubtotal + applicableShipping;
+            const shippingDisplay = document.getElementById('shippingDisplay');
             
             // Update displays
             document.getElementById('subtotalDisplay').textContent = '₱' + selectedSubtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-            document.getElementById('totalDisplay').textContent = '₱' + selectedSubtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            document.getElementById('totalDisplay').textContent = '₱' + finalTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            if (shippingDisplay) {
+                shippingDisplay.textContent = applicableShipping > 0
+                    ? '₱' + applicableShipping.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                    : 'Free';
+                shippingDisplay.classList.toggle('text-green-600', applicableShipping <= 0);
+                shippingDisplay.classList.toggle('text-gray-900', applicableShipping > 0);
+            }
             document.getElementById('selectedCount').textContent = selectedCount;
         }
 
