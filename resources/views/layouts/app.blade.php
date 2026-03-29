@@ -1217,9 +1217,11 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            // ── Show loading screen when logout form is submitted (max 4 s then force-redirect)
+            // ── Show loading screen and perform logout via fetch to avoid plain redirect page flashes
             document.querySelectorAll('form[action*="/logout"]').forEach(function(form) {
-                form.addEventListener('submit', function() {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
                     var ov = document.getElementById('pageTransitionOverlay');
                     var msgEl = document.getElementById('ptoMessage');
                     var fill = document.getElementById('ptoFill');
@@ -1228,9 +1230,47 @@
                         // Use a fast 3-second animation for logout
                         if (fill) { fill.style.animation = 'none'; void fill.offsetHeight; fill.style.animation = 'ptofill 3s ease-out forwards'; }
                         ov.style.display = 'flex';
-                        // Force redirect to login after 4 s in case server is slow
-                        setTimeout(function() { window.location.href = '/login'; }, 4000);
                     }
+
+                    var loginUrl = '{{ route('login.user.form') }}';
+                    var authToken = localStorage.getItem('yakan_auth_token') || sessionStorage.getItem('auth_token');
+                    var actionUrl = form.getAttribute('action') || '/logout';
+
+                    try {
+                        var parsedAction = new URL(actionUrl, window.location.origin);
+                        if (authToken && !parsedAction.searchParams.has('auth_token')) {
+                            parsedAction.searchParams.set('auth_token', authToken);
+                        }
+                        actionUrl = parsedAction.toString();
+                    } catch (err) {
+                        // Keep original action if URL parsing fails.
+                    }
+
+                    var formData = new FormData(form);
+                    if (authToken && !formData.get('auth_token')) {
+                        formData.append('auth_token', authToken);
+                    }
+
+                    fetch(actionUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json, text/html'
+                        },
+                        credentials: 'include',
+                        body: formData
+                    }).then(function() {
+                        window.location.href = loginUrl;
+                    }).catch(function() {
+                        // Fallback to regular form submit if fetch fails.
+                        form.submit();
+                    });
+
+                    // Safety timeout in case network hangs.
+                    setTimeout(function() {
+                        window.location.href = loginUrl;
+                    }, 4000);
                 });
             });
 
