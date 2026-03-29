@@ -63,9 +63,9 @@
                         <p>No fabric types available at the moment. Please try again later.</p>
                     </div>
                 @else
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="flex flex-wrap justify-center gap-6">
                         @foreach($fabricTypes as $type)
-                            <label class="fabric-option group relative bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-xl p-6 cursor-pointer hover:border-red-700 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1" 
+                            <label class="fabric-option w-full md:w-[280px] group relative bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-xl p-6 cursor-pointer hover:border-red-700 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1" 
                                    onclick="selectFabricOption('{{ $type->id }}')">
                                 <input type="radio" name="fabric_type" value="{{ $type->id }}" class="sr-only">
                                 <div class="text-center">
