@@ -19,13 +19,19 @@ class Authenticate extends Middleware
             ?? $request->header('X-Auth-Token')
             ?? $request->bearerToken();
 
-        // For auth_token-based requests, avoid DB-backed sessions before auth middleware completes.
-        if ($resolvedToken && config('session.driver') === 'database') {
-            config(['session.driver' => 'cookie']);
-        }
+        // Only switch session driver when the token comes from the HTTP request itself
+        // (not from a stored session value) to avoid destroying the regular user session.
+        $tokenFromRequest = $resolvedToken !== null;
 
         if (!$resolvedToken) {
             $resolvedToken = session('auth_token');
+        }
+
+        // For auth_token-based requests, avoid DB-backed sessions before auth middleware completes.
+        // But ONLY when the token was explicitly passed in the request, not hydrated from session —
+        // switching the driver when a form POST comes in destroys the regular session and logs users out.
+        if ($tokenFromRequest && $resolvedToken && config('session.driver') === 'database') {
+            config(['session.driver' => 'cookie']);
         }
 
         // Try token authentication if not already authenticated
