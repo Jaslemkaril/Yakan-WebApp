@@ -756,14 +756,23 @@
                                 default => ucfirst(str_replace('_', ' ', $order->payment_method ?? 'Unknown')),
                             } }}. Status will be updated automatically via webhook.
                         </p>
-                        @if($order->transaction_id)
-                            <form action="{{ route('admin.custom-orders.check_payment', $order->id) }}" method="POST" class="inline">
+                        <div class="flex gap-2 flex-wrap">
+                            @if($order->transaction_id)
+                                <form action="{{ route('admin.custom-orders.check_payment', $order->id) }}" method="POST" class="inline">
+                                    @csrf
+                                    <button type="submit" class="bg-[#800000] hover:bg-[#600000] text-white px-3 py-2 rounded-lg text-sm font-semibold">
+                                        Check Status Manually
+                                    </button>
+                                </form>
+                            @endif
+                            {{-- Direct mark as paid for Maya pending payments --}}
+                            <form action="{{ route('admin.custom-orders.confirmPayment', $order) }}" method="POST" class="inline" onsubmit="return confirm('Mark this Maya payment as paid?')">
                                 @csrf
-                                <button type="submit" class="bg-[#800000] hover:bg-[#600000] text-white px-3 py-2 rounded-lg text-sm font-semibold">
-                                    Check Status Manually
+                                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm font-semibold">
+                                    ✓ Mark as Paid
                                 </button>
                             </form>
-                        @endif
+                        </div>
                     </div>
                 @endif
             </div>
