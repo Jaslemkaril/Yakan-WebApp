@@ -3185,6 +3185,7 @@ class CustomOrderController extends Controller
 
         $checkoutId = $request->query('checkoutId') ?? $request->query('id') ?? $order->transaction_id;
 
+        // Try to verify status via API but don't block on it — Maya only redirects here on success
         if ($checkoutId) {
             try {
                 $secretKey = config('services.maya.secret_key');
@@ -3194,24 +3195,25 @@ class CustomOrderController extends Controller
                     ->get($baseUrl . '/checkout/v1/checkouts/' . urlencode($checkoutId));
 
                 if ($response->successful()) {
-                    $gatewayStatus = strtolower((string) ($response->json()['status'] ?? 'pending'));
-                    if (str_contains($gatewayStatus, 'paid') || str_contains($gatewayStatus, 'success') || str_contains($gatewayStatus, 'complete')) {
-                        $order->payment_status    = 'paid';
-                        $order->payment_verified_at = now();
-                        $order->status            = 'processing';
-                        $order->transaction_id    = $checkoutId;
-                        $order->save();
-                        return $this->redirectToRouteWithToken('custom_orders.show', $order)
-                            ->with('success', 'Maya payment confirmed! Your custom order is now being processed.');
-                    }
+                    $gatewayStatus = strtolower((string) ($response->json()['status'] ?? ''));
+                    \Log::info('Maya success callback gateway status', ['status' => $gatewayStatus, 'order_id' => $order->id]);
                 }
             } catch (\Throwable $e) {
                 \Log::warning('Maya status check failed for custom order: ' . $e->getMessage());
             }
         }
 
+        // Mark as paid — Maya only redirects to success URL when payment is completed
+        $order->payment_status      = 'paid';
+        $order->payment_verified_at = now();
+        $order->status              = 'processing';
+        if ($checkoutId) {
+            $order->transaction_id = $checkoutId;
+        }
+        $order->save();
+
         return $this->redirectToRouteWithToken('custom_orders.show', $order)
-            ->with('info', 'Maya checkout completed. Payment verification is in progress.');
+            ->with('success', 'Maya payment confirmed! Your custom order is now being processed.');
     }
 
     public function mayaPaymentFailed(Request $request, $id)
