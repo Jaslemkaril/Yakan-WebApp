@@ -963,6 +963,22 @@
             </div>
             @endif
 
+            {{-- Mark Maya Payment as Paid (show when Maya/online_banking payment is pending) --}}
+            @if(in_array($order->payment_status, ['pending', 'unpaid']) && in_array($order->payment_method, ['maya', 'online_banking']) && $order->transaction_id)
+            <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+                <p class="text-sm font-bold text-blue-800 mb-2">⚠️ Maya payment completed but not confirmed</p>
+                <form action="{{ route('admin.custom-orders.confirmPayment', $order) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" onsubmit="return confirm('Mark this Maya payment as paid?')">
+                    @csrf
+                    @if(request('auth_token'))
+                    <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+                    @endif
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-4 rounded-lg">
+                        ✓ Mark Maya Payment as Paid
+                    </button>
+                </form>
+            </div>
+            @endif
+
             {{-- Admin Actions --}}
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
