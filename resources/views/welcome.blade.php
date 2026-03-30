@@ -479,7 +479,7 @@
                                     </div>
                                 @elseif($product->isLowStock())
                                     <div class="absolute top-3 left-3">
-                                        <span class="px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full shadow-lg animate-pulse">
+                                        <span class="px-3 py-1 text-white text-xs font-bold rounded-full shadow-lg animate-pulse" style="background-color:#800000;">
                                             Low Stock
                                         </span>
                                     </div>
@@ -531,7 +531,7 @@
                                 <div class="flex items-center justify-between pt-4 border-t border-gray-100">
                                     <div>
                                         <p class="text-xs text-gray-500 mb-1">Price</p>
-                                        <span class="text-2xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
+                                        <span class="text-2xl font-bold bg-gradient-to-r bg-clip-text text-transparent" style="background-image: linear-gradient(to right, #800000, #5f0000);">
                                             ₱{{ number_format($product->price ?? 0) }}
                                         </span>
                                     </div>
