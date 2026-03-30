@@ -478,16 +478,20 @@
                                 
                                 <!-- Rating -->
                                 <div class="flex items-center mb-2 md:mb-4">
-                                    <div class="flex text-yellow-400 mr-1 md:mr-2 text-xs sm:text-sm" title="4.0 out of 5 stars">
+                                    @php
+                                        $reviewCount = (int) ($product->reviews_count ?? 0);
+                                        $averageRating = (float) ($product->average_rating ?? 0);
+                                    @endphp
+                                    <div class="flex text-yellow-400 mr-1 md:mr-2 text-xs sm:text-sm" title="{{ number_format($averageRating, 1) }} out of 5 stars">
                                         @for($i = 1; $i <= 5; $i++)
-                                            @if($i <= 4)
+                                            @if($reviewCount > 0 && $i <= floor($averageRating))
                                                 ★
                                             @else
                                                 ☆
                                             @endif
                                         @endfor
                                     </div>
-                                    <span class="text-xs sm:text-sm text-gray-500 hidden sm:inline">({{ $product->reviews_count ?? 0 }} {{ Str::plural('review', $product->reviews_count ?? 0) }})</span>
+                                    <span class="text-xs sm:text-sm text-gray-500 hidden sm:inline">({{ $reviewCount }} {{ Str::plural('review', $reviewCount) }})</span>
                                 </div>
                                 
                                 <!-- Price Section -->
