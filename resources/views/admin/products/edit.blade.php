@@ -116,6 +116,39 @@ use Illuminate\Support\Facades\Storage;
         </div>
 
         <script>
+        let toastTimeout = null;
+
+        function showUiToast(message, type = 'success') {
+            const existing = document.getElementById('adminUiToast');
+            if (existing) {
+                existing.remove();
+            }
+            if (toastTimeout) {
+                clearTimeout(toastTimeout);
+            }
+
+            const toast = document.createElement('div');
+            toast.id = 'adminUiToast';
+            const isSuccess = type === 'success';
+            toast.className = `fixed top-5 right-5 z-[9999] px-4 py-3 rounded-xl shadow-xl text-white text-sm font-semibold transition-all duration-300 ${isSuccess ? 'bg-green-600' : 'bg-red-600'}`;
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-10px)';
+            toast.textContent = message;
+
+            document.body.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateY(0)';
+            });
+
+            toastTimeout = setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
         function toggleNewCategory() {
             const div = document.getElementById('newCategoryDiv');
             const input = document.getElementById('newCategoryInput');
@@ -132,7 +165,7 @@ use Illuminate\Support\Facades\Storage;
             const categoryName = input.value.trim();
             
             if (!categoryName) {
-                alert('Please enter a category name');
+                showUiToast('Please enter a category name', 'error');
                 return;
             }
 
@@ -183,17 +216,17 @@ use Illuminate\Support\Facades\Storage;
                     const option = new Option(data.category.name, data.category.id, true, true);
                     select.add(option);
                     
-                    alert('Category "' + data.category.name + '" created successfully!');
+                    showUiToast(`Category "${data.category.name}" added successfully!`, 'success');
                     input.value = '';
                     toggleNewCategory();
-                    location.reload();
+                    setTimeout(() => location.reload(), 1200);
                 } else {
-                    alert('Error: ' + (data.message || 'Failed to create category'));
+                    showUiToast(data.message || 'Failed to create category', 'error');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Failed to create category. Please try again.');
+                showUiToast(error.message || 'Failed to create category. Please try again.', 'error');
             });
         }
 
@@ -247,15 +280,15 @@ use Illuminate\Support\Facades\Storage;
             })
             .then(data => {
                 if (data.success) {
-                    alert('Category deleted successfully!');
+                    showUiToast('Category deleted successfully!', 'success');
                     location.reload();
                 } else {
-                    alert('Error: ' + (data.message || 'Failed to delete category'));
+                    showUiToast(data.message || 'Failed to delete category', 'error');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert(error.message || 'Failed to delete category. Please try again.');
+                showUiToast(error.message || 'Failed to delete category. Please try again.', 'error');
             });
         }
         </script>
