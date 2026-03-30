@@ -687,7 +687,16 @@
 
 @push('scripts')
 <script>
+    const wishlistProductIds = @json($wishlistProductIds ?? []);
     const welcomeWishlistState = new Set();
+
+    document.addEventListener('DOMContentLoaded', function() {
+        wishlistProductIds.forEach(function(productId) {
+            const numericId = Number(productId);
+            welcomeWishlistState.add(numericId);
+            setWelcomeWishlistButtonState(numericId, true);
+        });
+    });
 
     function setWelcomeWishlistButtonState(productId, inWishlist) {
         const button = document.getElementById(`wishlist-btn-${productId}`);
@@ -717,7 +726,8 @@
         const button = event.currentTarget;
         if (!button) return;
 
-        const currentlyInWishlist = welcomeWishlistState.has(productId) || button.classList.contains('in-wishlist');
+        const numericProductId = Number(productId);
+        const currentlyInWishlist = welcomeWishlistState.has(numericProductId) || button.classList.contains('in-wishlist');
         const action = currentlyInWishlist ? 'remove' : 'add';
         const baseRoute = action === 'add' ? '{{ route("wishlist.add") }}' : '{{ route("wishlist.remove") }}';
 
@@ -770,11 +780,11 @@
 
                 const nextInWishlist = action === 'add';
                 if (nextInWishlist) {
-                    welcomeWishlistState.add(productId);
+                    welcomeWishlistState.add(numericProductId);
                 } else {
-                    welcomeWishlistState.delete(productId);
+                    welcomeWishlistState.delete(numericProductId);
                 }
-                setWelcomeWishlistButtonState(productId, nextInWishlist);
+                setWelcomeWishlistButtonState(numericProductId, nextInWishlist);
                 
                 // Show toast notification
                 showToast(data.message || 'Wishlist updated!');

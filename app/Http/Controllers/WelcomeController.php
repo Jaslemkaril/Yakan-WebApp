@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class WelcomeController extends Controller
@@ -51,12 +52,27 @@ class WelcomeController extends Controller
         // Total number of active products
         $totalProducts = Product::where('status', 'active')->count();
 
+        // Preload wishlist product ids so homepage hearts reflect saved state.
+        $wishlistProductIds = [];
+        if (Auth::check()) {
+            $wishlist = Auth::user()->wishlists()->default()->first();
+            if ($wishlist) {
+                $wishlistProductIds = $wishlist->items()
+                    ->where('item_type', Product::class)
+                    ->pluck('item_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->values()
+                    ->toArray();
+            }
+        }
+
         // Pass all variables to the view
         return view('welcome', compact(
             'latestProducts',
             'featuredProducts',
             'categories',
-            'totalProducts'
+            'totalProducts',
+            'wishlistProductIds'
         ));
     }
 
