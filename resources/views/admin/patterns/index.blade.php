@@ -185,7 +185,7 @@
                             <a href="{{ route('admin.patterns.edit', $pattern) }}{{ request()->has('auth_token') ? '?auth_token=' . request()->get('auth_token') : '' }}"
                                class="flex-1 text-center px-3 py-2 border-2 text-sm font-bold rounded-lg hover:bg-red-50 transition-colors"
                                style="border-color: #800000; color: #800000;">Edit</a>
-                            <form action="{{ route('admin.patterns.destroy', $pattern) }}" method="POST" onsubmit="return confirm('Delete {{ addslashes($pattern->name) }}? This cannot be undone.')" class="flex-1">
+                            <form action="{{ route('admin.patterns.destroy', $pattern) }}" method="POST" class="flex-1 js-pattern-delete-form" data-pattern-name="{{ $pattern->name }}">
                                 @csrf
                                 @method('DELETE')
                                 @if(request()->has('auth_token'))
@@ -219,4 +219,64 @@
         @endif
     </div>
 </div>
+
+<div id="patternDeleteModal" class="fixed inset-0 z-[10000] hidden items-center justify-center bg-black/45 px-4">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-gray-200 p-5">
+        <h3 class="text-lg font-bold text-gray-900 mb-2">Delete Pattern</h3>
+        <p class="text-sm text-gray-600 mb-1">You are about to delete:</p>
+        <p id="patternDeleteName" class="text-base font-semibold" style="color:#800000;"></p>
+        <p class="text-sm text-gray-500 mt-2 mb-5">This action cannot be undone.</p>
+        <div class="flex justify-end gap-2">
+            <button type="button" id="patternDeleteCancel" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition">Cancel</button>
+            <button type="button" id="patternDeleteConfirm" class="px-4 py-2 rounded-lg text-white hover:opacity-90 transition" style="background-color:#800000;">Delete</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const modal = document.getElementById('patternDeleteModal');
+    const nameEl = document.getElementById('patternDeleteName');
+    const cancelBtn = document.getElementById('patternDeleteCancel');
+    const confirmBtn = document.getElementById('patternDeleteConfirm');
+    let activeForm = null;
+
+    if (!modal || !nameEl || !cancelBtn || !confirmBtn) {
+        return;
+    }
+
+    document.querySelectorAll('.js-pattern-delete-form').forEach((form) => {
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            activeForm = form;
+            nameEl.textContent = form.dataset.patternName || 'this pattern';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        });
+    });
+
+    function closeModal() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        activeForm = null;
+    }
+
+    cancelBtn.addEventListener('click', closeModal);
+
+    confirmBtn.addEventListener('click', function () {
+        if (!activeForm) {
+            return;
+        }
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Deleting...';
+        activeForm.submit();
+    });
+
+    modal.addEventListener('click', function (event) {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+})();
+</script>
 @endsection
