@@ -149,6 +149,45 @@ use Illuminate\Support\Facades\Storage;
             }, 3500);
         }
 
+        function showUiConfirm(message) {
+            return new Promise((resolve) => {
+                const existing = document.getElementById('adminUiConfirm');
+                if (existing) {
+                    existing.remove();
+                }
+
+                const overlay = document.createElement('div');
+                overlay.id = 'adminUiConfirm';
+                overlay.className = 'fixed inset-0 z-[10000] flex items-center justify-center bg-black/45 px-4';
+
+                overlay.innerHTML = `
+                    <div class="w-full max-w-sm rounded-2xl bg-white shadow-2xl border border-gray-200 p-5">
+                        <h3 class="text-base font-bold text-gray-900 mb-2">Confirm Delete</h3>
+                        <p class="text-sm text-gray-600 mb-5">${message}</p>
+                        <div class="flex justify-end gap-2">
+                            <button type="button" id="confirmCancelBtn" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition">Cancel</button>
+                            <button type="button" id="confirmDeleteBtn" class="px-4 py-2 rounded-lg bg-[#800000] text-white hover:bg-[#600000] transition">Delete</button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(overlay);
+
+                const cleanup = (result) => {
+                    overlay.remove();
+                    resolve(result);
+                };
+
+                overlay.querySelector('#confirmCancelBtn')?.addEventListener('click', () => cleanup(false));
+                overlay.querySelector('#confirmDeleteBtn')?.addEventListener('click', () => cleanup(true));
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) {
+                        cleanup(false);
+                    }
+                });
+            });
+        }
+
         function toggleNewCategory() {
             const div = document.getElementById('newCategoryDiv');
             const input = document.getElementById('newCategoryInput');
@@ -237,8 +276,9 @@ use Illuminate\Support\Facades\Storage;
             }
         });
 
-        function deleteCategory(categoryId) {
-            if (!confirm('Are you sure you want to delete this category?')) {
+        async function deleteCategory(categoryId) {
+            const confirmed = await showUiConfirm('Are you sure you want to delete this category?');
+            if (!confirmed) {
                 return;
             }
 
