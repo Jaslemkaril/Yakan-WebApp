@@ -73,7 +73,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Base Color</label>
-                        <input type="text" name="base_color" value="{{ old('base_color', $pattern->base_color) }}" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500" />
+                        <input type="text" name="base_color" value="{{ old('base_color', $pattern->base_color ?? '#800000') }}" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500" placeholder="#800000" />
                         @error('base_color') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
                     <div>

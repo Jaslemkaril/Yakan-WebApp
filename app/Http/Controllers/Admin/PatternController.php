@@ -63,6 +63,9 @@ class PatternController extends Controller
             'media_alt.*' => 'nullable|string|max:255',
         ]);
 
+        // DB requires non-null base_color; guarantee a safe fallback.
+        $validated['base_color'] = $validated['base_color'] ?? '#800000';
+
         // Set is_active default value if not present
         $validated['is_active'] = $request->has('is_active') ? 1 : 0;
 
@@ -208,6 +211,9 @@ class PatternController extends Controller
             'media_alt' => 'nullable|array',
             'media_alt.*' => 'nullable|string|max:255',
         ]);
+
+        // Keep base_color non-null on updates as well.
+        $validated['base_color'] = $validated['base_color'] ?? '#800000';
 
         // Handle SVG file upload
         $newSvgFileName = null;
