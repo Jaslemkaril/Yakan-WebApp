@@ -453,7 +453,8 @@
                                 <!-- Quick Actions -->
                                 <div class="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-4 group-hover:translate-x-0">
                                     @auth
-                                    <button onclick="toggleWishlist({{ $product->id }})" 
+                                    <button onclick="toggleWishlist(event, {{ $product->id }})" 
+                                            id="wishlist-btn-{{ $product->id }}"
                                             class="w-10 h-10 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-red-50 hover:text-red-600 transition-colors duration-200">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
@@ -686,30 +687,107 @@
 
 @push('scripts')
 <script>
+    const welcomeWishlistState = new Set();
+
+    function setWelcomeWishlistButtonState(productId, inWishlist) {
+        const button = document.getElementById(`wishlist-btn-${productId}`);
+        if (!button) return;
+
+        const svg = button.querySelector('svg');
+        if (!svg) return;
+
+        if (inWishlist) {
+            button.classList.add('in-wishlist');
+            button.style.color = '#800000';
+            svg.setAttribute('fill', '#800000');
+            svg.setAttribute('stroke', '#800000');
+        } else {
+            button.classList.remove('in-wishlist');
+            button.style.color = '';
+            svg.setAttribute('fill', 'none');
+            svg.setAttribute('stroke', 'currentColor');
+        }
+    }
+
     // Toggle Wishlist
-    function toggleWishlist(productId) {
-        fetch(`/wishlist/toggle/${productId}`, {
+    function toggleWishlist(event, productId) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const button = event.currentTarget;
+        if (!button) return;
+
+        const currentlyInWishlist = welcomeWishlistState.has(productId) || button.classList.contains('in-wishlist');
+        const action = currentlyInWishlist ? 'remove' : 'add';
+        const baseRoute = action === 'add' ? '{{ route("wishlist.add") }}' : '{{ route("wishlist.remove") }}';
+
+        const authToken = localStorage.getItem('yakan_auth_token') || sessionStorage.getItem('auth_token');
+        const requestUrl = new URL(baseRoute, window.location.origin);
+        if (authToken) {
+            requestUrl.searchParams.set('auth_token', authToken);
+        }
+
+        button.disabled = true;
+
+        fetch(requestUrl.toString(), {
             method: 'POST',
             headers: {
+                'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'X-Auth-Token': authToken || ''
             }
+            ,
+            credentials: 'include',
+            body: JSON.stringify({
+                type: 'product',
+                id: productId,
+                auth_token: authToken || undefined
+            })
         })
-        .then(response => response.json())
+        .then(async response => {
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (e) {
+                data = { success: false, message: 'Unexpected server response' };
+            }
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Please login to add to wishlist');
+                }
+                throw new Error(data.message || 'Unable to update wishlist');
+            }
+
+            return data;
+        })
         .then(data => {
             if (data.success) {
                 // Visual feedback
-                const btn = event.currentTarget;
-                btn.classList.add('animate-bounce');
-                setTimeout(() => btn.classList.remove('animate-bounce'), 600);
+                button.classList.add('animate-bounce');
+                setTimeout(() => button.classList.remove('animate-bounce'), 600);
+
+                const nextInWishlist = action === 'add';
+                if (nextInWishlist) {
+                    welcomeWishlistState.add(productId);
+                } else {
+                    welcomeWishlistState.delete(productId);
+                }
+                setWelcomeWishlistButtonState(productId, nextInWishlist);
                 
                 // Show toast notification
                 showToast(data.message || 'Wishlist updated!');
+            } else {
+                showToast(data.message || 'Unable to update wishlist', 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            showToast('Please login to add to wishlist', 'error');
+            showToast(error.message || 'Error updating wishlist', 'error');
+        })
+        .finally(() => {
+            button.disabled = false;
         });
     }
     
