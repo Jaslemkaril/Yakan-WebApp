@@ -29,7 +29,7 @@
         </div>
     @endif
 
-    <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+    <form id="addProductForm" action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
         @csrf
         
         <!-- Preserve auth_token if present in URL -->
@@ -506,11 +506,45 @@
         </div>
 
         <!-- Submit Button -->
-        <button type="submit"
+        <button id="createProductSubmitBtn" type="submit"
             class="bg-[#800000] text-white px-6 py-3 rounded-lg hover:bg-[#600000] transition-colors duration-200 font-medium shadow-lg">
             <i class="fas fa-plus mr-2"></i>Create Product
         </button>
     </form>
+
+    <div id="addProductLoadingOverlay" class="fixed inset-0 z-[10001] hidden items-center justify-center bg-black/50 px-4">
+        <div class="w-full max-w-sm rounded-2xl bg-white shadow-2xl border border-gray-200 p-6 text-center">
+            <div class="mx-auto mb-4 h-10 w-10 border-4 border-[#800000]/20 border-t-[#800000] rounded-full animate-spin"></div>
+            <p class="text-lg font-bold text-gray-900">Adding product...</p>
+            <p class="mt-1 text-sm text-gray-600">Please wait while we save your product details.</p>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        const form = document.getElementById('addProductForm');
+        const submitBtn = document.getElementById('createProductSubmitBtn');
+        const overlay = document.getElementById('addProductLoadingOverlay');
+
+        if (!form || !submitBtn || !overlay) {
+            return;
+        }
+
+        form.addEventListener('submit', function (event) {
+            if (form.dataset.submitting === '1') {
+                event.preventDefault();
+                return;
+            }
+
+            form.dataset.submitting = '1';
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Adding Product...';
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+        });
+    })();
+    </script>
 </div>
 </div>
 @endsection
