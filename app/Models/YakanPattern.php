@@ -186,12 +186,16 @@ class YakanPattern extends Model
      */
     public function getImageUrlAttribute(): string
     {
-        // If has SVG, return data URI
-        if ($this->hasSvg()) {
-            $svgContent = $this->getSvgContent();
-            if ($svgContent) {
-                return 'data:image/svg+xml;base64,' . base64_encode($svgContent);
-            }
+        // Prefer serving SVG by URL/path so browser renders the actual uploaded file.
+        $svgUrl = $this->resolveSvgUrl();
+        if ($svgUrl) {
+            return $svgUrl;
+        }
+
+        // Fallback for legacy inline SVG saved in pattern_data.
+        $svgContent = $this->getSvgContent();
+        if ($svgContent) {
+            return 'data:image/svg+xml;base64,' . base64_encode($svgContent);
         }
 
         // Fallback to first media image
@@ -201,5 +205,31 @@ class YakanPattern extends Model
         }
 
         return '';
+    }
+
+    /**
+     * Resolve an SVG file path/URL for browser rendering.
+     */
+    private function resolveSvgUrl(): ?string
+    {
+        if (empty($this->svg_path)) {
+            return null;
+        }
+
+        if (filter_var($this->svg_path, FILTER_VALIDATE_URL)) {
+            return $this->svg_path;
+        }
+
+        $directPath = public_path('uploads/patterns/svg/' . $this->svg_path);
+        if (file_exists($directPath)) {
+            return asset('uploads/patterns/svg/' . $this->svg_path);
+        }
+
+        $relativeUploadPath = public_path('uploads/' . ltrim($this->svg_path, '/'));
+        if (file_exists($relativeUploadPath)) {
+            return asset('uploads/' . ltrim($this->svg_path, '/'));
+        }
+
+        return null;
     }
 }

@@ -92,7 +92,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 @foreach($patterns as $pattern)
                 @php
-                    $svgContent = $pattern->hasSvg() ? $pattern->getSvgContent() : null;
+                    $previewUrl = $pattern->image_url;
                     $difficultyConfig = [
                         'simple'   => ['bg' => 'bg-emerald-100', 'text' => 'text-emerald-800'],
                         'medium'   => ['bg' => 'bg-yellow-100',  'text' => 'text-yellow-800'],
@@ -106,19 +106,9 @@
                 <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 border border-gray-100 flex flex-col">
 
                     {{-- Pattern preview --}}
-                    @if($svgContent)
+                    @if($previewUrl)
                         <div class="w-full h-44 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-3 overflow-hidden relative">
-                            <div class="max-w-full max-h-full flex items-center justify-center">{!! $svgContent !!}</div>
-                            @if(!$pattern->is_active)
-                                <div class="absolute inset-0 bg-gray-900/20 flex items-center justify-center">
-                                    <span class="bg-gray-800/70 text-white text-xs font-bold px-2 py-1 rounded">Inactive</span>
-                                </div>
-                            @endif
-                        </div>
-                    @elseif($pattern->media->isNotEmpty())
-                        @php $firstMedia = $pattern->media->first(); @endphp
-                        <div class="w-full h-44 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden relative">
-                            <img src="{{ $firstMedia->url }}" alt="{{ $firstMedia->alt_text ?? $pattern->name }}" class="w-full h-full object-contain p-2">
+                            <img src="{{ $previewUrl }}" alt="{{ $pattern->name }}" class="w-full h-full object-contain">
                             @if(!$pattern->is_active)
                                 <div class="absolute inset-0 bg-gray-900/20 flex items-center justify-center">
                                     <span class="bg-gray-800/70 text-white text-xs font-bold px-2 py-1 rounded">Inactive</span>
