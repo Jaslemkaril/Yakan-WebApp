@@ -558,7 +558,7 @@ input[type='range']::-moz-range-thumb {
                          data-category="{{ $pattern->category }}"
                          data-pattern-name="{{ $pattern->name }}"
                          data-pattern-svg="{{ $pattern->hasSvg() ? base64_encode($pattern->getSvgContent()) : '' }}"
-                         data-pattern-image="{{ $pattern->media->isNotEmpty() ? $pattern->media->first()->url : '' }}">
+                         data-pattern-image="{{ $pattern->image_url }}">
                         
                         <!-- Multi-Selection Checkbox -->
                         <div class="absolute top-2 left-2 z-20">
@@ -571,21 +571,12 @@ input[type='range']::-moz-range-thumb {
                         
                         <!-- Pattern Preview -->
                         <div class="h-48 bg-gradient-to-br from-purple-100 to-red-100 relative overflow-hidden">
-                            @if($pattern->hasSvg())
-                                <!-- Display SVG Pattern -->
-                                <div class="absolute inset-0 flex items-center justify-center p-4">
-                                    {!! $pattern->getSvgContent() !!}
-                                </div>
-                            @elseif($pattern->media->isNotEmpty())
-                                @php
-                                    $firstMedia = $pattern->media->first();
-                                    $patternImage = $firstMedia->url;
-                                @endphp
-                                <!-- Display Pattern Image from Database -->
-                                <img src="{{ $patternImage }}" 
-                                     alt="{{ $firstMedia->alt_text ?? $pattern->name }}"
+                            @if(!empty($pattern->image_url))
+                                <!-- Display Pattern Image/SVG URL -->
+                                <img src="{{ $pattern->image_url }}" 
+                                     alt="{{ $pattern->name }}"
                                      class="w-full h-full object-cover"
-                                     data-pattern-image="{{ $patternImage }}"
+                                     data-pattern-image="{{ $pattern->image_url }}"
                                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                             @else
                                 <!-- No Pattern Image Available -->
