@@ -125,12 +125,13 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.7) 100%);
+        background: transparent;
         opacity: 0;
         transition: opacity 0.3s ease;
         display: flex;
-        align-items: flex-end;
-        padding: 1rem;
+        align-items: flex-start;
+        justify-content: flex-end;
+        padding: 0.9rem;
     }
 
     .product-card:hover .product-overlay {
@@ -139,21 +140,24 @@
 
     .quick-actions {
         display: flex;
-        gap: 0.5rem;
-        width: 100%;
+        flex-direction: column;
+        gap: 0.55rem;
+        width: auto;
     }
 
     .quick-action-btn {
-        flex: 1;
-        padding: 0.5rem;
+        width: 44px;
+        height: 44px;
         background: rgba(255, 255, 255, 0.9);
         border: none;
-        border-radius: 0.5rem;
-        font-size: 0.875rem;
-        font-weight: 600;
+        border-radius: 9999px;
         cursor: pointer;
         transition: all 0.2s ease;
         backdrop-filter: blur(10px);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #111827;
     }
 
     .quick-action-btn:hover {
@@ -163,12 +167,12 @@
     }
 
     .quick-action-btn.primary {
-        background: #800000;
-        color: white;
+        background: rgba(255, 255, 255, 0.95);
+        color: #111827;
     }
 
     .quick-action-btn.primary:hover {
-        background: #600000;
+        background: white;
     }
 
     .product-badge {
@@ -437,25 +441,23 @@
                                 <!-- Hover Overlay with Quick Actions -->
                                 <div class="product-overlay">
                                     <div class="quick-actions">
-                                        <button id="wishlist-btn-{{ $product->id }}" class="quick-action-btn" onclick="event.stopPropagation(); toggleWishlist({{ $product->id }})">
-                                            <svg class="w-4 h-4 inline mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <button id="wishlist-btn-{{ $product->id }}" class="quick-action-btn" onclick="event.stopPropagation(); toggleWishlist({{ $product->id }})" title="Save to wishlist" aria-label="Save to wishlist">
+                                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                                             </svg>
-                                            Save
                                         </button>
                                         @if($product->isInStock())
-                                            <button class="quick-action-btn primary" onclick="event.stopPropagation(); quickAddToCart({{ $product->id }})">
-                                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                            <button class="quick-action-btn primary" onclick="event.stopPropagation(); quickAddToCart({{ $product->id }})" title="Add to cart" aria-label="Add to cart">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13h7"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 8h5m-2.5-2.5v5"/>
                                                 </svg>
-                                                Add
                                             </button>
                                         @else
-                                            <button class="quick-action-btn" disabled style="opacity: 0.5; cursor: not-allowed; background: #6b7280;">
-                                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <button class="quick-action-btn" disabled style="opacity: 0.5; cursor: not-allowed; background: #6b7280; color: #fff;" title="Out of stock" aria-label="Out of stock">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                                 </svg>
-                                                Out of Stock
                                             </button>
                                         @endif
                                     </div>
