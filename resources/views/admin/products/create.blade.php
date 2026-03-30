@@ -133,26 +133,46 @@
                 return;
             }
 
-            // Construct the URL directly
-            const createUrl = '/admin/categories';
+            const authToken = new URLSearchParams(window.location.search).get('auth_token')
+                || localStorage.getItem('yakan_auth_token')
+                || sessionStorage.getItem('auth_token');
 
-            // Send AJAX request to create category
-            fetch(createUrl, {
+            const createUrl = new URL('/admin/categories', window.location.origin);
+            if (authToken) {
+                createUrl.searchParams.set('auth_token', authToken);
+            }
+
+            fetch(createUrl.toString(), {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'X-Auth-Token': authToken || ''
                 },
-                body: JSON.stringify({ name: categoryName })
+                body: JSON.stringify({
+                    name: categoryName,
+                    auth_token: authToken || undefined
+                })
             })
-            .then(response => {
-                if (!response.ok) {
-                    return response.text().then(text => {
-                        throw new Error(`HTTP ${response.status}: ${text}`);
-                    });
+            .then(async response => {
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    if (response.status === 401 || response.status === 403 || text.toLowerCase().includes('login')) {
+                        throw new Error('Session expired. Please refresh the page and login again.');
+                    }
+                    throw new Error('Unexpected server response while creating category.');
                 }
-                return response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || `HTTP ${response.status}`);
+                }
+
+                return data;
             })
             .then(data => {
                 if (data.success) {
@@ -173,7 +193,7 @@
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Failed to create category: ' + error.message);
+                alert(error.message || 'Failed to create category. Please try again.');
             });
         }
 
@@ -190,24 +210,42 @@
                 return;
             }
 
-            // Construct the delete URL
-            const deleteUrl = '/admin/categories/' + categoryId;
+            const authToken = new URLSearchParams(window.location.search).get('auth_token')
+                || localStorage.getItem('yakan_auth_token')
+                || sessionStorage.getItem('auth_token');
 
-            // Send DELETE request to remove category
-            fetch(deleteUrl, {
+            const deleteUrl = new URL(`/admin/categories/${categoryId}`, window.location.origin);
+            if (authToken) {
+                deleteUrl.searchParams.set('auth_token', authToken);
+            }
+
+            fetch(deleteUrl.toString(), {
                 method: 'DELETE',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'X-Auth-Token': authToken || ''
                 }
             })
-            .then(response => {
-                // Check if response is ok
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+            .then(async response => {
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    if (response.status === 401 || response.status === 403 || text.toLowerCase().includes('login')) {
+                        throw new Error('Session expired. Please refresh the page and login again.');
+                    }
+                    throw new Error('Unexpected server response while deleting category.');
                 }
-                return response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || `HTTP ${response.status}`);
+                }
+
+                return data;
             })
             .then(data => {
                 if (data.success) {
@@ -219,7 +257,7 @@
             })
             .catch(error => {
                 console.error('Delete error:', error);
-                alert('Failed to delete category. Please try again.');
+                alert(error.message || 'Failed to delete category. Please try again.');
             });
         }
 

@@ -136,16 +136,47 @@ use Illuminate\Support\Facades\Storage;
                 return;
             }
 
-            fetch('{{ route("admin.categories.store") }}', {
+            const authToken = new URLSearchParams(window.location.search).get('auth_token')
+                || localStorage.getItem('yakan_auth_token')
+                || sessionStorage.getItem('auth_token');
+
+            const createUrl = new URL('{{ route("admin.categories.store") }}', window.location.origin);
+            if (authToken) {
+                createUrl.searchParams.set('auth_token', authToken);
+            }
+
+            fetch(createUrl.toString(), {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'X-Auth-Token': authToken || ''
                 },
-                body: JSON.stringify({ name: categoryName })
+                body: JSON.stringify({
+                    name: categoryName,
+                    auth_token: authToken || undefined
+                })
             })
-            .then(response => response.json())
+            .then(async response => {
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    if (response.status === 401 || response.status === 403 || text.toLowerCase().includes('login')) {
+                        throw new Error('Session expired. Please refresh the page and login again.');
+                    }
+                    throw new Error('Unexpected server response while creating category.');
+                }
+
+                if (!response.ok) {
+                    throw new Error(data.message || `HTTP ${response.status}`);
+                }
+
+                return data;
+            })
             .then(data => {
                 if (data.success) {
                     const select = document.getElementById('categorySelect');
@@ -178,14 +209,42 @@ use Illuminate\Support\Facades\Storage;
                 return;
             }
 
-            fetch(`{{ url('admin/categories') }}/${categoryId}`, {
+            const authToken = new URLSearchParams(window.location.search).get('auth_token')
+                || localStorage.getItem('yakan_auth_token')
+                || sessionStorage.getItem('auth_token');
+
+            const deleteUrl = new URL(`{{ url('admin/categories') }}/${categoryId}`, window.location.origin);
+            if (authToken) {
+                deleteUrl.searchParams.set('auth_token', authToken);
+            }
+
+            fetch(deleteUrl.toString(), {
                 method: 'DELETE',
+                credentials: 'include',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'X-Auth-Token': authToken || ''
                 }
             })
-            .then(response => response.json())
+            .then(async response => {
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    if (response.status === 401 || response.status === 403 || text.toLowerCase().includes('login')) {
+                        throw new Error('Session expired. Please refresh the page and login again.');
+                    }
+                    throw new Error('Unexpected server response while deleting category.');
+                }
+
+                if (!response.ok) {
+                    throw new Error(data.message || `HTTP ${response.status}`);
+                }
+
+                return data;
+            })
             .then(data => {
                 if (data.success) {
                     alert('Category deleted successfully!');
@@ -196,7 +255,7 @@ use Illuminate\Support\Facades\Storage;
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Failed to delete category. Please try again.');
+                alert(error.message || 'Failed to delete category. Please try again.');
             });
         }
         </script>
