@@ -449,8 +449,10 @@
                                         @if($product->isInStock())
                                             <button class="quick-action-btn primary" onclick="event.stopPropagation(); quickAddToCart({{ $product->id }})" title="Add to cart" aria-label="Add to cart">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13h7"/>
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 8h5m-2.5-2.5v5"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h9l3-6H5.4M7 13l-1 2h10"/>
+                                                    <circle cx="9" cy="18" r="1.5" stroke-width="1.8"/>
+                                                    <circle cx="16" cy="18" r="1.5" stroke-width="1.8"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 6h4m-2-2v4"/>
                                                 </svg>
                                             </button>
                                         @else
