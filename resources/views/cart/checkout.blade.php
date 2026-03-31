@@ -1870,22 +1870,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 @csrf
                 <input type="hidden" name="from_checkout" value="1">
                 
-                <!-- Address Label -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        <svg class="w-4 h-4 inline" style="color: #800000;" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
-                        </svg>
-                        Address Label <span style="color: #800000;">*</span>
-                    </label>
-                    <select name="label" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
-                        <option value="">Select a label</option>
-                        <option value="Home">🏠 Home</option>
-                        <option value="Work">💼 Work</option>
-                        <option value="Other">📍 Other</option>
-                    </select>
-                </div>
-                
                 <!-- Name -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -1917,13 +1901,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     <input type="text" name="formatted_address" required placeholder="House No., Building, Street Name" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
                 </div>
                 
-                <!-- Region -->
+                <!-- Barangay -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Barangay</label>
+                    <select id="new_barangay_id" name="barangay_id" disabled class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all bg-gray-100">
+                        <option value="">-- Select Barangay --</option>
+                    </select>
+                    <p id="new_barangay_hint" class="hidden text-xs text-gray-400 mt-1">No barangays listed for this city — you can skip this field.</p>
+                </div>
+
+                <!-- City -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Region <span style="color: #800000;">*</span>
+                        City/Municipality <span style="color: #800000;">*</span>
                     </label>
-                    <select id="new_region_id" name="region_id" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
-                        <option value="">-- Select Region --</option>
+                    <select id="new_city_id" name="city_id" required disabled class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all bg-gray-100">
+                        <option value="">-- Select City/Municipality --</option>
                     </select>
                 </div>
 
@@ -1937,23 +1930,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     </select>
                 </div>
 
-                <!-- City -->
+                <!-- Region -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        City/Municipality <span style="color: #800000;">*</span>
+                        Region <span style="color: #800000;">*</span>
                     </label>
-                    <select id="new_city_id" name="city_id" required disabled class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all bg-gray-100">
-                        <option value="">-- Select City/Municipality --</option>
+                    <select id="new_region_id" name="region_id" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
+                        <option value="">-- Select Region --</option>
                     </select>
-                </div>
-                
-                <!-- Barangay -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Barangay</label>
-                    <select id="new_barangay_id" name="barangay_id" disabled class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all bg-gray-100">
-                        <option value="">-- Select Barangay --</option>
-                    </select>
-                    <p id="new_barangay_hint" class="hidden text-xs text-gray-400 mt-1">No barangays listed for this city — you can skip this field.</p>
                 </div>
                 
                 <!-- Postal Code -->
@@ -1962,6 +1946,22 @@ document.addEventListener('DOMContentLoaded', function() {
                         Postal Code <span style="color: #800000;">*</span>
                     </label>
                     <input type="text" id="newPostalCode" name="postal_code" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
+                </div>
+
+                <!-- Address Label -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <svg class="w-4 h-4 inline" style="color: #800000;" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                        </svg>
+                        Address Label <span style="color: #800000;">*</span>
+                    </label>
+                    <select name="label" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
+                        <option value="">Select a label</option>
+                        <option value="Home">🏠 Home</option>
+                        <option value="Work">💼 Work</option>
+                        <option value="Other">📍 Other</option>
+                    </select>
                 </div>
                 
                 <!-- Set as Default -->
