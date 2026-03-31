@@ -382,14 +382,20 @@ class AddressController extends Controller
      */
     public function getProvinces($regionId)
     {
+        $region = PhilippineRegion::find($regionId, ['id', 'region_code']);
+
         $provinces = PhilippineProvince::where('region_id', $regionId)
             ->orderBy('name')
             ->get(['id', 'name']);
 
         $fallback = false;
-        if ($provinces->isEmpty()) {
-            // Fallback when region mapping data is incomplete in the reference tables.
-            $provinces = PhilippineProvince::orderBy('name')->get(['id', 'name']);
+        if ($provinces->isEmpty() && $region && !empty($region->region_code)) {
+            // Region-aware fallback when region_id mapping is incomplete.
+            // Seeded province codes are typically like "BATA-IV-A", "CEBU-VII", etc.
+            $suffix = '-' . $region->region_code;
+            $provinces = PhilippineProvince::where('province_code', 'like', '%' . $suffix)
+                ->orderBy('name')
+                ->get(['id', 'name']);
             $fallback = true;
         }
         
@@ -408,18 +414,11 @@ class AddressController extends Controller
         $cities = PhilippineCity::where('province_id', $provinceId)
             ->orderBy('name')
             ->get(['id', 'name']);
-
-        $fallback = false;
-        if ($cities->isEmpty()) {
-            // Fallback when province->city mapping data is incomplete.
-            $cities = PhilippineCity::orderBy('name')->get(['id', 'name']);
-            $fallback = true;
-        }
         
         return response()->json([
             'success' => true,
             'data' => $cities,
-            'fallback' => $fallback,
+            'fallback' => false,
         ]);
     }
 
