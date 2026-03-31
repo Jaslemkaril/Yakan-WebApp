@@ -893,7 +893,7 @@
                         <x-notification-dropdown />
 
                         <!-- User Menu -->
-                        <div class="relative" x-data="{ open: false }">
+                        <div class="relative" x-data="{ open: false }" x-init="open = false">
                             <button @click="open = !open" class="flex items-center space-x-1 lg:space-x-2 p-1.5 lg:p-2 rounded-lg hover:bg-gray-100 transition-colors">
                                 @if(auth()->user()->avatar)
                                     <img src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->name }}" class="w-7 h-7 lg:w-8 lg:h-8 rounded-full object-cover border-2 border-maroon-600" loading="lazy">
@@ -907,7 +907,7 @@
                                 </svg>
                             </button>
 
-                            <div x-show="open" @click.away="open = false" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="transform scale-95 opacity-0" x-transition:enter-end="transform scale-100 opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform scale-100 opacity-100" x-transition:leave-end="transform scale-95 opacity-0" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
+                            <div x-cloak x-show="open" @click.away="open = false" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="transform scale-95 opacity-0" x-transition:enter-end="transform scale-100 opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform scale-100 opacity-100" x-transition:leave-end="transform scale-95 opacity-0" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50" style="display: none;">
                                 <div class="px-4 py-2 border-b border-gray-100">
                                     <p class="text-sm font-semibold text-gray-900">{{ auth()->user()->name }}</p>
                                     <p class="text-xs text-gray-500">{{ auth()->user()->email }}</p>
