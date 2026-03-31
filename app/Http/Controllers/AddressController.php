@@ -9,6 +9,7 @@ use App\Models\PhilippineCity;
 use App\Models\PhilippineBarangay;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class AddressController extends Controller
 {
@@ -43,7 +44,9 @@ class AddressController extends Controller
 
         $rules = [
             'label'             => 'required|string|max:50',
-            'full_name'         => 'required|string|max:255',
+            'full_name'         => 'nullable|string|max:255',
+            'first_name'        => 'nullable|string|max:120',
+            'last_name'         => 'nullable|string|max:120',
             'phone_number'      => 'required|string|max:20',
             'formatted_address' => 'required|string|max:255',
             'postal_code'       => 'required|string|max:10',
@@ -62,6 +65,8 @@ class AddressController extends Controller
 
         $validated = $request->validate($rules);
 
+        $fullName = $this->buildFullNameFromRequest($request, $validated);
+
         if ($useIds) {
             $region   = PhilippineRegion::find($validated['region_id']);
             $province = PhilippineProvince::find($validated['province_id']);
@@ -79,7 +84,7 @@ class AddressController extends Controller
         // Map form fields to database columns
         $addressData = [
             'label'       => $validated['label'],
-            'full_name'   => $validated['full_name'],
+            'full_name'   => $fullName,
             'phone_number'=> $validated['phone_number'],
             'street'      => $validated['formatted_address'],
             'barangay'    => $barangayName,
@@ -188,7 +193,9 @@ class AddressController extends Controller
 
         $rules = [
             'label'             => 'required|string|max:50',
-            'full_name'         => 'required|string|max:255',
+            'full_name'         => 'nullable|string|max:255',
+            'first_name'        => 'nullable|string|max:120',
+            'last_name'         => 'nullable|string|max:120',
             'phone_number'      => 'required|string|max:20',
             'formatted_address' => 'required|string|max:255',
             'postal_code'       => 'required|string|max:10',
@@ -207,6 +214,8 @@ class AddressController extends Controller
 
         $validated = $request->validate($rules);
 
+        $fullName = $this->buildFullNameFromRequest($request, $validated);
+
         if ($useIds) {
             $region   = PhilippineRegion::find($validated['region_id']);
             $province = PhilippineProvince::find($validated['province_id']);
@@ -224,7 +233,7 @@ class AddressController extends Controller
         // Map form fields to database columns
         $addressData = [
             'label'        => $validated['label'],
-            'full_name'    => $validated['full_name'],
+            'full_name'    => $fullName,
             'phone_number' => $validated['phone_number'],
             'street'       => $validated['formatted_address'],
             'barangay'     => $barangayName,
@@ -314,6 +323,29 @@ class AddressController extends Controller
         return response()->json([
             'success' => true,
             'data' => $address,
+        ]);
+    }
+
+    /**
+     * Build full name using split inputs first, then fallback to legacy full_name.
+     */
+    private function buildFullNameFromRequest(Request $request, array $validated): string
+    {
+        $firstName = trim((string) ($validated['first_name'] ?? $request->input('first_name', '')));
+        $lastName = trim((string) ($validated['last_name'] ?? $request->input('last_name', '')));
+        $legacyFullName = trim((string) ($validated['full_name'] ?? $request->input('full_name', '')));
+
+        if ($firstName !== '' && $lastName !== '') {
+            return trim($firstName . ' ' . $lastName);
+        }
+
+        if ($legacyFullName !== '') {
+            return $legacyFullName;
+        }
+
+        throw ValidationException::withMessages([
+            'first_name' => 'First name is required.',
+            'last_name' => 'Last name is required.',
         ]);
     }
 

@@ -1,16 +1,29 @@
 <form action="{{ route('addresses.update', $address) }}" method="POST" class="p-6">
     @csrf
     @method('PATCH')
+    @php
+        $nameParts = preg_split('/\s+/', trim((string) $address->full_name));
+        $editLastName = count($nameParts) > 1 ? array_pop($nameParts) : '';
+        $editFirstName = implode(' ', $nameParts);
+        if ($editFirstName === '' && !empty($address->full_name)) {
+            $editFirstName = $address->full_name;
+        }
+    @endphp
     
     <div class="grid grid-cols-2 gap-4 mb-4">
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-            <input type="text" name="full_name" value="{{ old('full_name', $address->full_name) }}" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
+            <label class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+            <input type="text" name="first_name" value="{{ old('first_name', $editFirstName) }}" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
         </div>
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-            <input type="tel" name="phone_number" value="{{ old('phone_number', $address->phone_number) }}" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+            <input type="text" name="last_name" value="{{ old('last_name', $editLastName) }}" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
         </div>
+    </div>
+
+    <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+        <input type="tel" name="phone_number" value="{{ old('phone_number', $address->phone_number) }}" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
     </div>
     
     <div class="mb-4">
