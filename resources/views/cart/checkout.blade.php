@@ -983,12 +983,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Address Modal Functions
 function openAddressModal() {
-    document.getElementById('addressModal').classList.remove('hidden');
+    const modal = document.getElementById('addressModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
 }
 
 function closeAddressModal() {
-    document.getElementById('addressModal').classList.add('hidden');
+    const modal = document.getElementById('addressModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
     document.body.style.overflow = 'auto';
 }
 
