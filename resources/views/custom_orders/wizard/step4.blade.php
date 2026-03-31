@@ -454,54 +454,81 @@
                     </div>
                     
                     @php
-                        // Calculate shipping fee based on selected address (minimum ₱100 for delivery)
-                        $shippingFee = 100; // default standard rate
-                        $selectedAddressForShipping = $defaultAddress;
-                        
-                        if ($selectedAddressForShipping) {
-                            $city = strtolower($selectedAddressForShipping->city ?? '');
-                            $region = strtolower($selectedAddressForShipping->province ?? $selectedAddressForShipping->region ?? '');
-                            $postalCode = $selectedAddressForShipping->postal_code ?? '';
-                            
-                            // Regional-based shipping (Professional Philippine courier rates)
-                            
-                            // ₱100 - Zamboanga City proper (standard minimum)
-                            if (str_contains($city, 'zamboanga') && str_starts_with($postalCode, '7')) {
+                        // Resolve selected address first (wizard-selected > default)
+                        $selectedAddressId = (int) (old('address_id', data_get($wizardData, 'details.address_id') ?? ($defaultAddress->id ?? 0)));
+                        $selectedAddressForShipping = $userAddresses->firstWhere('id', $selectedAddressId) ?? $defaultAddress;
+
+                        $deliveryTypeForPricing = old('delivery_type', data_get($wizardData, 'details.delivery_type') ?? 'delivery');
+                        $shippingFee = 0;
+                        $shippingZoneLabel = 'Store pickup (no shipping fee)';
+
+                        if ($deliveryTypeForPricing !== 'pickup') {
+                            $shippingFee = 350;
+                            $shippingZoneLabel = 'Far Luzon / Remote';
+
+                            $addressHaystack = strtolower(trim(implode(' ', array_filter([
+                                $selectedAddressForShipping->city ?? null,
+                                $selectedAddressForShipping->province ?? null,
+                                $selectedAddressForShipping->region ?? null,
+                                $selectedAddressForShipping->barangay ?? null,
+                                $selectedAddressForShipping->street_name ?? null,
+                                $selectedAddressForShipping->landmark ?? null,
+                            ]))));
+
+                            if ($addressHaystack === '') {
                                 $shippingFee = 100;
-                            }
-                            // ₱100 - Zamboanga Peninsula (nearby, standard minimum)
-                            elseif (str_contains($region, 'zamboanga') || 
-                                    in_array($city, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
+                                $shippingZoneLabel = 'Within Zamboanga City';
+                            } elseif (str_contains($addressHaystack, 'zamboanga')) {
                                 $shippingFee = 100;
-                            }
-                            // ₱120 - Western Mindanao
-                            elseif (in_array($city, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) ||
-                                    str_contains($region, 'barmm') || str_contains($region, 'armm')) {
-                                $shippingFee = 120;
-                            }
-                            // ₱150 - Other Mindanao regions
-                            elseif (str_contains($region, 'mindanao') ||
-                                    in_array($city, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'])) {
-                                $shippingFee = 150;
-                            }
-                            // ₱180 - Visayas
-                            elseif (str_contains($region, 'visayas') ||
-                                    in_array($city, ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'])) {
+                                $shippingZoneLabel = 'Within Zamboanga City / Zamboanga Peninsula';
+                            } elseif (
+                                str_contains($addressHaystack, 'barmm') ||
+                                str_contains($addressHaystack, 'bangsamoro') ||
+                                str_contains($addressHaystack, 'basilan') ||
+                                str_contains($addressHaystack, 'sulu') ||
+                                str_contains($addressHaystack, 'tawi')
+                            ) {
+                                $shippingFee = 100;
+                                $shippingZoneLabel = 'Zamboanga Peninsula + BARMM';
+                            } elseif (
+                                str_contains($addressHaystack, 'mindanao') ||
+                                str_contains($addressHaystack, 'davao') ||
+                                str_contains($addressHaystack, 'cagayan de oro') ||
+                                str_contains($addressHaystack, 'iligan') ||
+                                str_contains($addressHaystack, 'cotabato') ||
+                                str_contains($addressHaystack, 'caraga') ||
+                                str_contains($addressHaystack, 'general santos') ||
+                                str_contains($addressHaystack, 'soccsksargen')
+                            ) {
                                 $shippingFee = 180;
-                            }
-                            // ₱220 - Metro Manila & nearby
-                            elseif (str_contains($city, 'manila') || str_contains($region, 'ncr') ||
-                                    in_array($city, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'])) {
-                                $shippingFee = 220;
-                            }
-                            // ₱250 - Northern Luzon
-                            elseif (str_contains($region, 'luzon') ||
-                                    in_array($city, ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'])) {
+                                $shippingZoneLabel = 'Other Mindanao Regions';
+                            } elseif (
+                                str_contains($addressHaystack, 'visaya') ||
+                                str_contains($addressHaystack, 'cebu') ||
+                                str_contains($addressHaystack, 'iloilo') ||
+                                str_contains($addressHaystack, 'bacolod') ||
+                                str_contains($addressHaystack, 'tacloban') ||
+                                str_contains($addressHaystack, 'leyte') ||
+                                str_contains($addressHaystack, 'samar') ||
+                                str_contains($addressHaystack, 'bohol') ||
+                                str_contains($addressHaystack, 'negros')
+                            ) {
                                 $shippingFee = 250;
-                            }
-                            // ₱280 - Remote islands & far areas
-                            else {
-                                $shippingFee = 280;
+                                $shippingZoneLabel = 'Visayas';
+                            } elseif (
+                                str_contains($addressHaystack, 'ncr') ||
+                                str_contains($addressHaystack, 'metro manila') ||
+                                str_contains($addressHaystack, 'manila') ||
+                                str_contains($addressHaystack, 'quezon city') ||
+                                str_contains($addressHaystack, 'makati') ||
+                                str_contains($addressHaystack, 'calabarzon') ||
+                                str_contains($addressHaystack, 'central luzon') ||
+                                str_contains($addressHaystack, 'laguna') ||
+                                str_contains($addressHaystack, 'cavite') ||
+                                str_contains($addressHaystack, 'bulacan')
+                            ) {
+                                $shippingFee = 300;
+                                $shippingZoneLabel = 'NCR + Nearby Luzon';
                             }
                         }
                         
@@ -802,8 +829,8 @@
                                         </label>
                                         <div class="space-y-3 mb-4">
                                             @foreach($userAddresses as $address)
-                                                <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md" style="border-color: {{ $address->id === ($defaultAddress->id ?? null) ? '#8b3a56' : '#d1d5db' }}; background-color: {{ $address->id === ($defaultAddress->id ?? null) ? '#f5e6e8' : 'white' }};">
-                                                    <input type="radio" name="address_id" value="{{ $address->id }}" class="mt-1 mr-3 w-4 h-4 flex-shrink-0" style="accent-color: #8b3a56;" {{ $address->id === ($defaultAddress->id ?? null) ? 'checked' : '' }} required />
+                                                <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md" style="border-color: {{ $address->id === ($selectedAddressForShipping->id ?? null) ? '#8b3a56' : '#d1d5db' }}; background-color: {{ $address->id === ($selectedAddressForShipping->id ?? null) ? '#f5e6e8' : 'white' }};">
+                                                    <input type="radio" name="address_id" value="{{ $address->id }}" class="mt-1 mr-3 w-4 h-4 flex-shrink-0" style="accent-color: #8b3a56;" {{ $address->id === ($selectedAddressForShipping->id ?? null) ? 'checked' : '' }} required />
                                                     <div class="flex-1 min-w-0">
                                                         <div class="flex items-start justify-between gap-2 mb-1">
                                                             <p class="font-bold text-gray-900 text-base">
@@ -919,11 +946,9 @@
                                         <div class="flex items-center justify-between p-3 bg-white rounded-lg border-2 border-gray-300" id="step4ShippingFeeBox">
                                             <div>
                                                 <div class="text-sm font-semibold text-gray-700">Estimated Shipping Fee</div>
-                                                <div class="text-xs text-gray-500" id="step4ShippingZoneLabel">Based on your selected address</div>
+                                                <div class="text-xs text-gray-500" id="step4ShippingZoneLabel">{{ $shippingZoneLabel }}</div>
                                             </div>
-                                            <div class="text-xl font-bold" style="color:#800000;" id="step4ShippingFeeDisplay">
-                                                &#8369;{{ number_format($shippingFee, 2) }}
-                                            </div>
+                                            <div class="text-xl font-bold" style="color:#800000;" id="step4ShippingFeeDisplay">{{ $shippingFee > 0 ? ('₱' . number_format($shippingFee, 2)) : 'FREE' }}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -1181,54 +1206,76 @@ function initDeliveryToggle() {
         }
     }
     
+    const SHIPPING_ZONES = {
+        0: { label: 'Within Zamboanga City', fee: 100 },
+        1: { label: 'Zamboanga Peninsula + BARMM', fee: 100 },
+        2: { label: 'Other Mindanao Regions', fee: 180 },
+        3: { label: 'Visayas', fee: 250 },
+        4: { label: 'NCR + Nearby Luzon', fee: 300 },
+        5: { label: 'Far Luzon / Remote', fee: 350 }
+    };
+
+    function detectShippingZone(addressText) {
+        const text = (addressText || '').toLowerCase();
+        if (!text) return 0;
+        if (text.includes('zamboanga')) return 0;
+        if (text.includes('barmm') || text.includes('bangsamoro') || text.includes('basilan') || text.includes('sulu') || text.includes('tawi')) return 1;
+        if (text.includes('mindanao') || text.includes('davao') || text.includes('cagayan de oro') || text.includes('iligan') || text.includes('cotabato') || text.includes('caraga') || text.includes('general santos') || text.includes('soccsksargen')) return 2;
+        if (text.includes('visaya') || text.includes('cebu') || text.includes('iloilo') || text.includes('bacolod') || text.includes('tacloban') || text.includes('leyte') || text.includes('samar') || text.includes('bohol') || text.includes('negros')) return 3;
+        if (text.includes('ncr') || text.includes('metro manila') || text.includes('manila') || text.includes('quezon city') || text.includes('makati') || text.includes('calabarzon') || text.includes('central luzon') || text.includes('laguna') || text.includes('cavite') || text.includes('bulacan')) return 4;
+        return 5;
+    }
+
+    function updateStep4ShippingAndTotal() {
+        const deliveryType = document.querySelector('input[name="delivery_type"]:checked')?.value || 'delivery';
+        const feeDisplay = document.getElementById('step4ShippingFeeDisplay');
+        const zoneLabel = document.getElementById('step4ShippingZoneLabel');
+        const shippingFeeDisplay = document.getElementById('shippingFeeDisplay');
+        const finalTotalDisplay = document.getElementById('finalTotalDisplay');
+        const priceData = document.getElementById('priceData');
+
+        let shippingFee = 0;
+        let label = 'Store pickup (no shipping fee)';
+
+        if (deliveryType === 'delivery') {
+            const selectedAddressRadio = document.querySelector('input[name="address_id"]:checked');
+            const selectedAddressLabel = selectedAddressRadio ? selectedAddressRadio.closest('label') : null;
+            const selectedAddressText = selectedAddressLabel ? selectedAddressLabel.textContent : '';
+            const zone = detectShippingZone(selectedAddressText);
+            const info = SHIPPING_ZONES[zone];
+            shippingFee = info.fee;
+            label = info.label;
+        }
+
+        if (feeDisplay) feeDisplay.textContent = shippingFee > 0 ? ('₱' + shippingFee.toFixed(2)) : 'FREE';
+        if (zoneLabel) zoneLabel.textContent = label;
+        if (shippingFeeDisplay) shippingFeeDisplay.textContent = shippingFee > 0 ? ('₱' + shippingFee.toFixed(2)) : 'FREE';
+
+        if (finalTotalDisplay && priceData) {
+            const base = parseFloat(priceData.dataset.basePrice || 0);
+            const fabric = parseFloat(priceData.dataset.fabricCostBase || 0);
+            const addons = parseFloat(priceData.dataset.addonsTotal || 0);
+            const total = base + fabric + shippingFee + addons;
+            finalTotalDisplay.textContent = '\u20B1' + total.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+    }
+
     // Update shipping fee display when address selection changes
     document.querySelectorAll('input[name="address_id"]').forEach(function(radio) {
-        radio.addEventListener('change', function() {
-            const label = this.closest('label');
-            if (!label) return;
-            const cityEl = label.querySelector('.text-sm.text-gray-600');
-            if (!cityEl) return;
-            const text = (cityEl.textContent || '').toLowerCase();
-            const SHIPPING_ZONES = {
-                0: { label: 'Within Zamboanga City', fee: 100 },
-                1: { label: 'Zamboanga Peninsula + BARMM', fee: 100 },
-                2: { label: 'Other Mindanao Regions', fee: 180 },
-                3: { label: 'Visayas', fee: 250 },
-                4: { label: 'NCR + Nearby Luzon', fee: 300 },
-                5: { label: 'Far Luzon / Remote', fee: 350 }
-            };
-            let zone = 5;
-            if (text.includes('zamboanga city') || text.includes('zamboanga del')) zone = 0;
-            else if (text.includes('barmm') || text.includes('bangsamoro') || text.includes('basilan') || text.includes('sulu') || text.includes('tawi')) zone = 1;
-            else if (text.includes('mindanao') || text.includes('davao') || text.includes('cagayan de oro') || text.includes('iligan') || text.includes('cotabato') || text.includes('caraga') || text.includes('general santos') || text.includes('soccsksargen')) zone = 2;
-            else if (text.includes('visaya') || text.includes('cebu') || text.includes('iloilo') || text.includes('bacolod') || text.includes('tacloban') || text.includes('leyte') || text.includes('samar') || text.includes('bohol') || text.includes('negros')) zone = 3;
-            else if (text.includes('ncr') || text.includes('metro manila') || text.includes('manila') || text.includes('quezon city') || text.includes('makati') || text.includes('calabarzon') || text.includes('central luzon') || text.includes('laguna') || text.includes('cavite') || text.includes('bulacan')) zone = 4;
-            const info = SHIPPING_ZONES[zone];
-            const feeDisplay = document.getElementById('step4ShippingFeeDisplay');
-            const zoneLabel = document.getElementById('step4ShippingZoneLabel');
-            const shippingFeeDisplay = document.getElementById('shippingFeeDisplay');
-            const finalTotalDisplay = document.getElementById('finalTotalDisplay');
-            const priceData = document.getElementById('priceData');
-            if (feeDisplay) feeDisplay.textContent = '₱' + info.fee.toFixed(2);
-            if (zoneLabel) zoneLabel.textContent = info.label;
-            if (shippingFeeDisplay) shippingFeeDisplay.textContent = '₱' + info.fee.toFixed(2);
-            if (finalTotalDisplay && priceData) {
-                const base = parseFloat(priceData.dataset.basePrice || 0);
-                const fabric = parseFloat(priceData.dataset.fabricCostBase || 0);
-                const addons = parseFloat(priceData.dataset.addonsTotal || 0);
-                const total = base + fabric + info.fee + addons;
-                finalTotalDisplay.textContent = '\u20B1' + total.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            }
-        });
+        radio.addEventListener('change', updateStep4ShippingAndTotal);
     });
 
     // Add event listeners
     deliveryRadios.forEach(radio => {
-        radio.addEventListener('change', toggleDeliveryPickup);
+        radio.addEventListener('change', function() {
+            toggleDeliveryPickup();
+            updateStep4ShippingAndTotal();
+        });
     });
     
     // Set initial state
     toggleDeliveryPickup();
+    updateStep4ShippingAndTotal();
 }
 
 function loadSVGDesignPreview() {
