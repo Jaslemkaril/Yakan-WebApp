@@ -37,6 +37,42 @@ class MayaCheckoutService
         $failureUrl = $options['failure_url'] ?? (config('app.url') . '/track-order');
         $cancelUrl = $options['cancel_url'] ?? (config('app.url') . '/track-order');
 
+        $items = $order->items->map(function ($item) {
+            return [
+                'name' => (string) ($item->product_name ?? ($item->product->name ?? ('Product #' . $item->product_id))),
+                'quantity' => (int) $item->quantity,
+                'totalAmount' => [
+                    'value' => number_format((float) $item->price * (int) $item->quantity, 2, '.', ''),
+                    'currency' => 'PHP',
+                ],
+            ];
+        })->values()->all();
+
+        $productItemsTotal = (float) $order->items->sum(function ($item) {
+            return (float) $item->price * (int) $item->quantity;
+        });
+
+        $shippingFee = (float) ($order->shipping_fee ?? 0);
+
+        // Fallback for older records where shipping_fee may not be populated.
+        if ($shippingFee <= 0) {
+            $orderTotal = (float) ($order->total_amount ?? $order->total ?? $amount);
+            $derivedShipping = round($orderTotal - $productItemsTotal, 2);
+            if ($derivedShipping > 0) {
+                $shippingFee = $derivedShipping;
+            }
+        }
+
+        if ($shippingFee > 0) {
+            $items[] = [
+                'name' => 'Shipping Fee',
+                'totalAmount' => [
+                    'value' => number_format($shippingFee, 2, '.', ''),
+                    'currency' => 'PHP',
+                ],
+            ];
+        }
+
         $payload = [
             'totalAmount' => [
                 'value' => number_format($amount, 2, '.', ''),
@@ -56,16 +92,7 @@ class MayaCheckoutService
                     'email' => (string) ($order->customer_email ?? ''),
                 ],
             ],
-            'items' => $order->items->map(function ($item) {
-                return [
-                    'name' => (string) ($item->product_name ?? ($item->product->name ?? ('Product #' . $item->product_id))),
-                    'quantity' => (int) $item->quantity,
-                    'totalAmount' => [
-                        'value' => number_format((float) $item->price * (int) $item->quantity, 2, '.', ''),
-                        'currency' => 'PHP',
-                    ],
-                ];
-            })->values()->all(),
+            'items' => $items,
         ];
 
         $response = Http::withBasicAuth($publicKey, '')
