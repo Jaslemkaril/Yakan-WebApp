@@ -385,10 +385,18 @@ class AddressController extends Controller
         $provinces = PhilippineProvince::where('region_id', $regionId)
             ->orderBy('name')
             ->get(['id', 'name']);
+
+        $fallback = false;
+        if ($provinces->isEmpty()) {
+            // Fallback when region mapping data is incomplete in the reference tables.
+            $provinces = PhilippineProvince::orderBy('name')->get(['id', 'name']);
+            $fallback = true;
+        }
         
         return response()->json([
             'success' => true,
             'data' => $provinces,
+            'fallback' => $fallback,
         ]);
     }
 
@@ -400,10 +408,18 @@ class AddressController extends Controller
         $cities = PhilippineCity::where('province_id', $provinceId)
             ->orderBy('name')
             ->get(['id', 'name']);
+
+        $fallback = false;
+        if ($cities->isEmpty()) {
+            // Fallback when province->city mapping data is incomplete.
+            $cities = PhilippineCity::orderBy('name')->get(['id', 'name']);
+            $fallback = true;
+        }
         
         return response()->json([
             'success' => true,
             'data' => $cities,
+            'fallback' => $fallback,
         ]);
     }
 
