@@ -1158,7 +1158,7 @@ function closeEditAddressModal() {
 
 function openNewAddressModal() {
     closeAddressModal();
-    populateRegionDropdown('new');
+    initializeNewAddressModalCascading();
     document.getElementById('newAddressModal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
 }
@@ -1219,14 +1219,16 @@ function submitNewAddress() {
     
     // Validate required fields
     const label = form.querySelector('[name="label"]').value;
-    const fullName = form.querySelector('[name="full_name"]').value;
+    const firstName = form.querySelector('[name="first_name"]').value;
+    const lastName = form.querySelector('[name="last_name"]').value;
     const phoneNumber = form.querySelector('[name="phone_number"]').value;
     const formattedAddress = form.querySelector('[name="formatted_address"]').value;
-    const city = form.querySelector('[name="city"]').value;
-    const region = form.querySelector('[name="region"]').value;
+    const regionId = form.querySelector('[name="region_id"]').value;
+    const provinceId = form.querySelector('[name="province_id"]').value;
+    const cityId = form.querySelector('[name="city_id"]').value;
     const postalCode = form.querySelector('[name="postal_code"]').value;
     
-    if (!label || !fullName || !phoneNumber || !formattedAddress || !city || !region || !postalCode) {
+    if (!label || !firstName || !lastName || !phoneNumber || !formattedAddress || !regionId || !provinceId || !cityId || !postalCode) {
         alert('Please fill in all required fields.');
         return;
     }
@@ -1235,6 +1237,146 @@ function submitNewAddress() {
     form.action = '{{ route("addresses.store") }}';
     form.method = 'POST';
     injectAuthAndSubmit(form);
+}
+
+let newAddressCascadingInitialized = false;
+
+function initializeNewAddressModalCascading() {
+    const regionSelect = document.getElementById('new_region_id');
+    const provinceSelect = document.getElementById('new_province_id');
+    const citySelect = document.getElementById('new_city_id');
+    const barangaySelect = document.getElementById('new_barangay_id');
+    const barangayHint = document.getElementById('new_barangay_hint');
+
+    if (!regionSelect || !provinceSelect || !citySelect || !barangaySelect) {
+        return;
+    }
+
+    const tokenFromUrl = new URLSearchParams(window.location.search).get('auth_token');
+    const token = tokenFromUrl || localStorage.getItem('yakan_auth_token') || sessionStorage.getItem('auth_token') || '';
+    const apiUrl = (path) => token ? `${path}?auth_token=${encodeURIComponent(token)}` : path;
+
+    const resetSelect = (select, placeholder) => {
+        select.innerHTML = `<option value="">-- ${placeholder} --</option>`;
+        select.disabled = true;
+        select.classList.add('bg-gray-100');
+    };
+
+    const enableSelect = (select) => {
+        select.disabled = false;
+        select.classList.remove('bg-gray-100');
+    };
+
+    const loadRegions = () => {
+        fetch(apiUrl('/addresses/api/regions'))
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) return;
+                regionSelect.innerHTML = '<option value="">-- Select Region --</option>';
+                data.data.forEach(region => {
+                    const option = document.createElement('option');
+                    option.value = region.id;
+                    option.textContent = region.name;
+                    regionSelect.appendChild(option);
+                });
+                enableSelect(regionSelect);
+            })
+            .catch(error => console.error('Error loading regions:', error));
+    };
+
+    const loadProvinces = (regionId) => {
+        fetch(apiUrl(`/addresses/api/provinces/${regionId}`))
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) return;
+                provinceSelect.innerHTML = '<option value="">-- Select Province --</option>';
+                data.data.forEach(province => {
+                    const option = document.createElement('option');
+                    option.value = province.id;
+                    option.textContent = province.name;
+                    provinceSelect.appendChild(option);
+                });
+                enableSelect(provinceSelect);
+            })
+            .catch(error => console.error('Error loading provinces:', error));
+    };
+
+    const loadCities = (provinceId) => {
+        fetch(apiUrl(`/addresses/api/cities/${provinceId}`))
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) return;
+                citySelect.innerHTML = '<option value="">-- Select City/Municipality --</option>';
+                data.data.forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city.id;
+                    option.textContent = city.name;
+                    citySelect.appendChild(option);
+                });
+                enableSelect(citySelect);
+            })
+            .catch(error => console.error('Error loading cities:', error));
+    };
+
+    const loadBarangays = (cityId) => {
+        if (barangayHint) barangayHint.classList.add('hidden');
+
+        fetch(apiUrl(`/addresses/api/barangays/${cityId}`))
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) return;
+
+                if (data.data.length === 0) {
+                    barangaySelect.innerHTML = '<option value="">-- No barangays available --</option>';
+                    barangaySelect.disabled = true;
+                    if (barangayHint) barangayHint.classList.remove('hidden');
+                    return;
+                }
+
+                barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
+                data.data.forEach(barangay => {
+                    const option = document.createElement('option');
+                    option.value = barangay.id;
+                    option.textContent = barangay.name;
+                    barangaySelect.appendChild(option);
+                });
+                enableSelect(barangaySelect);
+            })
+            .catch(error => console.error('Error loading barangays:', error));
+    };
+
+    if (!newAddressCascadingInitialized) {
+        regionSelect.addEventListener('change', function() {
+            resetSelect(provinceSelect, 'Select Province');
+            resetSelect(citySelect, 'Select City/Municipality');
+            resetSelect(barangaySelect, 'Select Barangay');
+            if (this.value) {
+                loadProvinces(this.value);
+            }
+        });
+
+        provinceSelect.addEventListener('change', function() {
+            resetSelect(citySelect, 'Select City/Municipality');
+            resetSelect(barangaySelect, 'Select Barangay');
+            if (this.value) {
+                loadCities(this.value);
+            }
+        });
+
+        citySelect.addEventListener('change', function() {
+            resetSelect(barangaySelect, 'Select Barangay');
+            if (this.value) {
+                loadBarangays(this.value);
+            }
+        });
+
+        newAddressCascadingInitialized = true;
+    }
+
+    resetSelect(provinceSelect, 'Select Province');
+    resetSelect(citySelect, 'Select City/Municipality');
+    resetSelect(barangaySelect, 'Select Barangay');
+    loadRegions();
 }
 </script>
 
@@ -1744,15 +1886,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     </select>
                 </div>
                 
-                <!-- Full Name -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        <svg class="w-4 h-4 inline" style="color: #800000;" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
-                        </svg>
-                        Full Name <span style="color: #800000;">*</span>
-                    </label>
-                    <input type="text" name="full_name" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
+                <!-- Name -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">First Name <span style="color: #800000;">*</span></label>
+                        <input type="text" name="first_name" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Last Name <span style="color: #800000;">*</span></label>
+                        <input type="text" name="last_name" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
+                    </div>
                 </div>
                 
                 <!-- Phone Number -->
@@ -1777,31 +1920,40 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- Region -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Province/Region <span style="color: #800000;">*</span>
+                        Region <span style="color: #800000;">*</span>
                     </label>
-                    <select id="newRegion" name="region" required onchange="populateCityDropdown('new')" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
+                    <select id="new_region_id" name="region_id" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
                         <option value="">-- Select Region --</option>
+                    </select>
+                </div>
+
+                <!-- Province -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Province <span style="color: #800000;">*</span>
+                    </label>
+                    <select id="new_province_id" name="province_id" required disabled class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all bg-gray-100">
+                        <option value="">-- Select Province --</option>
                     </select>
                 </div>
 
                 <!-- City -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        City / Municipality <span style="color: #800000;">*</span>
+                        City/Municipality <span style="color: #800000;">*</span>
                     </label>
-                    <select id="newCity" name="city" required onchange="populateBarangayDropdown('new'); autoFillPostal('new')" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
-                        <option value="">-- Select City --</option>
+                    <select id="new_city_id" name="city_id" required disabled class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all bg-gray-100">
+                        <option value="">-- Select City/Municipality --</option>
                     </select>
                 </div>
                 
                 <!-- Barangay -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Barangay</label>
-                    <div id="newBarangayContainer">
-                        <select id="newBarangay" name="barangay" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
-                            <option value="">-- Select Barangay --</option>
-                        </select>
-                    </div>
+                    <select id="new_barangay_id" name="barangay_id" disabled class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all bg-gray-100">
+                        <option value="">-- Select Barangay --</option>
+                    </select>
+                    <p id="new_barangay_hint" class="hidden text-xs text-gray-400 mt-1">No barangays listed for this city — you can skip this field.</p>
                 </div>
                 
                 <!-- Postal Code -->
@@ -1826,7 +1978,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 Cancel
             </button>
             <button type="button" onclick="submitNewAddress()" class="flex-1 text-white px-6 py-3 rounded-lg font-semibold transition-all" style="background: linear-gradient(135deg, #800000 0%, #600000 100%);" onmouseover="this.style.background='linear-gradient(135deg, #600000 0%, #400000 100%)'" onmouseout="this.style.background='linear-gradient(135deg, #800000 0%, #600000 100%)'">
-                Add Address
+                Submit
             </button>
         </div>
     </div>
