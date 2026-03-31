@@ -1869,16 +1869,31 @@ document.addEventListener('DOMContentLoaded', function() {
             <form id="newAddressForm" action="{{ route('addresses.store') }}" method="POST" class="space-y-4">
                 @csrf
                 <input type="hidden" name="from_checkout" value="1">
+                @php
+                    $checkoutUser = auth()->user();
+                    $checkoutPrefillFirstName = old('first_name', $checkoutUser->first_name ?? '');
+                    $checkoutPrefillLastName = old('last_name', $checkoutUser->last_name ?? '');
+
+                    if (($checkoutPrefillFirstName === '' || $checkoutPrefillLastName === '') && !empty($checkoutUser?->name)) {
+                        $checkoutNameParts = preg_split('/\s+/', trim((string) $checkoutUser->name));
+                        if ($checkoutPrefillLastName === '' && count($checkoutNameParts) > 1) {
+                            $checkoutPrefillLastName = array_pop($checkoutNameParts);
+                        }
+                        if ($checkoutPrefillFirstName === '') {
+                            $checkoutPrefillFirstName = implode(' ', $checkoutNameParts);
+                        }
+                    }
+                @endphp
                 
                 <!-- Name -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">First Name <span style="color: #800000;">*</span></label>
-                        <input type="text" name="first_name" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
+                        <input type="text" name="first_name" value="{{ $checkoutPrefillFirstName }}" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Last Name <span style="color: #800000;">*</span></label>
-                        <input type="text" name="last_name" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
+                        <input type="text" name="last_name" value="{{ $checkoutPrefillLastName }}" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
                     </div>
                 </div>
                 

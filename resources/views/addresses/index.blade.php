@@ -183,14 +183,29 @@
         
         <form action="{{ route('addresses.store') }}" method="POST" class="p-6">
             @csrf
+            @php
+                $user = auth()->user();
+                $prefillFirstName = old('first_name', $user->first_name ?? '');
+                $prefillLastName = old('last_name', $user->last_name ?? '');
+
+                if (($prefillFirstName === '' || $prefillLastName === '') && !empty($user?->name)) {
+                    $nameParts = preg_split('/\s+/', trim((string) $user->name));
+                    if ($prefillLastName === '' && count($nameParts) > 1) {
+                        $prefillLastName = array_pop($nameParts);
+                    }
+                    if ($prefillFirstName === '') {
+                        $prefillFirstName = implode(' ', $nameParts);
+                    }
+                }
+            @endphp
             <div class="grid grid-cols-2 gap-4 mb-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                    <input type="text" name="first_name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
+                    <input type="text" name="first_name" value="{{ $prefillFirstName }}" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                    <input type="text" name="last_name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
+                    <input type="text" name="last_name" value="{{ $prefillLastName }}" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
                 </div>
             </div>
 
