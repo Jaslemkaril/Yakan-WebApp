@@ -1908,30 +1908,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     <input type="tel" name="phone_number" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
                 </div>
                 
-                <!-- Street Address -->
+                <!-- Region -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Street Address <span style="color: #800000;">*</span>
+                        Region <span style="color: #800000;">*</span>
                     </label>
-                    <input type="text" name="formatted_address" required placeholder="House No., Building, Street Name" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
-                </div>
-                
-                <!-- Barangay -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Barangay</label>
-                    <select id="new_barangay_id" name="barangay_id" disabled class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all bg-gray-100">
-                        <option value="">-- Select Barangay --</option>
-                    </select>
-                    <p id="new_barangay_hint" class="hidden text-xs text-gray-400 mt-1">No barangays listed for this city — you can skip this field.</p>
-                </div>
-
-                <!-- City -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        City/Municipality <span style="color: #800000;">*</span>
-                    </label>
-                    <select id="new_city_id" name="city_id" required disabled class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all bg-gray-100">
-                        <option value="">-- Select City/Municipality --</option>
+                    <select id="new_region_id" name="region_id" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
+                        <option value="">-- Select Region --</option>
                     </select>
                 </div>
 
@@ -1945,14 +1928,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     </select>
                 </div>
 
-                <!-- Region -->
+                <!-- City -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Region <span style="color: #800000;">*</span>
+                        City/Municipality <span style="color: #800000;">*</span>
                     </label>
-                    <select id="new_region_id" name="region_id" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all">
-                        <option value="">-- Select Region --</option>
+                    <select id="new_city_id" name="city_id" required disabled class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all bg-gray-100">
+                        <option value="">-- Select City/Municipality --</option>
                     </select>
+                </div>
+
+                <!-- Barangay -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Barangay</label>
+                    <select id="new_barangay_id" name="barangay_id" disabled class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all bg-gray-100">
+                        <option value="">-- Select Barangay --</option>
+                    </select>
+                    <p id="new_barangay_hint" class="hidden text-xs text-gray-400 mt-1">No barangays listed for this city — you can skip this field.</p>
+                </div>
+
+                <!-- Street Address -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Street Address <span style="color: #800000;">*</span>
+                    </label>
+                    <input type="text" name="formatted_address" required placeholder="House No., Building, Street Name" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 transition-all" style="focus:ring-color: #800000;">
                 </div>
                 
                 <!-- Postal Code -->
