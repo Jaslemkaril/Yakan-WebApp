@@ -56,24 +56,50 @@
         return 350.0;
     };
     
-    // Get price parts for each order (same logic as admin)
+    // Get price parts for each order (same logic as admin, with shipping inclusion detection)
     $getPriceParts = function ($item) use ($calculateShippingFromAddress) {
         $quoted = (float) ($item->final_price ?? $item->estimated_price ?? 0);
         $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
         if ($deliveryType === 'pickup') {
-            return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
+            return ['quoted' => $quoted, 'items_subtotal' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
         }
-        $breakdown = method_exists($item, 'getPriceBreakdown') ? ($item->getPriceBreakdown() ?? []) : [];
-        $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
+
+        $breakdownWrap = method_exists($item, 'getPriceBreakdown') ? ($item->getPriceBreakdown() ?? []) : [];
+        $breakdown = $breakdownWrap['breakdown'] ?? [];
+        $material = (float) ($breakdown['material_cost'] ?? 0);
+        $pattern = (float) ($breakdown['pattern_fee'] ?? 0);
+        $labor = (float) ($breakdown['labor_cost'] ?? 0);
+        $discount = (float) ($breakdown['discount'] ?? 0);
+        $deliveryFeeInBreakdown = (float) ($breakdown['delivery_fee'] ?? 0);
+        $itemsSubtotal = max(($material + $pattern + $labor - $discount), 0);
+
         if ($deliveryFeeInBreakdown > 0) {
-            return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
+            $subtotalFromBreakdown = $itemsSubtotal > 0 ? $itemsSubtotal : max(($quoted - $deliveryFeeInBreakdown), 0);
+            return ['quoted' => $quoted, 'items_subtotal' => $subtotalFromBreakdown, 'shipping' => 0.0, 'total' => $quoted];
         }
+
         $shipping = $calculateShippingFromAddress($item);
-        return ['quoted' => $quoted, 'shipping' => $shipping, 'total' => $quoted + $shipping];
+
+        // quoted already includes shipping
+        if ($itemsSubtotal > 0 && abs($quoted - ($itemsSubtotal + $shipping)) < 0.01) {
+            return ['quoted' => $quoted, 'items_subtotal' => $itemsSubtotal, 'shipping' => 0.0, 'total' => $quoted];
+        }
+
+        // quoted is items subtotal only
+        if ($itemsSubtotal > 0 && abs($quoted - $itemsSubtotal) < 0.01) {
+            return ['quoted' => $quoted, 'items_subtotal' => $itemsSubtotal, 'shipping' => $shipping, 'total' => $quoted + $shipping];
+        }
+
+        // fallback for legacy rows
+        if ($itemsSubtotal <= 0) {
+            return ['quoted' => $quoted, 'items_subtotal' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
+        }
+
+        return ['quoted' => $quoted, 'items_subtotal' => $itemsSubtotal, 'shipping' => $shipping, 'total' => $itemsSubtotal + $shipping];
     };
     
     // Calculate batch totals
-    $batchItemsSubtotal = (float) $batchUnpaidOrders->sum(fn($item) => $getPriceParts($item)['quoted']);
+    $batchItemsSubtotal = (float) $batchUnpaidOrders->sum(fn($item) => $getPriceParts($item)['items_subtotal'] ?? 0);
     $batchShippingFee = (float) $batchUnpaidOrders->map(fn($item) => $getPriceParts($item)['shipping'])->max();
     $batchPaymentTotal = $batchItemsSubtotal + $batchShippingFee;
     
@@ -1070,10 +1096,11 @@
                                                 $summarySubtotal = $batchItemsSubtotal;
                                                 $summaryTotal = $deliveryType === 'pickup' ? $summarySubtotal : $batchPaymentTotal;
                                             } else {
-                                                $singleShipping = $getPriceParts($order)['shipping'];
+                                                $singlePriceParts = $getPriceParts($order);
+                                                $singleShipping = (float) ($singlePriceParts['shipping'] ?? 0);
                                                 $summaryShippingFee = $deliveryType === 'pickup' ? 0 : $singleShipping;
-                                                $summarySubtotal = (float) $order->final_price;
-                                                $summaryTotal = $summarySubtotal + $summaryShippingFee;
+                                                $summarySubtotal = (float) ($singlePriceParts['items_subtotal'] ?? ($order->final_price ?? 0));
+                                                $summaryTotal = (float) ($singlePriceParts['total'] ?? ($summarySubtotal + $summaryShippingFee));
                                             }
                                         @endphp
                                         
@@ -1501,9 +1528,13 @@
                     <p class="text-gray-700 mb-6 max-w-2xl mx-auto text-lg">Congratulations! You've accepted the quote. Complete your payment now to start production of your custom Yakan masterpiece!</p>
                     
                     @if($order->final_price)
+                        @php
+                            $approvedSingleParts = $getPriceParts($order);
+                            $approvedSingleTotal = (float) ($approvedSingleParts['total'] ?? ($order->final_price ?? 0));
+                        @endphp
                         <div class="bg-white rounded-2xl p-6 border-2 mb-6 max-w-md mx-auto shadow-lg" style="border-color:#e0b0b0;">
                             <p class="text-sm font-semibold text-gray-600 mb-2 uppercase tracking-wide">Total Amount to Pay</p>
-                            <p class="text-5xl font-black mb-3" style="color:#800000;">₱{{ number_format($batchPaymentTotal, 2) }}</p>
+                            <p class="text-5xl font-black mb-3" style="color:#800000;">₱{{ number_format($isBatchOrder ? $batchPaymentTotal : $approvedSingleTotal, 2) }}</p>
                             <p class="text-xs text-gray-500">
                                 @if($isBatchOrder)
                                     Batch Order ({{ $batchUnpaidOrders->count() }} items)
