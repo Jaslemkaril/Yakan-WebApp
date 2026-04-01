@@ -641,14 +641,50 @@ class CustomOrderController extends Controller
         $items = [];
         
         foreach ($orders as $order) {
-            // Calculate item price from breakdown if available
-            $breakdown = $order->getPriceBreakdown();
-            $breakdownData = $breakdown['breakdown'] ?? [];
-            $material = (float) ($breakdownData['material_cost'] ?? 0);
-            $pattern = (float) ($breakdownData['pattern_fee'] ?? 0);
-            $labor = (float) ($breakdownData['labor_cost'] ?? 0);
-            $fromBreakdown = $material + $pattern + $labor;
-            $itemPrice = $fromBreakdown > 0 ? $fromBreakdown : (float) ($order->final_price ?? $order->estimated_price ?? 0);
+            // Canonical subtotal: pattern fee + fabric cost (same as approved/admin split).
+            $itemPrice = 0.0;
+            $patternIds = $order->patterns;
+            if (is_string($patternIds)) {
+                $patternIds = json_decode($patternIds, true) ?? [];
+            }
+
+            if (is_array($patternIds) && !empty($patternIds) && !empty($order->fabric_quantity_meters)) {
+                $patterns = \App\Models\YakanPattern::whereIn('id', array_map('intval', $patternIds))->get();
+                if ($patterns->isNotEmpty()) {
+                    $qtyMultiplier = (float) ($order->quantity ?? 1);
+                    $patternFeeTotal = (float) $patterns->sum(function ($pattern) {
+                        return (float) ($pattern->pattern_price ?? 0);
+                    });
+                    $pricePerMeter = (float) ($patterns->first()->price_per_meter ?? 0);
+                    $materialCost = ((float) $order->fabric_quantity_meters) * $pricePerMeter;
+                    $itemPrice = ($materialCost + $patternFeeTotal) * $qtyMultiplier;
+                }
+            }
+
+            // Fallback to breakdown subtotal (without shipping) when canonical data is unavailable.
+            if ($itemPrice <= 0) {
+                $breakdown = $order->getPriceBreakdown();
+                $breakdownData = $breakdown['breakdown'] ?? [];
+                $material = (float) ($breakdownData['material_cost'] ?? 0);
+                $pattern = (float) ($breakdownData['pattern_fee'] ?? 0);
+                $labor = (float) ($breakdownData['labor_cost'] ?? 0);
+                $discount = (float) ($breakdownData['discount'] ?? 0);
+                $deliveryFee = (float) ($breakdownData['delivery_fee'] ?? 0);
+                $fromBreakdown = max(($material + $pattern + $labor - $discount - $deliveryFee), 0);
+                if ($fromBreakdown > 0) {
+                    $itemPrice = $fromBreakdown;
+                }
+            }
+
+            // Last-resort fallback from quoted amount with shipping removed if present.
+            if ($itemPrice <= 0) {
+                $quoted = (float) ($order->final_price ?? $order->estimated_price ?? 0);
+                $orderShipping = (float) ($order->shipping_fee ?? 0);
+                $itemPrice = max($quoted - $orderShipping, 0);
+                if ($itemPrice <= 0) {
+                    $itemPrice = $quoted;
+                }
+            }
             
             $items[] = [
                 'name'        => 'Custom Order #' . $order->id,
