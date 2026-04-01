@@ -9,6 +9,67 @@ use Illuminate\Support\Facades\DB;
 
 class AdminCustomOrderController extends Controller
 {
+    private function resolveAdminOrderItemsSubtotal(CustomOrder $order): float
+    {
+        $breakdown = $order->getPriceBreakdown();
+        $breakdownData = $breakdown['breakdown'] ?? [];
+
+        $material = (float) ($breakdownData['material_cost'] ?? 0);
+        $pattern = (float) ($breakdownData['pattern_fee'] ?? 0);
+        $labor = (float) ($breakdownData['labor_cost'] ?? 0);
+        $discount = (float) ($breakdownData['discount'] ?? 0);
+        $fromBreakdown = max(($material + $pattern + $labor - $discount), 0);
+        if ($fromBreakdown > 0) {
+            return $fromBreakdown;
+        }
+
+        // Canonical fallback from selected pattern(s) and meters.
+        $patternModels = collect();
+
+        $patternIdFromMeta = (int) data_get($order->design_metadata ?? [], 'pattern_id', 0);
+        if ($patternIdFromMeta > 0) {
+            $metaPattern = \App\Models\YakanPattern::find($patternIdFromMeta);
+            if ($metaPattern) {
+                $patternModels->push($metaPattern);
+            }
+        }
+
+        $patternsRaw = $order->patterns;
+        $patternsArr = is_array($patternsRaw) ? $patternsRaw : [];
+        foreach ($patternsArr as $rawPattern) {
+            if (is_numeric($rawPattern)) {
+                $p = \App\Models\YakanPattern::find((int) $rawPattern);
+            } else {
+                $p = !empty($rawPattern) ? \App\Models\YakanPattern::where('name', $rawPattern)->first() : null;
+            }
+            if ($p) {
+                $patternModels->push($p);
+            }
+        }
+
+        $patternModels = $patternModels->unique('id')->values();
+        if ($patternModels->isNotEmpty() && !empty($order->fabric_quantity_meters)) {
+            $qtyMultiplier = (float) ($order->quantity ?? 1);
+            $patternFeeTotal = (float) $patternModels->sum(fn($p) => (float) ($p->pattern_price ?? 0));
+            $pricePerMeter = (float) ($patternModels->first()->price_per_meter ?? 0);
+            $materialCost = ((float) $order->fabric_quantity_meters) * $pricePerMeter;
+            $canonicalSubtotal = ($materialCost + $patternFeeTotal) * $qtyMultiplier;
+            if ($canonicalSubtotal > 0) {
+                return $canonicalSubtotal;
+            }
+        }
+
+        // Last fallback: quoted amount minus one shipping fee (if delivery).
+        $quoted = (float) ($order->final_price ?? $order->estimated_price ?? 0);
+        $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
+        if ($deliveryType === 'pickup') {
+            return $quoted;
+        }
+
+        $shipping = (float) ($order->shipping_fee ?? 0);
+        return max($quoted - $shipping, 0);
+    }
+
     private function resolveAdminOrderPriceParts(CustomOrder $order): array
     {
         $quoted = (float) ($order->final_price ?? $order->estimated_price ?? 0);
@@ -66,7 +127,7 @@ class AdminCustomOrderController extends Controller
         }
 
         $quotedSubtotal = (float) $orders->sum(
-            fn(CustomOrder $item) => (float) ($item->final_price ?? $item->estimated_price ?? 0)
+            fn(CustomOrder $item) => (float) $this->resolveAdminOrderItemsSubtotal($item)
         );
 
         return $quotedSubtotal + $this->calculateBatchSharedShipping($orders);
