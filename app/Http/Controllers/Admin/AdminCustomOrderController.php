@@ -9,58 +9,54 @@ use Illuminate\Support\Facades\DB;
 
 class AdminCustomOrderController extends Controller
 {
+    private function resolveAdminOrderPriceParts(CustomOrder $order): array
+    {
+        $quoted = (float) ($order->final_price ?? $order->estimated_price ?? 0);
+        $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
+
+        if ($deliveryType === 'pickup') {
+            return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
+        }
+
+        $breakdown = $order->getPriceBreakdown();
+        $breakdownData = $breakdown['breakdown'] ?? [];
+
+        $material = (float) ($breakdownData['material_cost'] ?? 0);
+        $pattern = (float) ($breakdownData['pattern_fee'] ?? 0);
+        $labor = (float) ($breakdownData['labor_cost'] ?? 0);
+        $discount = (float) ($breakdownData['discount'] ?? 0);
+        $deliveryFeeInBreakdown = (float) ($breakdownData['delivery_fee'] ?? 0);
+        $itemsSubtotalFromBreakdown = max(($material + $pattern + $labor - $discount), 0);
+
+        if ($deliveryFeeInBreakdown > 0) {
+            return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
+        }
+
+        $shipping = (float) ($order->shipping_fee ?? 0);
+
+        if ($itemsSubtotalFromBreakdown > 0 && abs($quoted - ($itemsSubtotalFromBreakdown + $shipping)) < 0.01) {
+            return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
+        }
+
+        if ($itemsSubtotalFromBreakdown > 0 && abs($quoted - $itemsSubtotalFromBreakdown) < 0.01) {
+            return ['quoted' => $quoted, 'shipping' => $shipping, 'total' => $quoted + $shipping];
+        }
+
+        // Legacy/ambiguous: avoid adding shipping again.
+        return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
+    }
+
     private function calculateBatchSharedShipping(
         \Illuminate\Support\Collection $orders
     ): float {
-        $eligibleShipping = $orders->map(function (CustomOrder $item) {
-            $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
-            if ($deliveryType === 'pickup') {
-                return 0.0;
-            }
-
-            $breakdown = $item->getPriceBreakdown();
-            $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
-            if ($deliveryFeeInBreakdown > 0) {
-                return 0.0;
-            }
-
-            return (float) ($item->shipping_fee ?? 0);
-        });
+        $eligibleShipping = $orders->map(fn(CustomOrder $item) => (float) ($this->resolveAdminOrderPriceParts($item)['shipping'] ?? 0));
 
         return (float) ($eligibleShipping->max() ?? 0);
     }
 
     private function calculateOrderDisplayTotal(CustomOrder $order): float
     {
-        $base = (float) ($order->final_price ?? $order->estimated_price ?? 0);
-        $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
-        if ($deliveryType === 'pickup') {
-            return $base;
-        }
-
-        $breakdown = $order->getPriceBreakdown();
-        $breakdownData = $breakdown['breakdown'] ?? [];
-        $deliveryFeeInBreakdown = (float) ($breakdownData['delivery_fee'] ?? 0);
-        if ($deliveryFeeInBreakdown > 0) {
-            return $base;
-        }
-
-        $material = (float) ($breakdownData['material_cost'] ?? 0);
-        $pattern = (float) ($breakdownData['pattern_fee'] ?? 0);
-        $labor = (float) ($breakdownData['labor_cost'] ?? 0);
-        $discount = (float) ($breakdownData['discount'] ?? 0);
-        $itemsSubtotalFromBreakdown = max(($material + $pattern + $labor - $discount), 0);
-
-        $shipping = (float) ($order->shipping_fee ?? 0);
-        if ($itemsSubtotalFromBreakdown > 0 && abs($base - ($itemsSubtotalFromBreakdown + $shipping)) < 0.01) {
-            return $base;
-        }
-
-        if ($itemsSubtotalFromBreakdown > 0 && abs($base - $itemsSubtotalFromBreakdown) < 0.01) {
-            return $base + $shipping;
-        }
-
-        return $base;
+        return (float) ($this->resolveAdminOrderPriceParts($order)['total'] ?? 0);
     }
 
     private function calculateBatchDisplayTotal(\Illuminate\Support\Collection $orders): float

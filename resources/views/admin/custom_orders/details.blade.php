@@ -655,15 +655,66 @@
                 <div class="space-y-3">
                     @if($isGroupedContext)
                         @php
-                            $groupPriceRows = $batchItems->map(function ($item) use ($getAdminPriceParts) {
+                            $groupPriceRows = $batchItems->map(function ($item) use ($getAdminPriceParts, $resolveShippingFromAddress) {
                                 $quoted = (float) ($item->final_price ?? $item->estimated_price ?? 0);
                                 $breakdownData = method_exists($item, 'getPriceBreakdown') ? ($item->getPriceBreakdown() ?? []) : [];
                                 $breakdown = $breakdownData['breakdown'] ?? [];
 
                                 $material = (float) ($breakdown['material_cost'] ?? 0);
                                 $pattern = (float) ($breakdown['pattern_fee'] ?? 0);
-                                $itemSubtotal = ($material + $pattern) > 0 ? ($material + $pattern) : $quoted;
-                                $itemShipping = (float) ($getAdminPriceParts($item)['shipping'] ?? 0);
+                                $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+                                $shippingDisplay = $deliveryType === 'pickup' ? 0.0 : (float) $resolveShippingFromAddress($item);
+
+                                // Fallback for pending/batch rows where admin_notes breakdown is unavailable.
+                                if (($material + $pattern) <= 0.0) {
+                                    $patternModels = collect();
+
+                                    $patternIdFromMeta = (int) data_get($item->design_metadata ?? [], 'pattern_id', 0);
+                                    if ($patternIdFromMeta > 0) {
+                                        $metaPattern = \App\Models\YakanPattern::find($patternIdFromMeta);
+                                        if ($metaPattern) {
+                                            $patternModels->push($metaPattern);
+                                        }
+                                    }
+
+                                    $patternsRaw = $item->patterns;
+                                    $patternsArr = is_array($patternsRaw) ? $patternsRaw : [];
+                                    foreach ($patternsArr as $rawPattern) {
+                                        if (is_numeric($rawPattern)) {
+                                            $p = \App\Models\YakanPattern::find((int) $rawPattern);
+                                        } else {
+                                            $p = !empty($rawPattern) ? \App\Models\YakanPattern::where('name', $rawPattern)->first() : null;
+                                        }
+                                        if ($p) {
+                                            $patternModels->push($p);
+                                        }
+                                    }
+
+                                    $patternModels = $patternModels->unique('id')->values();
+                                    $patternFallback = (float) $patternModels->sum(fn($p) => (float) ($p->pattern_price ?? 0));
+                                    $pricePerMeter = (float) (($patternModels->first()->price_per_meter ?? 0));
+                                    $meters = (float) ($item->fabric_quantity_meters ?? 0);
+                                    $materialFallback = ($meters > 0 && $pricePerMeter > 0) ? ($meters * $pricePerMeter) : 0.0;
+
+                                    if ($materialFallback > 0 || $patternFallback > 0) {
+                                        $material = $materialFallback;
+                                        $pattern = $patternFallback;
+                                    }
+                                }
+
+                                $itemSubtotal = $material + $pattern;
+                                if ($itemSubtotal <= 0.0) {
+                                    $itemSubtotal = ($deliveryType !== 'pickup' && $quoted > $shippingDisplay)
+                                        ? max($quoted - $shippingDisplay, 0)
+                                        : $quoted;
+                                }
+
+                                if ($material <= 0.0 && $pattern <= 0.0 && $itemSubtotal > 0.0) {
+                                    $material = $itemSubtotal;
+                                }
+
+                                // Shipping to display in grouped breakdown should reflect address-based fee, not only "to-add" state.
+                                $itemShipping = $shippingDisplay;
 
                                 return [
                                     'id' => $item->id,
