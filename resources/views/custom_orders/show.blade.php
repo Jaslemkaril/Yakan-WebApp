@@ -1299,22 +1299,22 @@
                                     </div>
                                 @elseif($order->status === 'processing' && $order->final_price)
                                     <div>
-                                        <p class="text-sm font-medium text-gray-700 mb-1">Total Paid</p>
-                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($currentOrderDisplayTotal ?? ($displayOrderTotal ?? ($order->final_price ?? 0)), 2) }}</p>
                                         <div class="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs space-y-1">
                                             <div class="flex justify-between"><span class="text-gray-600">Items Subtotal:</span><span class="font-semibold text-gray-900">₱{{ number_format($currentOrderItemsSubtotal, 2) }}</span></div>
                                             <div class="flex justify-between"><span class="text-gray-600">Shipping Fee:</span><span class="font-semibold text-gray-900">₱{{ number_format($currentOrderShippingFee, 2) }}</span></div>
                                         </div>
+                                        <p class="text-sm font-medium text-gray-700 mt-2 mb-1">Total Paid</p>
+                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($currentOrderDisplayTotal ?? ($displayOrderTotal ?? ($order->final_price ?? 0)), 2) }}</p>
                                         <p class="text-xs text-indigo-600 mt-1 font-semibold">Payment accepted, waiting for production start</p>
                                     </div>
                                 @elseif($order->status === 'in_production' && $order->final_price)
                                     <div>
-                                        <p class="text-sm font-medium text-gray-700 mb-1">Final Price</p>
-                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($currentOrderDisplayTotal ?? ($displayOrderTotal ?? ($order->final_price ?? 0)), 2) }}</p>
                                         <div class="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs space-y-1">
                                             <div class="flex justify-between"><span class="text-gray-600">Items Subtotal:</span><span class="font-semibold text-gray-900">₱{{ number_format($currentOrderItemsSubtotal, 2) }}</span></div>
                                             <div class="flex justify-between"><span class="text-gray-600">Shipping Fee:</span><span class="font-semibold text-gray-900">₱{{ number_format($currentOrderShippingFee, 2) }}</span></div>
                                         </div>
+                                        <p class="text-sm font-medium text-gray-700 mt-2 mb-1">Final Price</p>
+                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($currentOrderDisplayTotal ?? ($displayOrderTotal ?? ($order->final_price ?? 0)), 2) }}</p>
                                         <p class="text-xs text-emerald-600 mt-1 font-semibold">Payment accepted</p>
                                     </div>
                                 @elseif(in_array($order->status, ['production_complete', 'out_for_delivery', 'delivered']) && $order->final_price)
