@@ -1374,6 +1374,26 @@
                                     </div>
                                 @elseif($order->status === 'processing' && $order->final_price)
                                     <div>
+                                        @if($isBatchOrder && $batchPaidOrders->count() > 0)
+                                        <div class="mt-2 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-3 border border-gray-300">
+                                            <p class="text-xs font-bold text-gray-800 mb-2">💰 Price Breakdown</p>
+                                            <div class="space-y-2 text-xs">
+                                                @foreach($batchPaidOrders as $batchItem)
+                                                    @php
+                                                        $paidRow = $getBatchDisplayRowParts($batchItem);
+                                                    @endphp
+                                                    <div class="rounded border border-gray-200 bg-white p-2">
+                                                        <div class="font-bold mb-1" style="color:#800000;">Custom Order #{{ $batchItem->id }}</div>
+                                                        <div class="space-y-0.5">
+                                                            <div class="flex justify-between"><span class="text-gray-600">Material Cost:</span><span class="font-semibold text-gray-900">₱{{ number_format((float) ($paidRow['material'] ?? 0), 2) }}</span></div>
+                                                            <div class="flex justify-between"><span class="text-gray-600">Pattern Fee:</span><span class="font-semibold text-gray-900">₱{{ number_format((float) ($paidRow['pattern'] ?? 0), 2) }}</span></div>
+                                                            <div class="border-t border-gray-200 pt-0.5 flex justify-between"><span class="text-gray-600 font-medium">Subtotal:</span><span class="font-bold text-gray-900">₱{{ number_format((float) ($paidRow['subtotal'] ?? 0), 2) }}</span></div>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                        @endif
                                         <div class="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs space-y-1">
                                             <div class="flex justify-between"><span class="text-gray-600">Items Subtotal:</span><span class="font-semibold text-gray-900">₱{{ number_format(($isBatchOrder && $batchPaidTotal > 0) ? $batchPaidItemsSubtotal : $currentOrderItemsSubtotal, 2) }}</span></div>
                                             <div class="flex justify-between"><span class="text-gray-600">Shipping Fee:</span><span class="font-semibold text-gray-900">₱{{ number_format(($isBatchOrder && $batchPaidTotal > 0) ? $batchPaidShippingFee : $currentOrderShippingFee, 2) }}</span></div>
@@ -1384,6 +1404,26 @@
                                     </div>
                                 @elseif($order->status === 'in_production' && $order->final_price)
                                     <div>
+                                        @if($isBatchOrder && $batchPaidOrders->count() > 0)
+                                        <div class="mt-2 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-3 border border-gray-300">
+                                            <p class="text-xs font-bold text-gray-800 mb-2">💰 Price Breakdown</p>
+                                            <div class="space-y-2 text-xs">
+                                                @foreach($batchPaidOrders as $batchItem)
+                                                    @php
+                                                        $paidRow = $getBatchDisplayRowParts($batchItem);
+                                                    @endphp
+                                                    <div class="rounded border border-gray-200 bg-white p-2">
+                                                        <div class="font-bold mb-1" style="color:#800000;">Custom Order #{{ $batchItem->id }}</div>
+                                                        <div class="space-y-0.5">
+                                                            <div class="flex justify-between"><span class="text-gray-600">Material Cost:</span><span class="font-semibold text-gray-900">₱{{ number_format((float) ($paidRow['material'] ?? 0), 2) }}</span></div>
+                                                            <div class="flex justify-between"><span class="text-gray-600">Pattern Fee:</span><span class="font-semibold text-gray-900">₱{{ number_format((float) ($paidRow['pattern'] ?? 0), 2) }}</span></div>
+                                                            <div class="border-t border-gray-200 pt-0.5 flex justify-between"><span class="text-gray-600 font-medium">Subtotal:</span><span class="font-bold text-gray-900">₱{{ number_format((float) ($paidRow['subtotal'] ?? 0), 2) }}</span></div>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                        @endif
                                         <div class="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs space-y-1">
                                             <div class="flex justify-between"><span class="text-gray-600">Items Subtotal:</span><span class="font-semibold text-gray-900">₱{{ number_format(($isBatchOrder && $batchPaidTotal > 0) ? $batchPaidItemsSubtotal : $currentOrderItemsSubtotal, 2) }}</span></div>
                                             <div class="flex justify-between"><span class="text-gray-600">Shipping Fee:</span><span class="font-semibold text-gray-900">₱{{ number_format(($isBatchOrder && $batchPaidTotal > 0) ? $batchPaidShippingFee : $currentOrderShippingFee, 2) }}</span></div>
