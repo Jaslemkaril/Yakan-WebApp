@@ -244,18 +244,45 @@
     $adminDeliveryFee = (float) ($breakdown['delivery_fee'] ?? 0);
     $hasBreakdown = !empty($breakdown);
 
+    // Canonical subtotal from breakdown components when available.
+    $itemsSubtotalFromBreakdown = max(
+        (float) ($breakdown['material_cost'] ?? 0)
+        + (float) ($breakdown['pattern_fee'] ?? 0)
+        + (float) ($breakdown['labor_cost'] ?? 0)
+        - (float) ($breakdown['discount'] ?? 0),
+        0
+    );
+
+    // Prefer persisted shipping, then breakdown delivery fee, then calculated zone fee.
+    $resolvedShippingFee = !$isDelivery
+        ? 0
+        : (float) ($order->shipping_fee ?? 0);
+    if ($resolvedShippingFee <= 0 && $adminDeliveryFee > 0) {
+        $resolvedShippingFee = $adminDeliveryFee;
+    }
+    if ($resolvedShippingFee <= 0) {
+        $resolvedShippingFee = (float) ($calcShippingFee ?? 0);
+    }
+
     // Base price (= admin-set final_price before we add shipping)
     $quotedOrderPrice = $isBatchPayment
         ? $batchComputedTotal
         : (float) ($order->final_price ?? 0);
 
-    if (!$isDelivery || $adminDeliveryFee > 0) {
-        $displayShippingFee = 0;
+    // Single-order display: show the same split as admin/user approved page.
+    if (!$isBatchPayment && $itemsSubtotalFromBreakdown > 0) {
+        $quotedOrderPrice = $itemsSubtotalFromBreakdown;
+        $displayShippingFee = $resolvedShippingFee;
+        $grandTotal = $quotedOrderPrice + $displayShippingFee;
     } else {
-        $displayShippingFee = (float) ($calcShippingFee ?? 0);
+        // Batch/legacy fallback keeps previous behavior.
+        if (!$isDelivery || $adminDeliveryFee > 0) {
+            $displayShippingFee = 0;
+        } else {
+            $displayShippingFee = $resolvedShippingFee;
+        }
+        $grandTotal = $quotedOrderPrice + $displayShippingFee;
     }
-
-    $grandTotal = $quotedOrderPrice + $displayShippingFee;
 @endphp
 
 <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -504,11 +531,9 @@
                     <div class="flex justify-between py-3 border-b border-gray-200 items-center">
                         <span class="text-gray-700 font-medium">Shipping Fee</span>
                         <span class="font-bold text-lg" id="payShippingDisplay">
-                            @if($adminDeliveryFee > 0)
-                                <span class="text-gray-500 text-sm">(included above)</span>
-                            @elseif($calcShippingFee === null)
+                            @if($displayShippingFee === null)
                                 <span class="text-orange-600">— select region below</span>
-                            @elseif($calcShippingFee == 0)
+                            @elseif($displayShippingFee == 0)
                                 <span class="text-green-600">FREE</span>
                             @else
                                 <span class="text-gray-900">₱{{ number_format($displayShippingFee, 2) }}</span>
@@ -535,7 +560,7 @@
                 <input type="hidden" name="auth_token" value="{{ $authToken }}">
             @endif
             <!-- Hidden shipping fields -->
-            <input type="hidden" name="shipping_fee"      id="hiddenShippingFee"      value="{{ $calcShippingFee ?? 0 }}">
+            <input type="hidden" name="shipping_fee"      id="hiddenShippingFee"      value="{{ $displayShippingFee ?? 0 }}">
             <input type="hidden" name="delivery_city"     id="hiddenDeliveryCity"     value="{{ $storedCity }}">
             <input type="hidden" name="delivery_province" id="hiddenDeliveryProvince" value="{{ $storedProvince }}">
 
