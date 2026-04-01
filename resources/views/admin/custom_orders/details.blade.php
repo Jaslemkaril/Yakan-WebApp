@@ -103,13 +103,38 @@
         if ($deliveryType === 'pickup') {
             return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
         }
+
         $breakdown = method_exists($item, 'getPriceBreakdown') ? ($item->getPriceBreakdown() ?? []) : [];
-        $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
+        $breakdownData = $breakdown['breakdown'] ?? [];
+
+        $material = (float) ($breakdownData['material_cost'] ?? 0);
+        $pattern = (float) ($breakdownData['pattern_fee'] ?? 0);
+        $labor = (float) ($breakdownData['labor_cost'] ?? 0);
+        $discount = (float) ($breakdownData['discount'] ?? 0);
+        $deliveryFeeInBreakdown = (float) ($breakdownData['delivery_fee'] ?? 0);
+
+        $itemsSubtotalFromBreakdown = max(($material + $pattern + $labor - $discount), 0);
+
+        // If delivery fee is explicitly in breakdown, quoted amount is already complete.
         if ($deliveryFeeInBreakdown > 0) {
             return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
         }
-        // Always recalculate from address to ensure correct zone-based pricing
+
+        // Recalculate shipping from address and avoid adding it twice if quoted already includes it.
         $shipping = $resolveShippingFromAddress($item);
+        if ($itemsSubtotalFromBreakdown > 0 && abs($quoted - ($itemsSubtotalFromBreakdown + $shipping)) < 0.01) {
+            return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
+        }
+
+        if ($itemsSubtotalFromBreakdown > 0 && abs($quoted - $itemsSubtotalFromBreakdown) < 0.01) {
+            return ['quoted' => $quoted, 'shipping' => $shipping, 'total' => $quoted + $shipping];
+        }
+
+        // Legacy fallback: if we cannot infer inclusion from breakdown, treat quoted as total.
+        if ($itemsSubtotalFromBreakdown <= 0) {
+            return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
+        }
+
         return ['quoted' => $quoted, 'shipping' => $shipping, 'total' => $quoted + $shipping];
     };
 
@@ -620,7 +645,7 @@
                     $orderDeliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
                     $shippingFee = $orderDeliveryType === 'pickup' ? 0 : (float) ($order->shipping_fee ?? 0);
                     $subtotal = $materialCost + $patternFee;
-                    $totalCalculated = $quotedPrice + $shippingFee;
+                    $totalCalculated = $subtotal + $shippingFee;
                     $isGroupedContext = $batchItems->count() > 1;
                     $pricingCardQuoted = $isGroupedContext ? $batchQuotedSubtotal : $quotedPrice;
                     $pricingCardShipping = $isGroupedContext ? $batchShippingTotal : $shippingFee;
