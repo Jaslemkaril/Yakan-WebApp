@@ -102,6 +102,38 @@
     $batchItemsSubtotal = (float) $batchUnpaidOrders->sum(fn($item) => $getPriceParts($item)['items_subtotal'] ?? 0);
     $batchShippingFee = (float) $batchUnpaidOrders->map(fn($item) => $getPriceParts($item)['shipping'])->max();
     $batchPaymentTotal = $batchItemsSubtotal + $batchShippingFee;
+
+    // Canonical single-order split for display refinements.
+    $currentOrderItemsSubtotal = null;
+    $currentPatternIds = $order->patterns;
+    if (is_string($currentPatternIds)) {
+        $currentPatternIds = json_decode($currentPatternIds, true) ?? [];
+    }
+    if (is_array($currentPatternIds) && !empty($currentPatternIds) && !empty($order->fabric_quantity_meters)) {
+        $currentPatterns = \App\Models\YakanPattern::whereIn('id', array_map('intval', $currentPatternIds))->get();
+        if ($currentPatterns->isNotEmpty()) {
+            $currentQtyMultiplier = (float) ($order->quantity ?? 1);
+            $currentPatternFeeTotal = (float) $currentPatterns->sum(function ($pattern) {
+                return (float) ($pattern->pattern_price ?? 0);
+            });
+            $currentPricePerMeter = (float) ($currentPatterns->first()->price_per_meter ?? 0);
+            $currentMaterialCost = ((float) $order->fabric_quantity_meters) * $currentPricePerMeter;
+            $currentOrderItemsSubtotal = ($currentMaterialCost + $currentPatternFeeTotal) * $currentQtyMultiplier;
+        }
+    }
+
+    $currentOrderPriceParts = $getPriceParts($order);
+    if ($currentOrderItemsSubtotal === null || $currentOrderItemsSubtotal <= 0) {
+        $currentOrderItemsSubtotal = (float) ($currentOrderPriceParts['items_subtotal'] ?? ($order->final_price ?? $order->estimated_price ?? 0));
+    }
+
+    $currentOrderShippingFee = (($order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup')) === 'pickup')
+        ? 0.0
+        : (float) ($order->shipping_fee ?? 0);
+    if ($currentOrderShippingFee <= 0) {
+        $currentOrderShippingFee = (float) ($currentOrderPriceParts['shipping'] ?? 0);
+    }
+    $currentOrderDisplayTotal = $currentOrderItemsSubtotal + $currentOrderShippingFee;
     
     $customOrderEstimatedDays = (int) \App\Models\SystemSetting::get('custom_order_estimated_days', 14);
     $estimatedCompletionDate = $order->created_at ? $order->created_at->copy()->addDays($customOrderEstimatedDays) : null;
@@ -638,7 +670,7 @@
                         </div>
                         <div>
                             <p class="text-xs text-gray-500 mb-0.5">Est. Price</p>
-                            <p class="font-semibold" style="color:#800000;">₱{{ number_format($order->final_price ?? $order->estimated_price ?? 0, 2) }}</p>
+                            <p class="font-semibold" style="color:#800000;">₱{{ number_format($currentOrderItemsSubtotal ?? ($order->final_price ?? $order->estimated_price ?? 0), 2) }}</p>
                         </div>
                     </div>
 
@@ -1268,13 +1300,21 @@
                                 @elseif($order->status === 'processing' && $order->final_price)
                                     <div>
                                         <p class="text-sm font-medium text-gray-700 mb-1">Total Paid</p>
-                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayOrderTotal ?? ($order->final_price ?? 0), 2) }}</p>
+                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($currentOrderDisplayTotal ?? ($displayOrderTotal ?? ($order->final_price ?? 0)), 2) }}</p>
+                                        <div class="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs space-y-1">
+                                            <div class="flex justify-between"><span class="text-gray-600">Items Subtotal:</span><span class="font-semibold text-gray-900">₱{{ number_format($currentOrderItemsSubtotal, 2) }}</span></div>
+                                            <div class="flex justify-between"><span class="text-gray-600">Shipping Fee:</span><span class="font-semibold text-gray-900">₱{{ number_format($currentOrderShippingFee, 2) }}</span></div>
+                                        </div>
                                         <p class="text-xs text-indigo-600 mt-1 font-semibold">Payment accepted, waiting for production start</p>
                                     </div>
                                 @elseif($order->status === 'in_production' && $order->final_price)
                                     <div>
                                         <p class="text-sm font-medium text-gray-700 mb-1">Final Price</p>
-                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayOrderTotal ?? ($order->final_price ?? 0), 2) }}</p>
+                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($currentOrderDisplayTotal ?? ($displayOrderTotal ?? ($order->final_price ?? 0)), 2) }}</p>
+                                        <div class="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs space-y-1">
+                                            <div class="flex justify-between"><span class="text-gray-600">Items Subtotal:</span><span class="font-semibold text-gray-900">₱{{ number_format($currentOrderItemsSubtotal, 2) }}</span></div>
+                                            <div class="flex justify-between"><span class="text-gray-600">Shipping Fee:</span><span class="font-semibold text-gray-900">₱{{ number_format($currentOrderShippingFee, 2) }}</span></div>
+                                        </div>
                                         <p class="text-xs text-emerald-600 mt-1 font-semibold">Payment accepted</p>
                                     </div>
                                 @elseif(in_array($order->status, ['production_complete', 'out_for_delivery', 'delivered']) && $order->final_price)
