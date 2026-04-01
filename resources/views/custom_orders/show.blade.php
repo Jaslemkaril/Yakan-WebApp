@@ -393,6 +393,7 @@
                 <div class="space-y-3">
                     @foreach($batchOrders as $idx => $item)
                         @php
+                            $itemDisplayParts = $getBatchDisplayRowParts($item);
                             $itemPatterns = collect();
                             if (!empty($item->design_metadata['pattern_id'])) {
                                 $p = \App\Models\YakanPattern::find($item->design_metadata['pattern_id']);
@@ -467,7 +468,7 @@
                                 </div>
                                 <div>
                                     <p class="text-xs text-gray-500 mb-0.5">Est. Price</p>
-                                    <p class="font-semibold" style="color:#800000;">₱{{ number_format($item->final_price ?? $item->estimated_price ?? 0, 2) }}</p>
+                                    <p class="font-semibold" style="color:#800000;">₱{{ number_format((float) ($itemDisplayParts['subtotal'] ?? ($item->final_price ?? $item->estimated_price ?? 0)), 2) }}</p>
                                 </div>
                             </div>
 
