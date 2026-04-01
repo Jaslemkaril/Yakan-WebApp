@@ -1096,6 +1096,25 @@
                                                 $summarySubtotal = $batchItemsSubtotal;
                                                 $summaryTotal = $deliveryType === 'pickup' ? $summarySubtotal : $batchPaymentTotal;
                                             } else {
+                                                // Canonical subtotal (same basis as admin details view)
+                                                $canonicalSubtotal = null;
+                                                $canonicalPatternIds = $order->patterns;
+                                                if (is_string($canonicalPatternIds)) {
+                                                    $canonicalPatternIds = json_decode($canonicalPatternIds, true) ?? [];
+                                                }
+                                                if (is_array($canonicalPatternIds) && !empty($canonicalPatternIds) && !empty($order->fabric_quantity_meters)) {
+                                                    $canonicalPatterns = \App\Models\YakanPattern::whereIn('id', array_map('intval', $canonicalPatternIds))->get();
+                                                    if ($canonicalPatterns->isNotEmpty()) {
+                                                        $canonicalQty = (float) ($order->quantity ?? 1);
+                                                        $canonicalPatternFee = (float) $canonicalPatterns->sum(function ($p) {
+                                                            return (float) ($p->pattern_price ?? 0);
+                                                        });
+                                                        $canonicalPricePerMeter = (float) ($canonicalPatterns->first()->price_per_meter ?? 0);
+                                                        $canonicalMaterialCost = ((float) $order->fabric_quantity_meters) * $canonicalPricePerMeter;
+                                                        $canonicalSubtotal = ($canonicalMaterialCost + $canonicalPatternFee) * $canonicalQty;
+                                                    }
+                                                }
+
                                                 $singleBreakdown = $order->getPriceBreakdown();
                                                 $singleBreakdownData = $singleBreakdown['breakdown'] ?? [];
 
@@ -1109,15 +1128,16 @@
                                                 if ($deliveryType !== 'pickup') {
                                                     $singleShipping = (float) ($order->shipping_fee ?? 0);
                                                     if ($singleShipping <= 0) {
-                                                        $singleShipping = (float) ($singleBreakdownData['delivery_fee'] ?? 0);
-                                                    }
-                                                    if ($singleShipping <= 0) {
-                                                        $singleShipping = (float) ($getPriceParts($order)['shipping'] ?? 0);
+                                                        $singleShipping = (float) $calculateShippingFromAddress($order);
                                                     }
                                                 }
 
                                                 // Prefer canonical split for display; fallback to quoted when breakdown is unavailable.
-                                                if ($singleItemsSubtotal > 0) {
+                                                if ($canonicalSubtotal !== null && $canonicalSubtotal > 0) {
+                                                    $summarySubtotal = $canonicalSubtotal;
+                                                    $summaryShippingFee = $singleShipping;
+                                                    $summaryTotal = $summarySubtotal + $summaryShippingFee;
+                                                } elseif ($singleItemsSubtotal > 0) {
                                                     $summarySubtotal = $singleItemsSubtotal;
                                                     $summaryShippingFee = $singleShipping;
                                                     $summaryTotal = $summarySubtotal + $summaryShippingFee;
