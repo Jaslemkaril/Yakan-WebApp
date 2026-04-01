@@ -3200,7 +3200,9 @@ class CustomOrderController extends Controller
 
         // Mark as paid — Maya only redirects to success URL when payment is completed
         $order->payment_status      = 'paid';
-        $order->payment_verified_at = now();
+        if (\Schema::hasColumn('custom_orders', 'payment_verified_at')) {
+            $order->payment_verified_at = now();
+        }
         $order->status              = 'processing';
         if ($checkoutId) {
             $order->transaction_id = $checkoutId;
@@ -3249,7 +3251,9 @@ class CustomOrderController extends Controller
 
         $order->payment_status    = 'paid';
         $order->payment_method    = 'maya';
-        $order->payment_verified_at = now();
+        if (\Schema::hasColumn('custom_orders', 'payment_verified_at')) {
+            $order->payment_verified_at = now();
+        }
         $order->status            = 'processing';
         $order->transaction_id    = 'DEMO-' . strtoupper(bin2hex(random_bytes(6)));
         $order->save();
