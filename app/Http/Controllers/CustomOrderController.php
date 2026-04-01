@@ -539,6 +539,32 @@ class CustomOrderController extends Controller
     }
 
     /**
+     * Compute a user-facing total for a single order card (includes shipping when applicable).
+     */
+    private function calculateOrderDisplayTotalWithShipping(CustomOrder $order): float
+    {
+        $base = (float) ($order->final_price ?? $order->estimated_price ?? 0);
+        $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
+
+        if ($deliveryType === 'pickup') {
+            return $base;
+        }
+
+        $breakdown = $order->getPriceBreakdown();
+        $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
+        if ($deliveryFeeInBreakdown > 0) {
+            return $base;
+        }
+
+        $shipping = (float) ($order->shipping_fee ?? 0);
+        if ($shipping <= 0) {
+            $shipping = $this->resolveAddressBasedShippingFeeForOrder($order);
+        }
+
+        return $base + max($shipping, 0);
+    }
+
+    /**
      * Sum payable amount across a set of custom orders.
      */
     private function calculateOrdersTotal(\Illuminate\Support\Collection $orders): float
@@ -2526,8 +2552,9 @@ class CustomOrderController extends Controller
             $batchPaymentTotal = $this->calculateOrdersTotal(
                 $batchOrders->where('payment_status', '!=', 'paid')->values()
             );
+            $displayOrderTotal = $this->calculateOrderDisplayTotalWithShipping($order);
 
-            return view('custom_orders.show', compact('order', 'batchOrders', 'isBatchOrder', 'batchPaymentTotal'));
+            return view('custom_orders.show', compact('order', 'batchOrders', 'isBatchOrder', 'batchPaymentTotal', 'displayOrderTotal'));
             
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             \Log::error('CustomOrder not found', [

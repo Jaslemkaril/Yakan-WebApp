@@ -1627,7 +1627,7 @@
                     @if($order->final_price)
                     <div class="bg-white rounded-xl p-4 border-2 inline-block" style="border-color:#e0b0b0;">
                         <p class="text-sm text-gray-600 mb-1">Amount Paid</p>
-                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
+                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayOrderTotal ?? ($order->final_price ?? 0), 2) }}</p>
                     </div>
                     @endif
                 </div>
@@ -1645,7 +1645,7 @@
                     @if($order->final_price)
                     <div class="bg-white rounded-xl p-4 border-2 mb-6 inline-block" style="border-color:#e0b0b0;">
                         <p class="text-sm text-gray-600 mb-1">Amount Due</p>
-                        <p class="text-3xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
+                        <p class="text-3xl font-bold" style="color:#800000;">₱{{ number_format($displayOrderTotal ?? ($order->final_price ?? 0), 2) }}</p>
                     </div>
                     @endif
                     <div>
@@ -1668,7 +1668,7 @@
                     @if($order->final_price)
                     <div class="bg-white rounded-xl p-4 border-2 mb-6 inline-block" style="border-color:#e0b0b0;">
                         <p class="text-sm text-gray-600 mb-1">Total Paid</p>
-                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
+                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayOrderTotal ?? ($order->final_price ?? 0), 2) }}</p>
                     </div>
                     @endif
                     <form method="POST" action="{{ route('custom_orders.confirm_received', $order) }}">
@@ -1696,7 +1696,7 @@
                     @if($order->final_price)
                     <div class="bg-white rounded-xl p-4 border-2 inline-block" style="border-color:#e0b0b0;">
                         <p class="text-sm text-gray-600 mb-1">Total Paid</p>
-                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
+                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayOrderTotal ?? ($order->final_price ?? 0), 2) }}</p>
                     </div>
                     @endif
                 </div>
