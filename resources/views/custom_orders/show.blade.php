@@ -5,6 +5,7 @@
     $batchOrders = $batchOrders ?? collect([$order]);
     $isBatchOrder = $isBatchOrder ?? ($batchOrders->count() > 1);
     $batchUnpaidOrders = $batchOrders->where('payment_status', '!=', 'paid')->values();
+    $batchPaidOrders = $batchOrders->where('payment_status', 'paid')->values();
     
     // Helper function to calculate shipping from address with user default fallback (same as admin)
     $calculateShippingFromAddress = function ($item) {
@@ -170,6 +171,11 @@
     $batchShippingFee = (float) ($batchDisplayRows->max('shipping_display') ?? 0);
     $batchPaymentTotal = $batchItemsSubtotal + $batchShippingFee;
 
+    $batchPaidDisplayRows = $batchPaidOrders->map(fn($item) => $getBatchDisplayRowParts($item));
+    $batchPaidItemsSubtotal = (float) $batchPaidDisplayRows->sum('subtotal');
+    $batchPaidShippingFee = (float) ($batchPaidDisplayRows->max('shipping_display') ?? 0);
+    $batchPaidTotal = $batchPaidItemsSubtotal + $batchPaidShippingFee;
+
     // Canonical single-order split for display refinements.
     $currentOrderItemsSubtotal = null;
     $currentPatternIds = $order->patterns;
@@ -201,6 +207,9 @@
         $currentOrderShippingFee = (float) ($currentOrderPriceParts['shipping'] ?? 0);
     }
     $currentOrderDisplayTotal = $currentOrderItemsSubtotal + $currentOrderShippingFee;
+    $displayPaidTotal = ($isBatchOrder && $batchPaidTotal > 0)
+        ? $batchPaidTotal
+        : $currentOrderDisplayTotal;
     
     $customOrderEstimatedDays = (int) \App\Models\SystemSetting::get('custom_order_estimated_days', 14);
     $estimatedCompletionDate = $order->created_at ? $order->created_at->copy()->addDays($customOrderEstimatedDays) : null;
@@ -1366,27 +1375,27 @@
                                 @elseif($order->status === 'processing' && $order->final_price)
                                     <div>
                                         <div class="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs space-y-1">
-                                            <div class="flex justify-between"><span class="text-gray-600">Items Subtotal:</span><span class="font-semibold text-gray-900">₱{{ number_format($currentOrderItemsSubtotal, 2) }}</span></div>
-                                            <div class="flex justify-between"><span class="text-gray-600">Shipping Fee:</span><span class="font-semibold text-gray-900">₱{{ number_format($currentOrderShippingFee, 2) }}</span></div>
+                                            <div class="flex justify-between"><span class="text-gray-600">Items Subtotal:</span><span class="font-semibold text-gray-900">₱{{ number_format(($isBatchOrder && $batchPaidTotal > 0) ? $batchPaidItemsSubtotal : $currentOrderItemsSubtotal, 2) }}</span></div>
+                                            <div class="flex justify-between"><span class="text-gray-600">Shipping Fee:</span><span class="font-semibold text-gray-900">₱{{ number_format(($isBatchOrder && $batchPaidTotal > 0) ? $batchPaidShippingFee : $currentOrderShippingFee, 2) }}</span></div>
                                         </div>
                                         <p class="text-sm font-medium text-gray-700 mt-2 mb-1">Total Paid</p>
-                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($currentOrderDisplayTotal ?? ($displayOrderTotal ?? ($order->final_price ?? 0)), 2) }}</p>
+                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayPaidTotal ?? ($displayOrderTotal ?? ($order->final_price ?? 0)), 2) }}</p>
                                         <p class="text-xs text-indigo-600 mt-1 font-semibold">Payment accepted, waiting for production start</p>
                                     </div>
                                 @elseif($order->status === 'in_production' && $order->final_price)
                                     <div>
                                         <div class="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-2 text-xs space-y-1">
-                                            <div class="flex justify-between"><span class="text-gray-600">Items Subtotal:</span><span class="font-semibold text-gray-900">₱{{ number_format($currentOrderItemsSubtotal, 2) }}</span></div>
-                                            <div class="flex justify-between"><span class="text-gray-600">Shipping Fee:</span><span class="font-semibold text-gray-900">₱{{ number_format($currentOrderShippingFee, 2) }}</span></div>
+                                            <div class="flex justify-between"><span class="text-gray-600">Items Subtotal:</span><span class="font-semibold text-gray-900">₱{{ number_format(($isBatchOrder && $batchPaidTotal > 0) ? $batchPaidItemsSubtotal : $currentOrderItemsSubtotal, 2) }}</span></div>
+                                            <div class="flex justify-between"><span class="text-gray-600">Shipping Fee:</span><span class="font-semibold text-gray-900">₱{{ number_format(($isBatchOrder && $batchPaidTotal > 0) ? $batchPaidShippingFee : $currentOrderShippingFee, 2) }}</span></div>
                                         </div>
                                         <p class="text-sm font-medium text-gray-700 mt-2 mb-1">Final Price</p>
-                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($currentOrderDisplayTotal ?? ($displayOrderTotal ?? ($order->final_price ?? 0)), 2) }}</p>
+                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayPaidTotal ?? ($displayOrderTotal ?? ($order->final_price ?? 0)), 2) }}</p>
                                         <p class="text-xs text-emerald-600 mt-1 font-semibold">Payment accepted</p>
                                     </div>
                                 @elseif(in_array($order->status, ['production_complete', 'out_for_delivery', 'delivered']) && $order->final_price)
                                     <div>
                                         <p class="text-sm font-medium text-gray-700 mb-1">Total Paid</p>
-                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayOrderTotal ?? ($order->final_price ?? 0), 2) }}</p>
+                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayPaidTotal ?? ($displayOrderTotal ?? ($order->final_price ?? 0)), 2) }}</p>
                                         <p class="text-xs text-emerald-600 mt-1 font-semibold">
                                             @if($order->status === 'delivered')
                                                 ✓ Delivered
@@ -1400,7 +1409,7 @@
                                 @elseif($order->status === 'completed' && $order->final_price)
                                     <div>
                                         <p class="text-sm font-medium text-gray-700 mb-1">Total Paid</p>
-                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayOrderTotal ?? ($order->final_price ?? 0), 2) }}</p>
+                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayPaidTotal ?? ($displayOrderTotal ?? ($order->final_price ?? 0)), 2) }}</p>
                                         <p class="text-xs text-emerald-600 mt-1 font-semibold">Order completed</p>
                                     </div>
                                 @else
@@ -1829,7 +1838,7 @@
                     @if($order->final_price)
                     <div class="bg-white rounded-xl p-4 border-2 inline-block" style="border-color:#e0b0b0;">
                         <p class="text-sm text-gray-600 mb-1">Amount Paid</p>
-                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayOrderTotal ?? ($order->final_price ?? 0), 2) }}</p>
+                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayPaidTotal ?? ($displayOrderTotal ?? ($order->final_price ?? 0)), 2) }}</p>
                     </div>
                     @endif
                 </div>

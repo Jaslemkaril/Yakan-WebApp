@@ -3264,16 +3264,28 @@ class CustomOrderController extends Controller
             }
         }
 
-        // Mark as paid — Maya only redirects to success URL when payment is completed
-        $order->payment_status      = 'paid';
-        if (\Schema::hasColumn('custom_orders', 'payment_verified_at')) {
-            $order->payment_verified_at = now();
+        // Mark paid items in the same batch/submission as paid to keep state and totals consistent.
+        $paidAt = now();
+        $batchToMarkPaid = $this->getUserBatchOrders($order, Auth::id())
+            ->where('payment_status', '!=', 'paid')
+            ->where('status', 'approved')
+            ->values();
+
+        if ($batchToMarkPaid->isEmpty()) {
+            $batchToMarkPaid = collect([$order]);
         }
-        $order->status              = 'processing';
-        if ($checkoutId) {
-            $order->transaction_id = $checkoutId;
+
+        foreach ($batchToMarkPaid as $batchOrder) {
+            $batchOrder->payment_status = 'paid';
+            if (\Schema::hasColumn('custom_orders', 'payment_verified_at')) {
+                $batchOrder->payment_verified_at = $paidAt;
+            }
+            $batchOrder->status = 'processing';
+            if ($checkoutId) {
+                $batchOrder->transaction_id = $checkoutId;
+            }
+            $batchOrder->save();
         }
-        $order->save();
 
         return $this->redirectToRouteWithToken('custom_orders.show', $order)
             ->with('success', 'Maya payment confirmed! Your custom order is now being processed.');
@@ -3315,14 +3327,27 @@ class CustomOrderController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $order->payment_status    = 'paid';
-        $order->payment_method    = 'maya';
-        if (\Schema::hasColumn('custom_orders', 'payment_verified_at')) {
-            $order->payment_verified_at = now();
+        $demoTransactionId = 'DEMO-' . strtoupper(bin2hex(random_bytes(6)));
+        $paidAt = now();
+        $batchToMarkPaid = $this->getUserBatchOrders($order, Auth::id())
+            ->where('payment_status', '!=', 'paid')
+            ->where('status', 'approved')
+            ->values();
+
+        if ($batchToMarkPaid->isEmpty()) {
+            $batchToMarkPaid = collect([$order]);
         }
-        $order->status            = 'processing';
-        $order->transaction_id    = 'DEMO-' . strtoupper(bin2hex(random_bytes(6)));
-        $order->save();
+
+        foreach ($batchToMarkPaid as $batchOrder) {
+            $batchOrder->payment_status = 'paid';
+            $batchOrder->payment_method = 'maya';
+            if (\Schema::hasColumn('custom_orders', 'payment_verified_at')) {
+                $batchOrder->payment_verified_at = $paidAt;
+            }
+            $batchOrder->status = 'processing';
+            $batchOrder->transaction_id = $demoTransactionId;
+            $batchOrder->save();
+        }
 
         \Log::info('Demo payment simulation used', ['order_id' => $order->id, 'user_id' => $order->user_id]);
 
