@@ -543,19 +543,10 @@ class CustomOrderController extends Controller
      */
     private function calculateOrdersTotal(\Illuminate\Support\Collection $orders): float
     {
-        if ($orders->count() <= 1) {
-            return (float) $orders->sum(function (CustomOrder $item) {
-                return $this->calculateOrderPayableTotal($item);
-            });
-        }
-
-        $quotedSubtotal = (float) $orders->sum(
+        // Items subtotal only (no shipping). Shipping is handled separately per flow.
+        return (float) $orders->sum(
             fn(CustomOrder $item) => (float) ($item->final_price ?? $item->estimated_price ?? 0)
         );
-
-        // NOTE: Shipping is calculated separately in initiatePaymentAjax() to avoid double-counting
-        // This method returns ONLY the items subtotal (no shipping)
-        return $quotedSubtotal;
     }
 
     /**
@@ -3032,7 +3023,6 @@ class CustomOrderController extends Controller
                     $publicKey  = config('services.maya.public_key');
                     $baseUrl    = rtrim(config('services.maya.base_url', 'https://pg-sandbox.paymaya.com'), '/');
                     $itemsSubtotal = (float) $this->calculateOrdersTotal($paymentOrders);
-                    $amount     = $itemsSubtotal + $shippingFee; // Include shipping in total
                     $buyer      = $order->user ?? User::find($order->user_id);
                     
                     $tokenQuery = $authTokenForCallback ? '?auth_token=' . urlencode($authTokenForCallback) : '';
@@ -3041,6 +3031,11 @@ class CustomOrderController extends Controller
                     
                     // Build items array - each batch order as separate line item
                     $items = $this->buildMayaItemsArray($paymentOrders, $shippingFee);
+
+                    // Keep Maya totalAmount exactly equal to items sum to avoid double-counting.
+                    $amount = (float) collect($items)->sum(function (array $item) {
+                        return (float) data_get($item, 'totalAmount.value', 0);
+                    });
 
                     $payload = [
                         'totalAmount' => ['value' => number_format($amount, 2, '.', ''), 'currency' => 'PHP'],
