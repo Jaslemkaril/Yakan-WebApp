@@ -341,7 +341,7 @@
                                 $userName = $order->user->name ?? 'N/A';
                                 $userEmail = $order->user->email ?? $order->email ?? '';
                                 $userInitial = strtoupper(substr($userName ?: 'N', 0, 1));
-                                $avatarRaw = $order->user->avatar_url ?? $order->user->avatar ?? null;
+                                $avatarRaw = $order->user->avatar ?? null;
                                 $avatarSrc = null;
                                 if (!empty($avatarRaw)) {
                                     if (str_starts_with($avatarRaw, 'http://') || str_starts_with($avatarRaw, 'https://')) {
