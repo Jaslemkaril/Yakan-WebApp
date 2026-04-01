@@ -1096,11 +1096,37 @@
                                                 $summarySubtotal = $batchItemsSubtotal;
                                                 $summaryTotal = $deliveryType === 'pickup' ? $summarySubtotal : $batchPaymentTotal;
                                             } else {
-                                                $singlePriceParts = $getPriceParts($order);
-                                                $singleShipping = (float) ($singlePriceParts['shipping'] ?? 0);
-                                                $summaryShippingFee = $deliveryType === 'pickup' ? 0 : $singleShipping;
-                                                $summarySubtotal = (float) ($singlePriceParts['items_subtotal'] ?? ($order->final_price ?? 0));
-                                                $summaryTotal = (float) ($singlePriceParts['total'] ?? ($summarySubtotal + $summaryShippingFee));
+                                                $singleBreakdown = $order->getPriceBreakdown();
+                                                $singleBreakdownData = $singleBreakdown['breakdown'] ?? [];
+
+                                                $singleMaterial = (float) ($singleBreakdownData['material_cost'] ?? 0);
+                                                $singlePattern = (float) ($singleBreakdownData['pattern_fee'] ?? 0);
+                                                $singleLabor = (float) ($singleBreakdownData['labor_cost'] ?? 0);
+                                                $singleDiscount = (float) ($singleBreakdownData['discount'] ?? 0);
+                                                $singleItemsSubtotal = max(($singleMaterial + $singlePattern + $singleLabor - $singleDiscount), 0);
+
+                                                $singleShipping = 0.0;
+                                                if ($deliveryType !== 'pickup') {
+                                                    $singleShipping = (float) ($order->shipping_fee ?? 0);
+                                                    if ($singleShipping <= 0) {
+                                                        $singleShipping = (float) ($singleBreakdownData['delivery_fee'] ?? 0);
+                                                    }
+                                                    if ($singleShipping <= 0) {
+                                                        $singleShipping = (float) ($getPriceParts($order)['shipping'] ?? 0);
+                                                    }
+                                                }
+
+                                                // Prefer canonical split for display; fallback to quoted when breakdown is unavailable.
+                                                if ($singleItemsSubtotal > 0) {
+                                                    $summarySubtotal = $singleItemsSubtotal;
+                                                    $summaryShippingFee = $singleShipping;
+                                                    $summaryTotal = $summarySubtotal + $summaryShippingFee;
+                                                } else {
+                                                    $singlePriceParts = $getPriceParts($order);
+                                                    $summaryShippingFee = $deliveryType === 'pickup' ? 0 : (float) ($singlePriceParts['shipping'] ?? 0);
+                                                    $summarySubtotal = (float) ($singlePriceParts['items_subtotal'] ?? ($order->final_price ?? 0));
+                                                    $summaryTotal = (float) ($singlePriceParts['total'] ?? ($summarySubtotal + $summaryShippingFee));
+                                                }
                                             }
                                         @endphp
                                         
