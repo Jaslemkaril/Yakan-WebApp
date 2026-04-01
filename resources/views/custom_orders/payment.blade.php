@@ -253,6 +253,28 @@
         0
     );
 
+    // Canonical subtotal from selected pattern(s) + fabric meters (same basis used in admin details).
+    $canonicalItemsSubtotal = null;
+    if (!$isBatchPayment) {
+        $patternIds = $order->patterns;
+        if (is_string($patternIds)) {
+            $patternIds = json_decode($patternIds, true) ?? [];
+        }
+
+        if (is_array($patternIds) && !empty($patternIds) && !empty($order->fabric_quantity_meters)) {
+            $patterns = \App\Models\YakanPattern::whereIn('id', array_map('intval', $patternIds))->get();
+            if ($patterns->isNotEmpty()) {
+                $qtyMultiplier = (float) ($order->quantity ?? 1);
+                $patternFeeTotal = (float) $patterns->sum(function ($pattern) {
+                    return (float) ($pattern->pattern_price ?? 0);
+                });
+                $pricePerMeter = (float) ($patterns->first()->price_per_meter ?? 0);
+                $materialCost = ((float) $order->fabric_quantity_meters) * $pricePerMeter;
+                $canonicalItemsSubtotal = ($materialCost + $patternFeeTotal) * $qtyMultiplier;
+            }
+        }
+    }
+
     // Prefer persisted shipping, then breakdown delivery fee, then calculated zone fee.
     $resolvedShippingFee = !$isDelivery
         ? 0
@@ -270,8 +292,12 @@
         : (float) ($order->final_price ?? 0);
 
     // Single-order display: show the same split as admin/user approved page.
-    if (!$isBatchPayment && $itemsSubtotalFromBreakdown > 0) {
-        $quotedOrderPrice = $itemsSubtotalFromBreakdown;
+    if (!$isBatchPayment) {
+        if ($canonicalItemsSubtotal !== null && $canonicalItemsSubtotal > 0) {
+            $quotedOrderPrice = $canonicalItemsSubtotal;
+        } elseif ($itemsSubtotalFromBreakdown > 0) {
+            $quotedOrderPrice = $itemsSubtotalFromBreakdown;
+        }
         $displayShippingFee = $resolvedShippingFee;
         $grandTotal = $quotedOrderPrice + $displayShippingFee;
     } else {
