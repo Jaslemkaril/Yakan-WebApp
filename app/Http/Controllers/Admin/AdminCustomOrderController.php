@@ -39,12 +39,28 @@ class AdminCustomOrderController extends Controller
         }
 
         $breakdown = $order->getPriceBreakdown();
-        $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
+        $breakdownData = $breakdown['breakdown'] ?? [];
+        $deliveryFeeInBreakdown = (float) ($breakdownData['delivery_fee'] ?? 0);
         if ($deliveryFeeInBreakdown > 0) {
             return $base;
         }
 
-        return $base + (float) ($order->shipping_fee ?? 0);
+        $material = (float) ($breakdownData['material_cost'] ?? 0);
+        $pattern = (float) ($breakdownData['pattern_fee'] ?? 0);
+        $labor = (float) ($breakdownData['labor_cost'] ?? 0);
+        $discount = (float) ($breakdownData['discount'] ?? 0);
+        $itemsSubtotalFromBreakdown = max(($material + $pattern + $labor - $discount), 0);
+
+        $shipping = (float) ($order->shipping_fee ?? 0);
+        if ($itemsSubtotalFromBreakdown > 0 && abs($base - ($itemsSubtotalFromBreakdown + $shipping)) < 0.01) {
+            return $base;
+        }
+
+        if ($itemsSubtotalFromBreakdown > 0 && abs($base - $itemsSubtotalFromBreakdown) < 0.01) {
+            return $base + $shipping;
+        }
+
+        return $base;
     }
 
     private function calculateBatchDisplayTotal(\Illuminate\Support\Collection $orders): float

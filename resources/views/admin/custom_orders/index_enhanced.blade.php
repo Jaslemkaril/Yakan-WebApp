@@ -414,9 +414,19 @@
                                 $itemDisplayPrice = (float) ($order->final_price ?? $order->estimated_price ?? 0);
                                 $itemDeliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
                                 $itemBreakdown = $order->getPriceBreakdown();
-                                $itemDeliveryFeeInBreakdown = (float) (($itemBreakdown['breakdown']['delivery_fee'] ?? 0));
+                                $itemBreakdownData = $itemBreakdown['breakdown'] ?? [];
+                                $itemDeliveryFeeInBreakdown = (float) ($itemBreakdownData['delivery_fee'] ?? 0);
                                 if ($itemDeliveryType !== 'pickup' && $itemDeliveryFeeInBreakdown <= 0) {
-                                    $itemDisplayPrice += (float) ($order->shipping_fee ?? 0);
+                                    $itemMaterial = (float) ($itemBreakdownData['material_cost'] ?? 0);
+                                    $itemPattern = (float) ($itemBreakdownData['pattern_fee'] ?? 0);
+                                    $itemLabor = (float) ($itemBreakdownData['labor_cost'] ?? 0);
+                                    $itemDiscount = (float) ($itemBreakdownData['discount'] ?? 0);
+                                    $itemSubtotalFromBreakdown = max(($itemMaterial + $itemPattern + $itemLabor - $itemDiscount), 0);
+                                    $itemShipping = (float) ($order->shipping_fee ?? 0);
+
+                                    if ($itemSubtotalFromBreakdown > 0 && abs($itemDisplayPrice - $itemSubtotalFromBreakdown) < 0.01) {
+                                        $itemDisplayPrice += $itemShipping;
+                                    }
                                 }
                                 $currentBatchMeta = null;
                                 if (!empty($order->batch_order_number) && !empty($batchMetaMap[$order->batch_order_number])) {
