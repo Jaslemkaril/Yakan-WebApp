@@ -1280,19 +1280,31 @@
                     <div class="p-6">
                         <div class="space-y-4">
                             @php
-                                // Map old 'completed' status to new 'delivered' for timeline display
-                                $displayStatus = $order->status === 'completed' ? 'delivered' : $order->status;
-                                $statuses = ['pending', 'approved', 'in_production', 'production_complete', 'out_for_delivery', 'delivered'];
-                                $currentIndex = array_search($displayStatus, $statuses);
-                                if ($currentIndex === false) $currentIndex = -1;
+                                $timelineStatuses = ['pending', 'price_quoted', 'approved', 'in_production', 'production_complete', 'out_for_delivery', 'delivered'];
+
+                                // Normalize runtime order states to timeline stages.
+                                $displayStatus = $order->status;
+                                if ($displayStatus === 'completed') {
+                                    $displayStatus = 'delivered';
+                                } elseif ($displayStatus === 'processing') {
+                                    $displayStatus = 'in_production';
+                                } elseif ($displayStatus === 'approved' && ($order->payment_status ?? null) === 'paid') {
+                                    $displayStatus = 'in_production';
+                                }
+
+                                if (!in_array($displayStatus, $timelineStatuses, true)) {
+                                    $displayStatus = ($order->payment_status ?? null) === 'paid' ? 'in_production' : 'pending';
+                                }
+
+                                $currentTimelineIndex = array_search($displayStatus, $timelineStatuses, true);
+                                if ($currentTimelineIndex === false) {
+                                    $currentTimelineIndex = 0;
+                                }
                             @endphp
 
                             @foreach(['pending' => 'Order Placed', 'price_quoted' => 'Price Quoted', 'approved' => 'Quote Accepted', 'in_production' => 'In Production', 'production_complete' => 'Production Complete', 'out_for_delivery' => 'Out for Delivery', 'delivered' => 'Delivered'] as $status => $label)
                                 @php
-                                    $timelineStatuses = ['pending', 'price_quoted', 'approved', 'in_production', 'production_complete', 'out_for_delivery', 'delivered'];
-                                    $statusIndex = array_search($status, $timelineStatuses);
-                                    $currentTimelineIndex = array_search($displayStatus, $timelineStatuses);
-                                    if ($currentTimelineIndex === false) $currentTimelineIndex = -1;
+                                    $statusIndex = array_search($status, $timelineStatuses, true);
                                     $isActive = $statusIndex <= $currentTimelineIndex;
                                     $isCurrent = $status === $displayStatus;
                                 @endphp
