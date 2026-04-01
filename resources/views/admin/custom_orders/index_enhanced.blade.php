@@ -337,13 +337,43 @@
                         </td>
 
                         <td class="px-4 py-3.5">
+                            @php
+                                $userName = $order->user->name ?? 'N/A';
+                                $userEmail = $order->user->email ?? $order->email ?? '';
+                                $userInitial = strtoupper(substr($userName ?: 'N', 0, 1));
+                                $avatarRaw = $order->user->avatar_url ?? $order->user->avatar ?? null;
+                                $avatarSrc = null;
+                                if (!empty($avatarRaw)) {
+                                    if (str_starts_with($avatarRaw, 'http://') || str_starts_with($avatarRaw, 'https://')) {
+                                        $avatarSrc = $avatarRaw;
+                                    } elseif (str_starts_with($avatarRaw, 'data:image')) {
+                                        $avatarSrc = $avatarRaw;
+                                    } elseif (str_starts_with($avatarRaw, 'storage/')) {
+                                        $avatarSrc = asset($avatarRaw);
+                                    } else {
+                                        $avatarSrc = asset('storage/' . ltrim($avatarRaw, '/'));
+                                    }
+                                }
+                            @endphp
                             <div class="flex items-center gap-2.5">
-                                <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style="background-color: #800000;">
-                                    {{ strtoupper(substr($order->user->name ?? 'N', 0, 1)) }}
+                                <div class="w-8 h-8 flex-shrink-0 relative">
+                                    @if($avatarSrc)
+                                        <img src="{{ $avatarSrc }}"
+                                             alt="{{ $userName }}"
+                                             class="w-8 h-8 rounded-full object-cover border border-gray-200"
+                                             onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
+                                        <div class="hidden w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style="background-color: #800000;">
+                                            {{ $userInitial }}
+                                        </div>
+                                    @else
+                                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style="background-color: #800000;">
+                                            {{ $userInitial }}
+                                        </div>
+                                    @endif
                                 </div>
                                 <div class="min-w-0">
-                                    <p class="font-semibold text-gray-900 text-sm truncate max-w-[160px]">{{ $order->user->name ?? 'N/A' }}</p>
-                                    <p class="text-[11px] text-gray-400 truncate max-w-[160px]">{{ $order->user->email ?? $order->email ?? '' }}</p>
+                                    <p class="font-semibold text-gray-900 text-sm truncate max-w-[160px]">{{ $userName }}</p>
+                                    <p class="text-[11px] text-gray-400 truncate max-w-[160px]">{{ $userEmail }}</p>
                                 </div>
                             </div>
                         </td>
