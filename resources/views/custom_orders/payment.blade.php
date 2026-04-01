@@ -114,21 +114,6 @@
     $isBatchPayment = $isBatchPayment ?? ($paymentOrders->count() > 1);
     $batchOrderNumber = $order->batch_order_number ?? null;
     $batchItemsCount = $paymentOrders->count();
-    
-    // Calculate batch total using breakdown data (more accurate)
-    $calculateItemSubtotal = function($item) {
-        $breakdownData = method_exists($item, 'getPriceBreakdown') ? ($item->getPriceBreakdown() ?? []) : [];
-        $bd = $breakdownData['breakdown'] ?? [];
-        $material = (float) ($bd['material_cost'] ?? 0);
-        $pattern = (float) ($bd['pattern_fee'] ?? 0);
-        $labor = (float) ($bd['labor_cost'] ?? 0);
-        $fromBreakdown = $material + $pattern + $labor;
-        return $fromBreakdown > 0 ? $fromBreakdown : (float) ($item->final_price ?? $item->estimated_price ?? 0);
-    };
-    
-    $batchComputedTotal = isset($paymentTotal)
-        ? (float) $paymentTotal
-        : (float) $paymentOrders->sum($calculateItemSubtotal);
 
     $mayaLogoPath = public_path('images/payment/maya-logo.jpg');
     $mayaLogoDataUri = file_exists($mayaLogoPath)
@@ -237,6 +222,83 @@
         // Use a default fee so summary always shows a numeric shipping amount.
         $calcShippingFee = $defaultDeliveryFee;
     }
+
+    $resolveBatchItemSummary = function($item) use ($isDelivery, $calcShippingFee) {
+        $quoted = (float) ($item->final_price ?? $item->estimated_price ?? 0);
+
+        $itemDeliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+        $itemIsDelivery = $itemDeliveryType !== 'pickup';
+        $itemShippingDisplay = $itemIsDelivery ? (float) ($item->shipping_fee ?? 0) : 0.0;
+        if ($itemIsDelivery && $itemShippingDisplay <= 0) {
+            $itemShippingDisplay = (float) $calcShippingFee;
+        }
+
+        $breakdownData = method_exists($item, 'getPriceBreakdown') ? ($item->getPriceBreakdown() ?? []) : [];
+        $bd = $breakdownData['breakdown'] ?? [];
+        $material = (float) ($bd['material_cost'] ?? 0);
+        $pattern = (float) ($bd['pattern_fee'] ?? 0);
+
+        if (($material + $pattern) <= 0.0) {
+            $patternModels = collect();
+
+            $patternIdFromMeta = (int) data_get($item->design_metadata ?? [], 'pattern_id', 0);
+            if ($patternIdFromMeta > 0) {
+                $metaPattern = \App\Models\YakanPattern::find($patternIdFromMeta);
+                if ($metaPattern) {
+                    $patternModels->push($metaPattern);
+                }
+            }
+
+            $patternIds = $item->patterns;
+            if (is_string($patternIds)) {
+                $patternIds = json_decode($patternIds, true) ?? [];
+            }
+            $patternIds = is_array($patternIds) ? $patternIds : [];
+
+            foreach ($patternIds as $rawPattern) {
+                if (is_numeric($rawPattern)) {
+                    $p = \App\Models\YakanPattern::find((int) $rawPattern);
+                } else {
+                    $p = !empty($rawPattern) ? \App\Models\YakanPattern::where('name', $rawPattern)->first() : null;
+                }
+                if ($p) {
+                    $patternModels->push($p);
+                }
+            }
+
+            $patternModels = $patternModels->unique('id')->values();
+            $patternFallback = (float) $patternModels->sum(fn($p) => (float) ($p->pattern_price ?? 0));
+            $pricePerMeter = (float) (($patternModels->first()->price_per_meter ?? 0));
+            $meters = (float) ($item->fabric_quantity_meters ?? 0);
+            $materialFallback = ($meters > 0 && $pricePerMeter > 0) ? ($meters * $pricePerMeter) : 0.0;
+
+            if ($materialFallback > 0 || $patternFallback > 0) {
+                $material = $materialFallback;
+                $pattern = $patternFallback;
+            }
+        }
+
+        $subtotal = $material + $pattern;
+        if ($subtotal <= 0.0) {
+            $subtotal = ($itemIsDelivery && $quoted > $itemShippingDisplay)
+                ? max($quoted - $itemShippingDisplay, 0)
+                : $quoted;
+        }
+
+        if ($material <= 0.0 && $pattern <= 0.0 && $subtotal > 0.0) {
+            $material = $subtotal;
+        }
+
+        return [
+            'material' => $material,
+            'pattern' => $pattern,
+            'subtotal' => $subtotal,
+            'shipping_display' => $itemShippingDisplay,
+        ];
+    };
+
+    $batchBreakdownRows = $paymentOrders->map(fn($item) => $resolveBatchItemSummary($item));
+    $batchComputedTotal = (float) $batchBreakdownRows->sum('subtotal');
 
     // Check if admin already included delivery_fee in price breakdown
     $priceBreakdown = $order->getPriceBreakdown();
@@ -369,14 +431,8 @@
                         <div class="space-y-1 max-h-44 overflow-y-auto pr-1">
                             @foreach($paymentOrders as $payItem)
                                 @php
-                                    $itemBreakdownList = $payItem->getPriceBreakdown();
-                                    $itemBreakdownListData = $itemBreakdownList['breakdown'] ?? [];
-                                    $itemMaterialList = (float) ($itemBreakdownListData['material_cost'] ?? 0);
-                                    $itemPatternList = (float) ($itemBreakdownListData['pattern_fee'] ?? 0);
-                                    $itemLaborList = (float) ($itemBreakdownListData['labor_cost'] ?? 0);
-                                    $itemPriceCalc = ($itemMaterialList + $itemPatternList + $itemLaborList) > 0 
-                                        ? ($itemMaterialList + $itemPatternList + $itemLaborList) 
-                                        : (float) ($payItem->final_price ?? $payItem->estimated_price ?? 0);
+                                    $itemSummaryRow = $resolveBatchItemSummary($payItem);
+                                    $itemPriceCalc = (float) ($itemSummaryRow['subtotal'] ?? 0);
                                 @endphp
                                 <div class="flex justify-between text-xs text-blue-900">
                                     <span>#{{ $payItem->id }} {{ $payItem->fabric_type ?? ($payItem->product->name ?? 'Custom item') }}</span>
@@ -459,14 +515,10 @@
                         <div class="space-y-3">
                             @foreach($paymentOrders as $payItem)
                                 @php
-                                    $itemBreakdown = $payItem->getPriceBreakdown();
-                                    $itemBreakdownData = $itemBreakdown['breakdown'] ?? [];
-                                    $itemMaterial = (float) ($itemBreakdownData['material_cost'] ?? 0);
-                                    $itemPattern = (float) ($itemBreakdownData['pattern_fee'] ?? 0);
-                                    $itemLabor = (float) ($itemBreakdownData['labor_cost'] ?? 0);
-                                    $itemSubtotal = ($itemMaterial + $itemPattern + $itemLabor) > 0 
-                                        ? ($itemMaterial + $itemPattern + $itemLabor) 
-                                        : (float) ($payItem->final_price ?? $payItem->estimated_price ?? 0);
+                                    $itemSummaryRow = $resolveBatchItemSummary($payItem);
+                                    $itemMaterial = (float) ($itemSummaryRow['material'] ?? 0);
+                                    $itemPattern = (float) ($itemSummaryRow['pattern'] ?? 0);
+                                    $itemSubtotal = (float) ($itemSummaryRow['subtotal'] ?? 0);
                                 @endphp
                                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
                                     <div class="font-bold mb-2" style="color:#800000;">Custom Order #{{ $payItem->id }}</div>
@@ -481,12 +533,6 @@
                                         <div class="flex justify-between items-center">
                                             <span class="text-gray-600">Pattern Fee:</span>
                                             <span class="font-semibold text-gray-900">₱{{ number_format($itemPattern, 2) }}</span>
-                                        </div>
-                                        @endif
-                                        @if($itemLabor > 0)
-                                        <div class="flex justify-between items-center">
-                                            <span class="text-gray-600">Labor Cost:</span>
-                                            <span class="font-semibold text-gray-900">₱{{ number_format($itemLabor, 2) }}</span>
                                         </div>
                                         @endif
                                         <div class="border-t border-gray-200 pt-1 flex justify-between items-center">
