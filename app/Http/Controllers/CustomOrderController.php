@@ -594,12 +594,63 @@ class CustomOrderController extends Controller
     private function calculateOrdersTotalWithShipping(\Illuminate\Support\Collection $orders): float
     {
         $itemsSubtotal = (float) $orders->sum(function (CustomOrder $item) {
-            return (float) ($item->final_price ?? $item->estimated_price ?? 0);
+            $breakdown = $item->getPriceBreakdown();
+            $breakdownData = $breakdown['breakdown'] ?? [];
+
+            $material = (float) ($breakdownData['material_cost'] ?? 0);
+            $pattern = (float) ($breakdownData['pattern_fee'] ?? 0);
+            $labor = (float) ($breakdownData['labor_cost'] ?? 0);
+            $discount = (float) ($breakdownData['discount'] ?? 0);
+            $fromBreakdown = max(($material + $pattern + $labor - $discount), 0);
+            if ($fromBreakdown > 0) {
+                return $fromBreakdown;
+            }
+
+            $patternIds = $item->patterns;
+            if (is_string($patternIds)) {
+                $patternIds = json_decode($patternIds, true) ?? [];
+            }
+
+            if (is_array($patternIds) && !empty($patternIds) && !empty($item->fabric_quantity_meters)) {
+                $patterns = \App\Models\YakanPattern::whereIn('id', array_map('intval', $patternIds))->get();
+                if ($patterns->isNotEmpty()) {
+                    $qtyMultiplier = (float) ($item->quantity ?? 1);
+                    $patternFeeTotal = (float) $patterns->sum(fn($pattern) => (float) ($pattern->pattern_price ?? 0));
+                    $pricePerMeter = (float) ($patterns->first()->price_per_meter ?? 0);
+                    $materialCost = ((float) $item->fabric_quantity_meters) * $pricePerMeter;
+                    $canonicalSubtotal = ($materialCost + $patternFeeTotal) * $qtyMultiplier;
+                    if ($canonicalSubtotal > 0) {
+                        return $canonicalSubtotal;
+                    }
+                }
+            }
+
+            $quoted = (float) ($item->final_price ?? $item->estimated_price ?? 0);
+            $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+            if ($deliveryType === 'pickup') {
+                return $quoted;
+            }
+
+            $shipping = (float) ($item->shipping_fee ?? 0);
+            if ($shipping <= 0) {
+                $shipping = $this->resolveAddressBasedShippingFeeForOrder($item);
+            }
+
+            return max($quoted - $shipping, 0);
         });
 
-        // Shared shipping applies only when shipping is still outside each quoted amount.
+        // Batch display should show one shared shipping charge.
         $sharedShipping = (float) ($orders->map(function (CustomOrder $item) {
-            return (float) ($this->resolveOrderPriceParts($item)['shipping'] ?? 0);
+            $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+            if ($deliveryType === 'pickup') {
+                return 0.0;
+            }
+
+            $shipping = (float) ($item->shipping_fee ?? 0);
+            if ($shipping <= 0) {
+                $shipping = $this->resolveAddressBasedShippingFeeForOrder($item);
+            }
+            return $shipping;
         })->max() ?? 0);
 
         return $itemsSubtotal + $sharedShipping;
@@ -2588,7 +2639,7 @@ class CustomOrderController extends Controller
             $order->load('product');
             $batchOrders = $this->getUserBatchOrders($order, Auth::id());
             $isBatchOrder = $batchOrders->count() > 1;
-            $batchPaymentTotal = $this->calculateOrdersTotal(
+            $batchPaymentTotal = $this->calculateOrdersTotalWithShipping(
                 $batchOrders->where('payment_status', '!=', 'paid')->values()
             );
             $displayOrderTotal = $this->calculateOrderDisplayTotalWithShipping($order);
