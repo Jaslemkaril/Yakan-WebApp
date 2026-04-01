@@ -1287,13 +1287,14 @@
                                 if ($displayStatus === 'completed') {
                                     $displayStatus = 'delivered';
                                 } elseif ($displayStatus === 'processing') {
-                                    $displayStatus = 'in_production';
+                                    // Paid/processing means payment accepted but admin may not have started production yet.
+                                    $displayStatus = 'approved';
                                 } elseif ($displayStatus === 'approved' && ($order->payment_status ?? null) === 'paid') {
-                                    $displayStatus = 'in_production';
+                                    $displayStatus = 'approved';
                                 }
 
                                 if (!in_array($displayStatus, $timelineStatuses, true)) {
-                                    $displayStatus = ($order->payment_status ?? null) === 'paid' ? 'in_production' : 'pending';
+                                    $displayStatus = ($order->payment_status ?? null) === 'paid' ? 'approved' : 'pending';
                                 }
 
                                 $currentTimelineIndex = array_search($displayStatus, $timelineStatuses, true);
