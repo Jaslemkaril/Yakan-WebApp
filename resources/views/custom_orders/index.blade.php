@@ -420,9 +420,28 @@
                                         $displayItemsSubtotalFromBreakdown = max(($displayMaterial + $displayPattern + $displayLabor - $displayDiscount), 0);
                                         $displayShippingAlreadyIncluded = $displayDeliveryFeeInBreakdown > 0;
 
+                                        // Canonical subtotal for pattern custom orders (align with admin details pricing card).
+                                        $displayCanonicalSubtotal = null;
+                                        $displayPatternIds = $order->patterns;
+                                        if (is_string($displayPatternIds)) {
+                                            $displayPatternIds = json_decode($displayPatternIds, true) ?? [];
+                                        }
+                                        if (is_array($displayPatternIds) && !empty($displayPatternIds) && !empty($order->fabric_quantity_meters)) {
+                                            $displayPatterns = \App\Models\YakanPattern::whereIn('id', array_map('intval', $displayPatternIds))->get();
+                                            if ($displayPatterns->isNotEmpty()) {
+                                                $displayQtyMultiplier = (float) ($order->quantity ?? 1);
+                                                $displayPatternTotal = (float) $displayPatterns->sum(function ($p) {
+                                                    return (float) ($p->pattern_price ?? 0);
+                                                });
+                                                $displayPricePerMeter = (float) ($displayPatterns->first()->price_per_meter ?? 0);
+                                                $displayMaterialTotal = ((float) $order->fabric_quantity_meters) * $displayPricePerMeter;
+                                                $displayCanonicalSubtotal = ($displayMaterialTotal + $displayPatternTotal) * $displayQtyMultiplier;
+                                            }
+                                        }
+
                                         // Calculate shipping with user address fallback
                                         $displayShippingFee = 0;
-                                        if ($displayDeliveryType !== 'pickup' && !$displayShippingAlreadyIncluded) {
+                                        if ($displayDeliveryType !== 'pickup') {
                                             $city = $order->delivery_city ?? '';
                                             $province = $order->delivery_province ?? '';
                                             $address = $order->delivery_address ?? '';
@@ -441,29 +460,37 @@
                                                     ]));
                                                 }
                                             }
+
+                                            // Prefer persisted shipping first.
+                                            $displayShippingFee = (float) ($order->shipping_fee ?? 0);
+                                            if ($displayDeliveryFeeInBreakdown > 0) {
+                                                $displayShippingFee = $displayDeliveryFeeInBreakdown;
+                                            }
                                             
                                             // Calculate zone-based shipping
-                                            $haystack = strtolower($address . ' ' . $city . ' ' . $province);
-                                            if (str_contains($haystack, 'zamboanga') || str_contains($haystack, 'barmm') || str_contains($haystack, 'basilan') || str_contains($haystack, 'sulu') || str_contains($haystack, 'tawi')) {
-                                                $displayShippingFee = 100;
-                                            } elseif (str_contains($haystack, 'mindanao') || str_contains($haystack, 'davao') || str_contains($haystack, 'cagayan de oro') || str_contains($haystack, 'general santos') || str_contains($haystack, 'caraga') || str_contains($haystack, 'soccsksargen')) {
-                                                $displayShippingFee = 180;
-                                            } elseif (str_contains($haystack, 'visaya') || str_contains($haystack, 'cebu') || str_contains($haystack, 'iloilo') || str_contains($haystack, 'bacolod') || str_contains($haystack, 'tacloban') || str_contains($haystack, 'leyte')) {
-                                                $displayShippingFee = 250;
-                                            } elseif (str_contains($haystack, 'ncr') || str_contains($haystack, 'metro manila') || str_contains($haystack, 'manila') || str_contains($haystack, 'calabarzon') || str_contains($haystack, 'central luzon')) {
-                                                $displayShippingFee = 300;
-                                            } elseif ($haystack !== '') {
-                                                $displayShippingFee = 350;
+                                            if ($displayShippingFee <= 0) {
+                                                $haystack = strtolower($address . ' ' . $city . ' ' . $province);
+                                                if (str_contains($haystack, 'zamboanga') || str_contains($haystack, 'barmm') || str_contains($haystack, 'basilan') || str_contains($haystack, 'sulu') || str_contains($haystack, 'tawi')) {
+                                                    $displayShippingFee = 100;
+                                                } elseif (str_contains($haystack, 'mindanao') || str_contains($haystack, 'davao') || str_contains($haystack, 'cagayan de oro') || str_contains($haystack, 'general santos') || str_contains($haystack, 'caraga') || str_contains($haystack, 'soccsksargen')) {
+                                                    $displayShippingFee = 180;
+                                                } elseif (str_contains($haystack, 'visaya') || str_contains($haystack, 'cebu') || str_contains($haystack, 'iloilo') || str_contains($haystack, 'bacolod') || str_contains($haystack, 'tacloban') || str_contains($haystack, 'leyte')) {
+                                                    $displayShippingFee = 250;
+                                                } elseif (str_contains($haystack, 'ncr') || str_contains($haystack, 'metro manila') || str_contains($haystack, 'manila') || str_contains($haystack, 'calabarzon') || str_contains($haystack, 'central luzon')) {
+                                                    $displayShippingFee = 300;
+                                                } elseif ($haystack !== '') {
+                                                    $displayShippingFee = 350;
+                                                }
                                             }
-                                            
-                                            // Add shipping only when quoted amount does not already include it.
-                                            if ($displayItemsSubtotalFromBreakdown > 0 && abs($displayPrice - ($displayItemsSubtotalFromBreakdown + $displayShippingFee)) < 0.01) {
-                                                $displayShippingAlreadyIncluded = true;
-                                            }
+                                        }
 
-                                            if (!$displayShippingAlreadyIncluded) {
-                                                $displayPrice += $displayShippingFee;
-                                            }
+                                        // Preferred: canonical subtotal + shipping once.
+                                        if ($displayCanonicalSubtotal !== null && $displayCanonicalSubtotal > 0) {
+                                            $displayPrice = $displayCanonicalSubtotal + (($displayDeliveryType === 'pickup') ? 0 : $displayShippingFee);
+                                        }
+                                        // Fallback: deterministic breakdown math.
+                                        elseif ($displayItemsSubtotalFromBreakdown > 0) {
+                                            $displayPrice = $displayItemsSubtotalFromBreakdown + (($displayDeliveryType === 'pickup') ? 0 : $displayShippingFee);
                                         }
                                     @endphp
                                     @if($displayPrice > 0)
