@@ -97,10 +97,77 @@
 
         return ['quoted' => $quoted, 'items_subtotal' => $itemsSubtotal, 'shipping' => $shipping, 'total' => $itemsSubtotal + $shipping];
     };
+
+    // Build display-ready batch row parts (same fallback behavior as admin details).
+    $getBatchDisplayRowParts = function ($item) use ($calculateShippingFromAddress) {
+        $quoted = (float) ($item->final_price ?? $item->estimated_price ?? 0);
+        $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+        $shippingDisplay = $deliveryType === 'pickup' ? 0.0 : (float) $calculateShippingFromAddress($item);
+
+        $breakdownWrap = method_exists($item, 'getPriceBreakdown') ? ($item->getPriceBreakdown() ?? []) : [];
+        $breakdown = $breakdownWrap['breakdown'] ?? [];
+        $material = (float) ($breakdown['material_cost'] ?? 0);
+        $pattern = (float) ($breakdown['pattern_fee'] ?? 0);
+
+        if (($material + $pattern) <= 0.0) {
+            $patternModels = collect();
+
+            $patternIdFromMeta = (int) data_get($item->design_metadata ?? [], 'pattern_id', 0);
+            if ($patternIdFromMeta > 0) {
+                $metaPattern = \App\Models\YakanPattern::find($patternIdFromMeta);
+                if ($metaPattern) {
+                    $patternModels->push($metaPattern);
+                }
+            }
+
+            $patternsRaw = $item->patterns;
+            $patternsArr = is_array($patternsRaw) ? $patternsRaw : [];
+            foreach ($patternsArr as $rawPattern) {
+                if (is_numeric($rawPattern)) {
+                    $p = \App\Models\YakanPattern::find((int) $rawPattern);
+                } else {
+                    $p = !empty($rawPattern) ? \App\Models\YakanPattern::where('name', $rawPattern)->first() : null;
+                }
+                if ($p) {
+                    $patternModels->push($p);
+                }
+            }
+
+            $patternModels = $patternModels->unique('id')->values();
+            $patternFallback = (float) $patternModels->sum(fn($p) => (float) ($p->pattern_price ?? 0));
+            $pricePerMeter = (float) (($patternModels->first()->price_per_meter ?? 0));
+            $meters = (float) ($item->fabric_quantity_meters ?? 0);
+            $materialFallback = ($meters > 0 && $pricePerMeter > 0) ? ($meters * $pricePerMeter) : 0.0;
+
+            if ($materialFallback > 0 || $patternFallback > 0) {
+                $material = $materialFallback;
+                $pattern = $patternFallback;
+            }
+        }
+
+        $subtotal = $material + $pattern;
+        if ($subtotal <= 0.0) {
+            $subtotal = ($deliveryType !== 'pickup' && $quoted > $shippingDisplay)
+                ? max($quoted - $shippingDisplay, 0)
+                : $quoted;
+        }
+
+        if ($material <= 0.0 && $pattern <= 0.0 && $subtotal > 0.0) {
+            $material = $subtotal;
+        }
+
+        return [
+            'material' => $material,
+            'pattern' => $pattern,
+            'subtotal' => $subtotal,
+            'shipping_display' => $shippingDisplay,
+        ];
+    };
     
     // Calculate batch totals
-    $batchItemsSubtotal = (float) $batchUnpaidOrders->sum(fn($item) => $getPriceParts($item)['items_subtotal'] ?? 0);
-    $batchShippingFee = (float) $batchUnpaidOrders->map(fn($item) => $getPriceParts($item)['shipping'])->max();
+    $batchDisplayRows = $batchUnpaidOrders->map(fn($item) => $getBatchDisplayRowParts($item));
+    $batchItemsSubtotal = (float) $batchDisplayRows->sum('subtotal');
+    $batchShippingFee = (float) ($batchDisplayRows->max('shipping_display') ?? 0);
     $batchPaymentTotal = $batchItemsSubtotal + $batchShippingFee;
 
     // Canonical single-order split for display refinements.
@@ -1205,11 +1272,10 @@
                                                 @if($isBatchOrder)
                                                     @foreach($batchOrders as $batchItem)
                                                         @php
-                                                            $itemBreakdown = $batchItem->getPriceBreakdown();
-                                                            $itemBreakdownData = $itemBreakdown['breakdown'] ?? [];
-                                                            $itemMaterial = (float) ($itemBreakdownData['material_cost'] ?? 0);
-                                                            $itemPattern = (float) ($itemBreakdownData['pattern_fee'] ?? 0);
-                                                            $itemSubtotal = ($itemMaterial + $itemPattern) > 0 ? ($itemMaterial + $itemPattern) : (float) ($batchItem->final_price ?? $batchItem->estimated_price ?? 0);
+                                                            $batchRowParts = $getBatchDisplayRowParts($batchItem);
+                                                            $itemMaterial = (float) ($batchRowParts['material'] ?? 0);
+                                                            $itemPattern = (float) ($batchRowParts['pattern'] ?? 0);
+                                                            $itemSubtotal = (float) ($batchRowParts['subtotal'] ?? 0);
                                                         @endphp
                                                         <div class="rounded-lg border border-gray-200 bg-white p-2">
                                                             <div class="font-bold mb-1" style="color:#800000;">Custom Order #{{ $batchItem->id }}</div>
