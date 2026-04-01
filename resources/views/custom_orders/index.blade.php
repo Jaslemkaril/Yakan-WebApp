@@ -411,7 +411,13 @@
                                         $displayPrice = (float) ($order->final_price ?? $order->estimated_price ?? 0);
                                         $displayDeliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
                                         $displayBreakdown = $order->getPriceBreakdown();
-                                        $displayDeliveryFeeInBreakdown = (float) (($displayBreakdown['breakdown']['delivery_fee'] ?? 0));
+                                        $displayBreakdownData = $displayBreakdown['breakdown'] ?? [];
+                                        $displayDeliveryFeeInBreakdown = (float) (($displayBreakdownData['delivery_fee'] ?? 0));
+                                        $displayMaterial = (float) ($displayBreakdownData['material_cost'] ?? 0);
+                                        $displayPattern = (float) ($displayBreakdownData['pattern_fee'] ?? 0);
+                                        $displayLabor = (float) ($displayBreakdownData['labor_cost'] ?? 0);
+                                        $displayDiscount = (float) ($displayBreakdownData['discount'] ?? 0);
+                                        $displayItemsSubtotalFromBreakdown = max(($displayMaterial + $displayPattern + $displayLabor - $displayDiscount), 0);
                                         $displayShippingAlreadyIncluded = $displayDeliveryFeeInBreakdown > 0;
 
                                         // Calculate shipping with user address fallback
@@ -450,7 +456,14 @@
                                                 $displayShippingFee = 350;
                                             }
                                             
-                                            $displayPrice += $displayShippingFee;
+                                            // Add shipping only when quoted amount does not already include it.
+                                            if ($displayItemsSubtotalFromBreakdown > 0 && abs($displayPrice - ($displayItemsSubtotalFromBreakdown + $displayShippingFee)) < 0.01) {
+                                                $displayShippingAlreadyIncluded = true;
+                                            }
+
+                                            if (!$displayShippingAlreadyIncluded) {
+                                                $displayPrice += $displayShippingFee;
+                                            }
                                         }
                                     @endphp
                                     @if($displayPrice > 0)

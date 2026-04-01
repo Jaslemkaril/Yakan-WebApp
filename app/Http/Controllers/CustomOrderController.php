@@ -519,23 +519,54 @@ class CustomOrderController extends Controller
      */
     private function calculateOrderPayableTotal(CustomOrder $order): float
     {
-        $base = (float) ($order->final_price ?? $order->estimated_price ?? 0);
+        return (float) ($this->resolveOrderPriceParts($order)['total'] ?? 0);
+    }
 
+    /**
+     * Resolve quoted/shipping/total parts with double-count protection.
+     */
+    private function resolveOrderPriceParts(CustomOrder $order): array
+    {
+        $quoted = (float) ($order->final_price ?? $order->estimated_price ?? 0);
         $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
-        if ($deliveryType === 'pickup') {
-            return $base;
-        }
 
-        $shipping = (float) ($order->shipping_fee ?? 0);
-        if ($shipping <= 0) {
-            return $base;
+        if ($deliveryType === 'pickup') {
+            return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
         }
 
         $breakdown = $order->getPriceBreakdown();
-        $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
-        $alreadyIncludedInBase = $deliveryFeeInBreakdown > 0;
+        $breakdownData = $breakdown['breakdown'] ?? [];
 
-        return $alreadyIncludedInBase ? $base : ($base + $shipping);
+        $material = (float) ($breakdownData['material_cost'] ?? 0);
+        $pattern = (float) ($breakdownData['pattern_fee'] ?? 0);
+        $labor = (float) ($breakdownData['labor_cost'] ?? 0);
+        $discount = (float) ($breakdownData['discount'] ?? 0);
+        $deliveryFeeInBreakdown = (float) ($breakdownData['delivery_fee'] ?? 0);
+        $itemsSubtotalFromBreakdown = max(($material + $pattern + $labor - $discount), 0);
+
+        // Explicit delivery fee in breakdown means quoted amount is already complete.
+        if ($deliveryFeeInBreakdown > 0) {
+            return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
+        }
+
+        $shipping = $this->resolveAddressBasedShippingFeeForOrder($order);
+
+        // Detect if quoted already includes shipping (e.g. 2650 + 180 = 2830 stored in final_price).
+        if ($itemsSubtotalFromBreakdown > 0 && abs($quoted - ($itemsSubtotalFromBreakdown + $shipping)) < 0.01) {
+            return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
+        }
+
+        // Detect quoted as items subtotal only and shipping still needs to be added.
+        if ($itemsSubtotalFromBreakdown > 0 && abs($quoted - $itemsSubtotalFromBreakdown) < 0.01) {
+            return ['quoted' => $quoted, 'shipping' => $shipping, 'total' => $quoted + $shipping];
+        }
+
+        // Legacy fallback: avoid inflating totals when inclusion is ambiguous.
+        if ($itemsSubtotalFromBreakdown <= 0) {
+            return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
+        }
+
+        return ['quoted' => $quoted, 'shipping' => $shipping, 'total' => $quoted + $shipping];
     }
 
     /**
@@ -543,25 +574,7 @@ class CustomOrderController extends Controller
      */
     private function calculateOrderDisplayTotalWithShipping(CustomOrder $order): float
     {
-        $base = (float) ($order->final_price ?? $order->estimated_price ?? 0);
-        $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
-
-        if ($deliveryType === 'pickup') {
-            return $base;
-        }
-
-        $breakdown = $order->getPriceBreakdown();
-        $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
-        if ($deliveryFeeInBreakdown > 0) {
-            return $base;
-        }
-
-        $shipping = (float) ($order->shipping_fee ?? 0);
-        if ($shipping <= 0) {
-            $shipping = $this->resolveAddressBasedShippingFeeForOrder($order);
-        }
-
-        return $base + max($shipping, 0);
+        return (float) ($this->resolveOrderPriceParts($order)['total'] ?? 0);
     }
 
     /**
@@ -580,23 +593,13 @@ class CustomOrderController extends Controller
      */
     private function calculateOrdersTotalWithShipping(\Illuminate\Support\Collection $orders): float
     {
-        $itemsSubtotal = $this->calculateOrdersTotal($orders);
-        
-        // Calculate shared shipping (max of all orders' shipping fees)
+        $itemsSubtotal = (float) $orders->sum(function (CustomOrder $item) {
+            return (float) ($item->final_price ?? $item->estimated_price ?? 0);
+        });
+
+        // Shared shipping applies only when shipping is still outside each quoted amount.
         $sharedShipping = (float) ($orders->map(function (CustomOrder $item) {
-            $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
-            if ($deliveryType === 'pickup') {
-                return 0.0;
-            }
-
-            $breakdown = $item->getPriceBreakdown();
-            $deliveryFeeInBreakdown = (float) (($breakdown['breakdown']['delivery_fee'] ?? 0));
-            if ($deliveryFeeInBreakdown > 0) {
-                return 0.0; // Already included in price
-            }
-
-            // Calculate from address
-            return $this->resolveAddressBasedShippingFeeForOrder($item);
+            return (float) ($this->resolveOrderPriceParts($item)['shipping'] ?? 0);
         })->max() ?? 0);
 
         return $itemsSubtotal + $sharedShipping;
