@@ -110,7 +110,93 @@ class AdminCustomOrderController extends Controller
     private function calculateBatchSharedShipping(
         \Illuminate\Support\Collection $orders
     ): float {
-        $eligibleShipping = $orders->map(fn(CustomOrder $item) => (float) ($this->resolveAdminOrderPriceParts($item)['shipping'] ?? 0));
+        $eligibleShipping = $orders->map(function (CustomOrder $item) {
+            $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+            if ($deliveryType === 'pickup') {
+                return 0.0;
+            }
+
+            $shipping = (float) ($item->shipping_fee ?? 0);
+            if ($shipping <= 0) {
+                $shipping = 0.0;
+
+                $city = strtolower((string) ($item->delivery_city ?? ''));
+                $province = strtolower((string) ($item->delivery_province ?? ''));
+                $address = strtolower((string) ($item->delivery_address ?? ''));
+                $haystack = trim($address . ' ' . $city . ' ' . $province);
+
+                if ($haystack === '' && !empty($item->user_id)) {
+                    $defaultAddress = \App\Models\UserAddress::query()
+                        ->where('user_id', $item->user_id)
+                        ->where('is_default', true)
+                        ->first();
+
+                    if ($defaultAddress) {
+                        $fallbackCity = strtolower((string) ($defaultAddress->city ?? ''));
+                        $fallbackProvince = strtolower((string) ($defaultAddress->province ?? $defaultAddress->region ?? ''));
+                        $fallbackAddress = strtolower(implode(' ', array_filter([
+                            $defaultAddress->street_name ?? null,
+                            $defaultAddress->barangay ?? null,
+                            $defaultAddress->city ?? null,
+                            $defaultAddress->province ?? ($defaultAddress->region ?? null),
+                        ])));
+
+                        $haystack = trim($fallbackAddress . ' ' . $fallbackCity . ' ' . $fallbackProvince);
+                    }
+                }
+
+                if (
+                    str_contains($haystack, 'zamboanga') ||
+                    str_contains($haystack, 'barmm') ||
+                    str_contains($haystack, 'bangsamoro') ||
+                    str_contains($haystack, 'basilan') ||
+                    str_contains($haystack, 'sulu') ||
+                    str_contains($haystack, 'tawi')
+                ) {
+                    $shipping = 100.0;
+                } elseif (
+                    str_contains($haystack, 'mindanao') ||
+                    str_contains($haystack, 'davao') ||
+                    str_contains($haystack, 'cagayan de oro') ||
+                    str_contains($haystack, 'iligan') ||
+                    str_contains($haystack, 'cotabato') ||
+                    str_contains($haystack, 'caraga') ||
+                    str_contains($haystack, 'general santos') ||
+                    str_contains($haystack, 'soccsksargen')
+                ) {
+                    $shipping = 180.0;
+                } elseif (
+                    str_contains($haystack, 'visaya') ||
+                    str_contains($haystack, 'cebu') ||
+                    str_contains($haystack, 'iloilo') ||
+                    str_contains($haystack, 'bacolod') ||
+                    str_contains($haystack, 'tacloban') ||
+                    str_contains($haystack, 'leyte') ||
+                    str_contains($haystack, 'samar') ||
+                    str_contains($haystack, 'bohol') ||
+                    str_contains($haystack, 'negros')
+                ) {
+                    $shipping = 250.0;
+                } elseif (
+                    str_contains($haystack, 'ncr') ||
+                    str_contains($haystack, 'metro manila') ||
+                    str_contains($haystack, 'manila') ||
+                    str_contains($haystack, 'quezon city') ||
+                    str_contains($haystack, 'makati') ||
+                    str_contains($haystack, 'calabarzon') ||
+                    str_contains($haystack, 'central luzon') ||
+                    str_contains($haystack, 'laguna') ||
+                    str_contains($haystack, 'cavite') ||
+                    str_contains($haystack, 'bulacan')
+                ) {
+                    $shipping = 300.0;
+                } elseif ($haystack !== '') {
+                    $shipping = 350.0;
+                }
+            }
+
+            return $shipping;
+        });
 
         return (float) ($eligibleShipping->max() ?? 0);
     }
