@@ -147,7 +147,7 @@
                                     'text' => 'text-indigo-800',
                                     'border' => 'border-indigo-300',
                                     'icon' => 'M13 10V3L4 14h7v7l9-11h-7z',
-                                    'description' => 'Payment accepted, order in production'
+                                    'description' => 'Payment accepted - waiting for production start'
                                 ],
                                 'in_production' => [
                                     'bg' => 'bg-indigo-100',
@@ -477,8 +477,8 @@
                 } elseif (in_array($order->status, ['processing', 'in_production', 'production_complete'])) {
                     $showDeliveryBanner = true;
                     if ($order->status === 'processing') {
-                        $deliveryLabel = 'Order in Production';
-                        $deliveryDescription = 'Your custom order is currently being processed.';
+                        $deliveryLabel = 'Payment Accepted';
+                        $deliveryDescription = 'Your payment is confirmed. Production will start once our team begins work on your order.';
                         $deliveryIcon = '⚙️';
                     } elseif ($order->status === 'in_production') {
                         $deliveryLabel = 'In Production';
@@ -1192,16 +1192,22 @@
                                         </div>
                                         @endif
                                     </div>
+                                @elseif($order->status === 'processing' && $order->final_price)
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-700 mb-1">Total Paid</p>
+                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayOrderTotal ?? ($order->final_price ?? 0), 2) }}</p>
+                                        <p class="text-xs text-indigo-600 mt-1 font-semibold">Payment accepted, waiting for production start</p>
+                                    </div>
                                 @elseif($order->status === 'in_production' && $order->final_price)
                                     <div>
                                         <p class="text-sm font-medium text-gray-700 mb-1">Final Price</p>
-                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
+                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayOrderTotal ?? ($order->final_price ?? 0), 2) }}</p>
                                         <p class="text-xs text-emerald-600 mt-1 font-semibold">Payment accepted</p>
                                     </div>
                                 @elseif(in_array($order->status, ['production_complete', 'out_for_delivery', 'delivered']) && $order->final_price)
                                     <div>
                                         <p class="text-sm font-medium text-gray-700 mb-1">Total Paid</p>
-                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
+                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayOrderTotal ?? ($order->final_price ?? 0), 2) }}</p>
                                         <p class="text-xs text-emerald-600 mt-1 font-semibold">
                                             @if($order->status === 'delivered')
                                                 ✓ Delivered
@@ -1215,15 +1221,15 @@
                                 @elseif($order->status === 'completed' && $order->final_price)
                                     <div>
                                         <p class="text-sm font-medium text-gray-700 mb-1">Total Paid</p>
-                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
+                                        <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayOrderTotal ?? ($order->final_price ?? 0), 2) }}</p>
                                         <p class="text-xs text-emerald-600 mt-1 font-semibold">Order completed</p>
                                     </div>
                                 @else
                                     <div class="text-center py-4">
                                         <svg class="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m-4-4h8"/>
                                         </svg>
-                                        <p class="text-sm font-medium text-gray-500">Price Not Set</p>
+                                        <p class="text-sm font-medium text-gray-500">Amount Not Available Yet</p>
                                     </div>
                                 @endif
                             </div>
