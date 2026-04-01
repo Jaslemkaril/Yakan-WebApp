@@ -659,6 +659,7 @@
 // Global variables
 let currentFilter = 'all';
 let notificationTimeout;
+const awaitingDecisionCount = {{ (int) ($awaitingDecision ?? 0) }};
 
 // Initialize the interface
 document.addEventListener('DOMContentLoaded', function() {
@@ -739,10 +740,9 @@ function checkForUpdates() {
 }
 
 function checkForNotifications() {
-    // Check for orders that need user attention
-    const awaitingDecision = document.querySelectorAll('[data-status="price_quoted"]');
-    if (awaitingDecision.length > 0) {
-        showNotification(`You have ${awaitingDecision.length} order(s) awaiting your decision!`, 'warning', 10000);
+    // Use backend-validated count to avoid stale/incorrect DOM-based warnings.
+    if (awaitingDecisionCount > 0) {
+        showNotification(`You have ${awaitingDecisionCount} order(s) awaiting your decision!`, 'warning', 10000);
     }
 }
 
