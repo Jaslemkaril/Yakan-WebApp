@@ -537,19 +537,16 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            
-                                            {{-- Payment Method Buttons --}}
-                                            <p class="text-sm font-semibold text-gray-800 mb-3">Choose your payment method:</p>
-                                            <div class="grid grid-cols-1 gap-3">
-                                                <button onclick="selectPaymentMethod('{{ $chatOrder->id }}', 'maya')" class="payment-method-btn flex items-center gap-3 bg-white hover:bg-green-50 border-2 border-green-300 hover:border-green-500 rounded-xl p-4 transition-all hover:shadow-md">
-                                                    <span class="text-3xl">💳</span>
-                                                    <span class="font-bold text-sm text-gray-900">Maya</span>
-                                                </button>
-                                                <button onclick="selectPaymentMethod('{{ $chatOrder->id }}', 'bank_transfer')" class="payment-method-btn flex items-center gap-3 bg-white hover:bg-green-50 border-2 border-green-300 hover:border-green-500 rounded-xl p-4 transition-all hover:shadow-md">
-                                                    <span class="text-3xl">🏦</span>
-                                                    <span class="font-bold text-sm text-gray-900">Bank Transfer</span>
-                                                </button>
-                                            </div>
+
+                                            @php
+                                                $proceedPaymentUrl = route('custom_orders.payment', $chatOrder) . (request('auth_token') ? '?auth_token=' . urlencode(request('auth_token')) : '');
+                                            @endphp
+                                            <a href="{{ $proceedPaymentUrl }}" class="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#500000] text-white font-bold py-3 px-4 rounded-xl transition shadow-md hover:shadow-lg">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                                                </svg>
+                                                <span>Proceed to Payment</span>
+                                            </a>
                                         </div>
                                     @endif
                                     
