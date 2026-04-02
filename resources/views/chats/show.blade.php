@@ -332,7 +332,7 @@
                                 
                                 @if(!$hasResponse)
                                     {{-- Shipping Fee & Total Breakdown --}}
-                                    <div id="quoteBreakdown-{{ $message->id }}" data-quoted="{{ $quotedPrice }}" data-delivery-fee="{{ $shippingFee }}" data-shipping-label="{{ $shippingLabel }}" class="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-4 mt-3 mx-2">
+                                    <div id="quoteBreakdown-{{ $message->id }}" data-quoted="{{ $quotedPrice }}" data-delivery-fee="{{ $shippingFee }}" data-shipping-label="{{ $shippingLabel }}" data-has-default-address="{{ $userDefaultAddress ? '1' : '0' }}" class="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-4 mt-3 mx-2">
                                         <div class="flex items-start gap-3">
                                             <div class="flex-shrink-0 bg-blue-400 rounded-full p-2">
                                                 <svg class="w-5 h-5 text-blue-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -359,7 +359,7 @@
                                                 
                                                 @if($userDefaultAddress)
                                                     {{-- Delivery Address --}}
-                                                    <div class="bg-white border border-blue-200 rounded-lg p-3 mb-3">
+                                                    <div id="quoteDeliveryAddress-{{ $message->id }}" class="bg-white border border-blue-200 rounded-lg p-3 mb-3">
                                                         <div class="flex items-start gap-2">
                                                             <svg class="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
@@ -368,6 +368,19 @@
                                                             <div class="flex-1 min-w-0">
                                                                 <p class="text-xs font-semibold text-gray-900 mb-0.5">Delivering to:</p>
                                                                 <p class="text-xs text-gray-700 break-words">{{ $userDefaultAddress->formatted_address }}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div id="quotePickupAddress-{{ $message->id }}" class="hidden bg-white border border-blue-200 rounded-lg p-3 mb-3">
+                                                        <div class="flex items-start gap-2">
+                                                            <svg class="w-4 h-4 text-[#8B0000] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.05 11a7 7 0 1113.9 0M12 13v8m0 0l-3-3m3 3l3-3"/>
+                                                            </svg>
+                                                            <div class="flex-1 min-w-0">
+                                                                <p class="text-xs font-semibold text-gray-900 mb-0.5">Pickup Location:</p>
+                                                                <p class="text-xs text-gray-700 break-words">Tuwas Yakan Weaving Center, Yakan Village, Upper Calarian, Labuan-Limpapa Road, National Road, Zamboanga City, Philippines 7000</p>
+                                                                <p class="text-[11px] text-gray-500 mt-1">Mon-Sat 8:00 AM - 6:00 PM</p>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -394,7 +407,7 @@
                                                         </div>
                                                     </div>
                                                     
-                                                    <button onclick="openAddressModal()" type="button" class="inline-flex items-center gap-2 text-xs font-semibold text-[#8B0000] hover:text-[#6B0000] transition-colors mt-1">
+                                                    <button id="quoteChangeAddressBtn-{{ $message->id }}" onclick="openAddressModal()" type="button" class="inline-flex items-center gap-2 text-xs font-semibold text-[#8B0000] hover:text-[#6B0000] transition-colors mt-1">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                                         </svg>
@@ -402,7 +415,7 @@
                                                     </button>
                                                 @else
                                                     {{-- No Address Warning --}}
-                                                    <div class="bg-white border-2 border-red-300 rounded-lg p-4 mb-3">
+                                                    <div id="quoteNoAddressWarning-{{ $message->id }}" class="bg-white border-2 border-red-300 rounded-lg p-4 mb-3">
                                                         <div class="flex items-center gap-2 mb-2">
                                                             <svg class="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
@@ -422,6 +435,19 @@
                                                             <div class="flex justify-between items-center text-sm mt-1 border-t border-yellow-200 pt-1">
                                                                 <span class="text-gray-700 font-semibold">Total To Pay:</span>
                                                                 <span id="quoteTotalValue-{{ $message->id }}" class="font-semibold text-gray-900">₱{{ number_format($quotedPrice, 2) }}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div id="quotePickupAddress-{{ $message->id }}" class="hidden bg-white border border-blue-200 rounded-lg p-3 mb-3">
+                                                        <div class="flex items-start gap-2">
+                                                            <svg class="w-4 h-4 text-[#8B0000] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.05 11a7 7 0 1113.9 0M12 13v8m0 0l-3-3m3 3l3-3"/>
+                                                            </svg>
+                                                            <div class="flex-1 min-w-0">
+                                                                <p class="text-xs font-semibold text-gray-900 mb-0.5">Pickup Location:</p>
+                                                                <p class="text-xs text-gray-700 break-words">Tuwas Yakan Weaving Center, Yakan Village, Upper Calarian, Labuan-Limpapa Road, National Road, Zamboanga City, Philippines 7000</p>
+                                                                <p class="text-[11px] text-gray-500 mt-1">Mon-Sat 8:00 AM - 6:00 PM</p>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1091,8 +1117,18 @@
         const shippingEl = document.getElementById(`quoteShippingValue-${messageId}`);
         const totalEl = document.getElementById(`quoteTotalValue-${messageId}`);
         const noteEl = document.getElementById(`quoteDeliveryNote-${messageId}`);
+        const hasDefaultAddress = block.dataset.hasDefaultAddress === '1';
+        const deliveryAddressEl = document.getElementById(`quoteDeliveryAddress-${messageId}`);
+        const pickupAddressEl = document.getElementById(`quotePickupAddress-${messageId}`);
+        const noAddressEl = document.getElementById(`quoteNoAddressWarning-${messageId}`);
+        const changeAddressBtn = document.getElementById(`quoteChangeAddressBtn-${messageId}`);
 
         if (deliveryType === 'pickup') {
+            if (deliveryAddressEl) deliveryAddressEl.classList.add('hidden');
+            if (noAddressEl) noAddressEl.classList.add('hidden');
+            if (changeAddressBtn) changeAddressBtn.classList.add('hidden');
+            if (pickupAddressEl) pickupAddressEl.classList.remove('hidden');
+
             if (shippingEl) {
                 shippingEl.innerHTML = '<span class="text-green-600">FREE (Pick up)</span>';
             }
@@ -1103,12 +1139,27 @@
                 noteEl.textContent = 'Pick up selected: no delivery fee will be added.';
             }
         } else {
+            if (pickupAddressEl) pickupAddressEl.classList.add('hidden');
+            if (hasDefaultAddress) {
+                if (deliveryAddressEl) deliveryAddressEl.classList.remove('hidden');
+                if (changeAddressBtn) changeAddressBtn.classList.remove('hidden');
+                if (noAddressEl) noAddressEl.classList.add('hidden');
+            } else {
+                if (deliveryAddressEl) deliveryAddressEl.classList.add('hidden');
+                if (changeAddressBtn) changeAddressBtn.classList.add('hidden');
+                if (noAddressEl) noAddressEl.classList.remove('hidden');
+            }
+
             if (shippingEl) {
-                const feeLabel = shippingLabel ? ` <span class="text-xs text-gray-500">(${shippingLabel})</span>` : '';
-                shippingEl.innerHTML = `${formatPeso(deliveryFee)}${feeLabel}`;
+                if (!hasDefaultAddress && deliveryFee <= 0) {
+                    shippingEl.innerHTML = '<span class="text-xs text-gray-500 italic">Add address to calculate</span>';
+                } else {
+                    const feeLabel = shippingLabel ? ` <span class="text-xs text-gray-500">(${shippingLabel})</span>` : '';
+                    shippingEl.innerHTML = `${formatPeso(deliveryFee)}${feeLabel}`;
+                }
             }
             if (totalEl) {
-                totalEl.textContent = formatPeso(quoted + deliveryFee);
+                totalEl.textContent = formatPeso((!hasDefaultAddress && deliveryFee <= 0) ? quoted : (quoted + deliveryFee));
             }
             if (noteEl) {
                 noteEl.textContent = 'Delivery selected: shipping fee is based on your delivery address.';

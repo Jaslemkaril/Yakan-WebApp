@@ -548,7 +548,7 @@ class ChatController extends Controller
             
             // Get formatted address
             $formattedAddress = $selectedDeliveryType === 'pickup'
-                ? 'Store Pickup (No delivery fee)'
+                ? 'Tuwas Yakan Weaving Center, Yakan Village, Upper Calarian, Labuan-Limpapa Road, National Road, Zamboanga City, Philippines 7000'
                 : ($userAddress ? $userAddress->formatted_address : 'Address not provided');
             
             // Get design images from quote message (only if column exists)
