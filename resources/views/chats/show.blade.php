@@ -454,14 +454,11 @@
                                         ->where('user_id', auth()->id())
                                         ->orderBy('created_at', 'desc')
                                         ->first();
-                                    
-                                    // Extract shipping fee from additional_notes
-                                    $shippingFee = 0;
-                                    if ($chatOrder && $chatOrder->additional_notes) {
-                                        if (preg_match('/Shipping Fee:\s*₱?([\d,]+\.?\d*)/', $chatOrder->additional_notes, $sfMatch)) {
-                                            $shippingFee = floatval(str_replace(',', '', $sfMatch[1]));
-                                        }
-                                    }
+
+                                    $shippingFee = $chatOrder ? (float) ($chatOrder->shipping_fee ?? 0) : 0;
+                                    $acceptedTotal = $chatOrder
+                                        ? ((float) ($chatOrder->final_price ?? ((float) ($chatOrder->estimated_price ?? 0) + $shippingFee)))
+                                        : 0;
                                 @endphp
                                 
                                 @if($chatOrder)
@@ -494,7 +491,7 @@
                                                     </div>
                                                     <div class="border-t border-gray-200 pt-2 flex justify-between">
                                                         <span class="font-bold text-gray-900">TOTAL TO PAY:</span>
-                                                        <span class="font-bold text-green-600 text-lg">₱{{ number_format($chatOrder->final_price, 2) }}</span>
+                                                        <span class="font-bold text-green-600 text-lg">₱{{ number_format($acceptedTotal, 2) }}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -542,7 +539,7 @@
                                                         </div>
                                                         <div class="flex justify-between items-center bg-green-100 p-3 rounded-lg border-2 border-green-300">
                                                             <span class="text-sm font-bold text-gray-800">Amount to Pay:</span>
-                                                            <span class="font-bold text-green-700 text-xl">₱{{ number_format($chatOrder->final_price, 2) }}</span>
+                                                            <span class="font-bold text-green-700 text-xl">₱{{ number_format($acceptedTotal, 2) }}</span>
                                                         </div>
                                                     </div>
                                                     

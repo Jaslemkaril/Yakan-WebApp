@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Chat;
 use App\Models\ChatMessage;
+use App\Models\CustomOrder;
+use App\Models\UserAddress;
 use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,6 +13,67 @@ use Illuminate\Support\Facades\Storage;
 
 class ChatController extends Controller
 {
+    private function calculateCanonicalShippingFeeFromAddress(?UserAddress $address): float
+    {
+        if (!$address) {
+            return 0.0;
+        }
+
+        $cityLower = strtolower((string) ($address->city ?? ''));
+        $regionLower = strtolower((string) ($address->province ?? ($address->region ?? '')));
+        $addrLower = strtolower(implode(' ', array_filter([
+            $address->street_name ?? null,
+            $address->barangay ?? null,
+            $address->city ?? null,
+            $address->province ?? ($address->region ?? null),
+        ])));
+        $haystack = trim($addrLower . ' ' . $cityLower . ' ' . $regionLower);
+
+        if (
+            str_contains($haystack, 'zamboanga') ||
+            str_contains($regionLower, 'barmm') ||
+            str_contains($regionLower, 'bangsamoro') ||
+            in_array($cityLower, ['dipolog city', 'dapitan city', 'pagadian city', 'isabela city', 'jolo', 'bongao', 'cotabato city', 'marawi city', 'lamitan'])
+        ) {
+            return 100.0;
+        }
+
+        if (
+            str_contains($haystack, 'mindanao') ||
+            str_contains($haystack, 'davao') ||
+            str_contains($haystack, 'soccsksargen') ||
+            str_contains($haystack, 'caraga') ||
+            str_contains($haystack, 'northern mindanao') ||
+            str_contains($haystack, 'cagayan de oro') ||
+            str_contains($haystack, 'general santos')
+        ) {
+            return 180.0;
+        }
+
+        if (
+            str_contains($haystack, 'visayas') ||
+            str_contains($haystack, 'cebu') ||
+            str_contains($haystack, 'iloilo') ||
+            str_contains($haystack, 'bacolod') ||
+            str_contains($haystack, 'tacloban') ||
+            str_contains($haystack, 'leyte')
+        ) {
+            return 250.0;
+        }
+
+        if (
+            str_contains($haystack, 'ncr') ||
+            str_contains($haystack, 'metro manila') ||
+            str_contains($haystack, 'manila') ||
+            str_contains($haystack, 'calabarzon') ||
+            str_contains($haystack, 'central luzon')
+        ) {
+            return 300.0;
+        }
+
+        return 350.0;
+    }
+
     /**
      * Helper to build redirect URL with auth_token if present
      */
@@ -120,6 +183,35 @@ class ChatController extends Controller
                 ->update(['is_read' => true]);
 
             $messages = $chat->messages()->get();
+
+            // Keep pending chat-order totals aligned with canonical shipping zones.
+            $userDefaultAddress = UserAddress::where('user_id', auth()->id())
+                ->where('is_default', true)
+                ->first();
+
+            if ($userDefaultAddress) {
+                $shippingFee = $this->calculateCanonicalShippingFeeFromAddress($userDefaultAddress);
+                $pendingOrders = CustomOrder::where('chat_id', $chat->id)
+                    ->where('user_id', auth()->id())
+                    ->where('payment_status', 'pending')
+                    ->get();
+
+                foreach ($pendingOrders as $pendingOrder) {
+                    $estimatedPrice = (float) ($pendingOrder->estimated_price ?? 0);
+                    $expectedTotal = $estimatedPrice + $shippingFee;
+                    $currentShipping = (float) ($pendingOrder->shipping_fee ?? 0);
+                    $currentTotal = (float) ($pendingOrder->final_price ?? 0);
+
+                    if (abs($currentShipping - $shippingFee) > 0.009 || abs($currentTotal - $expectedTotal) > 0.009) {
+                        $pendingOrder->update([
+                            'shipping_fee' => $shippingFee,
+                            'final_price' => $expectedTotal,
+                            'delivery_city' => $userDefaultAddress->city,
+                            'delivery_province' => ($userDefaultAddress->province ?? $userDefaultAddress->region),
+                        ]);
+                    }
+                }
+            }
 
             \Log::info('ChatController show: Messages loaded', ['count' => $messages->count()]);
 
@@ -434,35 +526,10 @@ class ChatController extends Controller
             }
             
             // Get user's default address for shipping calculation
-            $userAddress = \App\Models\UserAddress::where('user_id', auth()->id())
+            $userAddress = UserAddress::where('user_id', auth()->id())
                 ->where('is_default', true)
                 ->first();
-            
-            // Calculate shipping fee (same logic as chat view)
-            $shippingFee = 0;
-            if ($userAddress) {
-                $cityLower = strtolower($userAddress->city ?? '');
-                $regionLower = strtolower($userAddress->province ?? '');
-                $postalCode = $userAddress->postal_code ?? '';
-                
-                if (str_contains($cityLower, 'zamboanga') && str_starts_with($postalCode, '7')) {
-                    $shippingFee = 0;
-                } elseif (str_contains($regionLower, 'zamboanga') || in_array($cityLower, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
-                    $shippingFee = 80;
-                } elseif (in_array($cityLower, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) || str_contains($regionLower, 'barmm') || str_contains($regionLower, 'armm')) {
-                    $shippingFee = 120;
-                } elseif (str_contains($regionLower, 'mindanao') || in_array($cityLower, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'])) {
-                    $shippingFee = 150;
-                } elseif (str_contains($regionLower, 'visayas') || in_array($cityLower, ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'])) {
-                    $shippingFee = 180;
-                } elseif (str_contains($cityLower, 'manila') || str_contains($regionLower, 'ncr') || in_array($cityLower, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'])) {
-                    $shippingFee = 220;
-                } elseif (str_contains($regionLower, 'luzon') || in_array($cityLower, ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'])) {
-                    $shippingFee = 250;
-                } else {
-                    $shippingFee = 280;
-                }
-            }
+            $shippingFee = $this->calculateCanonicalShippingFeeFromAddress($userAddress);
             
             $totalAmount = $quotedPrice + $shippingFee;
             
@@ -524,7 +591,7 @@ class ChatController extends Controller
             
             // Create custom order in custom_orders table
             try {
-                $order = \App\Models\CustomOrder::create([
+                $order = CustomOrder::create([
                     'user_id' => auth()->id(),
                     'chat_id' => $chat->id,
                     'specifications' => $orderNotes,
@@ -532,7 +599,10 @@ class ChatController extends Controller
                     'product_type' => $fabricType,
                     'estimated_price' => $quotedPrice,
                     'final_price' => $totalAmount,
+                    'shipping_fee' => $shippingFee,
                     'delivery_address' => $formattedAddress,
+                    'delivery_city' => $userAddress->city ?? null,
+                    'delivery_province' => ($userAddress->province ?? $userAddress->region ?? null),
                     'delivery_type' => 'deliver',
                     'phone' => $userAddress ? ($userAddress->phone_number ?? (auth()->user()->phone ?? '')) : (auth()->user()->phone ?? ''),
                     'email' => auth()->user()->email,
