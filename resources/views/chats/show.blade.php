@@ -499,6 +499,10 @@
                                             {{-- Payment Method Buttons --}}
                                             <p class="text-sm font-semibold text-gray-800 mb-3">Choose your payment method:</p>
                                             <div class="grid grid-cols-1 gap-3">
+                                                <button onclick="selectPaymentMethod('{{ $chatOrder->id }}', 'maya')" class="payment-method-btn flex items-center gap-3 bg-white hover:bg-green-50 border-2 border-green-300 hover:border-green-500 rounded-xl p-4 transition-all hover:shadow-md">
+                                                    <span class="text-3xl">💳</span>
+                                                    <span class="font-bold text-sm text-gray-900">Maya</span>
+                                                </button>
                                                 <button onclick="selectPaymentMethod('{{ $chatOrder->id }}', 'bank_transfer')" class="payment-method-btn flex items-center gap-3 bg-white hover:bg-green-50 border-2 border-green-300 hover:border-green-500 rounded-xl p-4 transition-all hover:shadow-md">
                                                     <span class="text-3xl">🏦</span>
                                                     <span class="font-bold text-sm text-gray-900">Bank Transfer</span>
@@ -555,9 +559,32 @@
                                                         </ol>
                                                     </div>
                                                 </div>
+                                            @elseif($chatOrder->payment_method === 'maya')
+                                                {{-- Maya Payment Details --}}
+                                                @php
+                                                    $mayaPaymentUrl = route('custom_orders.payment', $chatOrder) . (request('auth_token') ? '?auth_token=' . urlencode(request('auth_token')) : '');
+                                                @endphp
+                                                <div class="bg-white/70 backdrop-blur rounded-xl p-4 mb-4">
+                                                    <div class="flex items-center gap-2 mb-3">
+                                                        <span class="text-2xl">💳</span>
+                                                        <h4 class="text-lg font-bold text-gray-900">Maya Checkout</h4>
+                                                    </div>
+
+                                                    <div class="bg-green-100 p-3 rounded-lg border-2 border-green-300 mb-3 flex justify-between items-center">
+                                                        <span class="text-sm font-bold text-gray-800">Amount to Pay:</span>
+                                                        <span class="font-bold text-green-700 text-xl">₱{{ number_format($acceptedTotal, 2) }}</span>
+                                                    </div>
+
+                                                    <p class="text-xs text-gray-700 mb-3">You will be redirected to Maya secure checkout to complete payment.</p>
+
+                                                    <a href="{{ $mayaPaymentUrl }}" class="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition shadow-md hover:shadow-lg">
+                                                        <span>Proceed to Maya Payment</span>
+                                                    </a>
+                                                </div>
                                             @endif
                                             
                                             {{-- Receipt Upload Form --}}
+                                            @if($chatOrder->payment_method === 'bank_transfer')
                                             <form action="{{ route('orders.upload_receipt', $chatOrder) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" enctype="multipart/form-data">
                                                 @csrf
                                                 @if(request('auth_token'))
@@ -592,6 +619,7 @@
                                                     </button>
                                                 </div>
                                             </form>
+                                            @endif
                                         </div>
                                     @endif
                                     

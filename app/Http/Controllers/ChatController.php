@@ -643,7 +643,7 @@ class ChatController extends Controller
     public function setPaymentMethod(Request $request, $orderId)
     {
         $validated = $request->validate([
-            'payment_method' => 'required|in:gcash,bank_transfer',
+            'payment_method' => 'required|in:maya,bank_transfer',
         ]);
         
         $order = \App\Models\CustomOrder::findOrFail($orderId);
