@@ -115,22 +115,45 @@ class OtpVerificationController extends Controller
         \Log::info('OTP resend - generated new OTP', ['user_id' => $user->id, 'email' => $email]);
 
         // Send OTP email via SendGrid HTTP API (SMTP blocked on Railway)
-        $emailSent = SendGridService::sendView(
+        $sendResult = SendGridService::sendViewDetailed(
             $user->email,
             'Verify Your Email - Yakan E-commerce',
             'emails.otp-verification',
             ['user' => $user, 'otp' => $otp]
         );
-        \Log::info('OTP resend attempt', ['user_id' => $user->id, 'sent' => $emailSent]);
+
+        if (!($sendResult['success'] ?? false)) {
+            \Log::warning('OTP resend first attempt failed, retrying once', [
+                'user_id' => $user->id,
+                'status' => $sendResult['status'] ?? null,
+                'error' => $sendResult['error'] ?? null,
+            ]);
+
+            $sendResult = SendGridService::sendViewDetailed(
+                $user->email,
+                'Verify Your Email - Yakan E-commerce',
+                'emails.otp-verification',
+                ['user' => $user, 'otp' => $otp]
+            );
+        }
+
+        $emailSent = (bool) ($sendResult['success'] ?? false);
+        \Log::info('OTP resend final result', [
+            'user_id' => $user->id,
+            'sent' => $emailSent,
+            'status' => $sendResult['status'] ?? null,
+            'message_id' => $sendResult['message_id'] ?? null,
+        ]);
 
         // Render view directly (no redirect to avoid session loss)
         $message = $emailSent
             ? 'New verification code sent to your email!'
-            : 'Email sending failed. Your OTP code is: ' . $otp;
+            : 'We could not send the OTP email right now. Please try "Send New Code" again.';
 
         return view('auth.verify-otp', [
             'user' => $user,
-            'success' => $message,
+            $emailSent ? 'success' : 'error' => $message,
+            'emailSent' => $emailSent,
         ]);
     }
 }

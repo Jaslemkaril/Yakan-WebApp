@@ -5,12 +5,9 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\SendGridService;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
@@ -84,13 +81,35 @@ class RegisteredUserController extends Controller
             \Log::info('OTP generated', ['user_id' => $user->id]);
 
             // Send OTP email via SendGrid HTTP API (SMTP is blocked on Railway)
-            $emailSent = SendGridService::sendView(
+            $sendResult = SendGridService::sendViewDetailed(
                 $user->email,
                 'Verify Your Email - Yakan E-commerce',
                 'emails.otp-verification',
                 ['user' => $user, 'otp' => $otp]
             );
-            \Log::info('OTP email send attempt', ['user_id' => $user->id, 'sent' => $emailSent]);
+
+            if (!($sendResult['success'] ?? false)) {
+                \Log::warning('OTP email first attempt failed, retrying once', [
+                    'user_id' => $user->id,
+                    'status' => $sendResult['status'] ?? null,
+                    'error' => $sendResult['error'] ?? null,
+                ]);
+
+                $sendResult = SendGridService::sendViewDetailed(
+                    $user->email,
+                    'Verify Your Email - Yakan E-commerce',
+                    'emails.otp-verification',
+                    ['user' => $user, 'otp' => $otp]
+                );
+            }
+
+            $emailSent = (bool) ($sendResult['success'] ?? false);
+            \Log::info('OTP email send final result', [
+                'user_id' => $user->id,
+                'sent' => $emailSent,
+                'status' => $sendResult['status'] ?? null,
+                'message_id' => $sendResult['message_id'] ?? null,
+            ]);
 
             // Send welcome email (non-blocking)
             SendGridService::sendView(
@@ -105,11 +124,11 @@ class RegisteredUserController extends Controller
             // Render OTP view directly instead of redirect (sessions don't persist on Railway)
             $message = $emailSent
                 ? 'Account created successfully! Please check your email for the verification code.'
-                : 'Account created! Email sending failed - your OTP code is: ' . $otp . ' (save this!)';
+                : 'Account created, but we could not send your OTP email right now. Please click "Send New Code" in a few seconds.';
 
             return view('auth.verify-otp', [
                 'user' => $user,
-                'success' => $message,
+                $emailSent ? 'success' : 'error' => $message,
                 'emailSent' => $emailSent,
             ]);
 
