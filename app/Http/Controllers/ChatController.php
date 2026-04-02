@@ -622,7 +622,8 @@ class ChatController extends Controller
                     'phone' => $userAddress ? ($userAddress->phone_number ?? (auth()->user()->phone ?? '')) : (auth()->user()->phone ?? ''),
                     'email' => auth()->user()->email,
                     'payment_status' => 'pending',
-                    'status' => 'price_quoted',
+                    'status' => 'approved',
+                    'approved_at' => now(),
                     'additional_notes' => ($customerNotes ? "Customer Notes: " . $customerNotes . "\n\n" : '') . 'Delivery Type: ' . ucfirst($selectedDeliveryType) . "\nShipping Fee: ₱" . number_format($shippingFee, 2) . "\nQuoted Price: ₱" . number_format($quotedPrice, 2) . "\nTotal: ₱" . number_format($totalAmount, 2),
                     'design_upload' => !empty($designImages) ? (is_array($designImages) ? implode(',', $designImages) : $designImages) : null,
                 ]);

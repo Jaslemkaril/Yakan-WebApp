@@ -2736,6 +2736,23 @@ class CustomOrderController extends Controller
             $isBatchPayment = $batchOrders->count() > 1;
             $paymentOrders = $batchOrders->where('payment_status', '!=', 'paid')->values();
 
+            // Backfill legacy chat orders accepted by user but still marked as price_quoted.
+            if (!empty($order->chat_id) && $paymentOrders->isNotEmpty()) {
+                foreach ($paymentOrders as $pendingOrder) {
+                    if (!empty($pendingOrder->chat_id) && $pendingOrder->status === 'price_quoted') {
+                        $pendingOrder->status = 'approved';
+                        if (empty($pendingOrder->approved_at)) {
+                            $pendingOrder->approved_at = now();
+                        }
+                        $pendingOrder->save();
+                    }
+                }
+
+                $order->refresh();
+                $batchOrders = $this->getUserBatchOrders($order, auth()->id());
+                $paymentOrders = $batchOrders->where('payment_status', '!=', 'paid')->values();
+            }
+
             if ($paymentOrders->isEmpty()) {
                 \Log::info('showPayment - Order already paid', [
                     'order_id' => $order->id,
