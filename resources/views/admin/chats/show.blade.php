@@ -63,19 +63,38 @@
     .cs-messages::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
 
     /* Message bubbles */
-    .cs-msg { display: flex; gap: 10px; max-width: 72%; margin-bottom: 16px; }
+    .cs-msg { display: flex; gap: 10px; max-width: 78%; margin-bottom: 16px; }
     .cs-msg.admin { flex-direction: row-reverse; margin-left: auto; }
     .cs-msg .cs-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; align-self: flex-end; }
     .cs-msg.user  .cs-avatar { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; }
     .cs-msg.admin .cs-avatar { background: linear-gradient(135deg, #800000, #5a0000); color: #fff; }
-    .cs-msg-body { display: flex; flex-direction: column; gap: 3px; }
+    .cs-msg-body { display: flex; flex-direction: column; gap: 4px; }
     .cs-msg.admin .cs-msg-body { align-items: flex-end; }
-    .cs-msg-sender { font-size: 0.7rem; font-weight: 700; color: #9ca3af; padding: 0 4px; }
-    .cs-msg-bubble { padding: 11px 15px; border-radius: 16px; font-size: 0.875rem; line-height: 1.55; word-break: break-word; white-space: pre-wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
-    .cs-msg.user  .cs-msg-bubble { background: #fff; color: #1f2937; border: 1px solid #e9e5e0; border-bottom-left-radius: 4px; }
-    .cs-msg.admin .cs-msg-bubble { background: linear-gradient(135deg, #800000, #5a0000); color: #fff; border-bottom-right-radius: 4px; }
-    .cs-msg-time { font-size: 0.68rem; color: #ccc; padding: 0 4px; }
-    .cs-msg.user  .cs-msg-time { color: #c4b8b8; }
+    .cs-msg-sender { font-size: 0.68rem; font-weight: 700; color: #9ca3af; padding: 0 6px; letter-spacing: 0.02em; }
+    .cs-msg-bubble {
+        padding: 12px 16px;
+        border-radius: 18px;
+        font-size: 0.885rem;
+        line-height: 1.5;
+        word-break: break-word;
+        white-space: pre-wrap;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+        max-width: min(620px, 70vw);
+    }
+    .cs-msg.user .cs-msg-bubble {
+        background: #ffffff;
+        color: #1f2937;
+        border: 1px solid #e5e7eb;
+        border-bottom-left-radius: 6px;
+    }
+    .cs-msg.admin .cs-msg-bubble {
+        background: linear-gradient(145deg, #8f0000 0%, #6b0000 55%, #550000 100%);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-bottom-right-radius: 6px;
+    }
+    .cs-msg-time { font-size: 0.67rem; color: #bdbdbd; padding: 0 6px; }
+    .cs-msg.user .cs-msg-time { color: #9ca3af; }
 
     /* Form response data block */
     .cs-form-data { margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.15); border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); }
@@ -135,8 +154,8 @@
     .cs-msg { margin-bottom: 3px; }
     .cs-msg.last-in-group { margin-bottom: 14px; }
     .cs-avatar-spacer { width: 32px; flex-shrink: 0; }
-    .cs-msg.user  .cs-msg-bubble.no-tail { border-bottom-left-radius: 16px; }
-    .cs-msg.admin .cs-msg-bubble.no-tail { border-bottom-right-radius: 16px; }
+    .cs-msg.user  .cs-msg-bubble.no-tail { border-bottom-left-radius: 18px; }
+    .cs-msg.admin .cs-msg-bubble.no-tail { border-bottom-right-radius: 18px; }
 
     /* ─── Date separator ───────────────────────── */
     .cs-date-sep { display: flex; align-items: center; gap: 10px; margin: 10px 0 6px; }
