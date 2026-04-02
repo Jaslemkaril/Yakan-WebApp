@@ -284,38 +284,44 @@
                                         $quotedPrice = floatval(str_replace(',', '', $matches[1]));
                                     }
                                     
-                                    // Calculate shipping fee based on address (same logic as CartController)
+                                    // Calculate shipping fee based on canonical custom-order zone rules
                                     $shippingFee = 0;
                                     $shippingLabel = '';
                                     
                                     if ($userDefaultAddress) {
                                         $cityLower = strtolower($userDefaultAddress->city ?? '');
                                         $regionLower = strtolower($userDefaultAddress->province ?? '');
-                                        $postalCode = $userDefaultAddress->postal_code ?? '';
-                                        
-                                        if (str_contains($cityLower, 'zamboanga') && str_starts_with($postalCode, '7')) {
-                                            $shippingFee = 0;
-                                            $shippingLabel = 'FREE DELIVERY! 🎉';
-                                        } elseif (str_contains($regionLower, 'zamboanga') || in_array($cityLower, ['isabela', 'dipolog', 'dapitan', 'pagadian'])) {
-                                            $shippingFee = 80;
-                                            $shippingLabel = 'Zamboanga Peninsula';
-                                        } elseif (in_array($cityLower, ['basilan', 'sulu', 'tawi-tawi', 'cotabato', 'maguindanao']) || str_contains($regionLower, 'barmm') || str_contains($regionLower, 'armm')) {
-                                            $shippingFee = 120;
-                                            $shippingLabel = 'BARMM Region';
-                                        } elseif (str_contains($regionLower, 'mindanao') || in_array($cityLower, ['davao', 'cagayan de oro', 'iligan', 'general santos', 'butuan', 'koronadal'])) {
-                                            $shippingFee = 150;
-                                            $shippingLabel = 'Mindanao';
-                                        } elseif (str_contains($regionLower, 'visayas') || in_array($cityLower, ['cebu', 'iloilo', 'bacolod', 'tacloban', 'dumaguete', 'tagbilaran', 'ormoc'])) {
+                                        $addrLower = strtolower(implode(' ', array_filter([
+                                            $userDefaultAddress->street_name ?? null,
+                                            $userDefaultAddress->barangay ?? null,
+                                            $userDefaultAddress->city ?? null,
+                                            $userDefaultAddress->province ?? ($userDefaultAddress->region ?? null),
+                                        ])));
+                                        $haystack = trim($addrLower . ' ' . $cityLower . ' ' . $regionLower);
+
+                                        if (str_contains($haystack, 'zamboanga') ||
+                                            str_contains($regionLower, 'barmm') || str_contains($regionLower, 'bangsamoro') ||
+                                            in_array($cityLower, ['dipolog city', 'dapitan city', 'pagadian city', 'isabela city', 'jolo', 'bongao', 'cotabato city', 'marawi city', 'lamitan'])) {
+                                            $shippingFee = 100;
+                                            $shippingLabel = 'Zamboanga/BARMM';
+                                        } elseif (str_contains($haystack, 'mindanao') || str_contains($haystack, 'davao') ||
+                                                  str_contains($haystack, 'soccsksargen') || str_contains($haystack, 'caraga') ||
+                                                  str_contains($haystack, 'northern mindanao') || str_contains($haystack, 'cagayan de oro') ||
+                                                  str_contains($haystack, 'general santos')) {
                                             $shippingFee = 180;
-                                            $shippingLabel = 'Visayas';
-                                        } elseif (str_contains($cityLower, 'manila') || str_contains($regionLower, 'ncr') || in_array($cityLower, ['quezon city', 'makati', 'pasig', 'taguig', 'caloocan', 'cavite', 'laguna', 'bulacan', 'rizal', 'pampanga'])) {
-                                            $shippingFee = 220;
-                                            $shippingLabel = 'NCR/Metro Manila';
-                                        } elseif (str_contains($regionLower, 'luzon') || in_array($cityLower, ['baguio', 'tuguegarao', 'laoag', 'santiago', 'vigan'])) {
+                                            $shippingLabel = 'Mindanao';
+                                        } elseif (str_contains($haystack, 'visayas') || str_contains($haystack, 'cebu') ||
+                                                  str_contains($haystack, 'iloilo') || str_contains($haystack, 'bacolod') ||
+                                                  str_contains($haystack, 'tacloban') || str_contains($haystack, 'leyte')) {
                                             $shippingFee = 250;
-                                            $shippingLabel = 'Luzon';
+                                            $shippingLabel = 'Visayas';
+                                        } elseif (str_contains($haystack, 'ncr') || str_contains($haystack, 'metro manila') ||
+                                                  str_contains($haystack, 'manila') || str_contains($haystack, 'calabarzon') ||
+                                                  str_contains($haystack, 'central luzon')) {
+                                            $shippingFee = 300;
+                                            $shippingLabel = 'NCR/Near Luzon';
                                         } else {
-                                            $shippingFee = 280;
+                                            $shippingFee = 350;
                                             $shippingLabel = 'Remote Area';
                                         }
                                     }
