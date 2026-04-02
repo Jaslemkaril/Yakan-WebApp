@@ -504,10 +504,29 @@
                         <span class="text-gray-600 font-medium">Product</span>
                         <span class="font-semibold text-gray-900">{{ $order->product->name ?? 'Custom Product' }}</span>
                     </div>
-                    <div class="summary-row">
-                        <span class="text-gray-600 font-medium">Quantity</span>
-                        <span class="font-semibold text-gray-900">{{ $order->quantity }}</span>
-                    </div>
+                    @if(!empty($order->chat_id))
+                        @php
+                            $chatMeters = (float) ($order->fabric_quantity_meters ?? 0);
+                            if ($chatMeters <= 0) {
+                                $chatMeters = (float) ($order->quantity ?? 0);
+                            }
+                        @endphp
+                        <div class="summary-row">
+                            <span class="text-gray-600 font-medium">Quantity</span>
+                            <span class="font-semibold text-gray-900">1</span>
+                        </div>
+                        @if($chatMeters > 0)
+                            <div class="summary-row">
+                                <span class="text-gray-600 font-medium">Meters</span>
+                                <span class="font-semibold text-gray-900">{{ rtrim(rtrim(number_format($chatMeters, 2), '0'), '.') }} m</span>
+                            </div>
+                        @endif
+                    @else
+                        <div class="summary-row">
+                            <span class="text-gray-600 font-medium">Quantity</span>
+                            <span class="font-semibold text-gray-900">{{ $order->quantity }}</span>
+                        </div>
+                    @endif
                 @endif
 
                 {{-- Price Breakdown Section - Admin Style --}}
