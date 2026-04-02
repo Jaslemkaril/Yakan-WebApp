@@ -561,8 +561,24 @@ class CustomOrderController extends Controller
             return ['quoted' => $quoted, 'shipping' => $shipping, 'total' => $quoted + $shipping];
         }
 
-        // Legacy fallback: avoid inflating totals when inclusion is ambiguous.
+        // Chat-origin orders can have no breakdown rows; use quoted base + shipping once.
         if ($itemsSubtotalFromBreakdown <= 0) {
+            if (!empty($order->chat_id)) {
+                $baseQuoted = (float) ($order->estimated_price ?? 0);
+                if ($baseQuoted > 0) {
+                    $rowShipping = (float) ($order->shipping_fee ?? 0);
+                    if ($rowShipping <= 0) {
+                        $rowShipping = $shipping;
+                    }
+                    return [
+                        'quoted' => $baseQuoted,
+                        'shipping' => $rowShipping,
+                        'total' => $baseQuoted + $rowShipping,
+                    ];
+                }
+            }
+
+            // Legacy fallback: avoid inflating totals when inclusion is ambiguous.
             return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
         }
 

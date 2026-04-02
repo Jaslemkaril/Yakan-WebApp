@@ -91,8 +91,25 @@
             return ['quoted' => $quoted, 'items_subtotal' => $itemsSubtotal, 'shipping' => $shipping, 'total' => $quoted + $shipping];
         }
 
-        // fallback for legacy rows
+        // Chat-origin rows can have no breakdown data; use quoted base + shipping once.
         if ($itemsSubtotal <= 0) {
+            if (!empty($item->chat_id)) {
+                $baseQuoted = (float) ($item->estimated_price ?? 0);
+                if ($baseQuoted > 0) {
+                    $rowShipping = (float) ($item->shipping_fee ?? 0);
+                    if ($rowShipping <= 0) {
+                        $rowShipping = $shipping;
+                    }
+                    return [
+                        'quoted' => $baseQuoted,
+                        'items_subtotal' => $baseQuoted,
+                        'shipping' => $rowShipping,
+                        'total' => $baseQuoted + $rowShipping,
+                    ];
+                }
+            }
+
+            // fallback for legacy rows
             return ['quoted' => $quoted, 'items_subtotal' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
         }
 
