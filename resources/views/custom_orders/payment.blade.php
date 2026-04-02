@@ -360,6 +360,15 @@
         } elseif ($itemsSubtotalFromBreakdown > 0) {
             $quotedOrderPrice = $itemsSubtotalFromBreakdown;
         }
+
+        // Chat-origin orders use estimated_price as quoted base, while final_price may already include shipping.
+        if (!empty($order->chat_id)) {
+            $chatQuotedBase = (float) ($order->estimated_price ?? 0);
+            if ($chatQuotedBase > 0) {
+                $quotedOrderPrice = $chatQuotedBase;
+            }
+        }
+
         $displayShippingFee = $resolvedShippingFee;
         $grandTotal = $quotedOrderPrice + $displayShippingFee;
     } else {
