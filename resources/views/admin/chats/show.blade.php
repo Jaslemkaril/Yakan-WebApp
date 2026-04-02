@@ -162,19 +162,6 @@
     .cs-date-sep::before, .cs-date-sep::after { content: ''; flex: 1; height: 1px; background: #e5e7eb; }
     .cs-date-sep span { font-size: 0.67rem; font-weight: 700; color: #9ca3af; white-space: nowrap; padding: 2px 8px; background: #f8f7f5; border-radius: 10px; border: 1px solid #e5e7eb; letter-spacing: 0.03em; text-transform: uppercase; }
 
-    /* ─── UI Popup Modal ───────────────────────── */
-    .cs-modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); display: flex; align-items: center; justify-content: center; z-index: 70; padding: 16px; }
-    .cs-modal-card { width: min(460px, 94vw); background: #fff; border-radius: 16px; border: 1px solid #eadede; box-shadow: 0 18px 45px rgba(0, 0, 0, 0.22); overflow: hidden; }
-    .cs-modal-head { padding: 14px 18px; border-bottom: 1px solid #efe7e7; background: linear-gradient(180deg, #fff, #fdfbfb); }
-    .cs-modal-title { font-size: 0.98rem; font-weight: 800; color: #111827; }
-    .cs-modal-body { padding: 18px; color: #374151; font-size: 0.9rem; line-height: 1.5; }
-    .cs-modal-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 0 18px 18px; }
-    .cs-modal-btn { border: 0; border-radius: 11px; padding: 9px 18px; font-size: 0.86rem; font-weight: 700; cursor: pointer; transition: all 0.18s; }
-    .cs-modal-btn.secondary { background: #f3f4f6; color: #374151; }
-    .cs-modal-btn.secondary:hover { background: #e5e7eb; }
-    .cs-modal-btn.primary { background: linear-gradient(135deg, #8f0000, #680000); color: #fff; }
-    .cs-modal-btn.primary:hover { opacity: 0.9; }
-
 </style>
 
 <div class="cs-wrap">
@@ -543,43 +530,8 @@
     }
 
     // ─── Request Custom Order Details ──────────────────────────────────────
-    let pendingRequestDetailsMessageId = null;
-
-    function openRequestDetailsModal(messageId) {
-        pendingRequestDetailsMessageId = messageId;
-        document.getElementById('requestDetailsModal').classList.remove('hidden');
-    }
-
-    function closeRequestDetailsModal() {
-        pendingRequestDetailsMessageId = null;
-        document.getElementById('requestDetailsModal').classList.add('hidden');
-    }
-
-    function showUiPopup(title, message) {
-        const safeTitle = (typeof title === 'string' && title.trim() !== '') ? title : 'Notice';
-        const safeMessage = (typeof message === 'string' && message.trim() !== '')
-            ? message
-            : 'Something happened. Please try again.';
-        document.getElementById('uiPopupTitle').textContent = safeTitle;
-        document.getElementById('uiPopupMessage').textContent = safeMessage;
-        document.getElementById('uiPopupModal').classList.remove('hidden');
-    }
-
-    function closeUiPopup() {
-        document.getElementById('uiPopupModal').classList.add('hidden');
-    }
-
     function requestCustomOrderDetails(messageId) {
-        openRequestDetailsModal(messageId);
-    }
-
-    function confirmRequestDetails() {
-        const messageId = pendingRequestDetailsMessageId;
-        if (!messageId) {
-            return;
-        }
-
-        closeRequestDetailsModal();
+        if (!confirm('Send a details request form to the customer for this design?')) return;
 
         const urlParams = new URLSearchParams(window.location.search);
         const authToken = urlParams.get('auth_token');
@@ -601,13 +553,13 @@
         })
         .then(data => {
             if (data.success) {
-                showUiPopup('Success', 'Details request sent to customer.');
-                setTimeout(() => location.reload(), 700);
+                alert('✓ Details request sent!');
+                location.reload();
             } else {
-                showUiPopup('Request Failed', data?.message || data?.error || 'Request could not be completed.');
+                alert('Failed: ' + (data.message || data.error || 'Unknown error'));
             }
         })
-        .catch(err => showUiPopup('Request Failed', err?.message || 'Network or server error.'));
+        .catch(err => alert('❌ ' + (err.message || 'Network or server error')));
     }
 </script>
 
@@ -672,32 +624,4 @@
     </div>
 </div>
 
-<!-- Request Details Confirm Modal -->
-<div id="requestDetailsModal" class="hidden cs-modal-overlay">
-    <div class="cs-modal-card">
-        <div class="cs-modal-head">
-            <h3 class="cs-modal-title">Send Details Request</h3>
-        </div>
-        <div class="cs-modal-body">
-            Send a details request form to the customer for this design?
-        </div>
-        <div class="cs-modal-actions">
-            <button type="button" class="cs-modal-btn secondary" onclick="closeRequestDetailsModal()">Cancel</button>
-            <button type="button" class="cs-modal-btn primary" onclick="confirmRequestDetails()">Send</button>
-        </div>
-    </div>
-</div>
-
-<!-- Generic UI Popup Modal -->
-<div id="uiPopupModal" class="hidden cs-modal-overlay">
-    <div class="cs-modal-card">
-        <div class="cs-modal-head">
-            <h3 id="uiPopupTitle" class="cs-modal-title">Notice</h3>
-        </div>
-        <div id="uiPopupMessage" class="cs-modal-body"></div>
-        <div class="cs-modal-actions">
-            <button type="button" class="cs-modal-btn primary" onclick="closeUiPopup()">OK</button>
-        </div>
-    </div>
-</div>
 @endsection
