@@ -556,8 +556,12 @@
     }
 
     function showUiPopup(title, message) {
-        document.getElementById('uiPopupTitle').textContent = title;
-        document.getElementById('uiPopupMessage').textContent = message;
+        const safeTitle = (typeof title === 'string' && title.trim() !== '') ? title : 'Notice';
+        const safeMessage = (typeof message === 'string' && message.trim() !== '')
+            ? message
+            : 'Something happened. Please try again.';
+        document.getElementById('uiPopupTitle').textContent = safeTitle;
+        document.getElementById('uiPopupMessage').textContent = safeMessage;
         document.getElementById('uiPopupModal').classList.remove('hidden');
     }
 
@@ -600,10 +604,10 @@
                 showUiPopup('Success', 'Details request sent to customer.');
                 setTimeout(() => location.reload(), 700);
             } else {
-                showUiPopup('Request Failed', data.message || 'Unknown error');
+                showUiPopup('Request Failed', data?.message || data?.error || 'Request could not be completed.');
             }
         })
-        .catch(err => showUiPopup('Request Failed', err.message));
+        .catch(err => showUiPopup('Request Failed', err?.message || 'Network or server error.'));
     }
 </script>
 
