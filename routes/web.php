@@ -1307,7 +1307,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         Route::post('/', [UserManagementController::class, 'store'])->name('users.store');
         Route::get('/{user}', [UserManagementController::class, 'show'])->name('users.show');
         Route::get('/{user}/edit', [UserManagementController::class, 'edit'])->name('users.edit');
-        Route::patch('/{user}', [UserManagementController::class, 'update'])->name('users.update');
+        Route::match(['patch', 'put'], '/{user}', [UserManagementController::class, 'update'])->name('users.update');
         Route::delete('/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
         Route::post('/{user}/toggle', [UserManagementController::class, 'toggleStatus'])->name('users.toggle');
     });
