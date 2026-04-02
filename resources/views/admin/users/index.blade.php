@@ -3,6 +3,12 @@
 @section('title', 'User Management')
 
 @section('content')
+@php
+    $activeUsersCount = $users->filter(function ($u) {
+        return $u->last_seen_at && $u->last_seen_at->gt(now()->subMinutes(5));
+    })->count();
+    $inactiveUsersCount = $users->count() - $activeUsersCount;
+@endphp
 <div class="space-y-6">
     <!-- User Management Header -->
     <div class="bg-[#800000] rounded-2xl p-8 text-white shadow-xl">
@@ -40,7 +46,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600 font-medium">Active Users</p>
-                    <p class="text-2xl font-bold text-[#800000]">{{ count($activeUserIds) }}</p>
+                    <p class="text-2xl font-bold text-[#800000]">{{ $activeUsersCount }}</p>
                 </div>
                 <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                     <i class="fas fa-user-check text-[#800000] text-xl"></i>
@@ -64,7 +70,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600 font-medium">Inactive Users</p>
-                    <p class="text-2xl font-bold text-[#800000]">{{ $users->where('status', 'inactive')->count() }}</p>
+                    <p class="text-2xl font-bold text-[#800000]">{{ $inactiveUsersCount }}</p>
                 </div>
                 <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                     <i class="fas fa-user-times text-[#800000] text-xl"></i>
@@ -177,15 +183,15 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @php
-                                        // Check if user has an active session (logged in right now)
+                                        $isActiveNow = $user->last_seen_at && $user->last_seen_at->gt(now()->subMinutes(5));
                                         $hasActiveSession = in_array($user->id, $activeUserIds);
-                                        
-                                        if ($hasActiveSession) {
+
+                                        if ($isActiveNow || $hasActiveSession) {
                                             $statusText = 'Active now';
                                             $statusColor = 'bg-green-100 text-green-800';
                                             $dotColor = 'bg-green-600';
-                                        } elseif ($user->last_login_at) {
-                                            $statusText = 'Active ' . $user->last_login_at->diffForHumans();
+                                        } elseif ($user->last_seen_at) {
+                                            $statusText = 'Active ' . $user->last_seen_at->diffForHumans();
                                             $statusColor = 'bg-blue-100 text-blue-800';
                                             $dotColor = 'bg-blue-600';
                                         } else {

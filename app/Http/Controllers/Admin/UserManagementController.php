@@ -31,15 +31,15 @@ class UserManagementController extends Controller
                 $query->where('role', $request->role);
             }
 
-            // Filter by status (active/inactive based on last login)
+                        // Filter by status (real-time based on last_seen_at)
             if ($request->filled('status')) {
                 if ($request->status === 'active') {
-                    $query->whereNotNull('last_login_at')
-                          ->where('last_login_at', '>', now()->subDays(30));
+                                        $query->whereNotNull('last_seen_at')
+                                                    ->where('last_seen_at', '>', now()->subMinutes(5));
                 } elseif ($request->status === 'inactive') {
                     $query->where(function($q) {
-                        $q->whereNull('last_login_at')
-                          ->orWhere('last_login_at', '<=', now()->subDays(30));
+                                                $q->whereNull('last_seen_at')
+                                                    ->orWhere('last_seen_at', '<=', now()->subMinutes(5));
                     });
                 }
             }
@@ -48,13 +48,22 @@ class UserManagementController extends Controller
                            ->paginate(15)
                            ->withQueryString();
 
-            // Get currently active users from sessions table
-            $activeUserIds = DB::table('sessions')
+            // Session-based online users (fallback signal).
+            $sessionActiveUserIds = DB::table('sessions')
                 ->whereNotNull('user_id')
                 ->where('last_activity', '>', now()->subMinutes(5)->timestamp)
                 ->pluck('user_id')
                 ->unique()
                 ->toArray();
+
+            // Real-time users via heartbeat.
+            $heartbeatActiveUserIds = User::query()
+                ->whereNotNull('last_seen_at')
+                ->where('last_seen_at', '>', now()->subMinutes(5))
+                ->pluck('id')
+                ->toArray();
+
+            $activeUserIds = array_values(array_unique(array_merge($sessionActiveUserIds, $heartbeatActiveUserIds)));
 
             return view('admin.users.index', compact('users', 'activeUserIds'));
         } catch (\Exception $e) {

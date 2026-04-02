@@ -76,6 +76,21 @@ class TokenAuth
         }
         
         $response = $next($request);
+
+        // Keep a lightweight heartbeat for real-time online status in admin user management.
+        if (Auth::check()) {
+            try {
+                $user = Auth::user();
+                if ($user) {
+                    $shouldUpdateSeen = !$user->last_seen_at || $user->last_seen_at->lt(now()->subSeconds(60));
+                    if ($shouldUpdateSeen) {
+                        $user->forceFill(['last_seen_at' => now()])->save();
+                    }
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('TokenAuth: failed to update last_seen_at', ['error' => $e->getMessage()]);
+            }
+        }
         
         // If user just authenticated via query param, set a persistent cookie
         // Use secure=null to auto-match the request protocol (avoids hardcoded mismatch)
