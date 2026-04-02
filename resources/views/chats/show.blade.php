@@ -327,11 +327,12 @@
                                     }
                                     
                                     $totalWithShipping = $quotedPrice + $shippingFee;
+                                    $defaultQuoteDeliveryType = $userDefaultAddress ? 'delivery' : 'pickup';
                                 @endphp
                                 
                                 @if(!$hasResponse)
                                     {{-- Shipping Fee & Total Breakdown --}}
-                                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-4 mt-3 mx-2">
+                                    <div id="quoteBreakdown-{{ $message->id }}" data-quoted="{{ $quotedPrice }}" data-delivery-fee="{{ $shippingFee }}" data-shipping-label="{{ $shippingLabel }}" class="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-4 mt-3 mx-2">
                                         <div class="flex items-start gap-3">
                                             <div class="flex-shrink-0 bg-blue-400 rounded-full p-2">
                                                 <svg class="w-5 h-5 text-blue-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -340,6 +341,21 @@
                                             </div>
                                             <div class="flex-1">
                                                 <h4 class="font-bold text-gray-900 text-sm mb-3">💰 Payment Breakdown</h4>
+
+                                                <div class="bg-white border border-blue-200 rounded-lg p-3 mb-3">
+                                                    <p class="text-xs font-semibold text-gray-900 mb-2">Delivery Option</p>
+                                                    <div class="flex items-center gap-4">
+                                                        <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-800">
+                                                            <input type="radio" name="quote_delivery_type_{{ $message->id }}" value="delivery" {{ $defaultQuoteDeliveryType === 'delivery' ? 'checked' : '' }} onchange="updateQuoteDeliveryType('{{ $message->id }}')">
+                                                            Deliver
+                                                        </label>
+                                                        <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-800">
+                                                            <input type="radio" name="quote_delivery_type_{{ $message->id }}" value="pickup" {{ $defaultQuoteDeliveryType === 'pickup' ? 'checked' : '' }} onchange="updateQuoteDeliveryType('{{ $message->id }}')">
+                                                            Pick up
+                                                        </label>
+                                                    </div>
+                                                    <p id="quoteDeliveryNote-{{ $message->id }}" class="text-xs text-gray-500 mt-2"></p>
+                                                </div>
                                                 
                                                 @if($userDefaultAddress)
                                                     {{-- Delivery Address --}}
@@ -365,21 +381,14 @@
                                                             </div>
                                                             <div class="flex justify-between items-center text-sm">
                                                                 <span class="text-gray-700">Shipping Fee:</span>
-                                                                <span class="font-semibold {{ $shippingFee == 0 ? 'text-green-600' : 'text-blue-700' }}">
-                                                                    @if($shippingFee == 0)
-                                                                        FREE 🎉
-                                                                    @else
-                                                                        ₱{{ number_format($shippingFee, 2) }}
-                                                                    @endif
-                                                                    @if($shippingLabel)
-                                                                        <span class="text-xs text-gray-500">({{ $shippingLabel }})</span>
-                                                                    @endif
+                                                                <span id="quoteShippingValue-{{ $message->id }}" class="font-semibold {{ $shippingFee == 0 ? 'text-green-600' : 'text-blue-700' }}">
+                                                                    ₱{{ number_format($shippingFee, 2) }} @if($shippingLabel)<span class="text-xs text-gray-500">({{ $shippingLabel }})</span>@endif
                                                                 </span>
                                                             </div>
                                                             <div class="border-t-2 border-dashed border-gray-300 pt-2 mt-2">
                                                                 <div class="flex justify-between items-center">
                                                                     <span class="text-base font-bold text-gray-900">TOTAL TO PAY:</span>
-                                                                    <span class="text-xl font-bold text-green-600">₱{{ number_format($totalWithShipping, 2) }}</span>
+                                                                    <span id="quoteTotalValue-{{ $message->id }}" class="text-xl font-bold text-green-600">₱{{ number_format($defaultQuoteDeliveryType === 'pickup' ? $quotedPrice : $totalWithShipping, 2) }}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -408,7 +417,11 @@
                                                             </div>
                                                             <div class="flex justify-between items-center text-sm mt-1">
                                                                 <span class="text-gray-700">Shipping Fee:</span>
-                                                                <span class="text-xs text-gray-500 italic">Add address to calculate</span>
+                                                                <span id="quoteShippingValue-{{ $message->id }}" class="text-xs text-gray-500 italic">Add address to calculate</span>
+                                                            </div>
+                                                            <div class="flex justify-between items-center text-sm mt-1 border-t border-yellow-200 pt-1">
+                                                                <span class="text-gray-700 font-semibold">Total To Pay:</span>
+                                                                <span id="quoteTotalValue-{{ $message->id }}" class="font-semibold text-gray-900">₱{{ number_format($quotedPrice, 2) }}</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -430,7 +443,8 @@
                                             @csrf
                                             <input type="hidden" name="response" value="accepted">
                                             <input type="hidden" name="quote_message_id" value="{{ $message->id }}">
-                                            <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm hover:shadow-md">
+                                            <input type="hidden" id="acceptedDeliveryType-{{ $message->id }}" name="delivery_type" value="{{ $defaultQuoteDeliveryType }}">
+                                            <button type="submit" onclick="return validateQuoteAcceptance('{{ $message->id }}', {{ $userDefaultAddress ? 'true' : 'false' }})" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm hover:shadow-md">
                                                 ✓ Accept Price
                                             </button>
                                         </form>
@@ -1052,6 +1066,72 @@
         form.action = `/addresses/${addressId}/set-default`;
         form.submit();
     }
+
+    function formatPeso(value) {
+        const amount = Number(value || 0);
+        return '₱' + amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function updateQuoteDeliveryType(messageId) {
+        const block = document.getElementById(`quoteBreakdown-${messageId}`);
+        if (!block) return;
+
+        const quoted = Number(block.dataset.quoted || 0);
+        const deliveryFee = Number(block.dataset.deliveryFee || 0);
+        const shippingLabel = block.dataset.shippingLabel || '';
+
+        const selected = document.querySelector(`input[name="quote_delivery_type_${messageId}"]:checked`);
+        const deliveryType = selected ? selected.value : 'delivery';
+
+        const hiddenDeliveryType = document.getElementById(`acceptedDeliveryType-${messageId}`);
+        if (hiddenDeliveryType) {
+            hiddenDeliveryType.value = deliveryType;
+        }
+
+        const shippingEl = document.getElementById(`quoteShippingValue-${messageId}`);
+        const totalEl = document.getElementById(`quoteTotalValue-${messageId}`);
+        const noteEl = document.getElementById(`quoteDeliveryNote-${messageId}`);
+
+        if (deliveryType === 'pickup') {
+            if (shippingEl) {
+                shippingEl.innerHTML = '<span class="text-green-600">FREE (Pick up)</span>';
+            }
+            if (totalEl) {
+                totalEl.textContent = formatPeso(quoted);
+            }
+            if (noteEl) {
+                noteEl.textContent = 'Pick up selected: no delivery fee will be added.';
+            }
+        } else {
+            if (shippingEl) {
+                const feeLabel = shippingLabel ? ` <span class="text-xs text-gray-500">(${shippingLabel})</span>` : '';
+                shippingEl.innerHTML = `${formatPeso(deliveryFee)}${feeLabel}`;
+            }
+            if (totalEl) {
+                totalEl.textContent = formatPeso(quoted + deliveryFee);
+            }
+            if (noteEl) {
+                noteEl.textContent = 'Delivery selected: shipping fee is based on your delivery address.';
+            }
+        }
+    }
+
+    function validateQuoteAcceptance(messageId, hasDefaultAddress) {
+        const selected = document.querySelector(`input[name="quote_delivery_type_${messageId}"]:checked`);
+        const deliveryType = selected ? selected.value : 'delivery';
+
+        const hiddenDeliveryType = document.getElementById(`acceptedDeliveryType-${messageId}`);
+        if (hiddenDeliveryType) {
+            hiddenDeliveryType.value = deliveryType;
+        }
+
+        if (deliveryType === 'delivery' && !hasDefaultAddress) {
+            alert('Please add or select a delivery address first, or choose Pick up.');
+            return false;
+        }
+
+        return true;
+    }
     
     // Payment Method Selection
     function selectPaymentMethod(orderId, method) {
@@ -1105,6 +1185,16 @@
             reader.readAsDataURL(file);
         }
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('[id^="quoteBreakdown-"]').forEach((el) => {
+            const parts = String(el.id).split('-');
+            const messageId = parts[parts.length - 1];
+            if (messageId) {
+                updateQuoteDeliveryType(messageId);
+            }
+        });
+    });
 </script>
 
 <!-- Address Selection Modal -->

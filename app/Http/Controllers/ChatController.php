@@ -498,6 +498,7 @@ class ChatController extends Controller
         $validated = $request->validate([
             'response' => 'required|in:accepted,declined',
             'quote_message_id' => 'required|exists:chat_messages,id',
+            'delivery_type' => 'nullable|in:delivery,pickup',
         ]);
 
         $response = $validated['response'];
@@ -518,6 +519,10 @@ class ChatController extends Controller
         // If accepted, create order (Pending Payment status)
         if ($response === 'accepted') {
             $quoteMessage = ChatMessage::find($validated['quote_message_id']);
+            $selectedDeliveryType = strtolower((string) ($validated['delivery_type'] ?? 'delivery'));
+            if (!in_array($selectedDeliveryType, ['delivery', 'pickup'], true)) {
+                $selectedDeliveryType = 'delivery';
+            }
             
             // Extract quoted price from message
             $quotedPrice = 0;
@@ -529,12 +534,22 @@ class ChatController extends Controller
             $userAddress = UserAddress::where('user_id', auth()->id())
                 ->where('is_default', true)
                 ->first();
-            $shippingFee = $this->calculateCanonicalShippingFeeFromAddress($userAddress);
+
+            if ($selectedDeliveryType === 'delivery' && !$userAddress) {
+                return $this->redirectWithToken('chats.show', $chat)
+                    ->with('error', 'Please add a delivery address first, or choose Pick up.');
+            }
+
+            $shippingFee = $selectedDeliveryType === 'pickup'
+                ? 0.0
+                : $this->calculateCanonicalShippingFeeFromAddress($userAddress);
             
             $totalAmount = $quotedPrice + $shippingFee;
             
             // Get formatted address
-            $formattedAddress = $userAddress ? $userAddress->formatted_address : 'Address not provided';
+            $formattedAddress = $selectedDeliveryType === 'pickup'
+                ? 'Store Pickup (No delivery fee)'
+                : ($userAddress ? $userAddress->formatted_address : 'Address not provided');
             
             // Get design images from quote message (only if column exists)
             $designImages = [];
@@ -601,14 +616,14 @@ class ChatController extends Controller
                     'final_price' => $totalAmount,
                     'shipping_fee' => $shippingFee,
                     'delivery_address' => $formattedAddress,
-                    'delivery_city' => $userAddress->city ?? null,
-                    'delivery_province' => ($userAddress->province ?? $userAddress->region ?? null),
-                    'delivery_type' => 'deliver',
+                    'delivery_city' => $selectedDeliveryType === 'pickup' ? null : ($userAddress->city ?? null),
+                    'delivery_province' => $selectedDeliveryType === 'pickup' ? null : ($userAddress->province ?? $userAddress->region ?? null),
+                    'delivery_type' => $selectedDeliveryType,
                     'phone' => $userAddress ? ($userAddress->phone_number ?? (auth()->user()->phone ?? '')) : (auth()->user()->phone ?? ''),
                     'email' => auth()->user()->email,
                     'payment_status' => 'pending',
                     'status' => 'price_quoted',
-                    'additional_notes' => ($customerNotes ? "Customer Notes: " . $customerNotes . "\n\n" : '') . 'Shipping Fee: ₱' . number_format($shippingFee, 2) . "\nQuoted Price: ₱" . number_format($quotedPrice, 2) . "\nTotal: ₱" . number_format($totalAmount, 2),
+                    'additional_notes' => ($customerNotes ? "Customer Notes: " . $customerNotes . "\n\n" : '') . 'Delivery Type: ' . ucfirst($selectedDeliveryType) . "\nShipping Fee: ₱" . number_format($shippingFee, 2) . "\nQuoted Price: ₱" . number_format($quotedPrice, 2) . "\nTotal: ₱" . number_format($totalAmount, 2),
                     'design_upload' => !empty($designImages) ? (is_array($designImages) ? implode(',', $designImages) : $designImages) : null,
                 ]);
                 
