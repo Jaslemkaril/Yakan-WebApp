@@ -381,6 +381,7 @@
                                                                 <p class="text-xs font-semibold text-gray-900 mb-0.5">Pickup Location:</p>
                                                                 <p class="text-xs text-gray-700 break-words">Tuwas Yakan Weaving Center, Yakan Village, Upper Calarian, Labuan-Limpapa Road, National Road, Zamboanga City, Philippines 7000</p>
                                                                 <p class="text-[11px] text-gray-500 mt-1">Mon-Sat 8:00 AM - 6:00 PM</p>
+                                                                <p class="text-[11px] text-gray-500">Contact: 0935 569 0272</p>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -448,6 +449,7 @@
                                                                 <p class="text-xs font-semibold text-gray-900 mb-0.5">Pickup Location:</p>
                                                                 <p class="text-xs text-gray-700 break-words">Tuwas Yakan Weaving Center, Yakan Village, Upper Calarian, Labuan-Limpapa Road, National Road, Zamboanga City, Philippines 7000</p>
                                                                 <p class="text-[11px] text-gray-500 mt-1">Mon-Sat 8:00 AM - 6:00 PM</p>
+                                                                <p class="text-[11px] text-gray-500">Contact: 0935 569 0272</p>
                                                             </div>
                                                         </div>
                                                     </div>

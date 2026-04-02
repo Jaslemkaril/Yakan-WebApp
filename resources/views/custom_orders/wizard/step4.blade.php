@@ -977,7 +977,7 @@
                                                         Sunday: Closed
                                                     </p>
                                                     <p class="text-xs text-gray-600 mt-2">
-                                                        <strong>Contact:</strong> (062) 123-4567
+                                                        <strong>Contact:</strong> 0935 569 0272
                                                     </p>
                                                 </div>
                                                 <p class="text-xs text-maroon-700 mt-3 flex items-start">
