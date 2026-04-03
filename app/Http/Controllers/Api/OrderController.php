@@ -127,9 +127,15 @@ class OrderController extends Controller
 
     public function index()
     {
+        $user = request()->user();
+
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
+        }
+
         $orders = Order::with(['items.product' => function($query) {
             $query->select('id', 'name', 'image');
-        }])->latest()->get();
+        }])->where('user_id', $user->id)->latest()->get();
         
         return response()->json([
             'success' => true,
@@ -140,9 +146,11 @@ class OrderController extends Controller
 
     public function show($id)
     {
+        $user = request()->user();
+
         $order = Order::with(['items.product' => function($query) {
             $query->select('id', 'name', 'image');
-        }])->find($id);
+        }])->where('id', $id)->where('user_id', $user?->id)->first();
         
         if (!$order) {
             return response()->json([

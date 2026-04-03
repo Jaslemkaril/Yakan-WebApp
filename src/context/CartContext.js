@@ -322,6 +322,9 @@ export const CartProvider = ({ children }) => {
       setCartItems([]);
       setWishlistItems([]);
       
+      // Clear any cached order data so it doesn't leak to the next logged-in user
+      await AsyncStorage.multiRemove(['pendingOrders', 'cachedOrders', 'orders']);
+
       // Then call logout API (which will delete the token)
       await ApiService.logout();
     } catch (error) {
