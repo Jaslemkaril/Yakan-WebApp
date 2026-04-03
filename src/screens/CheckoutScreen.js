@@ -92,52 +92,94 @@ const CheckoutScreen = ({ navigation }) => {
     try {
       setCalculatingShipping(true);
       const selectedAddr = savedAddresses.find(addr => addr.id === selectedAddressId);
-      
+
       if (!selectedAddr) {
         setShippingFee(100);
         return;
       }
 
-      // Use stored shipping fee from address if available (set when address was created with region picker)
-      if (selectedAddr.regionShipping) {
-        setShippingFee(selectedAddr.regionShipping);
-        console.log(`[Checkout] Using stored shipping fee: ₱${selectedAddr.regionShipping}`);
+      const cityLower     = (selectedAddr.city     || '').toLowerCase();
+      const regionLower   = (selectedAddr.region   || '').toLowerCase();
+      const provinceLower = (selectedAddr.province || '').toLowerCase();
+
+      // Zone 1 — ₱100: Zamboanga Peninsula + BARMM islands (nearest to store)
+      const zone1Cities = [
+        'dipolog', 'dapitan', 'pagadian', 'isabela city',
+        'ipil', 'jolo', 'bongao', 'marawi', 'lamitan',
+      ];
+      if (
+        cityLower.includes('zamboanga') ||
+        regionLower.includes('zamboanga') ||
+        regionLower.includes('region ix') ||
+        provinceLower.includes('zamboanga') ||
+        provinceLower.includes('basilan') ||
+        provinceLower.includes('sulu') ||
+        provinceLower.includes('tawi') ||
+        regionLower.includes('barmm') ||
+        regionLower.includes('bangsamoro') ||
+        zone1Cities.some(c => cityLower.includes(c))
+      ) {
+        setShippingFee(100);
+        console.log(`[Checkout] Zone 1 (₱100) for "${selectedAddr.city}, ${selectedAddr.province}"`);
         return;
       }
 
-      // Region-based shipping fee
-      // Region IX (Zamboanga Peninsula) = ₱100 — where the store is based
-      // Other Mindanao (X,XI,XII,XIII,BARMM) = ₱150
-      // Visayas (VI,VII,VIII) = ₱180
-      // Luzon / NCR / CAR = ₱200
-      const region = (selectedAddr.region || '').toLowerCase();
-      const province = (selectedAddr.province || '').toLowerCase();
-      let fee = 100; // default
-
-      if (region.includes('zamboanga') || region.includes('region ix') || region.includes('ix')) {
-        fee = 100;
-      } else if (
-        region.includes('x ') || region.includes('xi ') || region.includes('xii') ||
-        region.includes('xiii') || region.includes('davao') || region.includes('northern mindanao') ||
-        region.includes('caraga') || region.includes('soccsksargen') || region.includes('barmm') ||
-        region.includes('bangsamoro') ||
-        province.includes('zamboanga') || province.includes('basilan') || province.includes('sulu') || province.includes('tawi')
+      // Zone 2 — ₱180: Other Mindanao (Davao, Northern Mindanao, SOCCSKSARGEN, Caraga)
+      const zone2Cities = [
+        'davao', 'digos', 'tagum', 'panabo',
+        'general santos', 'koronadal', 'kidapawan',
+        'cagayan de oro', 'iligan', 'ozamiz',
+        'butuan', 'surigao', 'malaybalay',
+      ];
+      if (
+        regionLower.includes('mindanao') ||
+        regionLower.includes('davao') ||
+        provinceLower.includes('davao') ||
+        regionLower.includes('soccsksargen') ||
+        regionLower.includes('caraga') ||
+        regionLower.includes('northern mindanao') ||
+        zone2Cities.some(c => cityLower.includes(c))
       ) {
-        fee = 150;
-      } else if (
-        region.includes('visayas') || region.includes('vi ') || region.includes('vii') || region.includes('viii')
-      ) {
-        fee = 180;
-      } else if (region.length > 0) {
-        // NCR, Luzon, CAR or any region not matching above
-        fee = 200;
-      } else {
-        // No region info — standard flat rate
-        fee = 100;
+        setShippingFee(180);
+        console.log(`[Checkout] Zone 2 (₱180) for "${selectedAddr.city}, ${selectedAddr.province}"`);
+        return;
       }
 
-      setShippingFee(fee);
-      console.log(`[Checkout] Shipping fee for region "${selectedAddr.region}": ₱${fee}`);
+      // Zone 3 — ₱250: Visayas
+      const zone3Cities = [
+        'cebu', 'iloilo', 'bacolod', 'tacloban',
+        'dumaguete', 'tagbilaran', 'ormoc', 'calbayog', 'roxas',
+      ];
+      if (
+        regionLower.includes('visayas') ||
+        zone3Cities.some(c => cityLower.includes(c))
+      ) {
+        setShippingFee(250);
+        console.log(`[Checkout] Zone 3 (₱250) for "${selectedAddr.city}, ${selectedAddr.province}"`);
+        return;
+      }
+
+      // Zone 4 — ₱300: NCR + Metro Manila + nearby Luzon
+      const zone4Cities = [
+        'quezon city', 'makati', 'pasig', 'taguig',
+        'caloocan', 'antipolo', 'angeles', 'san fernando', 'batangas', 'lucena',
+      ];
+      if (
+        regionLower.includes('ncr') ||
+        regionLower.includes('metro manila') ||
+        cityLower.includes('manila') ||
+        regionLower.includes('calabarzon') ||
+        regionLower.includes('central luzon') ||
+        zone4Cities.some(c => cityLower.includes(c))
+      ) {
+        setShippingFee(300);
+        console.log(`[Checkout] Zone 4 (₱300) for "${selectedAddr.city}, ${selectedAddr.province}"`);
+        return;
+      }
+
+      // Zone 5 — ₱350: Far Luzon / remote
+      setShippingFee(350);
+      console.log(`[Checkout] Zone 5 (₱350) for "${selectedAddr.city}, ${selectedAddr.province}"`);
     } catch (error) {
       console.error('[Checkout] Error calculating shipping fee:', error);
       setShippingFee(100);
