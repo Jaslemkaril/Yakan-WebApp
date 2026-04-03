@@ -388,19 +388,32 @@ const OrderDetailsScreen = ({ navigation, route }) => {
           {order.items && order.items.length > 0 ? (
             order.items.map((item, index) => {
               // Construct image URL from product image path
-              const imageUrl = item.product?.image 
-                ? `${API_CONFIG.STORAGE_BASE_URL.replace('/storage', '')}/uploads/products/${item.product.image}`
-                : 'https://via.placeholder.com/60?text=No+Image';
+              const rawImage = item.product?.image;
+              const baseUrl = API_CONFIG.API_BASE_URL.replace('/api/v1', '');
+              const imageUrl = rawImage
+                ? rawImage.startsWith('http')
+                  ? rawImage
+                  : rawImage.startsWith('/uploads') || rawImage.startsWith('/storage')
+                    ? `${baseUrl}${rawImage}`
+                    : `${baseUrl}/storage/products/${rawImage}`
+                : null;
               
               return (
                 <View key={index} style={styles.itemCard}>
                   <View style={styles.itemRow}>
                     {/* Product Image */}
-                    <Image 
-                      source={{ uri: imageUrl }}
-                      style={styles.itemImage}
-                      resizeMode="cover"
-                    />
+                    {imageUrl ? (
+                      <Image 
+                        source={{ uri: imageUrl }}
+                        style={styles.itemImage}
+                        resizeMode="cover"
+                        onError={() => {}}
+                      />
+                    ) : (
+                      <View style={[styles.itemImage, styles.itemImagePlaceholder]}>
+                        <Ionicons name="image-outline" size={24} color="#ccc" />
+                      </View>
+                    )}
                     
                     {/* Product Info */}
                     <View style={styles.itemInfo}>
@@ -730,6 +743,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 12,
     backgroundColor: '#F5F5F5',
+  },
+  itemImagePlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   itemInfo: {
     flex: 1,
