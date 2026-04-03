@@ -44,10 +44,6 @@ Route::prefix('v1')->group(function () {
     Route::get('/cultural-heritage/categories', [CulturalHeritageController::class, 'categories']);
     Route::get('/cultural-heritage/{slug}', [CulturalHeritageController::class, 'show']);
 
-    // ===================== ORDERS (Public - Read Only) =====================
-    Route::get('/orders', [OrderController::class, 'index']);
-    Route::get('/orders/{id}', [OrderController::class, 'show']);
-
     // ===================== AUTHENTICATED ROUTES =====================
     Route::middleware('auth:sanctum')->group(function () {
         // Auth
@@ -59,7 +55,9 @@ Route::prefix('v1')->group(function () {
         Route::put('/products/{product}/reviews/{review}', [ReviewController::class, 'update']);
         Route::delete('/products/{product}/reviews/{review}', [ReviewController::class, 'destroy']);
 
-        // Orders (Create - Requires Auth)
+        // Orders (Auth required)
+        Route::get('/orders', [OrderController::class, 'index']);
+        Route::get('/orders/{id}', [OrderController::class, 'show']);
         Route::post('/orders', [OrderController::class, 'store']);
         Route::post('/orders/{id}/upload-receipt', [OrderController::class, 'uploadReceipt']);
         
