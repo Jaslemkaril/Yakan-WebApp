@@ -11,8 +11,10 @@ import {
   SafeAreaView,
   StatusBar,
   ScrollView,
+  Image,
 } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { API_CONFIG } from '../config/config';
 import { useCart } from '../context/CartContext';
 import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
@@ -261,80 +263,82 @@ const OrdersScreen = ({ navigation }) => {
             style={{flex: 1}}
             data={filteredOrders}
             keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item, index }) => {
-              const pi = getMiniProgress(item.status);
+            renderItem={({ item }) => {
               const sc = getStatusColor(item.status);
+              const items = item.orderItems || item.items || [];
+              const baseUrl = API_CONFIG.API_BASE_URL.replace('/api/v1', '');
+              const firstImage = items[0]?.product?.image;
+              const imageUrl = firstImage
+                ? firstImage.startsWith('http')
+                  ? firstImage
+                  : firstImage.startsWith('/uploads') || firstImage.startsWith('/storage')
+                    ? `${baseUrl}${firstImage}`
+                    : `${baseUrl}/storage/products/${firstImage}`
+                : null;
+              const orderRef = item.order_number || item.order_ref || `ORD-${item.id}`;
+              const isPaid = item.payment_status === 'paid' || item.payment_status === 'verified';
+
               return (
                 <TouchableOpacity
-                  style={[styles.orderCard, { borderLeftColor: sc }]}
+                  style={styles.orderCard}
                   onPress={() => navigation.navigate('OrderDetails', { orderData: item })}
                   activeOpacity={0.7}
                 >
-                  {/* Card Header */}
-                  <View style={styles.orderCardHeader}>
-                    <View style={styles.orderHeaderLeft}>
-                      <View style={[styles.orderNumberContainer, { backgroundColor: sc + '20' }]}>
-                        <MaterialCommunityIcons name={getStatusIcon(item.status)} size={22} color={sc} />
-                      </View>
-                      <View style={styles.orderInfo}>
-                        <Text style={styles.orderRef}>Order #{item.id}</Text>
-                        <Text style={styles.orderDate}>
-                          {new Date(item.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </Text>
-                      </View>
+                  {/* Header: order ref + badges */}
+                  <View style={styles.cardHeader}>
+                    <View style={styles.cardHeaderLeft}>
+                      <Text style={styles.orderRef}>{orderRef}</Text>
+                      <Text style={styles.orderDate}>
+                        {new Date(item.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </Text>
                     </View>
-                    <View style={[styles.statusBadge, { backgroundColor: sc }]}>
-                      <MaterialCommunityIcons name={getStatusIcon(item.status)} size={12} color="#fff" style={{ marginRight: 4 }} />
-                      <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
+                    <View style={styles.badgesRow}>
+                      <View style={[styles.statusPill, { borderColor: sc, backgroundColor: sc + '15' }]}>
+                        <Text style={[styles.statusPillText, { color: sc }]}>{getStatusLabel(item.status)}</Text>
+                      </View>
                     </View>
                   </View>
 
-                  {/* Mini progress dots */}
-                  {pi >= 0 && (
-                    <View style={styles.miniProgress}>
-                      {MINI_STAGES.map((_, idx) => (
-                        <React.Fragment key={idx}>
-                          <View style={[
-                            styles.miniDot,
-                            idx <= pi ? { backgroundColor: sc } : { backgroundColor: theme.borderLight },
-                          ]} />
-                          {idx < MINI_STAGES.length - 1 && (
-                            <View style={[styles.miniLine, { backgroundColor: idx < pi ? sc : theme.borderLight }]} />
-                          )}
-                        </React.Fragment>
-                      ))}
+                  {/* Image + items */}
+                  <View style={styles.cardBody}>
+                    {imageUrl ? (
+                      <Image source={{ uri: imageUrl }} style={styles.productThumb} resizeMode="cover" />
+                    ) : (
+                      <View style={[styles.productThumb, styles.productThumbPlaceholder]}>
+                        <MaterialCommunityIcons name="image-outline" size={28} color="#ccc" />
+                      </View>
+                    )}
+                    <View style={styles.itemsList}>
+                      <Text style={styles.itemsLabel}>ITEMS ({items.length})</Text>
+                      <View style={styles.itemChips}>
+                        {items.slice(0, 3).map((it, idx) => (
+                          <View key={idx} style={styles.itemChip}>
+                            <Text style={styles.itemChipText} numberOfLines={1}>
+                              {it.product?.name || it.name || it.product_name || 'Item'}
+                            </Text>
+                          </View>
+                        ))}
+                        {items.length > 3 && (
+                          <Text style={styles.moreItems}>+{items.length - 3} more</Text>
+                        )}
+                      </View>
                     </View>
-                  )}
+                  </View>
 
-                  {/* Order details row */}
-                  <View style={styles.orderCardBody}>
-                    <View style={styles.orderDetail}>
-                      <MaterialCommunityIcons name="shopping-outline" size={16} color="#8B1A1A" style={{ marginBottom: 4 }} />
-                      <Text style={styles.detailLabel}>Items</Text>
-                      <Text style={styles.detailValue}>{item.orderItems?.length || item.items?.length || 0}</Text>
+                  {/* Footer: total + payment */}
+                  <View style={styles.cardFooter}>
+                    <View style={styles.footerLeft}>
+                      <Text style={styles.totalLabel}>Total Amount</Text>
                     </View>
-                    <View style={[styles.detailDivider]} />
-                    <View style={styles.orderDetail}>
-                      <MaterialCommunityIcons name="currency-php" size={16} color="#22C55E" style={{ marginBottom: 4 }} />
-                      <Text style={styles.detailLabel}>Total</Text>
-                      <Text style={[styles.detailValue, { color: '#22C55E' }]}>
+                    <View style={styles.footerRight}>
+                      <View style={[styles.paymentPill, { borderColor: isPaid ? '#22C55E' : '#F59E0B', backgroundColor: isPaid ? '#F0FDF4' : '#FFFBEB' }]}>
+                        <MaterialCommunityIcons name={isPaid ? 'check-circle' : 'clock-outline'} size={12} color={isPaid ? '#22C55E' : '#F59E0B'} style={{ marginRight: 3 }} />
+                        <Text style={[styles.paymentPillText, { color: isPaid ? '#22C55E' : '#F59E0B' }]}>{isPaid ? 'Paid' : 'Pending'}</Text>
+                      </View>
+                      <Text style={styles.totalAmount}>
                         ₱{(parseFloat(item.total_amount || item.total) || 0).toFixed(2)}
                       </Text>
                     </View>
-                    <View style={[styles.detailDivider]} />
-                    <View style={styles.orderDetail}>
-                      <MaterialCommunityIcons name={item.payment_status === 'paid' ? 'check-circle' : 'clock-outline'} size={16} color={item.payment_status === 'paid' ? '#22C55E' : '#F59E0B'} style={{ marginBottom: 4 }} />
-                      <Text style={styles.detailLabel}>Payment</Text>
-                      <Text style={[styles.detailValue, { color: item.payment_status === 'paid' ? '#22C55E' : '#F59E0B' }]}>
-                        {item.payment_status === 'paid' ? 'Paid' : 'Pending'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Footer */}
-                  <View style={styles.orderCardFooter}>
-                    <Text style={styles.viewDetails}>View Details</Text>
-                    <MaterialCommunityIcons name="chevron-right" size={18} color="#8B1A1A" />
                   </View>
                 </TouchableOpacity>
               );
@@ -381,25 +385,36 @@ const getStyles = (theme) => StyleSheet.create({
   loginButtonText: { color: '#fff', fontWeight: '600', fontSize: 15 },
   loadingText:   { marginTop: 12, fontSize: 16, color: theme.text },
   ordersList:    { paddingHorizontal: 14, paddingTop: 14, paddingBottom: 100 },
-  orderCard:     { backgroundColor: theme.cardBackground, borderRadius: 16, marginBottom: 14, overflow: 'hidden', elevation: 4, shadowColor: '#000', shadowOffset: {width:0,height:2}, shadowOpacity: 0.09, shadowRadius: 8, borderLeftWidth: 4 },
-  orderCardHeader:{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
-  orderHeaderLeft:{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 },
-  orderNumberContainer: { width: 46, height: 46, borderRadius: 13, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  orderInfo:     { flex: 1 },
+  orderCard:     { backgroundColor: theme.cardBackground, borderRadius: 16, marginBottom: 14, overflow: 'hidden', elevation: 3, shadowColor: '#000', shadowOffset: {width:0,height:2}, shadowOpacity: 0.07, shadowRadius: 8, borderWidth: 1, borderColor: theme.borderLight },
+
+  // Card header
+  cardHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 },
+  cardHeaderLeft:{ flex: 1, marginRight: 10 },
   orderRef:      { fontSize: 15, fontWeight: '700', color: theme.text, marginBottom: 3 },
-  orderDate:     { fontSize: 12, color: theme.textSecondary, fontWeight: '500' },
-  statusBadge:   { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, flexDirection: 'row', alignItems: 'center' },
-  statusText:    { color: '#fff', fontSize: 11, fontWeight: '700' },
-  miniProgress:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 12 },
-  miniDot:       { width: 8, height: 8, borderRadius: 4 },
-  miniLine:      { flex: 1, height: 2, marginHorizontal: 2 },
-  orderCardBody: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: theme.borderLight, justifyContent: 'space-around' },
-  orderDetail:   { alignItems: 'center', flex: 1 },
-  detailDivider: { width: 1, height: '100%', backgroundColor: theme.borderLight },
-  detailLabel:   { fontSize: 11, color: theme.textMuted, marginBottom: 3, fontWeight: '600' },
-  detailValue:   { fontSize: 14, fontWeight: '700', color: theme.text },
-  orderCardFooter:{ paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: theme.borderLight, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
-  viewDetails:   { fontSize: 13, fontWeight: '700', color: '#8B1A1A', marginRight: 4 },
+  orderDate:     { fontSize: 12, color: theme.textSecondary },
+  badgesRow:     { flexDirection: 'row', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' },
+  statusPill:    { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1.5 },
+  statusPillText:{ fontSize: 11, fontWeight: '700' },
+
+  // Card body
+  cardBody:      { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 16, paddingBottom: 14, borderTopWidth: 1, borderTopColor: theme.borderLight, paddingTop: 14, gap: 14 },
+  productThumb:  { width: 72, height: 72, borderRadius: 10, backgroundColor: '#F3F4F6' },
+  productThumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  itemsList:     { flex: 1 },
+  itemsLabel:    { fontSize: 10, fontWeight: '700', color: theme.textMuted, letterSpacing: 0.8, marginBottom: 8 },
+  itemChips:     { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  itemChip:      { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#8B1A1A', backgroundColor: '#FEF2F2', maxWidth: 160 },
+  itemChipText:  { fontSize: 12, color: '#8B1A1A', fontWeight: '600' },
+  moreItems:     { fontSize: 11, color: theme.textMuted, alignSelf: 'center', marginLeft: 2 },
+
+  // Card footer
+  cardFooter:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: theme.borderLight },
+  footerLeft:    {},
+  footerRight:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  totalLabel:    { fontSize: 12, color: theme.textMuted, fontWeight: '600' },
+  totalAmount:   { fontSize: 16, fontWeight: '800', color: '#8B1A1A' },
+  paymentPill:   { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, borderWidth: 1.5 },
+  paymentPillText:{ fontSize: 11, fontWeight: '700' },
 });
 
 export default OrdersScreen;
