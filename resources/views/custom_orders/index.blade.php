@@ -193,7 +193,7 @@
                                             <span class="text-white font-bold text-sm">{{ substr($order->batch_order_number ?? $order->id, 0, 2) }}</span>
                                         </div>
                                         <div>
-                                            <span class="text-sm font-semibold text-gray-900">{{ $order->batch_order_number ?? '#'.$order->id }}</span>
+                                            <span class="text-sm font-semibold text-gray-900">{{ $order->display_ref }}</span>
                                             @if($isGroupedSubmission)
                                                 <div class="mt-1 inline-flex items-center px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[11px] font-semibold">{{ $currentBatchMeta['item_count'] }} items</div>
                                             @endif

@@ -276,7 +276,7 @@
                     @endphp
                     @if($chatOrder)
                         <a href="{{ route('admin.custom-orders.show', $chatOrder->id) }}" class="cs-action-btn green">
-                            <i class="fas fa-box" style="width:14px;"></i> Custom Order {{ $chatOrder->batch_order_number ?? '#'.$chatOrder->id }}
+                            <i class="fas fa-box" style="width:14px;"></i> Custom Order {{ $chatOrder->display_ref }}
                         </a>
                     @endif
                     @if($chat->user_id)

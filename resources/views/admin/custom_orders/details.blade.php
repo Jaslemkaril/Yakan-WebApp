@@ -164,7 +164,7 @@
                 </svg>
                 Back to Orders
             </a>
-            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 break-words">Order {{ $order->batch_order_number ?? '#'.$order->id }} - Details</h1>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 break-words">Order {{ $order->display_ref }} - Details</h1>
             <p class="text-gray-600 mt-1">Created {{ $order->created_at->format('M d, Y \a\t h:i A') }}</p>
             <p class="text-sm font-semibold mt-1" style="color:#800000;">
                 Estimated Turnaround: {{ $customOrderEstimatedDays }} day{{ $customOrderEstimatedDays === 1 ? '' : 's' }}

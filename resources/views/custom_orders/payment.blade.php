@@ -398,7 +398,7 @@
                     @if($isBatchPayment)
                         Batch Payment{{ $batchOrderNumber ? ' • ' . $batchOrderNumber : '' }}
                     @else
-                        Order {{ $order->batch_order_number ?? '#'.$order->id }}
+                        Order {{ $order->display_ref }}
                     @endif
                 </p>
             </div>

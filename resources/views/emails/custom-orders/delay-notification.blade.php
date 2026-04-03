@@ -73,7 +73,7 @@
     <div class="content">
         <p>Dear {{ $order->user->name ?? 'Valued Customer' }},</p>
         
-        <p>We wanted to inform you about a delay in the production of your custom order <strong>{{ $order->batch_order_number ?? '#'.$order->id }}</strong>.</p>
+        <p>We wanted to inform you about a delay in the production of your custom order <strong>{{ $order->display_ref }}</strong>.</p>
         
         <div class="delay-box">
             <h3 style="color: #ff9800; margin-top: 0;">Reason for Delay:</h3>

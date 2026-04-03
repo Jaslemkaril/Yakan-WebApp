@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('title', 'Order Submitted Successfully - Custom Order')
 
@@ -129,7 +129,7 @@
                             @if($bOrder->estimated_price)
                             <div>
                                 <p class="text-xs text-gray-500 mb-0.5">Est. Price</p>
-                                <p class="font-semibold" style="color:#800000;">₱{{ number_format($bOrder->estimated_price, 2) }}</p>
+                                <p class="font-semibold" style="color:#800000;">?{{ number_format($bOrder->estimated_price, 2) }}</p>
                             </div>
                             @endif
                             <div>
@@ -144,7 +144,7 @@
                         @endif
                         <div class="mt-3">
                             <a href="{{ route('custom_orders.show', $bOrder->id) }}" class="text-xs font-semibold hover:underline" style="color:#800000;">
-                                View Order Details →
+                                View Order Details ?
                             </a>
                         </div>
                     </div>
@@ -155,7 +155,7 @@
                 @if($totalEstimated > 0)
                 <div class="mt-5 pt-4 border-t flex justify-between items-center" style="border-color:#e0b0b0;">
                     <span class="text-sm font-semibold text-gray-700">Combined Estimated Total:</span>
-                    <span class="text-xl font-bold" style="color:#800000;">₱{{ number_format($totalEstimated, 2) }}</span>
+                    <span class="text-xl font-bold" style="color:#800000;">?{{ number_format($totalEstimated, 2) }}</span>
                 </div>
                 @endif
             </div>
@@ -272,7 +272,7 @@
 
                     <div>
                         <p class="text-sm text-gray-500 mb-1">Order Number</p>
-                        <p class="text-lg font-semibold text-gray-900">{{ $order->batch_order_number ?? '#'.$order->id }}</p>
+                        <p class="text-lg font-semibold text-gray-900">{{ $order->display_ref }}</p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500 mb-1">Status</p>

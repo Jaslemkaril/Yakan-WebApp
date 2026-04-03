@@ -313,13 +313,13 @@
                         <td class="px-5 py-3.5">
                             @if($isBatchPrimary)
                                 <div class="flex items-center gap-1 mb-0.5">
-                                    <span class="font-bold text-gray-900">{{ $order->batch_order_number ?? '#'.$order->id }}</span>
+                                    <span class="font-bold text-gray-900">{{ $order->display_ref }}</span>
                                     <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold" style="background-color:#f5e6e8; color:#800000;">
                                         {{ $batchCount }} {{ $batchCount === 1 ? 'item' : 'items' }}
                                     </span>
                                 </div>
                             @else
-                                <span class="font-bold text-gray-900">{{ $order->batch_order_number ?? '#'.$order->id }}</span>
+                                <span class="font-bold text-gray-900">{{ $order->display_ref }}</span>
                             @endif
                             <div class="mt-0.5">
                                 @if($order->delivery_type === 'pickup')

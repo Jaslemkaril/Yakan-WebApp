@@ -7,7 +7,7 @@
         <!-- Header -->
         <div class="mb-6">
             <h1 class="text-3xl font-bold text-gray-900 mb-2">Confirm Payment</h1>
-            <p class="text-gray-600">Order {{ $order->batch_order_number ?? '#'.$order->id }} • {{ ucfirst($order->payment_method) }}</p>
+            <p class="text-gray-600">Order {{ $order->display_ref }} • {{ ucfirst($order->payment_method) }}</p>
         </div>
 
         @if(session('success'))

@@ -24,7 +24,7 @@
     <div class="bg-white shadow-xl rounded-2xl border-2 border-[#e0b0b0]">
         <div class="px-6 py-6 border-b-2 border-[#e0b0b0] bg-gradient-to-r from-[#fef2f2] to-white flex items-center justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-[#800000]">Custom Order {{ $order->batch_order_number ?? '#'.$order->id }}</h1>
+                <h1 class="text-3xl font-bold text-[#800000]">Custom Order {{ $order->display_ref }}</h1>
                 <p class="text-gray-600 mt-1">Manage and track this custom order</p>
             </div>
             <div class="flex items-center gap-3">

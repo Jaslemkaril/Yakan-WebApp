@@ -133,6 +133,19 @@ class CustomOrder extends Model
     }
 
     /**
+     * Get a human-readable order reference.
+     * Uses batch_order_number for batches; otherwise YYMMDD + zero-padded ID.
+     */
+    public function getDisplayRefAttribute(): string
+    {
+        if (!empty($this->batch_order_number)) {
+            return $this->batch_order_number;
+        }
+        $date = $this->created_at ? $this->created_at->format('ymd') : date('ymd');
+        return 'CO' . $date . str_pad((string) $this->id, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
      * Relation to User with optimized select
      */
     public function user()
