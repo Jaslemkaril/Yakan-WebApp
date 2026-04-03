@@ -99,85 +99,65 @@ const CheckoutScreen = ({ navigation }) => {
       }
 
       const cityLower     = (selectedAddr.city     || '').toLowerCase();
-      const regionLower   = (selectedAddr.region   || '').toLowerCase();
       const provinceLower = (selectedAddr.province || '').toLowerCase();
 
-      // Zone 1 — ₱100: Zamboanga Peninsula + BARMM islands (nearest to store)
-      const zone1Cities = [
-        'dipolog', 'dapitan', 'pagadian', 'isabela city',
-        'ipil', 'jolo', 'bongao', 'marawi', 'lamitan',
-      ];
-      if (
-        cityLower.includes('zamboanga') ||
-        regionLower.includes('zamboanga') ||
-        regionLower.includes('region ix') ||
-        provinceLower.includes('zamboanga') ||
-        provinceLower.includes('basilan') ||
-        provinceLower.includes('sulu') ||
-        provinceLower.includes('tawi') ||
-        regionLower.includes('barmm') ||
-        regionLower.includes('bangsamoro') ||
-        zone1Cities.some(c => cityLower.includes(c))
-      ) {
+      // Helper — checks if city or province contains any of the keywords
+      const matchesAny = (keywords) =>
+        keywords.some(k => cityLower.includes(k) || provinceLower.includes(k));
+
+      // Zone 1 — ₱100: Zamboanga Peninsula + BARMM
+      // (store is in Zamboanga City — this is the base/nearest zone)
+      if (matchesAny([
+        'zamboanga', 'basilan', 'sulu', 'tawi',
+        'maguindanao', 'lanao del sur', 'cotabato',
+        'dipolog', 'dapitan', 'pagadian', 'ipil',
+        'jolo', 'bongao', 'marawi', 'lamitan', 'isabela city',
+      ])) {
         setShippingFee(100);
         console.log(`[Checkout] Zone 1 (₱100) for "${selectedAddr.city}, ${selectedAddr.province}"`);
         return;
       }
 
-      // Zone 2 — ₱180: Other Mindanao (Davao, Northern Mindanao, SOCCSKSARGEN, Caraga)
-      const zone2Cities = [
-        'davao', 'digos', 'tagum', 'panabo',
-        'general santos', 'koronadal', 'kidapawan',
-        'cagayan de oro', 'iligan', 'ozamiz',
-        'butuan', 'surigao', 'malaybalay',
-      ];
-      if (
-        regionLower.includes('mindanao') ||
-        regionLower.includes('davao') ||
-        provinceLower.includes('davao') ||
-        regionLower.includes('soccsksargen') ||
-        regionLower.includes('caraga') ||
-        regionLower.includes('northern mindanao') ||
-        zone2Cities.some(c => cityLower.includes(c))
-      ) {
+      // Zone 2 — ₱180: Rest of Mindanao
+      if (matchesAny([
+        'davao', 'sarangani', 'south cotabato', 'sultan kudarat',
+        'north cotabato', 'misamis', 'bukidnon', 'lanao del norte',
+        'camiguin', 'agusan', 'surigao', 'dinagat',
+        'tagum', 'digos', 'panabo', 'general santos',
+        'koronadal', 'kidapawan', 'cagayan de oro',
+        'iligan', 'ozamiz', 'butuan', 'malaybalay',
+      ])) {
         setShippingFee(180);
         console.log(`[Checkout] Zone 2 (₱180) for "${selectedAddr.city}, ${selectedAddr.province}"`);
         return;
       }
 
       // Zone 3 — ₱250: Visayas
-      const zone3Cities = [
-        'cebu', 'iloilo', 'bacolod', 'tacloban',
-        'dumaguete', 'tagbilaran', 'ormoc', 'calbayog', 'roxas',
-      ];
-      if (
-        regionLower.includes('visayas') ||
-        zone3Cities.some(c => cityLower.includes(c))
-      ) {
+      if (matchesAny([
+        'cebu', 'bohol', 'negros', 'leyte', 'samar', 'biliran',
+        'aklan', 'antique', 'capiz', 'iloilo', 'guimaras',
+        'bacolod', 'tacloban', 'dumaguete', 'tagbilaran',
+        'ormoc', 'calbayog', 'roxas city',
+      ])) {
         setShippingFee(250);
         console.log(`[Checkout] Zone 3 (₱250) for "${selectedAddr.city}, ${selectedAddr.province}"`);
         return;
       }
 
-      // Zone 4 — ₱300: NCR + Metro Manila + nearby Luzon
-      const zone4Cities = [
-        'quezon city', 'makati', 'pasig', 'taguig',
-        'caloocan', 'antipolo', 'angeles', 'san fernando', 'batangas', 'lucena',
-      ];
-      if (
-        regionLower.includes('ncr') ||
-        regionLower.includes('metro manila') ||
-        cityLower.includes('manila') ||
-        regionLower.includes('calabarzon') ||
-        regionLower.includes('central luzon') ||
-        zone4Cities.some(c => cityLower.includes(c))
-      ) {
+      // Zone 4 — ₱300: NCR, Metro Manila, Central Luzon, CALABARZON
+      if (matchesAny([
+        'manila', 'makati', 'pasig', 'taguig', 'caloocan',
+        'quezon city', 'antipolo', 'bulacan', 'cavite',
+        'laguna', 'batangas', 'rizal', 'pampanga',
+        'tarlac', 'nueva ecija', 'bataan', 'zambales', 'aurora',
+        'angeles', 'san fernando', 'lucena', 'lipa',
+      ])) {
         setShippingFee(300);
         console.log(`[Checkout] Zone 4 (₱300) for "${selectedAddr.city}, ${selectedAddr.province}"`);
         return;
       }
 
-      // Zone 5 — ₱350: Far Luzon / remote
+      // Zone 5 — ₱350: Far Luzon (Ilocos, CAR, Cagayan Valley, Bicol, MIMAROPA)
       setShippingFee(350);
       console.log(`[Checkout] Zone 5 (₱350) for "${selectedAddr.city}, ${selectedAddr.province}"`);
     } catch (error) {

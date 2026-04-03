@@ -990,70 +990,57 @@ HTML
             return 0;
         }
 
-        $cityLower = strtolower((string) ($address->city ?? ''));
-        $regionLower = strtolower((string) ($address->province ?? $address->region ?? ''));
+        $cityLower     = strtolower((string) ($address->city     ?? ''));
+        $provinceLower = strtolower((string) ($address->province ?? ''));
 
-        // Zone 1 — ₱100: Zamboanga City + Peninsula + BARMM
-        if (
-            str_contains($cityLower, 'zamboanga') ||
-            str_contains($regionLower, 'zamboanga') ||
-            str_contains($regionLower, 'barmm') ||
-            str_contains($regionLower, 'bangsamoro') ||
-            in_array($cityLower, [
-                'dipolog city', 'dapitan city', 'pagadian city', 'isabela city',
-                'zamboanga del norte', 'zamboanga del sur', 'zamboanga sibugay',
-                'ipil', 'jolo', 'bongao', 'cotabato city', 'marawi city', 'lamitan city'
-            ])
-        ) {
+        $matches = fn(array $keywords): bool => collect($keywords)->contains(
+            fn($k) => str_contains($cityLower, $k) || str_contains($provinceLower, $k)
+        );
+
+        // Zone 1 — ₱100: Zamboanga Peninsula + BARMM (store base)
+        if ($matches([
+            'zamboanga', 'basilan', 'sulu', 'tawi',
+            'maguindanao', 'lanao del sur', 'cotabato',
+            'dipolog', 'dapitan', 'pagadian', 'ipil',
+            'jolo', 'bongao', 'marawi', 'lamitan', 'isabela city',
+        ])) {
             return 100;
         }
 
-        // Zone 2 — ₱180: Other Mindanao
-        if (
-            str_contains($regionLower, 'mindanao') ||
-            str_contains($regionLower, 'davao') ||
-            str_contains($regionLower, 'soccsksargen') ||
-            str_contains($regionLower, 'caraga') ||
-            str_contains($regionLower, 'northern mindanao') ||
-            in_array($cityLower, [
-                'davao city', 'digos city', 'tagum city', 'panabo city',
-                'general santos city', 'koronadal city', 'kidapawan city',
-                'cagayan de oro city', 'iligan city', 'ozamiz city',
-                'butuan city', 'surigao city', 'malaybalay city'
-            ])
-        ) {
+        // Zone 2 — ₱180: Rest of Mindanao
+        if ($matches([
+            'davao', 'sarangani', 'south cotabato', 'sultan kudarat',
+            'north cotabato', 'misamis', 'bukidnon', 'lanao del norte',
+            'camiguin', 'agusan', 'surigao', 'dinagat',
+            'tagum', 'digos', 'panabo', 'general santos',
+            'koronadal', 'kidapawan', 'cagayan de oro',
+            'iligan', 'ozamiz', 'butuan', 'malaybalay',
+        ])) {
             return 180;
         }
 
         // Zone 3 — ₱250: Visayas
-        if (
-            str_contains($regionLower, 'visayas') ||
-            in_array($cityLower, [
-                'cebu city', 'iloilo city', 'bacolod city',
-                'tacloban city', 'dumaguete city', 'tagbilaran city',
-                'ormoc city', 'calbayog city', 'roxas city'
-            ])
-        ) {
+        if ($matches([
+            'cebu', 'bohol', 'negros', 'leyte', 'samar', 'biliran',
+            'aklan', 'antique', 'capiz', 'iloilo', 'guimaras',
+            'bacolod', 'tacloban', 'dumaguete', 'tagbilaran',
+            'ormoc', 'calbayog', 'roxas city',
+        ])) {
             return 250;
         }
 
-        // Zone 4 — ₱300: NCR + nearby Luzon
-        if (
-            str_contains($regionLower, 'ncr') ||
-            str_contains($regionLower, 'metro manila') ||
-            str_contains($cityLower, 'manila') ||
-            str_contains($regionLower, 'calabarzon') ||
-            str_contains($regionLower, 'central luzon') ||
-            in_array($cityLower, [
-                'quezon city', 'makati city', 'pasig city', 'taguig city',
-                'caloocan city', 'antipolo city', 'angeles city',
-                'san fernando city', 'batangas city', 'lucena city'
-            ])
-        ) {
+        // Zone 4 — ₱300: NCR, Metro Manila, Central Luzon, CALABARZON
+        if ($matches([
+            'manila', 'makati', 'pasig', 'taguig', 'caloocan',
+            'quezon city', 'antipolo', 'bulacan', 'cavite',
+            'laguna', 'batangas', 'rizal', 'pampanga',
+            'tarlac', 'nueva ecija', 'bataan', 'zambales', 'aurora',
+            'angeles', 'san fernando', 'lucena', 'lipa',
+        ])) {
             return 300;
         }
 
-        // Zone 5 — ₱350: Far Luzon / remote
+        // Zone 5 — ₱350: Far Luzon (Ilocos, CAR, Cagayan Valley, Bicol, MIMAROPA)
         return 350;
     }
 
