@@ -13,11 +13,24 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
+import { useCart } from '../context/CartContext';
 
 export default function SettingsScreen({ navigation }) {
   const [notifications, setNotifications] = useState(true);
   const [emailUpdates, setEmailUpdates] = useState(false);
   const { isDarkMode, toggleDarkMode, theme } = useTheme();
+  const { logout } = useCart();
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Logout', style: 'destructive', onPress: () => logout() },
+      ]
+    );
+  };
 
   const handleClearCache = () => {
     Alert.alert(
@@ -236,6 +249,18 @@ export default function SettingsScreen({ navigation }) {
           </Text>
         </View>
 
+        {/* Logout Button */}
+        <TouchableOpacity
+          style={[styles.logoutButton, { borderColor: '#EF4444' }]}
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
+          <View style={styles.logoutIconContainer}>
+            <MaterialCommunityIcons name="logout" size={22} color="#EF4444" />
+          </View>
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+
         <View style={{ height: 30 }} />
       </ScrollView>
     </View>
@@ -417,6 +442,30 @@ const styles = StyleSheet.create({
   versionText: {
     fontSize: 12,
     fontWeight: '600',
+  },  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginTop: 24,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    backgroundColor: '#FEF2F2',
+  },
+  logoutIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#EF4444',
+    letterSpacing: 0.2,
   },
   copyrightText: {
     fontSize: 11,
