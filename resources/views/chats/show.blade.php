@@ -556,7 +556,7 @@
                                             {{-- Order Reference --}}
                                             <div class="mb-4 pb-3 border-b border-blue-200">
                                                 <p class="text-xs font-semibold text-gray-600 mb-1">Custom Order:</p>
-                                                <p class="text-lg font-bold text-gray-900">#{{ $chatOrder->id }}</p>
+                                                <p class="text-lg font-bold text-gray-900">{{ $chatOrder->batch_order_number ?? '#'.$chatOrder->id }}</p>
                                             </div>
                                             
                                             @if($chatOrder->payment_method === 'bank_transfer')
@@ -679,7 +679,7 @@
                                             
                                             <div class="bg-white/60 rounded-lg p-3">
                                                 <p class="text-xs font-semibold text-gray-600 mb-1">Custom Order:</p>
-                                                <p class="text-sm font-bold text-gray-900">#{{ $chatOrder->id }}</p>
+                                                <p class="text-sm font-bold text-gray-900">{{ $chatOrder->batch_order_number ?? '#'.$chatOrder->id }}</p>
                                             </div>
                                         </div>
                                     @endif

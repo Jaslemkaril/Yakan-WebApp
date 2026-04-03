@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice - Order #{{ $order->id }}</title>
+    <title>Invoice - Order {{ $order->order_ref ?? '#'.$order->id }}</title>
     <style>
         * {
             margin: 0;

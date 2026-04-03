@@ -46,7 +46,7 @@
                 @if($isBatchPayment)
                     Complete one payment for {{ $paymentOrders->count() }} custom items{{ $batchOrderNumber ? ' • ' . $batchOrderNumber : '' }}
                 @else
-                    Complete your payment for Custom Order #{{ $order->id }}
+                    Complete your payment for Custom Order {{ $order->batch_order_number ?? '#'.$order->id }}
                 @endif
             </p>
         </div>
@@ -254,7 +254,7 @@
                     <div class="space-y-2 text-sm text-gray-600 mb-6">
                         <div class="flex justify-between">
                             <span>Order ID:</span>
-                            <span class="font-medium text-gray-900">#{{ $order->id }}</span>
+                            <span class="font-medium text-gray-900">{{ $order->batch_order_number ?? '#'.$order->id }}</span>
                         </div>
                         @php
                             $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');

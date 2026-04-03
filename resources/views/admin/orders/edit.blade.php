@@ -8,7 +8,7 @@
     <div class="bg-[#800000] rounded-2xl p-8 text-white shadow-xl">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
-                <h1 class="text-3xl font-bold mb-2">Edit Order #{{ $order->id }}</h1>
+                <h1 class="text-3xl font-bold mb-2">Edit Order {{ $order->order_ref ?? '#'.$order->id }}</h1>
                 <p class="text-red-100 text-lg">Modify order details and items</p>
                 @if($order->status !== 'pending')
                     <div class="mt-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">

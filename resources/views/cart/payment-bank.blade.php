@@ -53,7 +53,7 @@
                             <div class="flex-shrink-0 w-10 h-10 bg-red-100 text-[#800000] rounded-full flex items-center justify-center font-bold">3</div>
                             <div class="flex-1">
                                 <h3 class="font-semibold text-gray-900 mb-2">Include your Order ID in the message</h3>
-                                <p class="text-gray-600 text-sm">Include Order ID: <span class="font-bold text-gray-900">#{{ $order->id }}</span> in the payment message/notes.</p>
+                                <p class="text-gray-600 text-sm">Include Order ID: <span class="font-bold text-gray-900">{{ $order->order_ref ?? '#'.$order->id }}</span> in the payment message/notes.</p>
                             </div>
                         </div>
                         <!-- Maya Step 4 -->
@@ -78,7 +78,7 @@
                             <div class="flex-shrink-0 w-10 h-10 bg-red-100 text-[#800000] rounded-full flex items-center justify-center font-bold">2</div>
                             <div class="flex-1">
                                 <h3 class="font-semibold text-gray-900 mb-2">Include your Order ID in reference</h3>
-                                <p class="text-gray-600 text-sm">Make sure to include Order ID: <span class="font-bold text-gray-900">#{{ $order->id }}</span> in your transfer reference.</p>
+                                <p class="text-gray-600 text-sm">Make sure to include Order ID: <span class="font-bold text-gray-900">{{ $order->order_ref ?? '#'.$order->id }}</span> in your transfer reference.</p>
                             </div>
                         </div>
                         <!-- Bank Step 3 -->
@@ -191,7 +191,7 @@
                     <div class="mt-6 pt-6 border-t border-gray-200 space-y-2 text-sm text-gray-600">
                         <div class="flex justify-between">
                             <span>Order ID:</span>
-                            <span class="font-medium text-gray-900">#{{ $order->id }}</span>
+                            <span class="font-medium text-gray-900">{{ $order->order_ref ?? '#'.$order->id }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span>Payment Method:</span>

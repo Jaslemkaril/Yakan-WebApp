@@ -77,7 +77,7 @@
                             <div class="flex items-center">
                                 <div class="w-8 h-8 rounded-full text-white text-sm font-bold flex items-center justify-center mr-3 flex-shrink-0" style="background-color:#800000;">{{ $idx + 1 }}</div>
                                 <div>
-                                    <p class="font-bold text-gray-900">Order #{{ $bOrder->id }}</p>
+                                    <p class="font-bold text-gray-900">Order {{ $bOrder->batch_order_number ?? '#'.$bOrder->id }}</p>
                                     <p class="text-xs text-gray-500">{{ $bOrder->created_at->format('M d, Y g:i A') }}</p>
                                 </div>
                             </div>

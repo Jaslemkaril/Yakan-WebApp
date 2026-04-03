@@ -244,7 +244,7 @@
                     <div class="space-y-2 text-sm text-gray-600 mb-6">
                         <div class="flex justify-between">
                             <span>Order ID:</span>
-                            <span class="font-medium text-gray-900">#{{ $order->id }}</span>
+                            <span class="font-medium text-gray-900">{{ $order->order_ref ?? '#'.$order->id }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span>Delivery Option:</span>
