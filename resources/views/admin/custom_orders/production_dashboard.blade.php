@@ -262,7 +262,7 @@
                 <div class="timeline-item {{ $order->status }}">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="font-medium text-gray-900">Order #{{ $order->id }}</p>
+                            <p class="font-medium text-gray-900">Order {{ $order->batch_order_number ?? '#'.$order->id }}</p>
                             <p class="text-sm text-gray-600">{{ $order->user->name ?? 'Guest' }}</p>
                             <p class="text-xs text-gray-500">{{ $order->created_at->diffForHumans() }}</p>
                         </div>
