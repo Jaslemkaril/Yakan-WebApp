@@ -272,7 +272,7 @@
 
                     <div>
                         <p class="text-sm text-gray-500 mb-1">Order Number</p>
-                        <p class="text-lg font-semibold text-gray-900">#{{ $order->id }}</p>
+                        <p class="text-lg font-semibold text-gray-900">{{ $order->batch_order_number ?? '#'.$order->id }}</p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500 mb-1">Status</p>

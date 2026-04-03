@@ -251,7 +251,7 @@
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Custom Order Details</h1>
-                    <p class="text-gray-600">Custom Order #{{ $order->id }}</p>
+                    <p class="text-gray-600">Custom Order {{ $order->batch_order_number ?? '#'.$order->id }}</p>
                     <p class="text-sm font-semibold mt-1" style="color:#800000;">
                         Estimated Turnaround: {{ $customOrderEstimatedDays }} day{{ $customOrderEstimatedDays === 1 ? '' : 's' }}
                         @if($estimatedCompletionDate)
@@ -1094,7 +1094,7 @@
                         <!-- Order ID -->
                         <div class="flex items-center justify-between pb-3 border-b border-gray-200">
                             <span class="text-sm font-medium text-gray-600">Order ID</span>
-                            <span class="text-sm font-bold text-gray-900">#{{ $order->id }}</span>
+                            <span class="text-sm font-bold text-gray-900">{{ $order->batch_order_number ?? '#'.$order->id }}</span>
                         </div>
 
                         <!-- Status -->
@@ -1758,7 +1758,7 @@
                                 @if($isBatchOrder)
                                     Batch Order ({{ $batchUnpaidOrders->count() }} items)
                                 @else
-                                    Order #{{ $order->id }}
+                                    Order {{ $order->batch_order_number ?? '#'.$order->id }}
                                 @endif
                             </p>
                         </div>
@@ -1830,7 +1830,7 @@
                         <div class="bg-white rounded-2xl p-6 border-2 mb-6 max-w-md mx-auto shadow-lg" style="border-color:#fbbf24;">
                             <p class="text-sm font-semibold text-amber-700 mb-2 uppercase tracking-wide">Amount Submitted</p>
                             <p class="text-5xl font-black mb-3 text-amber-600">₱{{ number_format($order->final_price, 2) }}</p>
-                            <p class="text-xs text-gray-500">Order #{{ $order->id }}</p>
+                            <p class="text-xs text-gray-500">Order {{ $order->batch_order_number ?? '#'.$order->id }}</p>
                         </div>
                     @endif
 
@@ -2066,7 +2066,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200" style="background-color:#fff5f5;">
-            <p class="font-semibold text-gray-800">Custom Order #{{ $order->id }} — {{ $order->product->name ?? 'Custom Fabric' }}</p>
+            <p class="font-semibold text-gray-800">Custom Order {{ $order->batch_order_number ?? '#'.$order->id }} — {{ $order->product->name ?? 'Custom Fabric' }}</p>
             <p class="text-sm text-gray-500">Share your experience with this custom order</p>
         </div>
 

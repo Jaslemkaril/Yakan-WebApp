@@ -190,10 +190,10 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
                                         <div class="w-10 h-10 bg-gradient-to-br from-red-700 to-red-800 rounded-lg flex items-center justify-center mr-3">
-                                            <span class="text-white font-bold text-sm">#{{ substr($order->id, 0, 2) }}</span>
+                                            <span class="text-white font-bold text-sm">{{ substr($order->batch_order_number ?? $order->id, 0, 2) }}</span>
                                         </div>
                                         <div>
-                                            <span class="text-sm font-semibold text-gray-900">#{{ $order->id }}</span>
+                                            <span class="text-sm font-semibold text-gray-900">{{ $order->batch_order_number ?? '#'.$order->id }}</span>
                                             @if($isGroupedSubmission)
                                                 <div class="mt-1 inline-flex items-center px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[11px] font-semibold">{{ $currentBatchMeta['item_count'] }} items</div>
                                             @endif

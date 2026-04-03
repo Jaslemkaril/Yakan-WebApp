@@ -1021,7 +1021,7 @@
                                             <div>
                                                 <div class="flex items-center space-x-2">
                                                     <p class="font-bold text-gray-900">
-                                                        #{{ $order->id ?? 'N/A' }}
+                                                        #{{ $order->order_ref ?? $order->id ?? 'N/A' }}
                                                     </p>
                                                 </div>
                                                 <div class="flex items-center space-x-2 text-sm text-gray-600 mt-1">

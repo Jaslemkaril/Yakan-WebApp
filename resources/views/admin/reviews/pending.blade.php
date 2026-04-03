@@ -104,7 +104,7 @@
                             @if($review->customOrder)
                                 <div>
                                     <span class="font-medium">Custom Order:</span>
-                                    <a href="{{ route('custom_orders.show', $review->customOrder) }}" class="text-maroon-600 hover:text-maroon-700">#{{ $review->customOrder->id }}</a>
+                                    <a href="{{ route('custom_orders.show', $review->customOrder) }}" class="text-maroon-600 hover:text-maroon-700">{{ $review->customOrder->batch_order_number ?? '#'.$review->customOrder->id }}</a>
                                 </div>
                             @endif
                         </div>

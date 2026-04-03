@@ -75,7 +75,7 @@
         <p>Thank you for your patience! Our master craftsmen have carefully reviewed your custom order specifications and calculated the final price.</p>
         
         <div class="price-box">
-            <h3>Order #{{ $order->id }}</h3>
+            <h3>Order {{ $order->batch_order_number ?? '#'.$order->id }}</h3>
             <div class="price">₱{{ $finalPrice }}</div>
             <p>This price includes materials, craftsmanship, and delivery</p>
         </div>
