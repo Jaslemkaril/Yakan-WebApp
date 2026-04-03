@@ -79,7 +79,7 @@ class AuthController extends Controller
                         'id' => $user->id,
                         'first_name' => $user->first_name,
                         'last_name' => $user->last_name,
-                        'name' => $user->first_name . ' ' . $user->last_name,
+                        'name' => trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: ($user->name ?? 'User'),
                         'email' => $user->email,
                         'role' => $user->role,
                         'created_at' => $user->created_at,
@@ -214,10 +214,7 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'first_name' => $user->first_name,
                 'last_name' => $user->last_name,
-                'name' => $user->first_name . ' ' . $user->last_name,
-                'email' => $user->email,
-                'role' => $user->role,
-                'created_at' => $user->created_at,
+                'name' => trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: ($user->name ?? 'User'),
             ]
         ]);
     }

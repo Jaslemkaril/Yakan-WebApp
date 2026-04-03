@@ -85,12 +85,14 @@ const AccountScreen = ({ navigation }) => {
   };
 
   const getInitials = (name) => {
-    if (!name) return 'U';
-    const names = name.split(' ');
-    if (names.length >= 2) {
-      return (names[0][0] + names[1][0]).toUpperCase();
+    if (!name || typeof name !== 'string') return 'U';
+    const trimmed = name.trim();
+    if (!trimmed) return 'U';
+    const parts = trimmed.split(' ').filter(p => p.length > 0);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
     }
-    return name.substring(0, 2).toUpperCase();
+    return trimmed.substring(0, 2).toUpperCase() || 'U';
   };
 
   // Show loading state while auth initializes — prevents blank/crash renders
