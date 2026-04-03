@@ -90,7 +90,7 @@
                                 @else
                                     <span class="text-xs font-semibold px-2 py-0.5 bg-red-50 text-[#800000] rounded">🛒 Order</span>
                                 @endif
-                                <h3 class="text-lg font-bold text-gray-900">#{{ $order->id }}</h3>
+                                <h3 class="text-lg font-bold text-gray-900">{{ $order->order_ref ?? '#'.$order->id }}</h3>
                                 <span class="status-badge status-{{ str_replace(' ', '_', $order->status) }}">
                                     {{ $statusLabel }}
                                 </span>

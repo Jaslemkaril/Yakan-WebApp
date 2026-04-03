@@ -154,7 +154,7 @@
                             @foreach($recent_orders as $order)
                             <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
                                 <div class="flex items-center justify-between mb-2">
-                                    <span class="font-medium text-gray-900">#{{ $order->id }}</span>
+                                    <span class="font-medium text-gray-900">{{ $order->order_ref ?? '#'.$order->id }}</span>
                                     <span class="text-xs px-2 py-1 rounded-full font-medium
                                         @if($order->payment_status == 'paid') bg-green-100 text-green-800
                                         @elseif($order->payment_status == 'failed') bg-red-100 text-red-800

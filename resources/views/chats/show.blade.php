@@ -515,7 +515,7 @@
                                                 </div>
                                                 <div>
                                                     <h3 class="font-bold text-green-900 text-lg">Quote Accepted!</h3>
-                                                    <p class="text-xs text-green-700">Custom Order #{{ $chatOrder->id }}</p>
+                                                    <p class="text-xs text-green-700">Custom Order {{ $chatOrder->order_ref ?? '#'.$chatOrder->id }}</p>
                                                 </div>
                                             </div>
                                             

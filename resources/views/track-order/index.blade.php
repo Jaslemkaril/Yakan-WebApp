@@ -159,7 +159,7 @@
                                         @else
                                             <span class="inline-block px-2 py-0.5 bg-red-50 text-[#800000] rounded text-xs font-semibold">🛒 Order</span>
                                         @endif
-                                        &nbsp;#{{ $order->id }}
+                                        &nbsp;{{ $order->order_ref ?? '#'.$order->id }}
                                     </p>
                                 </div>
                                 <span class="px-3 py-1 rounded-full text-xs font-semibold {{ $badgeClass }}">
