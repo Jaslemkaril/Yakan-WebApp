@@ -261,7 +261,21 @@ export default function PaymentScreen({ navigation, route }) {
           if (checkoutUrl) {
             setIsProcessing(false);
             await WebBrowser.openBrowserAsync(checkoutUrl);
-            // After browser closes, go straight to order details
+            // After browser closes, sync payment status from Maya before navigating
+            setIsProcessing(true);
+            try {
+              const statusRes = await ApiService.getMayaPaymentStatus(backendId);
+              const paymentStatus = statusRes?.data?.data?.payment_status ?? statusRes?.data?.payment_status;
+              const orderStatus   = statusRes?.data?.data?.status        ?? statusRes?.data?.status;
+              if (paymentStatus === 'paid' || paymentStatus === 'verified') {
+                finalOrderData.status = 'payment_verified';
+                finalOrderData.paymentStatus = 'paid';
+              }
+              if (orderStatus) finalOrderData.orderStatus = orderStatus;
+            } catch (_) {
+              // silently ignore — fall back to pending state
+            }
+            setIsProcessing(false);
             await updateOrderInStorage(finalOrderData);
             clearCart();
             notifyOrderCreated(orderData.orderRef);
