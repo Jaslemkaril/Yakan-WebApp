@@ -117,9 +117,17 @@ class Order extends Model
      */
     public static function generateOrderRef(): string
     {
-        $date = now()->format('Ymd');
-        $count = static::whereDate('created_at', now())->count() + 1;
-        return sprintf('ORD-%s-%03d', $date, $count);
+        $prefix = now()->format('ymd'); // YYMMDD
+        $random = str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
+        $ref    = $prefix . $random;
+
+        // Ensure uniqueness
+        while (static::where('order_ref', $ref)->exists()) {
+            $random = str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
+            $ref    = $prefix . $random;
+        }
+
+        return $ref;
     }
 
     /**

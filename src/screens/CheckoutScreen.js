@@ -279,7 +279,12 @@ const CheckoutScreen = ({ navigation }) => {
   const total = subtotal + shippingFeeDisplay - discount;
 
   const generateOrderRef = () => {
-    return 'ORD-' + Date.now().toString().slice(-8);
+    const now = new Date();
+    const yy  = String(now.getFullYear()).slice(-2);
+    const mm  = String(now.getMonth() + 1).padStart(2, '0');
+    const dd  = String(now.getDate()).padStart(2, '0');
+    const rand = String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
+    return yy + mm + dd + rand;
   };
 
   // Sample valid coupon codes (in real app, this would come from backend)
