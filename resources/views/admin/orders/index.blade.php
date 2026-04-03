@@ -344,7 +344,7 @@
                     <tbody>
                         @forelse($orders as $order)
                             <tr>
-                                <td class="font-semibold text-[#800000]">#{{ $order->id }}</td>
+                                <td class="font-semibold text-[#800000]">{{ $order->order_ref ?? '#'.$order->id }}</td>
                                 <td>
                                     <div class="font-medium text-gray-900">{{ $order->user->name ?? $order->customer_name ?? 'N/A' }}</div>
                                     <div class="text-xs text-gray-500">{{ $order->user->email ?? $order->customer_email ?? 'N/A' }}</div>
