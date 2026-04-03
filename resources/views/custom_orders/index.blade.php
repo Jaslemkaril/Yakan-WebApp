@@ -12,7 +12,7 @@
                     <p class="text-gray-600">Track and manage your personalized product orders</p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3">
-                    <button onclick="checkForUpdates()" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 transition-colors">
+                    <button onclick="checkForUpdates(this)" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 transition-colors">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                         </svg>
@@ -731,11 +731,12 @@ function authReload() {
     window.location.href = url;
 }
 
-function checkForUpdates() {
-    const refreshBtn = event.currentTarget || event.target;
-    const originalContent = refreshBtn.innerHTML;
-    refreshBtn.innerHTML = '<svg class="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Refreshing...';
-    refreshBtn.disabled = true;
+function checkForUpdates(btn) {
+    const refreshBtn = btn || (typeof event !== 'undefined' && event && (event.currentTarget || event.target)) || null;
+    if (refreshBtn) {
+        refreshBtn.innerHTML = '<svg class="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Refreshing...';
+        refreshBtn.disabled = true;
+    }
     authReload();
 }
 
