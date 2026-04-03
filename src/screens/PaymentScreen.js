@@ -261,19 +261,26 @@ export default function PaymentScreen({ navigation, route }) {
           if (checkoutUrl) {
             setIsProcessing(false);
             await WebBrowser.openBrowserAsync(checkoutUrl);
-            // After browser closes, sync payment status from Maya before navigating
+            // Poll Maya payment status (up to 5 attempts, 2s apart) to confirm payment
             setIsProcessing(true);
-            try {
-              const statusRes = await ApiService.getMayaPaymentStatus(backendId);
-              const paymentStatus = statusRes?.data?.data?.payment_status ?? statusRes?.data?.payment_status;
-              const orderStatus   = statusRes?.data?.data?.status        ?? statusRes?.data?.status;
-              if (paymentStatus === 'paid' || paymentStatus === 'verified') {
-                finalOrderData.status = 'payment_verified';
-                finalOrderData.paymentStatus = 'paid';
+            let paid = false;
+            for (let attempt = 0; attempt < 5; attempt++) {
+              try {
+                await new Promise(r => setTimeout(r, 2000));
+                const statusRes = await ApiService.getMayaPaymentStatus(backendId);
+                const paymentStatus = statusRes?.data?.data?.payment_status ?? statusRes?.data?.payment_status;
+                const orderStatus   = statusRes?.data?.data?.status        ?? statusRes?.data?.status;
+                if (paymentStatus === 'paid' || paymentStatus === 'verified') {
+                  finalOrderData.status = 'payment_verified';
+                  finalOrderData.paymentStatus = 'paid';
+                  if (orderStatus) finalOrderData.orderStatus = orderStatus;
+                  paid = true;
+                  break;
+                }
+                if (orderStatus) finalOrderData.orderStatus = orderStatus;
+              } catch (_) {
+                // continue polling
               }
-              if (orderStatus) finalOrderData.orderStatus = orderStatus;
-            } catch (_) {
-              // silently ignore — fall back to pending state
             }
             setIsProcessing(false);
             await updateOrderInStorage(finalOrderData);
