@@ -552,12 +552,206 @@ class DashboardController extends Controller
      */
     public function exportReport(Request $request, $type = null)
     {
-        try {
-            $period = $request->get('period', 'all');
+        // Send headers immediately so the browser treats this as a download
+        $period = $request->get('period', 'all');
 
-            // Date filtering
-            $dateQuery = \App\Models\Order::query();
-            $periodLabel = 'All Time';
+        $periodLabel = 'All Time';
+        $dateQuery = \App\Models\Order::query();
+        switch ($period) {
+            case 'daily':
+                $dateQuery->whereDate('created_at', today());
+                $periodLabel = 'Daily – ' . today()->format('F d, Y');
+                break;
+            case 'weekly':
+                $dateQuery->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                $periodLabel = 'Weekly – ' . now()->startOfWeek()->format('M d') . ' to ' . now()->endOfWeek()->format('M d, Y');
+                break;
+            case 'monthly':
+                $dateQuery->whereYear('created_at', now()->year)->whereMonth('created_at', now()->month);
+                $periodLabel = 'Monthly – ' . now()->format('F Y');
+                break;
+            case 'yearly':
+                $dateQuery->whereYear('created_at', now()->year);
+                $periodLabel = 'Yearly – ' . now()->year;
+                break;
+        }
+
+        // Detect available columns on orders table
+        $orderCols = \Schema::getColumnListing('orders');
+        $hasShipping = in_array('shipping_fee', $orderCols);
+        $hasDeliveryType = in_array('delivery_type', $orderCols);
+
+        // Core metrics — safe, simple counts
+        $totalOrders      = (clone $dateQuery)->count();
+        $pendingOrders    = (clone $dateQuery)->where('status', 'pending')->count();
+        $processingOrders = (clone $dateQuery)->where('status', 'processing')->count();
+        $completedOrders  = (clone $dateQuery)->where('status', 'completed')->count();
+        $shippedOrders    = (clone $dateQuery)->where('status', 'shipped')->count();
+        $deliveredOrders  = (clone $dateQuery)->where('status', 'delivered')->count();
+        $cancelledOrders  = (clone $dateQuery)->whereIn('status', ['cancelled', 'refunded'])->count();
+        $totalRevenue     = (float)(clone $dateQuery)->whereIn('status', ['completed', 'delivered'])->sum('total_amount');
+        $pendingRevenue   = (float)(clone $dateQuery)->whereIn('status', ['pending', 'processing', 'shipped'])->sum('total_amount');
+        $avgOrderValue    = ($completedOrders + $deliveredOrders) > 0 ? $totalRevenue / ($completedOrders + $deliveredOrders) : 0;
+
+        // Orders with details
+        $orders = (clone $dateQuery)->with(['user', 'items.product'])->orderByDesc('created_at')->get();
+
+        // Top products
+        $topProducts = collect();
+        try {
+            $tpq = \App\Models\OrderItem::selectRaw('product_id, SUM(quantity) as sold, SUM(price * quantity) as revenue')
+                ->groupBy('product_id')->orderByDesc('sold')->with('product');
+            if ($period !== 'all') {
+                $tpq->whereIn('order_id', (clone $dateQuery)->pluck('id'));
+            }
+            $topProducts = $tpq->take(15)->get();
+        } catch (\Throwable $e) { \Log::warning('CSV export top products: ' . $e->getMessage()); }
+
+        // Payment methods
+        $rawPaymentMethods = (clone $dateQuery)->selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')->groupBy('payment_method')->get();
+        $paymentMethods = $this->normalizePaymentMethods($rawPaymentMethods);
+
+        // Monthly revenue trend
+        $monthlyRevenue = collect();
+        try {
+            $monthlyRevenue = \App\Models\Order::selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, COUNT(*) as orders, SUM(total_amount) as revenue')
+                ->whereIn('status', ['completed', 'delivered'])
+                ->where('created_at', '>=', now()->subMonths(12)->startOfMonth())
+                ->groupByRaw('YEAR(created_at), MONTH(created_at)')
+                ->orderByRaw('YEAR(created_at), MONTH(created_at)')
+                ->get();
+        } catch (\Throwable $e) { \Log::warning('CSV export monthly: ' . $e->getMessage()); }
+
+        // Custom orders summary
+        $customOrderStats = collect();
+        try {
+            $coCols = \Schema::getColumnListing('custom_orders');
+            $coRevCol = in_array('total_price', $coCols) ? 'total_price' : (in_array('total_amount', $coCols) ? 'total_amount' : null);
+            $coSel = $coRevCol ? "status, payment_status, COUNT(*) as count, SUM({$coRevCol}) as revenue" : 'status, payment_status, COUNT(*) as count';
+            $customOrderStats = \App\Models\CustomOrder::selectRaw($coSel)->groupBy('status', 'payment_status')->get();
+        } catch (\Throwable $e) { \Log::warning('CSV export custom orders: ' . $e->getMessage()); }
+
+        // Delivery breakdown
+        $deliveryBreakdown = collect();
+        if ($hasDeliveryType) {
+            try {
+                $deliveryBreakdown = (clone $dateQuery)->selectRaw('delivery_type, COUNT(*) as count, SUM(total_amount) as total')->groupBy('delivery_type')->get();
+            } catch (\Throwable $e) { \Log::warning('CSV export delivery: ' . $e->getMessage()); }
+        }
+
+        // Build CSV
+        $output = fopen('php://temp', 'r+');
+        fwrite($output, "\xEF\xBB\xBF"); // UTF-8 BOM
+        $sep = [''];
+
+        fputcsv($output, ['YAKAN E-COMMERCE – DASHBOARD REPORT']);
+        fputcsv($output, ['Period:', $periodLabel]);
+        fputcsv($output, ['Generated:', now()->format('F d, Y  H:i:s')]);
+        fputcsv($output, $sep);
+
+        fputcsv($output, ['=== OVERVIEW METRICS ===']);
+        fputcsv($output, ['Metric', 'Value']);
+        fputcsv($output, ['Total Orders', $totalOrders]);
+        fputcsv($output, ['Pending', $pendingOrders]);
+        fputcsv($output, ['Processing', $processingOrders]);
+        fputcsv($output, ['Shipped', $shippedOrders]);
+        fputcsv($output, ['Delivered', $deliveredOrders]);
+        fputcsv($output, ['Completed', $completedOrders]);
+        fputcsv($output, ['Cancelled/Refunded', $cancelledOrders]);
+        fputcsv($output, ['Confirmed Revenue', 'PHP ' . number_format($totalRevenue, 2)]);
+        fputcsv($output, ['Pending Revenue', 'PHP ' . number_format($pendingRevenue, 2)]);
+        fputcsv($output, ['Average Order Value', 'PHP ' . number_format($avgOrderValue, 2)]);
+        fputcsv($output, $sep);
+
+        fputcsv($output, ['=== PAYMENT METHODS ===']);
+        fputcsv($output, ['Payment Method', 'Orders', 'Total (PHP)', '% of Orders']);
+        foreach ($paymentMethods as $method) {
+            $pct = $totalOrders > 0 ? round(($method->count / $totalOrders) * 100, 1) : 0;
+            fputcsv($output, [
+                $method->display_name ?? $this->paymentMethodDisplayName($method->payment_method ?? null),
+                $method->count,
+                number_format($method->total ?? 0, 2),
+                $pct . '%',
+            ]);
+        }
+        fputcsv($output, $sep);
+
+        if ($deliveryBreakdown->isNotEmpty()) {
+            fputcsv($output, ['=== DELIVERY TYPE BREAKDOWN ===']);
+            fputcsv($output, ['Delivery Type', 'Orders', 'Total (PHP)']);
+            foreach ($deliveryBreakdown as $row) {
+                fputcsv($output, [ucfirst($row->delivery_type ?? 'N/A'), $row->count, number_format($row->total ?? 0, 2)]);
+            }
+            fputcsv($output, $sep);
+        }
+
+        if ($topProducts->isNotEmpty()) {
+            fputcsv($output, ['=== TOP SELLING PRODUCTS ===']);
+            fputcsv($output, ['Rank', 'Product Name', 'Qty Sold', 'Revenue (PHP)']);
+            foreach ($topProducts as $i => $item) {
+                fputcsv($output, [$i + 1, $item->product->name ?? 'Unknown', $item->sold, number_format($item->revenue ?? 0, 2)]);
+            }
+            fputcsv($output, $sep);
+        }
+
+        if ($monthlyRevenue->isNotEmpty()) {
+            fputcsv($output, ['=== MONTHLY REVENUE TREND (Last 12 Months) ===']);
+            fputcsv($output, ['Month', 'Orders', 'Revenue (PHP)']);
+            foreach ($monthlyRevenue as $row) {
+                fputcsv($output, [date('F Y', mktime(0, 0, 0, $row->month, 1, $row->year)), $row->orders, number_format($row->revenue ?? 0, 2)]);
+            }
+            fputcsv($output, $sep);
+        }
+
+        if ($customOrderStats->isNotEmpty()) {
+            fputcsv($output, ['=== CUSTOM ORDERS SUMMARY ===']);
+            fputcsv($output, ['Status', 'Payment Status', 'Count', 'Revenue (PHP)']);
+            foreach ($customOrderStats as $row) {
+                fputcsv($output, [ucfirst($row->status ?? 'unknown'), ucfirst($row->payment_status ?? 'unpaid'), $row->count, number_format($row->revenue ?? 0, 2)]);
+            }
+            fputcsv($output, $sep);
+        }
+
+        fputcsv($output, ['=== ALL ORDERS DETAIL ===']);
+        fputcsv($output, array_filter([
+            'Order ID', 'Customer Name', 'Email', 'Date', 'Status',
+            'Payment Method', $hasDeliveryType ? 'Delivery Type' : null,
+            $hasShipping ? 'Shipping (PHP)' : null, 'Total Amount (PHP)', 'Items'
+        ]));
+        foreach ($orders as $order) {
+            $items = $order->items->map(fn($item) =>
+                ($item->product->name ?? 'Unknown') . ' x' . $item->quantity . ' @ PHP' . number_format($item->price ?? 0, 2)
+            )->join(' | ');
+            $row = [
+                'ORD-' . str_pad($order->id, 5, '0', STR_PAD_LEFT),
+                $order->user->name ?? ($order->customer_name ?? 'Guest'),
+                $order->user->email ?? '',
+                $order->created_at->format('Y-m-d H:i'),
+                ucfirst($order->status ?? 'unknown'),
+                $this->paymentMethodDisplayName($order->payment_method ?? null),
+            ];
+            if ($hasDeliveryType) $row[] = ucfirst($order->delivery_type ?? 'N/A');
+            if ($hasShipping)     $row[] = number_format($order->shipping_fee ?? 0, 2);
+            $row[] = number_format($order->total_amount ?? 0, 2);
+            $row[] = $items ?: 'No items';
+            fputcsv($output, $row);
+        }
+
+        rewind($output);
+        $csvContent = stream_get_contents($output);
+        fclose($output);
+
+        $filename = 'Yakan_Dashboard_' . ucfirst($period) . '_' . date('Y-m-d') . '.csv';
+
+        return response($csvContent, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Length'      => strlen($csvContent),
+            'Cache-Control'       => 'no-store, no-cache, must-revalidate',
+            'Pragma'              => 'no-cache',
+            'X-Accel-Buffering'   => 'no',
+        ]);
+    }
             switch ($period) {
                 case 'daily':
                     $dateQuery->whereDate('created_at', today());
@@ -579,204 +773,6 @@ class DashboardController extends Controller
                     $periodLabel = 'All Time';
                     break;
             }
-
-            // Overview metrics
-            $totalOrders      = (clone $dateQuery)->count();
-            $pendingOrders    = (clone $dateQuery)->where('status', 'pending')->count();
-            $processingOrders = (clone $dateQuery)->where('status', 'processing')->count();
-            $completedOrders  = (clone $dateQuery)->where('status', 'completed')->count();
-            $shippedOrders    = (clone $dateQuery)->where('status', 'shipped')->count();
-            $deliveredOrders  = (clone $dateQuery)->where('status', 'delivered')->count();
-            $cancelledOrders  = (clone $dateQuery)->whereIn('status', ['cancelled', 'refunded'])->count();
-            $totalRevenue     = (float)(clone $dateQuery)->whereIn('status', ['completed', 'delivered'])->sum('total_amount');
-            $pendingRevenue   = (float)(clone $dateQuery)->whereIn('status', ['pending', 'processing', 'shipped'])->sum('total_amount');
-            $avgOrderValue    = ($completedOrders + $deliveredOrders) > 0
-                                    ? $totalRevenue / ($completedOrders + $deliveredOrders) : 0;
-
-            // Orders with details
-            $orders = (clone $dateQuery)->with(['user', 'items.product'])
-                ->orderByDesc('created_at')
-                ->get();
-
-            // Top products
-            $topProductsQuery = \App\Models\OrderItem::selectRaw(
-                'product_id, SUM(quantity) as sold, SUM(price * quantity) as revenue'
-            )->groupBy('product_id')->orderByDesc('sold')->with('product');
-            if ($period !== 'all') {
-                $orderIds = (clone $dateQuery)->pluck('id');
-                $topProductsQuery->whereIn('order_id', $orderIds);
-            }
-            $topProducts = $topProductsQuery->take(15)->get();
-
-            // Payment method breakdown
-            $rawPaymentMethods = (clone $dateQuery)
-                ->selectRaw('payment_method, COUNT(*) as count, SUM(total_amount) as total')
-                ->groupBy('payment_method')->get();
-            $paymentMethods = $this->normalizePaymentMethods($rawPaymentMethods);
-
-            // Monthly revenue trend (last 12 months)
-            $monthlyRevenue = \App\Models\Order::selectRaw(
-                'YEAR(created_at) as year, MONTH(created_at) as month,
-                 COUNT(*) as orders, SUM(total_amount) as revenue'
-            )->whereIn('status', ['completed', 'delivered'])
-             ->where('created_at', '>=', now()->subMonths(12)->startOfMonth())
-             ->groupByRaw('YEAR(created_at), MONTH(created_at)')
-             ->orderByRaw('YEAR(created_at), MONTH(created_at)')
-             ->get();
-
-            // Custom orders summary
-            $customOrderStats = \App\Models\CustomOrder::selectRaw(
-                'status, payment_status, COUNT(*) as count, SUM(total_price) as revenue'
-            )->groupBy('status', 'payment_status')->get();
-
-            // Delivery type breakdown
-            $deliveryBreakdown = (clone $dateQuery)
-                ->selectRaw('delivery_type, COUNT(*) as count, SUM(total_amount) as total')
-                ->groupBy('delivery_type')->get();
-
-            // Build CSV in memory
-            $output = fopen('php://temp', 'r+');
-
-            // UTF-8 BOM for Excel
-            fwrite($output, "\xEF\xBB\xBF");
-
-            $sep = ['', '', '', '', '', '', '', ''];
-
-            // ── HEADER ──────────────────────────────────────────────────────────
-            fputcsv($output, ['YAKAN E-COMMERCE – DASHBOARD REPORT']);
-            fputcsv($output, ['Period:', $periodLabel]);
-            fputcsv($output, ['Generated:', now()->format('F d, Y  H:i:s')]);
-            fputcsv($output, $sep);
-
-            // ── OVERVIEW METRICS ────────────────────────────────────────────────
-            fputcsv($output, ['=== OVERVIEW METRICS ===']);
-            fputcsv($output, ['Metric', 'Count / Value']);
-            fputcsv($output, ['Total Orders',      $totalOrders]);
-            fputcsv($output, ['Pending',           $pendingOrders]);
-            fputcsv($output, ['Processing',        $processingOrders]);
-            fputcsv($output, ['Shipped',           $shippedOrders]);
-            fputcsv($output, ['Delivered',         $deliveredOrders]);
-            fputcsv($output, ['Completed',         $completedOrders]);
-            fputcsv($output, ['Cancelled/Refunded',$cancelledOrders]);
-            fputcsv($output, ['', '']);
-            fputcsv($output, ['Confirmed Revenue', 'PHP ' . number_format($totalRevenue, 2)]);
-            fputcsv($output, ['Pending Revenue',   'PHP ' . number_format($pendingRevenue, 2)]);
-            fputcsv($output, ['Average Order Value','PHP ' . number_format($avgOrderValue, 2)]);
-            fputcsv($output, $sep);
-
-            // ── PAYMENT METHODS ─────────────────────────────────────────────────
-            fputcsv($output, ['=== PAYMENT METHODS ===']);
-            fputcsv($output, ['Payment Method', 'Orders', 'Total Amount (PHP)', '% of Orders']);
-            foreach ($paymentMethods as $method) {
-                $pct = $totalOrders > 0 ? round(($method->count / $totalOrders) * 100, 1) : 0;
-                fputcsv($output, [
-                    $method->display_name ?? $this->paymentMethodDisplayName($method->payment_method ?? null),
-                    $method->count,
-                    number_format($method->total ?? 0, 2),
-                    $pct . '%',
-                ]);
-            }
-            fputcsv($output, $sep);
-
-            // ── DELIVERY BREAKDOWN ──────────────────────────────────────────────
-            fputcsv($output, ['=== DELIVERY TYPE BREAKDOWN ===']);
-            fputcsv($output, ['Delivery Type', 'Orders', 'Total Amount (PHP)']);
-            foreach ($deliveryBreakdown as $row) {
-                fputcsv($output, [
-                    ucfirst($row->delivery_type ?? 'N/A'),
-                    $row->count,
-                    number_format($row->total ?? 0, 2),
-                ]);
-            }
-            fputcsv($output, $sep);
-
-            // ── TOP SELLING PRODUCTS ────────────────────────────────────────────
-            fputcsv($output, ['=== TOP SELLING PRODUCTS ===']);
-            fputcsv($output, ['Rank', 'Product Name', 'Qty Sold', 'Revenue (PHP)']);
-            foreach ($topProducts as $i => $item) {
-                fputcsv($output, [
-                    $i + 1,
-                    $item->product->name ?? 'Unknown Product',
-                    $item->sold,
-                    number_format($item->revenue ?? 0, 2),
-                ]);
-            }
-            fputcsv($output, $sep);
-
-            // ── MONTHLY REVENUE TREND ───────────────────────────────────────────
-            fputcsv($output, ['=== MONTHLY REVENUE TREND (Last 12 Months) ===']);
-            fputcsv($output, ['Month', 'Orders', 'Revenue (PHP)']);
-            foreach ($monthlyRevenue as $row) {
-                fputcsv($output, [
-                    date('F Y', mktime(0, 0, 0, $row->month, 1, $row->year)),
-                    $row->orders,
-                    number_format($row->revenue ?? 0, 2),
-                ]);
-            }
-            fputcsv($output, $sep);
-
-            // ── CUSTOM ORDERS SUMMARY ───────────────────────────────────────────
-            fputcsv($output, ['=== CUSTOM ORDERS SUMMARY ===']);
-            fputcsv($output, ['Status', 'Payment Status', 'Count', 'Revenue (PHP)']);
-            foreach ($customOrderStats as $row) {
-                fputcsv($output, [
-                    ucfirst($row->status ?? 'unknown'),
-                    ucfirst($row->payment_status ?? 'unpaid'),
-                    $row->count,
-                    number_format($row->revenue ?? 0, 2),
-                ]);
-            }
-            fputcsv($output, $sep);
-
-            // ── ALL ORDERS DETAIL ───────────────────────────────────────────────
-            fputcsv($output, ['=== ALL ORDERS DETAIL ===']);
-            fputcsv($output, [
-                'Order ID', 'Customer Name', 'Email',
-                'Date', 'Status', 'Payment Method',
-                'Delivery Type', 'Subtotal (PHP)', 'Shipping (PHP)', 'Total Amount (PHP)',
-                'Items'
-            ]);
-            foreach ($orders as $order) {
-                $items = $order->items->map(function ($item) {
-                    return ($item->product->name ?? 'Unknown') . ' x' . $item->quantity
-                        . ' @ PHP' . number_format($item->price ?? 0, 2);
-                })->join(' | ');
-
-                fputcsv($output, [
-                    'ORD-' . str_pad($order->id, 5, '0', STR_PAD_LEFT),
-                    $order->user->name ?? ($order->customer_name ?? 'Guest'),
-                    $order->user->email ?? '',
-                    $order->created_at->format('Y-m-d H:i'),
-                    ucfirst($order->status ?? 'unknown'),
-                    $this->paymentMethodDisplayName($order->payment_method ?? null),
-                    ucfirst($order->delivery_type ?? 'N/A'),
-                    number_format(($order->total_amount ?? 0) - ($order->shipping_fee ?? 0), 2),
-                    number_format($order->shipping_fee ?? 0, 2),
-                    number_format($order->total_amount ?? 0, 2),
-                    $items ?: 'No items',
-                ]);
-            }
-
-            // Get CSV content
-            rewind($output);
-            $csvContent = stream_get_contents($output);
-            fclose($output);
-
-            $filename = 'Yakan_Dashboard_' . ucfirst($period) . '_' . date('Y-m-d') . '.csv';
-
-            return response($csvContent, 200, [
-                'Content-Type'        => 'text/csv; charset=UTF-8',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-                'Content-Length'      => strlen($csvContent),
-                'Cache-Control'       => 'no-store, no-cache, must-revalidate',
-                'Pragma'              => 'no-cache',
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Export report error: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Unable to export report: ' . $e->getMessage());
-        }
-    }
 
     private function canonicalPaymentMethod(?string $method): string
     {
