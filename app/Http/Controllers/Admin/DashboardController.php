@@ -744,12 +744,13 @@ class DashboardController extends Controller
         $filename = 'Yakan_Dashboard_' . ucfirst($period) . '_' . date('Y-m-d') . '.csv';
 
         return response($csvContent, 200, [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'Content-Length'      => strlen($csvContent),
-            'Cache-Control'       => 'no-store, no-cache, must-revalidate',
-            'Pragma'              => 'no-cache',
-            'X-Accel-Buffering'   => 'no',
+            'Content-Type'              => 'application/octet-stream',
+            'Content-Disposition'       => 'attachment; filename="' . $filename . '"',
+            'Content-Length'            => strlen($csvContent),
+            'Cache-Control'             => 'no-store, no-cache, must-revalidate',
+            'Pragma'                    => 'no-cache',
+            'X-Accel-Buffering'         => 'no',
+            'X-Content-Type-Options'    => 'nosniff',
         ]);
     }
 
