@@ -213,10 +213,11 @@ class ApiService {
   /**
    * Register new user
    */
-  async register(firstName, lastName, email, password, confirmPassword) {
+  async register(firstName, lastName, middleName, email, password, confirmPassword) {
     const response = await this.request('POST', API_CONFIG.ENDPOINTS.AUTH.REGISTER, {
       first_name: firstName,
       last_name: lastName,
+      middle_initial: middleName || null,
       email,
       password,
       password_confirmation: confirmPassword,
@@ -529,6 +530,13 @@ class ApiService {
    */
   async updateUserProfile(profileData) {
     return this.request('PUT', API_CONFIG.ENDPOINTS.USER.UPDATE_PROFILE, profileData);
+  }
+
+  /**
+   * Validate a coupon code against the backend
+   */
+  async validateCoupon(code, subtotal = 0) {
+    return this.request('POST', API_CONFIG.ENDPOINTS.COUPON.VALIDATE, { code, subtotal });
   }
 
   /**

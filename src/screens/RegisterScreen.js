@@ -24,6 +24,7 @@ WebBrowser.maybeCompleteAuthSession();
 export default function RegisterScreen({ navigation }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [middleName, setMiddleName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -33,6 +34,7 @@ export default function RegisterScreen({ navigation }) {
 
   const [firstFocused, setFirstFocused] = useState(false);
   const [lastFocused, setLastFocused] = useState(false);
+  const [middleFocused, setMiddleFocused] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passFocused, setPassFocused] = useState(false);
   const [confirmFocused, setConfirmFocused] = useState(false);
@@ -99,7 +101,7 @@ export default function RegisterScreen({ navigation }) {
     }
     setIsLoading(true);
     try {
-      const result = await registerWithBackend(firstName, lastName, email, password, confirmPassword);
+      const result = await registerWithBackend(firstName, lastName, middleName, email, password, confirmPassword);
       if (!result.success) {
         Alert.alert('Registration Failed', result.message || 'An error occurred during registration');
       }
@@ -183,6 +185,21 @@ export default function RegisterScreen({ navigation }) {
                     onBlur={() => setLastFocused(false)}
                   />
                 </View>
+              </View>
+
+              {/* Middle Name */}
+              <View style={[styles.inputGroup, middleFocused && styles.inputGroupFocused]}>
+                <MaterialIcons name="person-outline" size={20} color={middleFocused ? '#dc2626' : '#9ca3af'} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Middle Name (optional)"
+                  placeholderTextColor="#9ca3af"
+                  value={middleName}
+                  onChangeText={setMiddleName}
+                  editable={!isLoading}
+                  onFocus={() => setMiddleFocused(true)}
+                  onBlur={() => setMiddleFocused(false)}
+                />
               </View>
 
               {/* Email */}

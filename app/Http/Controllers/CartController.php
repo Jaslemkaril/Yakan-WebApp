@@ -223,6 +223,52 @@ class CartController extends Controller
     }
 
     /**
+     * Validate a coupon code for the mobile app (returns discount without session side-effects).
+     */
+    public function validateCoupon(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'code'     => 'required|string',
+            'subtotal' => 'nullable|numeric|min:0',
+        ]);
+
+        $code   = strtoupper(trim($request->input('code')));
+        $coupon = Coupon::where('code', $code)->first();
+
+        $fail = fn(string $msg) => response()->json(['success' => false, 'message' => $msg], 422);
+
+        if (!$coupon)                                                                          return $fail('Coupon not found.');
+        if (!$coupon->active)                                                                  return $fail('This coupon is not active.');
+        $now = now();
+        if ($coupon->starts_at && $now->lt($coupon->starts_at))                               return $fail('This coupon is not yet active.');
+        if ($coupon->ends_at   && $now->gt($coupon->ends_at))                                 return $fail('This coupon has expired.');
+        if ($coupon->usage_limit && $coupon->times_redeemed >= $coupon->usage_limit)           return $fail('This coupon usage limit has been reached.');
+        if ($coupon->usage_limit_per_user) {
+            $userRedemptions = $coupon->redemptions()->where('user_id', Auth::id())->count();
+            if ($userRedemptions >= $coupon->usage_limit_per_user)                            return $fail('You have already used this coupon.');
+        }
+
+        $subtotal       = max(0, (float) $request->input('subtotal', 0));
+        $discountAmount = $coupon->calculateDiscount($subtotal);
+
+        if ($discountAmount <= 0 && $coupon->min_spend > 0 && $subtotal < $coupon->min_spend) {
+            return $fail('Minimum spend of ₱' . number_format($coupon->min_spend, 2) . ' required.');
+        }
+
+        $description = $coupon->discount_type === 'percent'
+            ? $coupon->discount_value . '% off'
+            : '₱' . number_format($coupon->discount_value, 2) . ' off';
+
+        return response()->json([
+            'success'     => true,
+            'message'     => 'Coupon applied!',
+            'discount'    => $discountAmount,
+            'code'        => $code,
+            'description' => $description,
+        ]);
+    }
+
+    /**
      * Remove applied coupon from session
      */
     public function removeCoupon(Request $request)

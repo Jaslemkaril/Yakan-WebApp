@@ -19,15 +19,16 @@ class AuthController extends Controller
             $validated = $request->validate([
                 'first_name' => 'required|string|max:255',
                 'last_name' => 'required|string|max:255',
-                'middle_initial' => 'nullable|string|max:2',
+                'middle_initial' => 'nullable|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users,email',
                 'password' => 'required|string|min:6|confirmed', // Simplified password rules
             ]);
 
             $validationTime = microtime(true);
 
+            $middlePart = $validated['middle_initial'] ?? null;
             $fullName = trim($validated['first_name'] . ' ' . 
-                           ($validated['middle_initial'] ?? null ? $validated['middle_initial'] . '. ' : '') . 
+                           ($middlePart ? $middlePart . ' ' : '') . 
                            $validated['last_name']);
 
             $user = \App\Models\User::create([

@@ -336,8 +336,8 @@ export const CartProvider = ({ children }) => {
     setUserInfo(null);
   };
 
-  const registerWithBackend = async (firstName, lastName, email, password, confirmPassword) => {
-    const response = await ApiService.register(firstName, lastName, email, password, confirmPassword);
+  const registerWithBackend = async (firstName, lastName, middleName, email, password, confirmPassword) => {
+    const response = await ApiService.register(firstName, lastName, middleName, email, password, confirmPassword);
     console.log('[CartContext] Register response:', response);
     
     if (response.success) {
@@ -348,7 +348,8 @@ export const CartProvider = ({ children }) => {
       
       // Ensure we have the name field
       if (!userData.name && userData.first_name && userData.last_name) {
-        userData.name = `${userData.first_name} ${userData.last_name}`;
+        const mid = userData.middle_initial ? ` ${userData.middle_initial}` : '';
+        userData.name = `${userData.first_name}${mid} ${userData.last_name}`;
       }
       
       setUserInfo(userData);

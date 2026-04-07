@@ -294,22 +294,31 @@ const CheckoutScreen = ({ navigation }) => {
     'FREESHIP': { code: 'FREESHIP', discount: 5, description: 'Free shipping' },
   };
 
-  const handleApplyCoupon = () => {
+  const handleApplyCoupon = async () => {
     setCouponError('');
     const code = couponCode.trim().toUpperCase();
-    
+
     if (!code) {
       setCouponError('Please enter a coupon code');
       return;
     }
-    
-    if (validCoupons[code]) {
-      setAppliedCoupon(validCoupons[code]);
-      setCouponError('');
-      Alert.alert('Success', `Coupon "${code}" applied! ${validCoupons[code].description}`);
-    } else {
-      setCouponError('Invalid coupon code');
+
+    setApplyingCoupon(true);
+    try {
+      const response = await ApiService.validateCoupon(code, subtotal);
+      if (response.success) {
+        setAppliedCoupon({ code: response.code, discount: response.discount, description: response.description });
+        setCouponError('');
+        Alert.alert('Success', `Coupon "${response.code}" applied! ${response.description}`);
+      } else {
+        setCouponError(response.message || 'Invalid coupon code');
+        setAppliedCoupon(null);
+      }
+    } catch {
+      setCouponError('Failed to validate coupon. Please try again.');
       setAppliedCoupon(null);
+    } finally {
+      setApplyingCoupon(false);
     }
   };
 

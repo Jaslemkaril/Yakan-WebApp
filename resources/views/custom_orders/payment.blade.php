@@ -631,9 +631,7 @@
                     <div class="flex justify-between py-3 border-b border-gray-200 items-center">
                         <span class="text-gray-700 font-medium">Shipping Fee</span>
                         <span class="font-bold text-lg" id="payShippingDisplay">
-                            @if($displayShippingFee === null)
-                                <span class="text-orange-600">— select region below</span>
-                            @elseif($displayShippingFee == 0)
+                            @if($displayShippingFee == 0)
                                 <span class="text-green-600">FREE</span>
                             @else
                                 <span class="text-gray-900">₱{{ number_format($displayShippingFee, 2) }}</span>

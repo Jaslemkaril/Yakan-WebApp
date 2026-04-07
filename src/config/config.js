@@ -111,6 +111,11 @@ export const API_CONFIG = {
       GET_RATE: '/shipping/rate',
       CALCULATE_FEE: '/shipping/calculate-fee',
     },
+
+    // Coupon endpoints
+    COUPON: {
+      VALIDATE: '/coupon/validate',
+    },
   },
 };
 

@@ -145,6 +145,46 @@
 
     <!-- Payment Methods + Top Products -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Peak Sales Days -->
+    @if($dayOfWeekStats->count() > 0)
+    @php
+        $peakDay   = $dayOfWeekStats->sortByDesc('orders')->first();
+        $peakDayRev = $dayOfWeekStats->sortByDesc('revenue')->first();
+        $dowLabels  = $dayOfWeekStats->pluck('day_name')->toArray();
+        $dowOrders  = $dayOfWeekStats->pluck('orders')->map(fn($v) => (int)$v)->toArray();
+        $dowRevenue = $dayOfWeekStats->pluck('revenue')->map(fn($v) => (float)$v)->toArray();
+    @endphp
+    <div class="chart-card lg:col-span-2">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
+            <div>
+                <h3 class="text-lg font-bold text-gray-900">Sales by Day of Week</h3>
+                <p class="text-xs text-gray-400 mt-0.5">All-time order volume and revenue per weekday</p>
+            </div>
+            <div class="flex gap-3 flex-wrap">
+                <div class="bg-[#800000] text-white rounded-xl px-4 py-2 text-sm font-semibold shadow">
+                    🏆 Busiest day: {{ $peakDay->day_name }} ({{ $peakDay->orders }} orders)
+                </div>
+                @if($peakMonth)
+                <div class="bg-blue-600 text-white rounded-xl px-4 py-2 text-sm font-semibold shadow">
+                    📅 Peak month: {{ \Carbon\Carbon::createFromDate($peakMonth->year, $peakMonth->month, 1)->format('F Y') }} (₱{{ number_format($peakMonth->revenue, 2) }})
+                </div>
+                @endif
+            </div>
+        </div>
+        <div style="height:220px;"><canvas id="dayOfWeekChart"></canvas></div>
+        <div class="mt-4 grid grid-cols-7 gap-1 text-center text-xs text-gray-500">
+            @foreach($dayOfWeekStats as $row)
+            <div class="rounded-lg py-2 {{ $row->day_name === $peakDay->day_name ? 'bg-red-50 border border-[#800000] font-bold text-[#800000]' : 'bg-gray-50' }}">
+                <div class="font-semibold">{{ substr($row->day_name, 0, 3) }}</div>
+                <div>{{ $row->orders }} orders</div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
+    <!-- Payment Methods + Top Products -->
         <div class="chart-card">
             <div class="mb-5">
                 <h3 class="text-lg font-bold text-gray-900">Payment Methods</h3>
@@ -311,6 +351,36 @@ const MAROON = '#800000', MAROON_A = 'rgba(128,0,0,0.13)';
             indexAxis:'y', responsive:true, maintainAspectRatio:false,
             plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>' ₱'+c.parsed.x.toLocaleString('en-PH',{minimumFractionDigits:2})}} },
             scales:{ x:{grid:{color:'#f3f4f6'},ticks:{callback:v=>'₱'+v.toLocaleString()}}, y:{grid:{display:false},ticks:{font:{size:11}}} }
+        }
+    });
+})();
+@endif
+
+// Day of Week
+@if($dayOfWeekStats->count() > 0)
+(function(){
+    const labels  = @json($dowLabels);
+    const orders  = @json($dowOrders);
+    const revenue = @json($dowRevenue);
+    const maxOrders = Math.max(...orders);
+    const bgColors = orders.map(v => v === maxOrders ? MAROON : 'rgba(128,0,0,0.35)');
+    new Chart(document.getElementById('dayOfWeekChart'), {
+        data: { labels,
+            datasets: [
+                { type:'bar',  label:'Orders',      data:orders,  backgroundColor:bgColors,  borderRadius:6, borderSkipped:false, yAxisID:'yOrd' },
+                { type:'line', label:'Revenue (₱)', data:revenue, borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,0.07)', borderWidth:2.5,
+                  pointBackgroundColor:'#3b82f6', pointRadius:4, tension:0.35, fill:true, yAxisID:'yRev' }
+            ]
+        },
+        options:{
+            responsive:true, maintainAspectRatio:false,
+            interaction:{ mode:'index', intersect:false },
+            plugins:{ legend:{position:'bottom',labels:{usePointStyle:true,padding:14}}, tooltip:{ callbacks:{ label: c => c.dataset.yAxisID==='yRev' ? ' ₱'+c.parsed.y.toLocaleString('en-PH',{minimumFractionDigits:2}) : ' '+c.parsed.y+' orders' } } },
+            scales:{
+                x:{ grid:{display:false} },
+                yOrd:{ position:'left',  grid:{color:'#f3f4f6'}, title:{display:true,text:'Orders',font:{size:11}}, ticks:{stepSize:1} },
+                yRev:{ position:'right', grid:{display:false}, title:{display:true,text:'Revenue (₱)',font:{size:11}}, ticks:{callback:v=>'₱'+v.toLocaleString()} }
+            }
         }
     });
 })();

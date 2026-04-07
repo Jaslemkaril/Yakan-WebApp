@@ -317,6 +317,17 @@ class DashboardController extends Controller
                 ->groupBy('status')
                 ->get();
 
+            // Day-of-week sales breakdown (all orders ever)
+            $dayOfWeekStats = Order::selectRaw(
+                    'DAYOFWEEK(created_at) as dow, DAYNAME(created_at) as day_name, COUNT(*) as orders, SUM(total_amount) as revenue'
+                )
+                ->groupBy('dow', 'day_name')
+                ->orderBy('dow')
+                ->get();
+
+            // Peak month (last 12 months)
+            $peakMonth = $monthlyRevenue->sortByDesc('revenue')->first();
+
             return view('admin.analytics.sales', compact(
                 'salesData',
                 'totalRevenue',
@@ -327,6 +338,8 @@ class DashboardController extends Controller
                 'paymentMethods',
                 'topProducts',
                 'statusBreakdown',
+                'dayOfWeekStats',
+                'peakMonth',
                 'period'
             ));
         } catch (\Exception $e) {
