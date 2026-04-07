@@ -310,7 +310,7 @@
 
             <!-- Mobile App Download -->
             <div class="mt-6 animate-fade-in-up" style="animation-delay:0.55s">
-                <a href="https://expo.dev/artifacts/eas/5KiGoFsAnSzUpuk9Qm4BLE.apk" download
+                <a href="https://expo.dev/artifacts/eas/8PxPQdBheVNZHCrto1gWNC.apk" download
                    class="group inline-flex items-center justify-center gap-3 px-7 py-3.5 rounded-2xl text-sm font-semibold text-white transition-all duration-300 hover:scale-105 hover:brightness-110 shadow-xl"
                    style="background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 100%); border: 1.5px solid rgba(255,255,255,0.3); backdrop-filter: blur(14px);">
                     <!-- Android robot icon -->
