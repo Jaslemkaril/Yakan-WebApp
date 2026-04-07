@@ -779,9 +779,9 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <!-- Logo -->
-                <div class="flex items-center">
-                    <a href="{{ route('welcome') }}" class="flex items-center space-x-2 sm:space-x-3 group">
-                        <img src="{{ asset('images/YakanLogo.png') }}" alt="Yakan Logo" class="w-10 h-10 sm:w-12 sm:h-12 object-contain transform group-hover:scale-105 transition-transform">
+                <div class="flex items-center shrink-0">
+                    <a href="{{ route('welcome') }}" class="flex items-center space-x-2 sm:space-x-3 group whitespace-nowrap">
+                        <img src="{{ asset('images/YakanLogo.png') }}" alt="Yakan Logo" class="w-10 h-10 sm:w-12 sm:h-12 object-contain transform group-hover:scale-105 transition-transform shrink-0">
                         <span class="text-xl sm:text-2xl font-bold text-gradient">Yakan</span>
                     </a>
                 </div>
