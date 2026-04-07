@@ -310,15 +310,14 @@
                         btn.disabled = true;
                         btn.innerHTML = '<i class=\'fas fa-spinner fa-spin\'></i><span class=\'hidden sm:inline\'> Exporting…</span>';
                         fetch(url)
-                            .then(function(r){ return r.blob(); })
-                            .then(function(blob){
+                            .then(function(r){ return r.text(); })
+                            .then(function(text){
                                 const a = document.createElement('a');
-                                a.href = URL.createObjectURL(blob);
+                                a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(text);
                                 a.download = 'Yakan_Dashboard_{{ ucfirst($period) }}_{{ date('Y-m-d') }}.csv';
                                 document.body.appendChild(a);
                                 a.click();
                                 document.body.removeChild(a);
-                                URL.revokeObjectURL(a.href);
                             })
                             .catch(function(e){ alert('Export failed: ' + e.message); })
                             .finally(function(){
