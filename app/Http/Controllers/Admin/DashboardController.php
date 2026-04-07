@@ -752,27 +752,6 @@ class DashboardController extends Controller
             'X-Accel-Buffering'   => 'no',
         ]);
     }
-            switch ($period) {
-                case 'daily':
-                    $dateQuery->whereDate('created_at', today());
-                    $periodLabel = 'Daily – ' . today()->format('F d, Y');
-                    break;
-                case 'weekly':
-                    $dateQuery->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
-                    $periodLabel = 'Weekly – ' . now()->startOfWeek()->format('M d') . ' to ' . now()->endOfWeek()->format('M d, Y');
-                    break;
-                case 'monthly':
-                    $dateQuery->whereYear('created_at', now()->year)->whereMonth('created_at', now()->month);
-                    $periodLabel = 'Monthly – ' . now()->format('F Y');
-                    break;
-                case 'yearly':
-                    $dateQuery->whereYear('created_at', now()->year);
-                    $periodLabel = 'Yearly – ' . now()->year;
-                    break;
-                default:
-                    $periodLabel = 'All Time';
-                    break;
-            }
 
     private function canonicalPaymentMethod(?string $method): string
     {
