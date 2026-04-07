@@ -12,6 +12,7 @@ import {
   Alert,
   ActivityIndicator,
   StatusBar,
+  Image,
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as Google from 'expo-auth-session/providers/google';
@@ -127,7 +128,7 @@ export default function RegisterScreen({ navigation }) {
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.logoIconContainer}>
-              <Text style={styles.logoIconText}>Y</Text>
+              <Image source={require('../../assets/icon.png')} style={{ width: 56, height: 56, borderRadius: 12 }} resizeMode="contain" />
             </View>
             <Text style={styles.brandName}>Yakan</Text>
             <Text style={styles.tagline}>weaving through generations</Text>

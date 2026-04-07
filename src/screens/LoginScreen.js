@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   StatusBar,
   ImageBackground,
+  Image,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -153,9 +154,9 @@ export default function LoginScreen({ navigation }) {
             resizeMode="cover"
           >
             <View style={styles.headerOverlay}>
-              {/* Y Logo Icon */}
+              {/* Yakan Logo */}
               <View style={styles.logoIconContainer}>
-                <Text style={styles.logoIconText}>Y</Text>
+                <Image source={require('../../assets/icon.png')} style={{ width: 56, height: 56, borderRadius: 12 }} resizeMode="contain" />
               </View>
               <Text style={styles.brandName}>Yakan</Text>
 
