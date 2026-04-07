@@ -3125,12 +3125,40 @@ class CustomOrderController extends Controller
                 ], 400);
             }
             
+            // Backfill chat orders accepted by user but still marked as price_quoted
+            if (!empty($order->chat_id) && $paymentOrders->isNotEmpty()) {
+                foreach ($paymentOrders as $pendingOrder) {
+                    if (!empty($pendingOrder->chat_id) && $pendingOrder->status === 'price_quoted') {
+                        $pendingOrder->status = 'approved';
+                        if (empty($pendingOrder->approved_at)) {
+                            $pendingOrder->approved_at = now();
+                        }
+                        $pendingOrder->save();
+                    }
+                }
+                $order->refresh();
+                $paymentOrders = $this->getUserBatchOrders($order, Auth::id())
+                    ->where('payment_status', '!=', 'paid')
+                    ->values();
+            }
+
             $notApproved = $paymentOrders->where('status', '!=', 'approved')->values();
             if ($notApproved->isNotEmpty()) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Payment is only available after admin approval.'
-                ], 400);
+                // If the anchor order is approved, proceed with only approved orders
+                if ($order->status === 'approved') {
+                    $paymentOrders = $paymentOrders->where('status', 'approved')->values();
+                    if ($paymentOrders->isEmpty()) {
+                        return response()->json([
+                            'success' => false,
+                            'error' => 'Payment is only available after admin approval.'
+                        ], 400);
+                    }
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'Payment is only available after admin approval.'
+                    ], 400);
+                }
             }
             
             $shippingFee = (float) ($request->input('shipping_fee') ?? $order->shipping_fee ?? 0);
