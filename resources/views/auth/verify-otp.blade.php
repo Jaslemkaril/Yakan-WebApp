@@ -196,9 +196,7 @@
                     <!-- Logo -->
                     <div class="text-center mb-8">
                         <div class="flex items-center justify-center space-x-3 mb-4">
-                            <div class="w-12 h-12 bg-gradient-to-br from-red-600 to-red-700 rounded-xl flex items-center justify-center">
-                                <span class="text-white font-bold text-xl">Y</span>
-                            </div>
+                            <img src="{{ asset('images/YakanLogo.png') }}" alt="Yakan Logo" class="w-12 h-12 object-contain">
                             <span class="text-2xl font-bold text-gradient">Yakan</span>
                         </div>
                         <h2 class="text-2xl font-bold text-gray-900">Verify Your Email</h2>

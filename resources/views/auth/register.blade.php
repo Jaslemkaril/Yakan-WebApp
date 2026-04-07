@@ -332,9 +332,7 @@
                         <!-- Logo -->
                         <div class="text-center mb-6 lg:mb-8">
                             <div class="flex items-center justify-center space-x-3 mb-3 lg:mb-4">
-                                <div class="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-red-600 to-red-700 rounded-xl flex items-center justify-center">
-                                    <span class="text-white font-bold text-lg lg:text-xl">Y</span>
-                                </div>
+                                <img src="{{ asset('images/YakanLogo.png') }}" alt="Yakan Logo" class="w-10 h-10 lg:w-12 lg:h-12 object-contain">
                                 <span class="text-xl lg:text-2xl font-bold text-gradient">Yakan</span>
                             </div>
                             <h2 class="text-xl lg:text-2xl font-bold text-gray-900">Create Account</h2>

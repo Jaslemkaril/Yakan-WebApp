@@ -156,9 +156,7 @@
                 <div class="auth-form">
                     <div class="text-center mb-8">
                         <div class="inline-flex items-center gap-3 mb-4">
-                            <div class="w-12 h-12 bg-gradient-to-br from-red-800 to-red-900 rounded-xl flex items-center justify-center">
-                                <span class="text-white font-bold text-2xl">Y</span>
-                            </div>
+                            <img src="{{ asset('images/YakanLogo.png') }}" alt="Yakan Logo" class="w-12 h-12 object-contain">
                             <h1 class="text-3xl font-bold bg-gradient-to-r from-red-800 to-orange-600 bg-clip-text text-transparent">
                                 Yakan
                             </h1>

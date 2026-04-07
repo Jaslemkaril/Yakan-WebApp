@@ -779,9 +779,7 @@
                 <!-- Logo -->
                 <div class="flex items-center">
                     <a href="{{ route('welcome') }}" class="flex items-center space-x-2 sm:space-x-3 group">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-maroon-600 to-maroon-700 rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform" style="background: linear-gradient(to bottom right, #800000, #600000);">
-                            <span class="text-white font-bold text-lg sm:text-xl">Y</span>
-                        </div>
+                        <img src="{{ asset('images/YakanLogo.png') }}" alt="Yakan Logo" class="w-10 h-10 sm:w-12 sm:h-12 object-contain transform group-hover:scale-105 transition-transform">
                         <span class="text-xl sm:text-2xl font-bold text-gradient">Yakan</span>
                     </a>
                 </div>
@@ -1119,9 +1117,7 @@
                 <!-- Company Info -->
                 <div class="space-y-4">
                     <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: linear-gradient(to bottom right, #800000, #600000);">
-                            <span class="text-white font-bold text-xl">Y</span>
-                        </div>
+                        <img src="{{ asset('images/YakanLogo.png') }}" alt="Yakan Logo" class="w-10 h-10 object-contain">
                         <span class="text-2xl font-bold">Yakan</span>
                     </div>
                     <p class="text-gray-400">Premium quality products and custom orders tailored to your needs.</p>

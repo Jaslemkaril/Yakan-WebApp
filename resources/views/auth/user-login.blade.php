@@ -433,9 +433,7 @@
                         <!-- Logo -->
                         <div class="text-center mb-8">
                             <div class="flex items-center justify-center space-x-3 mb-4">
-                                <div class="w-14 h-14 bg-gradient-to-br from-red-600 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-300">
-                                    <span class="text-white font-bold text-2xl">Y</span>
-                                </div>
+                                <img src="{{ asset('images/YakanLogo.png') }}" alt="Yakan Logo" class="w-14 h-14 object-contain">
                                 <span class="text-3xl font-bold text-gradient">Yakan</span>
                             </div>
                             <h2 class="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
