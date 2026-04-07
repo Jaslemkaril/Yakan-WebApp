@@ -304,7 +304,28 @@
                     </a>
                     @endif
                     
-                    <button onclick="(function(){ const token = new URLSearchParams(window.location.search).get('auth_token'); const url = '{{ route('admin.dashboard.export', ['period' => $period]) }}' + (token ? '&auth_token=' + encodeURIComponent(token) : ''); window.location.href = url; })()" class="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
+                    <button onclick="(function(btn){
+                        const token = new URLSearchParams(window.location.search).get('auth_token');
+                        const url = '{{ route('admin.dashboard.export', ['period' => $period]) }}' + (token ? '&auth_token=' + encodeURIComponent(token) : '');
+                        btn.disabled = true;
+                        btn.innerHTML = '<i class=\'fas fa-spinner fa-spin\'></i><span class=\'hidden sm:inline\'> Exporting…</span>';
+                        fetch(url)
+                            .then(function(r){ return r.blob(); })
+                            .then(function(blob){
+                                const a = document.createElement('a');
+                                a.href = URL.createObjectURL(blob);
+                                a.download = 'Yakan_Dashboard_{{ ucfirst($period) }}_{{ date('Y-m-d') }}.csv';
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(a.href);
+                            })
+                            .catch(function(e){ alert('Export failed: ' + e.message); })
+                            .finally(function(){
+                                btn.disabled = false;
+                                btn.innerHTML = '<i class=\'fas fa-file-csv\'></i><span class=\'hidden sm:inline\'> Export CSV</span><span class=\'sm:hidden\'>CSV</span>';
+                            });
+                    })(this)" class="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
                         <i class="fas fa-file-csv"></i>
                         <span class="hidden sm:inline">Export CSV</span>
                         <span class="sm:hidden">CSV</span>
