@@ -304,7 +304,7 @@
                     </a>
                     @endif
                     
-                    <a href="{{ route('admin.dashboard.export', ['period' => $period]) }}" download="Yakan_Dashboard_{{ ucfirst($period) }}_{{ date('Y-m-d') }}.csv" class="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
+                    <a href="{{ route('admin.dashboard.export', ['period' => $period]) }}" class="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
                         <i class="fas fa-file-csv"></i>
                         <span class="hidden sm:inline">Export CSV</span>
                         <span class="sm:hidden">CSV</span>
