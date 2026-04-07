@@ -749,6 +749,7 @@
                 <h3 class="text-xl font-bold text-gray-900 mb-2">Proceeding to Payment...</h3>
                 <p class="text-gray-600 text-sm">Please wait while we connect you to the payment gateway.</p>
                 <p class="text-xs text-gray-400 mt-4">Do not close or refresh this page.</p>
+                <button onclick="document.getElementById('paymentLoadingOverlay').classList.add('hidden')" class="mt-6 text-sm text-red-700 underline hover:text-red-900">Cancel</button>
             </div>
         </div>
 
@@ -1123,6 +1124,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (storedProvince || storedCity) payCalcShipping();
+});
+
+// ===== Bfcache / back-button restore: always hide the loading overlay =====
+window.addEventListener('pageshow', function(event) {
+    const overlay = document.getElementById('paymentLoadingOverlay');
+    if (overlay) overlay.classList.add('hidden');
+    const btn = document.getElementById('continuePaymentBtn');
+    if (btn) btn.disabled = false;
 });
 
 // ===== AJAX Payment Handler =====

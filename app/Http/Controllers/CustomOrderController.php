@@ -3326,6 +3326,21 @@ class CustomOrderController extends Controller
     public function mayaPaymentSuccess(Request $request, $id)
     {
         $order = CustomOrder::findOrFail($id);
+
+        if (!Auth::check()) {
+            $token = $request->query('auth_token') ?? $request->input('auth_token') ?? session('auth_token');
+            if ($token) {
+                $authToken = \DB::table('auth_tokens')
+                    ->where('token', $token)
+                    ->where('expires_at', '>', now())
+                    ->first();
+                if ($authToken) {
+                    $user = \App\Models\User::find($authToken->user_id);
+                    if ($user) Auth::login($user, true);
+                }
+            }
+        }
+
         if ($order->user_id !== Auth::id()) abort(403);
 
         $checkoutId = $request->query('checkoutId') ?? $request->query('id') ?? $order->transaction_id;
@@ -3378,6 +3393,21 @@ class CustomOrderController extends Controller
     public function mayaPaymentFailed(Request $request, $id)
     {
         $order = CustomOrder::findOrFail($id);
+
+        if (!Auth::check()) {
+            $token = $request->query('auth_token') ?? $request->input('auth_token') ?? session('auth_token');
+            if ($token) {
+                $authToken = \DB::table('auth_tokens')
+                    ->where('token', $token)
+                    ->where('expires_at', '>', now())
+                    ->first();
+                if ($authToken) {
+                    $user = \App\Models\User::find($authToken->user_id);
+                    if ($user) Auth::login($user, true);
+                }
+            }
+        }
+
         if ($order->user_id !== Auth::id()) abort(403);
 
         return $this->redirectToRouteWithToken('custom_orders.payment', $order)
