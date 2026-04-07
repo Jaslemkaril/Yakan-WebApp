@@ -304,11 +304,11 @@
                     </a>
                     @endif
                     
-                    <a href="{{ route('admin.dashboard.export', ['period' => $period]) }}" class="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
+                    <button onclick="(function(){ const token = new URLSearchParams(window.location.search).get('auth_token'); const url = '{{ route('admin.dashboard.export', ['period' => $period]) }}' + (token ? '&auth_token=' + encodeURIComponent(token) : ''); window.location.href = url; })()" class="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
                         <i class="fas fa-file-csv"></i>
                         <span class="hidden sm:inline">Export CSV</span>
                         <span class="sm:hidden">CSV</span>
-                    </a>
+                    </button>
                     
                     <button onclick="document.getElementById('printReportModal').classList.remove('hidden')" class="px-4 py-2 bg-[#800000] text-white rounded-lg font-medium hover:bg-[#600000] transition-colors flex items-center gap-2">
                         <i class="fas fa-print"></i>
