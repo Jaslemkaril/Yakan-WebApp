@@ -53,6 +53,7 @@ const CheckoutScreen = ({ navigation }) => {
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState('');
   const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [availableCoupons, setAvailableCoupons] = useState([]);
   
   const [addressForm, setAddressForm] = useState({
     fullName: '',
@@ -70,6 +71,7 @@ const CheckoutScreen = ({ navigation }) => {
   // Load saved addresses on mount and when screen gains focus
   useEffect(() => {
     loadAddresses();
+    loadAvailableCoupons();
   }, []);
 
   // Reload addresses when returning from SavedAddresses screen
@@ -87,6 +89,18 @@ const CheckoutScreen = ({ navigation }) => {
       setShippingFee(0);
     }
   }, [selectedAddressId, deliveryOption]);
+
+  const loadAvailableCoupons = async () => {
+    try {
+      const response = await ApiService.getAvailableCoupons();
+      if (response.success) {
+        const list = response.data?.data ?? response.data ?? [];
+        setAvailableCoupons(Array.isArray(list) ? list : []);
+      }
+    } catch (e) {
+      // silent — coupons are optional
+    }
+  };
 
   const calculateShippingFee = async () => {
     try {
@@ -275,7 +289,7 @@ const CheckoutScreen = ({ navigation }) => {
 
   const shippingFeeDisplay = deliveryOption === 'pickup' ? 0 : shippingFee;
   const subtotal = itemsToCheckout.reduce((total, item) => total + (item.price * item.quantity), 0);
-  const discount = appliedCoupon ? appliedCoupon.discount : 0;
+  const discount = appliedCoupon ? Math.min(appliedCoupon.discount, shippingFeeDisplay) : 0;
   const total = subtotal + shippingFeeDisplay - discount;
 
   const generateOrderRef = () => {
@@ -285,13 +299,6 @@ const CheckoutScreen = ({ navigation }) => {
     const dd  = String(now.getDate()).padStart(2, '0');
     const rand = String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
     return yy + mm + dd + rand;
-  };
-
-  // Sample valid coupon codes (in real app, this would come from backend)
-  const validCoupons = {
-    'SAVE10': { code: 'SAVE10', discount: 10, description: '₱10 off' },
-    'SAVE20': { code: 'SAVE20', discount: 20, description: '₱20 off' },
-    'FREESHIP': { code: 'FREESHIP', discount: 5, description: 'Free shipping' },
   };
 
   const handleApplyCoupon = async () => {
@@ -305,7 +312,7 @@ const CheckoutScreen = ({ navigation }) => {
 
     setApplyingCoupon(true);
     try {
-      const response = await ApiService.validateCoupon(code, subtotal);
+      const response = await ApiService.validateCoupon(code, subtotal, shippingFeeDisplay);
       if (response.success) {
         setAppliedCoupon({ code: response.code, discount: response.discount, description: response.description });
         setCouponError('');
@@ -723,6 +730,27 @@ const CheckoutScreen = ({ navigation }) => {
 
           {/* Coupon Section */}
           <View style={styles.couponSection}>
+            {/* Available coupons chips */}
+            {availableCoupons.length > 0 && !appliedCoupon && (
+              <View style={{ marginBottom: 10 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400e', marginBottom: 6 }}>
+                  🎟️ Available coupons — tap to apply:
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {availableCoupons.map(c => (
+                    <TouchableOpacity
+                      key={c.code}
+                      onPress={() => { setCouponCode(c.code); }}
+                      style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1.5,
+                                borderColor: '#d97706', backgroundColor: '#fffbeb' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#92400e' }}>
+                        🏷️ {c.code}: {c.description}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
             <View style={styles.couponRow}>
               <MaterialCommunityIcons name="tag-outline" size={18} color="#8B1A1A" style={{ marginRight: 6 }} />
               <TextInput

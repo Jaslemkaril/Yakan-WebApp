@@ -70,4 +70,19 @@ class Coupon extends Model
         $discount = max(0.0, min($discount, $subtotal));
         return round($discount, 2);
     }
+
+    /**
+     * Calculate discount applied only to the shipping fee.
+     * min_spend is checked separately against the order subtotal.
+     */
+    public function calculateShippingDiscount(float $shippingFee): float
+    {
+        if ($shippingFee <= 0) return 0.0;
+        $discount = $this->type === 'percent'
+            ? ($shippingFee * ((float)$this->value) / 100.0)
+            : (float)$this->value;
+        // Cannot discount more than the actual shipping fee
+        $discount = max(0.0, min($discount, $shippingFee));
+        return round($discount, 2);
+    }
 }

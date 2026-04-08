@@ -249,20 +249,22 @@ class CartController extends Controller
             if ($userRedemptions >= $coupon->usage_limit_per_user)                            return $fail('You have already used this coupon.');
         }
 
-        $subtotal       = max(0, (float) $request->input('subtotal', 0));
-        $discountAmount = $coupon->calculateDiscount($subtotal);
+        $subtotal    = max(0, (float) $request->input('subtotal', 0));
+        $shippingFee = max(0, (float) $request->input('shipping_fee', 0));
 
-        if ($discountAmount <= 0 && $coupon->min_spend > 0 && $subtotal < $coupon->min_spend) {
+        if ((float)($coupon->min_spend ?? 0) > 0 && $subtotal < (float)$coupon->min_spend) {
             return $fail('Minimum spend of ₱' . number_format($coupon->min_spend, 2) . ' required.');
         }
 
-        $description = $coupon->discount_type === 'percent'
-            ? $coupon->discount_value . '% off'
-            : '₱' . number_format($coupon->discount_value, 2) . ' off';
+        $discountAmount = $coupon->calculateShippingDiscount($shippingFee);
+
+        $description = $coupon->type === 'percent'
+            ? (int)$coupon->value . '% off shipping'
+            : '₱' . number_format($coupon->value, 2) . ' off shipping';
 
         return response()->json([
             'success'     => true,
-            'message'     => 'Coupon applied!',
+            'message'     => 'Coupon applied! Shipping fee discounted.',
             'discount'    => $discountAmount,
             'code'        => $code,
             'description' => $description,
@@ -279,6 +281,32 @@ class CartController extends Controller
             return response()->json(['success' => true, 'message' => 'Coupon removed.']);
         }
         return back()->with('success', 'Coupon removed.');
+    }
+
+    /**
+     * Get available (active, usable) coupons for the current user (API endpoint for mobile).
+     */
+    public function getAvailableCoupons(\Illuminate\Http\Request $request): \Illuminate\Http\JsonResponse
+    {
+        $user    = $request->user();
+        $coupons = Coupon::where('active', true)
+            ->where(function ($q) { $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()); })
+            ->where(function ($q) { $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()); })
+            ->where(function ($q) { $q->whereNull('usage_limit')->orWhereColumn('times_redeemed', '<', 'usage_limit'); })
+            ->get()
+            ->filter(fn($c) => $c->canBeUsedBy($user))
+            ->map(fn($c) => [
+                'code'        => $c->code,
+                'type'        => $c->type,
+                'value'       => (float) $c->value,
+                'min_spend'   => (float) ($c->min_spend ?? 0),
+                'description' => $c->type === 'percent'
+                    ? (int)$c->value . '% off shipping'
+                    : '₱' . number_format($c->value, 2) . ' off shipping',
+            ])
+            ->values();
+
+        return response()->json(['success' => true, 'data' => $coupons]);
     }
 
     /**
@@ -624,6 +652,19 @@ class CartController extends Controller
             $subtotal = $cartItems->sum(fn($item) => $item->product->price * $item->quantity);
         }
 
+        // Load user addresses first (needed for shipping fee estimate)
+        $addresses = \App\Models\UserAddress::forUser(Auth::id())
+            ->orderBy('is_default', 'desc')
+            ->get();
+
+        $defaultAddress = $addresses->firstWhere('is_default', true);
+
+        // Estimate shipping fee from default address for coupon discount preview
+        $estimatedShippingFee = 0;
+        if ($defaultAddress) {
+            $estimatedShippingFee = $this->calculateShippingFeeForAddress($defaultAddress, 'delivery');
+        }
+
         $discount = 0;
         $appliedCoupon = null;
 
@@ -631,24 +672,27 @@ class CartController extends Controller
             $code = session('coupon_code');
             $appliedCoupon = Coupon::where('code', $code)->first();
             if ($appliedCoupon && $appliedCoupon->canBeUsedBy(Auth::user())) {
-                $discount = $appliedCoupon->calculateDiscount((float)$subtotal);
+                if ($subtotal >= (float)($appliedCoupon->min_spend ?? 0)) {
+                    $discount = $appliedCoupon->calculateShippingDiscount($estimatedShippingFee);
+                }
             } else {
-                // Invalid or unusable coupon, clear it
                 session()->forget(['coupon_code']);
                 $appliedCoupon = null;
             }
         }
 
-        $total = max(0, $subtotal - $discount);
+        // Load active coupons the user can use (shown as chips on checkout page)
+        $availableCoupons = Coupon::where('active', true)
+            ->where(function ($q) { $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()); })
+            ->where(function ($q) { $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()); })
+            ->where(function ($q) { $q->whereNull('usage_limit')->orWhereColumn('times_redeemed', '<', 'usage_limit'); })
+            ->get()
+            ->filter(fn($c) => $c->canBeUsedBy(Auth::user()))
+            ->values();
 
-        // Load user addresses
-        $addresses = \App\Models\UserAddress::forUser(Auth::id())
-            ->orderBy('is_default', 'desc')
-            ->get();
-        
-        $defaultAddress = $addresses->firstWhere('is_default', true);
+        $total = $subtotal; // products subtotal; discount applies to shipping fee at processCheckout
 
-        return view('cart.checkout', compact('cartItems', 'total', 'addresses', 'defaultAddress'))
+        return view('cart.checkout', compact('cartItems', 'total', 'addresses', 'defaultAddress', 'availableCoupons'))
             ->with('subtotal', $subtotal)
             ->with('discount', $discount)
             ->with('appliedCoupon', $appliedCoupon);
@@ -733,19 +777,18 @@ class CartController extends Controller
         $subtotal = $cartItems->sum(fn($item) => $item->product->price * $item->quantity);
         $discount = 0;
         $coupon = null;
-        // Try session first, then form hidden input fallback (for Railway session loss)
+        // Find coupon; discount calculated after shippingFee is known (applies to shipping only)
         $couponCode = session('coupon_code') ?: $request->input('coupon_code');
+        $pendingCoupon = null;
         if ($couponCode) {
-            $coupon = Coupon::where('code', $couponCode)->first();
-            if ($coupon && $coupon->canBeUsedBy(Auth::user())) {
-                $discount = $coupon->calculateDiscount((float)$subtotal);
-            } else {
-                $coupon = null;
+            $pendingCoupon = Coupon::where('code', $couponCode)->first();
+            if (!$pendingCoupon || !$pendingCoupon->canBeUsedBy(Auth::user())) {
+                $pendingCoupon = null;
                 session()->forget('coupon_code');
             }
         }
 
-        $totalBeforeShipping = max(0, $subtotal - $discount);
+        $totalBeforeShipping = $subtotal; // no product-level discount
 
         // Build delivery address string (only for delivery type)
         $deliveryAddress = null;
@@ -779,7 +822,15 @@ class CartController extends Controller
             $shippingFee = 0;
         }
 
-        $totalAmount = $totalBeforeShipping + $shippingFee;
+        // Apply coupon to shipping fee now that shippingFee is known
+        if ($pendingCoupon && $subtotal >= (float)($pendingCoupon->min_spend ?? 0)) {
+            $coupon   = $pendingCoupon;
+            $discount = $coupon->calculateShippingDiscount($shippingFee);
+        } elseif ($pendingCoupon) {
+            session()->forget('coupon_code');
+        }
+
+        $totalAmount = $subtotal + max(0, $shippingFee - $discount);
 
         // Create main order (tracking number & history auto-handled in Order model)
         // Initialize tracking details

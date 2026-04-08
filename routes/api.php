@@ -82,6 +82,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('/cart', [CartController::class, 'clear']);
 
         // Coupon
+        Route::get('/coupons/available', [CartController::class, 'getAvailableCoupons']);
         Route::post('/coupon/validate', [CartController::class, 'validateCoupon']);
         Route::post('/coupon/remove', [CartController::class, 'removeCoupon']);
 

@@ -116,6 +116,7 @@ export const API_CONFIG = {
     // Coupon endpoints
     COUPON: {
       VALIDATE: '/coupon/validate',
+      AVAILABLE: '/coupons/available',
     },
   },
 };

@@ -546,8 +546,12 @@ class ApiService {
   /**
    * Validate a coupon code against the backend
    */
-  async validateCoupon(code, subtotal = 0) {
-    return this.request('POST', API_CONFIG.ENDPOINTS.COUPON.VALIDATE, { code, subtotal });
+  async validateCoupon(code, subtotal = 0, shippingFee = 0) {
+    return this.request('POST', API_CONFIG.ENDPOINTS.COUPON.VALIDATE, { code, subtotal, shipping_fee: shippingFee });
+  }
+
+  async getAvailableCoupons() {
+    return this.request('GET', API_CONFIG.ENDPOINTS.COUPON.AVAILABLE);
   }
 
   /**

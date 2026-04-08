@@ -537,6 +537,21 @@
 
                             <!-- Coupon Section -->
                             <div class="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-xl border-2 border-amber-200 shadow-sm">
+                                {{-- Available coupons chips --}}
+                                @if(!empty($availableCoupons) && $availableCoupons->count() > 0)
+                                <div class="mb-3">
+                                    <p class="text-xs font-bold text-amber-800 mb-2">🎟️ Available coupons — click to apply:</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        @foreach($availableCoupons as $ac)
+                                        <button type="button"
+                                            onclick="applyAvailableCoupon('{{ $ac->code }}')"
+                                            class="text-xs px-3 py-1.5 rounded-full border-2 border-amber-500 bg-white text-amber-900 font-semibold hover:bg-amber-100 transition-all shadow-sm">
+                                            🏷️ {{ $ac->code }}: {{ $ac->type === 'percent' ? (int)$ac->value.'% off shipping' : '₱'.number_format($ac->value,2).' off shipping' }}
+                                        </button>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                @endif
                                 {{-- AJAX coupon messages --}}
                                 <div id="coupon-msg" class="hidden mb-2 text-sm flex items-center gap-2"></div>
                                 @if(session('success'))
@@ -2248,6 +2263,7 @@ document.addEventListener('DOMContentLoaded', function() {
             applyBtn.textContent = 'Applying…';
             try {
                 const body = { code };
+                body.shipping_fee = parseFloat(document.getElementById('shippingFeeInput')?.value || 0);
                 if (buyNow)    { body.buy_now = 1; body.product_id = productId; body.quantity = quantity; }
                 const res  = await fetch('{{ route("cart.coupon.apply") }}', {
                     method:  'POST',
@@ -2320,6 +2336,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const appliedDiscount = parseFloat('{{ $discount ?? 0 }}');
         const finalVal = parseFloat('{{ $finalTotal ?? 0 }}');
         finalDisplay.dataset.subtotal = (finalVal - shippingFee + appliedDiscount).toFixed(2);
+    }
+
+    function applyAvailableCoupon(code) {
+        const input = document.getElementById('coupon-input');
+        if (!input || input.disabled) return;
+        input.value = code;
+        const btn = document.getElementById('apply-coupon-btn');
+        if (btn) btn.click();
     }
 })();
 </script>
