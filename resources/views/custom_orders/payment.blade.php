@@ -731,17 +731,6 @@
             </button>
         </form>
 
-        {{-- Demo simulate payment (for sandbox testing) --}}
-        <form method="POST" action="{{ route('custom_orders.payment.simulate', $order->id) }}{{ $authToken ? '?auth_token=' . urlencode($authToken) : '' }}" class="mb-4 text-center" onsubmit="return confirm('Simulate a successful payment? (Demo only)')">
-            @csrf
-            @if($authToken)
-                <input type="hidden" name="auth_token" value="{{ $authToken }}">
-            @endif
-            <button type="submit" style="background:none;border:2px dashed #800000;color:#800000;padding:0.6rem 1.5rem;border-radius:10px;font-weight:600;cursor:pointer;font-size:0.9rem;">
-                🧪 Simulate Successful Payment (Demo)
-            </button>
-        </form>
-
         <!-- Loading Overlay -->
         <div id="paymentLoadingOverlay" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
             <div class="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl">
