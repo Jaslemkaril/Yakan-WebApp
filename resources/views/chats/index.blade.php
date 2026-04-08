@@ -101,7 +101,7 @@
                 </div>
                 <div>
                     <h1 class="text-4xl font-bold text-white mb-1">My Chats</h1>
-                    <p class="text-white/80 text-base">Connect with our support team</p>
+                    <p class="text-white/80 text-base">Bring your design ideas to life.</p>
                 </div>
             </div>
             <a href="{{ route('chats.create') }}" class="bg-white text-[#800000] px-7 py-3.5 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl hover:scale-105">
@@ -209,12 +209,12 @@
                     </div>
                 </div>
                 <h3 class="text-2xl font-bold text-gray-900 mb-3">No chats yet</h3>
-                <p class="text-gray-600 mb-8 text-base max-w-md mx-auto">Start a conversation with our support team to get help with your orders and questions</p>
+                <p class="text-gray-600 mb-8 text-base max-w-md mx-auto">Start a conversation to shape your custom order with us.</p>
                 <a href="{{ route('chats.create') }}" class="inline-flex items-center gap-2 maroon-btn px-8 py-4 rounded-xl font-semibold shadow-lg">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                     </svg>
-                    Create New Chat
+                    Start Designing
                 </a>
             </div>
         @endif
