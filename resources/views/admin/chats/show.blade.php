@@ -1,6 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Chat: ' . $chat->subject)
+@section('hide_admin_header', '1')
 
 @section('content')
 <style>
@@ -10,8 +11,8 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        height: calc(100dvh - 11.5rem);
-        min-height: 620px;
+        height: calc(100dvh - 8rem);
+        min-height: 560px;
         border: 1px solid #e9e5e0;
         border-radius: 14px;
     }
@@ -154,7 +155,7 @@
 
     /* Responsive */
     @media (max-width: 1024px) {
-        .cs-wrap { height: calc(100dvh - 10.5rem); min-height: 560px; }
+        .cs-wrap { height: calc(100dvh - 7rem); min-height: 520px; }
     }
 
     @media (max-width: 860px) { .cs-sidebar { width: 260px; } }

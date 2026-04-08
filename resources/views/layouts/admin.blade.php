@@ -1057,10 +1057,16 @@
 </div>
         </aside>
 
+        @php
+            $hideAdminHeader = trim($__env->yieldContent('hide_admin_header')) === '1';
+            $contentPaddingClass = $hideAdminHeader ? 'p-4 sm:p-6' : 'p-4 pt-16 sm:pt-6 sm:p-6';
+        @endphp
+
         <!-- Main Content -->
         <main class="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out"
               :class="{ 'ml-0': sidebarCollapsed && window.innerWidth >= 768, 'md:ml-0': !sidebarCollapsed && window.innerWidth >= 768 }">
             <!-- Top Header Bar -->
+            @unless($hideAdminHeader)
             <header class="bg-white shadow-sm border-b-4 mobile-header transition-all duration-300" style="border-bottom-color: #800000;">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
@@ -1104,9 +1110,10 @@
                     </div>
                 </div>
             </header>
+            @endunless
 
             <!-- Content Area -->
-            <div class="flex-1 overflow-auto p-4 pt-16 sm:pt-6 sm:p-6">
+            <div class="flex-1 overflow-auto {{ $contentPaddingClass }}">
                 <!-- Session Messages -->
                 @if(session('success'))
                     <div class="bg-green-50 border-l-4 border-green-500 text-green-700 p-4 rounded-r-lg mb-6 shadow-sm flex items-start">
