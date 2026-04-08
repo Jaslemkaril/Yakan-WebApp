@@ -70,6 +70,9 @@
     .cs-drawer-close { width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer; transition: all 0.2s; }
     .cs-drawer-close:hover { color: #800000; border-color: #d9c1c1; background: #fdf8f8; }
     .cs-drawer-content { padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+    .cs-drawer-actions { display: flex; flex-direction: column; gap: 10px; }
+    .cs-drawer-actions .cs-status-select { width: 100%; }
+    .cs-drawer-actions .cs-btn-delete { width: 100%; justify-content: center; }
 
     /* Action buttons in sidebar */
     .cs-action-btn { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 9px; font-size: 0.82rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; transition: all 0.2s; width: 100%; text-align: left; }
@@ -217,28 +220,6 @@
             <button type="button" class="cs-info-toggle" onclick="toggleInfoDrawer(true)" title="Chat details">
                 <i class="fas fa-info"></i>
             </button>
-            <form action="{{ route('admin.chats.update-status', $chat) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
-                @csrf
-                @method('PATCH')
-                @if(request('auth_token'))
-                    <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
-                @endif
-                <select name="status" onchange="this.form.submit()" class="cs-status-select">
-                    <option value="open"    {{ $chat->status === 'open'    ? 'selected' : '' }}>Open</option>
-                    <option value="pending" {{ $chat->status === 'pending' ? 'selected' : '' }}>Pending</option>
-                    <option value="closed"  {{ $chat->status === 'closed'  ? 'selected' : '' }}>Closed</option>
-                </select>
-            </form>
-            <form action="{{ route('admin.chats.destroy', $chat) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" onsubmit="return confirm('Delete this chat?');">
-                @csrf
-                @method('DELETE')
-                @if(request('auth_token'))
-                    <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
-                @endif
-                <button type="submit" class="cs-btn-delete">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
-            </form>
         </div>
     </div>
 
@@ -491,6 +472,37 @@
                         <span class="ir-label">Messages</span>
                         <span class="ir-value">{{ $messages->count() }} total &bull; {{ $chat->unreadCount() }} unread</span>
                     </div>
+                </div>
+            </div>
+
+            <div class="cs-card">
+                <div class="cs-card-head">
+                    <div class="ch-icon"><i class="fas fa-sliders-h"></i></div>
+                    <span>Chat Controls</span>
+                </div>
+                <div class="cs-card-body cs-drawer-actions">
+                    <form action="{{ route('admin.chats.update-status', $chat) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
+                        @csrf
+                        @method('PATCH')
+                        @if(request('auth_token'))
+                            <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+                        @endif
+                        <select name="status" onchange="this.form.submit()" class="cs-status-select">
+                            <option value="open"    {{ $chat->status === 'open'    ? 'selected' : '' }}>Open</option>
+                            <option value="pending" {{ $chat->status === 'pending' ? 'selected' : '' }}>Pending</option>
+                            <option value="closed"  {{ $chat->status === 'closed'  ? 'selected' : '' }}>Closed</option>
+                        </select>
+                    </form>
+                    <form action="{{ route('admin.chats.destroy', $chat) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST" onsubmit="return confirm('Delete this chat?');">
+                        @csrf
+                        @method('DELETE')
+                        @if(request('auth_token'))
+                            <input type="hidden" name="auth_token" value="{{ request('auth_token') }}">
+                        @endif
+                        <button type="submit" class="cs-btn-delete">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
