@@ -2,6 +2,7 @@
 
 @section('title', 'Chat: ' . $chat->subject)
 @section('hide_admin_header', '1')
+@section('admin_content_padding', 'p-3 sm:p-4 pb-0 sm:pb-0')
 
 @section('content')
 <style>
@@ -11,8 +12,8 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        height: calc(100dvh - 8rem);
-        min-height: 560px;
+        height: calc(100dvh - 5.75rem);
+        min-height: 600px;
         border: 1px solid #e9e5e0;
         border-radius: 14px;
     }
@@ -36,7 +37,10 @@
     .cs-body { display: flex; flex: 1; overflow: hidden; min-height: 0; }
 
     /* Sidebar */
-    .cs-sidebar { width: 300px; flex-shrink: 0; background: #fff; border-right: 1px solid #e9e5e0; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 14px; }
+    .cs-sidebar { width: 300px; min-height: 0; flex-shrink: 0; background: #fff; border-right: 1px solid #e9e5e0; overflow-y: auto; padding: 16px 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+    .cs-sidebar::-webkit-scrollbar { width: 6px; }
+    .cs-sidebar::-webkit-scrollbar-track { background: transparent; }
+    .cs-sidebar::-webkit-scrollbar-thumb { background: #d8d3cd; border-radius: 4px; }
 
     .cs-card { background: #fdf8f8; border: 1px solid #f0e8e8; border-radius: 12px; overflow: hidden; }
     .cs-card-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid #f0e8e8; }
@@ -155,12 +159,12 @@
 
     /* Responsive */
     @media (max-width: 1024px) {
-        .cs-wrap { height: calc(100dvh - 7rem); min-height: 520px; }
+        .cs-wrap { height: calc(100dvh - 5rem); min-height: 560px; }
     }
 
     @media (max-width: 860px) { .cs-sidebar { width: 260px; } }
     @media (max-width: 640px) {
-        .cs-wrap { height: auto; min-height: calc(100dvh - 8.5rem); border-radius: 10px; }
+        .cs-wrap { height: auto; min-height: calc(100dvh - 7.25rem); border-radius: 10px; }
         .cs-body { flex-direction: column; }
         .cs-sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e9e5e0; max-height: 42vh; overflow-y: auto; }
         .cs-topbar { padding: 14px 16px; }

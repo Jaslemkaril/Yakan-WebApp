@@ -1060,6 +1060,10 @@
         @php
             $hideAdminHeader = trim($__env->yieldContent('hide_admin_header')) === '1';
             $contentPaddingClass = $hideAdminHeader ? 'p-4 sm:p-6' : 'p-4 pt-16 sm:pt-6 sm:p-6';
+            $contentPaddingOverride = trim($__env->yieldContent('admin_content_padding'));
+            if ($contentPaddingOverride !== '') {
+                $contentPaddingClass = $contentPaddingOverride;
+            }
         @endphp
 
         <!-- Main Content -->
