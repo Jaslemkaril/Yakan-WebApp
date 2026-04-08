@@ -58,6 +58,11 @@
                                 <div>
                                     <h3 style="font-size: 1.125rem; font-weight: bold; color: #111827;">{{ $order->order_ref }}</h3>
                                     <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">{{ $order->created_at->format('M d, Y') }}</p>
+                                    @if($order->estimated_delivery_date && !in_array($order->status, ['delivered','completed','cancelled']))
+                                        <p style="font-size: 0.8rem; color: #800000; margin-top: 0.25rem; font-weight: 600;">
+                                            📦 Est. Delivery: {{ \Carbon\Carbon::parse($order->estimated_delivery_date)->format('M d, Y') }}
+                                        </p>
+                                    @endif
                                 </div>
                                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end;">
                                     <span style="display: inline-flex; align-items: center; padding: 0.375rem 0.75rem; background: linear-gradient(135deg, #f5e6e6 0%, #e8cccc 100%); color: #800000; font-size: 0.75rem; font-weight: bold; border-radius: 9999px; border: 1px solid #d4a5a5;">

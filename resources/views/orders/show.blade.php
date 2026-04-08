@@ -144,6 +144,30 @@
                         </div>
                     </div>
 
+                    @if($order->estimated_delivery_date)
+                        <div class="pt-4 pb-4 border-t border-gray-200">
+                            <div class="flex items-center gap-3 p-4 rounded-xl"
+                                 style="background: linear-gradient(135deg, #fff5f5 0%, #ffe4e4 100%); border: 1px solid #f5c6c6;">
+                                <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#800000;">
+                                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-semibold uppercase text-gray-500 mb-1">Estimated Delivery Date</p>
+                                    <p class="text-lg font-bold" style="color:#800000;">
+                                        {{ \Carbon\Carbon::parse($order->estimated_delivery_date)->format('F d, Y') }}
+                                    </p>
+                                    @if(!in_array($order->status, ['delivered','completed','cancelled']))
+                                        <p class="text-xs text-gray-500 mt-1">
+                                            {{ \Carbon\Carbon::parse($order->estimated_delivery_date)->isPast() ? 'Expected soon' : \Carbon\Carbon::parse($order->estimated_delivery_date)->diffForHumans() }}
+                                        </p>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
                     @if($order->delivery_type === 'deliver')
                         <div class="pt-6 border-t-2 border-gray-200">
                             <p class="text-xs text-gray-600 font-semibold uppercase mb-2">Delivery Address</p>
