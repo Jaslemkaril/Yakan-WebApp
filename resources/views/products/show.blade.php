@@ -124,6 +124,40 @@
                         </span>
                     @endif
                 </div>
+
+                <!-- Estimated Delivery -->
+                @if($availableStock > 0)
+                @php
+                    // Calculate 3–5 business days from today (skip weekends)
+                    $addBusinessDays = function(int $days): \Carbon\Carbon {
+                        $date = \Carbon\Carbon::now();
+                        $added = 0;
+                        while ($added < $days) {
+                            $date->addDay();
+                            if (!$date->isWeekend()) $added++;
+                        }
+                        return $date;
+                    };
+                    $earliest = $addBusinessDays(3);
+                    $latest   = $addBusinessDays(5);
+                    $sameMonth = $earliest->month === $latest->month;
+                    $range = $sameMonth
+                        ? $earliest->format('M d') . '–' . $latest->format('d, Y')
+                        : $earliest->format('M d') . ' – ' . $latest->format('M d, Y');
+                @endphp
+                <div class="mt-3 flex items-center gap-3 px-4 py-3 rounded-xl"
+                     style="background: linear-gradient(135deg, #fff5f5 0%, #ffe4e4 100%); border: 1px solid #f5c6c6;">
+                    <svg class="w-5 h-5 flex-shrink-0" style="color:#800000;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <div>
+                        <span class="text-xs font-semibold uppercase text-gray-500">Estimated Delivery</span>
+                        <p class="text-sm font-bold" style="color:#800000;">{{ $range }}</p>
+                        <p class="text-xs text-gray-500">3–5 business days after order confirmation</p>
+                    </div>
+                </div>
+                @endif
             </div>
 
             <!-- Description -->
