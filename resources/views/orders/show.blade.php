@@ -96,21 +96,41 @@
         @endif
 
         @if($order->status === 'delivered')
-        <div class="mb-8 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-md p-6 border-2 border-green-200">
-            <div class="flex items-center gap-3 mb-4">
-                <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <div class="mb-8" id="confirm-receipt-card">
+            <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-md border-2 border-green-300 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-11 h-11 bg-green-600 rounded-lg flex items-center justify-center shadow">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900">Confirm Receipt</h3>
+                            <p class="text-xs text-green-700 font-medium">Your order has been marked as delivered</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-5">Have you received all your items in good condition? Confirming lets the seller know your order is complete.</p>
+                    <button id="confirm-received-btn"
+                        onclick="confirmOrderReceived({{ $order->id }}, '{{ csrf_token() }}')"
+                        class="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 active:scale-95 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        Yes, I Received My Order
+                    </button>
                 </div>
-                <h3 class="text-lg font-bold text-gray-900">Confirm Receipt</h3>
             </div>
-            <p class="text-sm text-gray-600 mb-4">Your order has been delivered. Please confirm that you have received it.</p>
-            <form method="POST" action="{{ route('orders.confirm-received', $order) }}" onsubmit="return confirm('Confirm that you have received this order?')">
-                @csrf
-                <button type="submit" class="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-all flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                    Yes, I Received My Order
-                </button>
-            </form>
+        </div>
+        @endif
+
+        @if($order->status === 'completed')
+        <div class="mb-8">
+            <div class="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl shadow-md border-2 border-emerald-400 p-6 flex items-center gap-4">
+                <div class="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
+                    <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-emerald-800">Order Completed!</h3>
+                    <p class="text-sm text-emerald-700">You have confirmed receipt of this order. Thank you for shopping with Yakan!</p>
+                </div>
+            </div>
         </div>
         @endif
 
@@ -497,3 +517,61 @@ function previewImages(input, previewId) {
 }
 </script>
 @endsection
+
+@push('scripts')
+<script>
+async function confirmOrderReceived(orderId, csrf) {
+    const btn = document.getElementById('confirm-received-btn');
+    if (!btn) return;
+
+    // Show loading state
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> Confirming…`;
+
+    try {
+        const res = await fetch(`/orders/${orderId}/confirm-received`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrf,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            // Replace the confirm card with a success banner
+            const card = document.getElementById('confirm-receipt-card');
+            if (card) {
+                card.innerHTML = `
+                    <div class="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl shadow-md border-2 border-emerald-400 p-6 flex items-center gap-4">
+                        <div class="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
+                            <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-emerald-800">✅ Order Completed!</h3>
+                            <p class="text-sm text-emerald-700">You have confirmed receipt of this order. Thank you for shopping with Yakan!</p>
+                        </div>
+                    </div>`;
+            }
+            // Also update the Order Status card
+            const statusEl = document.querySelector('.text-3xl.font-bold.text-gray-900');
+            if (statusEl && statusEl.closest('.border-l-4')) {
+                statusEl.textContent = 'Completed';
+            }
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Yes, I Received My Order`;
+            alert(data.message || 'Could not confirm order. Please try again.');
+        }
+    } catch (e) {
+        btn.disabled = false;
+        btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Yes, I Received My Order`;
+        alert('Network error. Please try again.');
+    }
+}
+</script>
+@endpush

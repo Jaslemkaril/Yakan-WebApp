@@ -478,46 +478,37 @@ class OrderController extends Controller
         try {
             // Verify the order belongs to the authenticated user
             if ($order->user_id !== auth()->id()) {
-                \Log::warning('Unauthorized order confirmation attempt', [
-                    'order_id' => $order->id,
-                    'order_user_id' => $order->user_id,
-                    'auth_user_id' => auth()->id()
-                ]);
-                return redirect()->back()->with('error', 'Unauthorized action.');
+                $msg = 'Unauthorized action.';
+                if (request()->expectsJson()) return response()->json(['success' => false, 'message' => $msg], 403);
+                return redirect()->back()->with('error', $msg);
             }
 
             // Check if order is in delivered status
             if ($order->status !== 'delivered') {
-                \Log::warning('Invalid status for order confirmation', [
-                    'order_id' => $order->id,
-                    'current_status' => $order->status
-                ]);
-                return redirect()->back()->with('error', 'Order must be delivered before confirmation.');
+                $msg = 'Order must be delivered before confirmation.';
+                if (request()->expectsJson()) return response()->json(['success' => false, 'message' => $msg], 422);
+                return redirect()->back()->with('error', $msg);
             }
 
             // Update order status to completed when customer confirms receipt
             $order->update([
-                'status' => 'completed',
+                'status'       => 'completed',
                 'delivered_at' => now(),
             ]);
 
-            // Force save session to ensure persistence
-            request()->session()->save();
-
             \Log::info('Order marked as received by customer', [
                 'order_id' => $order->id,
-                'user_id' => auth()->id(),
-                'completed_at' => now()
+                'user_id'  => auth()->id(),
             ]);
 
-            return redirect()->back()->with('success', 'Order marked as received. Thank you for your confirmation!');
+            $msg = 'Order marked as received. Thank you for your confirmation!';
+            if (request()->expectsJson()) return response()->json(['success' => true, 'message' => $msg]);
+            return redirect()->back()->with('success', $msg);
         } catch (\Exception $e) {
-            \Log::error('Error confirming order received', [
-                'order_id' => $order->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return redirect()->back()->with('error', 'Failed to confirm order received. Please try again.');
+            \Log::error('Error confirming order received', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+            $msg = 'Failed to confirm order received. Please try again.';
+            if (request()->expectsJson()) return response()->json(['success' => false, 'message' => $msg], 500);
+            return redirect()->back()->with('error', $msg);
         }
     }
 
