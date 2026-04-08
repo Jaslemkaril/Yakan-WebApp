@@ -5,10 +5,19 @@
 @section('content')
 <style>
     /* ─── Layout ─────────────────────────────────── */
-    .cs-wrap { background: #f8f7f5; display: flex; flex-direction: column; overflow: hidden; }
+    .cs-wrap {
+        background: #f8f7f5;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        height: calc(100dvh - 11.5rem);
+        min-height: 620px;
+        border: 1px solid #e9e5e0;
+        border-radius: 14px;
+    }
 
     /* Top bar */
-    .cs-topbar { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: #fff; border-bottom: 1px solid #e9e5e0; gap: 16px; flex-wrap: wrap; }
+    .cs-topbar { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: #fff; border-bottom: 1px solid #e9e5e0; gap: 16px; flex-wrap: wrap; position: sticky; top: 0; z-index: 5; }
     .cs-topbar-left { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
     .cs-back { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #6b7280; text-decoration: none; font-weight: 500; transition: color 0.2s; }
     .cs-back:hover { color: #800000; }
@@ -23,7 +32,7 @@
     .cs-btn-delete:hover { background: #fee2e2; }
 
     /* ─── Body: sidebar + main ────────────────────── */
-    .cs-body { display: flex; flex: 1; overflow: hidden; }
+    .cs-body { display: flex; flex: 1; overflow: hidden; min-height: 0; }
 
     /* Sidebar */
     .cs-sidebar { width: 300px; flex-shrink: 0; background: #fff; border-right: 1px solid #e9e5e0; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 14px; }
@@ -54,10 +63,10 @@
     .cs-action-btn.green:hover     { opacity: 0.88; transform: translateY(-1px); }
 
     /* ─── Main chat area ──────────────────────────── */
-    .cs-main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .cs-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 
     /* Messages scroll area */
-    .cs-messages { flex: 1; overflow-y: auto; padding: 24px 28px; background: #f8f7f5; display: flex; flex-direction: column; gap: 4px; }
+    .cs-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 24px 28px; background: #f8f7f5; display: flex; flex-direction: column; gap: 4px; overscroll-behavior: contain; }
     .cs-messages::-webkit-scrollbar { width: 5px; }
     .cs-messages::-webkit-scrollbar-track { background: transparent; }
     .cs-messages::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
@@ -125,7 +134,7 @@
     .cs-closed-notice strong { color: #374151; }
 
     /* Reply bar */
-    .cs-reply { border-top: 1px solid #e9e5e0; background: #fff; padding: 14px 20px; }
+    .cs-reply { border-top: 1px solid #e9e5e0; background: #fff; padding: 14px 20px; position: sticky; bottom: 0; z-index: 4; }
     .cs-image-preview { margin-bottom: 10px; display: none; }
     .cs-image-preview-inner { position: relative; display: inline-block; }
     .cs-image-preview img { max-height: 120px; border-radius: 10px; border: 2px solid #e5e7eb; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
@@ -144,10 +153,18 @@
     .cs-send-btn svg { width: 15px; height: 15px; color: #fff; }
 
     /* Responsive */
+    @media (max-width: 1024px) {
+        .cs-wrap { height: calc(100dvh - 10.5rem); min-height: 560px; }
+    }
+
     @media (max-width: 860px) { .cs-sidebar { width: 260px; } }
     @media (max-width: 640px) {
+        .cs-wrap { height: auto; min-height: calc(100dvh - 8.5rem); border-radius: 10px; }
         .cs-body { flex-direction: column; }
-        .cs-sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e9e5e0; overflow-y: visible; }
+        .cs-sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e9e5e0; max-height: 42vh; overflow-y: auto; }
+        .cs-topbar { padding: 14px 16px; }
+        .cs-messages { padding: 16px; }
+        .cs-reply { padding: 10px 12px; }
     }
 
     /* ─── Grouped messages ──────────────────────── */
