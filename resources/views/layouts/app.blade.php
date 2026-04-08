@@ -830,19 +830,6 @@
                     <a href="{{ route('custom_orders.index') . $tokenParam }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Custom Orders</a>
                     <a href="{{ route('cultural-heritage.index') . $tokenParam }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Cultural Heritage</a>
                     <a href="{{ route('track-order.index') . $tokenParam }}" class="nav-link whitespace-nowrap text-sm xl:text-base">Track Order</a>
-                    @auth
-                        <a href="{{ route('chats.index') . $tokenParam }}" class="nav-link whitespace-nowrap flex items-center gap-1.5 relative text-sm lg:text-base">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                            </svg>
-                            <span class="hidden lg:inline">Support</span>
-                            @if($unreadChatCount > 0)
-                                <span style="position: absolute; top: -8px; right: -8px; background-color: #800000; color: white; font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 10px; min-width: 18px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3); z-index: 10;">
-                                    {{ $unreadChatCount > 9 ? '9+' : $unreadChatCount }}
-                                </span>
-                            @endif
-                        </a>
-                    @endauth
                 </div>
 
                 <!-- Right Side Actions -->
@@ -985,15 +972,6 @@
                         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                         Track Order
                     </a>
-                    @auth
-                        <a href="{{ route('chats.index') . $tokenParam }}" class="mobile-nav-link relative">
-                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                            Support
-                            @if($unreadChatCount > 0)
-                                <span class="ml-auto text-xs font-bold text-white px-1.5 py-0.5 rounded-full" style="background:#800000;font-size:10px;">{{ $unreadChatCount > 9 ? '9+' : $unreadChatCount }}</span>
-                            @endif
-                        </a>
-                    @endauth
                 </div>
 
                 @auth

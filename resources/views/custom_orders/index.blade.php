@@ -3,6 +3,10 @@
 @section('content')
 <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-7xl mx-auto">
+        @php
+            $authToken = request('auth_token') ?? session('auth_token') ?? request()->cookie('auth_token');
+            $tokenParam = $authToken ? '?auth_token=' . $authToken : '';
+        @endphp
 
         <!-- Enhanced Page Header -->
         <div class="mb-8">
@@ -12,12 +16,12 @@
                     <p class="text-gray-600">Track and manage your personalized product orders</p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3">
-                    <button onclick="checkForUpdates(this)" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 transition-colors">
+                    <a href="{{ route('chats.index') . $tokenParam }}" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 transition-colors">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                         </svg>
-                        Check Updates
-                    </button>
+                        Let's Design Yours
+                    </a>
 
                     <a href="{{ route('custom_orders.create') }}"
                        class="inline-flex items-center px-6 py-3 bg-red-700 hover:bg-red-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200">
@@ -35,7 +39,6 @@
 
         @php
             $customOrderEstimatedDays = (int) \App\Models\SystemSetting::get('custom_order_estimated_days', 14);
-            $authToken = request('auth_token') ?? session('auth_token') ?? request()->cookie('auth_token');
         @endphp
 
         @if($orders->count() > 0)
