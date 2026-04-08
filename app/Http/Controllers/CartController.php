@@ -1044,12 +1044,12 @@ HTML
     {
         $paymentMethod = $requestedMethod === 'online' ? 'gcash' : $requestedMethod;
 
-        if ($paymentMethod === 'maya' && !$this->ordersPaymentMethodSupports('maya')) {
+        if (in_array($paymentMethod, ['maya', 'paymongo']) && !$this->ordersPaymentMethodSupports($paymentMethod)) {
             if ($this->tryEnableMayaPaymentMethod()) {
-                return 'maya';
+                return $paymentMethod;
             }
 
-            \Log::warning('orders.payment_method enum does not include maya yet; using gcash fallback until migration is applied.');
+            \Log::warning('orders.payment_method enum does not include ' . $paymentMethod . ' yet; using gcash fallback.');
             return 'gcash';
         }
 
@@ -1161,11 +1161,11 @@ HTML
     private function tryEnableMayaPaymentMethod(): bool
     {
         try {
-            DB::statement("ALTER TABLE orders MODIFY payment_method ENUM('gcash','maya','bank_transfer','cash') NOT NULL DEFAULT 'gcash'");
-            \Log::info('Auto-updated orders.payment_method enum to include maya during checkout.');
+            DB::statement("ALTER TABLE orders MODIFY payment_method ENUM('gcash','maya','paymongo','bank_transfer','cash') NOT NULL DEFAULT 'gcash'");
+            \Log::info('Auto-updated orders.payment_method enum to include maya/paymongo during checkout.');
             return true;
         } catch (\Throwable $exception) {
-            \Log::warning('Auto-update of orders.payment_method enum failed; maya will fallback to gcash.', [
+            \Log::warning('Auto-update of orders.payment_method enum failed.', [
                 'error' => $exception->getMessage(),
             ]);
             return false;
