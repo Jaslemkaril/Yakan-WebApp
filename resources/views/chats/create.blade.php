@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Start New Chat')
+@section('title', 'Start Design Chat')
 
 @section('content')
 <style>
@@ -33,7 +33,7 @@
                 <svg class="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                 </svg>
-                Back to Chats
+                Back to Design Chats
             </a>
             <div class="flex items-center gap-3 mb-3">
                 <div class="p-3 bg-gradient-to-br from-[#8B0000] to-[#6B0000] rounded-xl shadow-lg">
@@ -42,8 +42,8 @@
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-4xl font-bold text-gray-900 mb-1">Start a New Chat</h1>
-                    <p class="text-gray-600 text-base">Get in touch with our support team</p>
+                    <h1 class="text-4xl font-bold text-gray-900 mb-1">Start Your Design Chat</h1>
+                    <p class="text-gray-600 text-base">Bring your design ideas to life.</p>
                 </div>
             </div>
             <div class="h-1.5 w-24 bg-gradient-to-r from-[#8B0000] to-[#6B0000] rounded-full shadow-md mt-4"></div>
@@ -62,7 +62,7 @@
                         </svg>
                         Subject
                     </label>
-                    <input type="text" id="subject" name="subject" required class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000] focus:border-transparent transition" placeholder="What is your inquiry about?" value="{{ old('subject') }}">
+                    <input type="text" id="subject" name="subject" required class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B0000] focus:border-transparent transition" placeholder="What would you like to customize?" value="{{ old('subject') }}">
                     @error('subject')
                         <p class="text-red-600 text-sm mt-2 flex items-center gap-1">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
@@ -98,7 +98,7 @@
                         </label>
 
                         <!-- Message Input -->
-                        <textarea id="message" name="message" required rows="1" class="flex-1 border-none bg-transparent resize-none outline-none text-sm text-gray-900 placeholder-gray-400 px-2 py-1" placeholder="Describe your issue or question in detail..." style="min-height: 24px; max-height: 120px; overflow-y: auto;" oninput="autoResize(this)">{{ old('message') }}</textarea>
+                        <textarea id="message" name="message" required rows="1" class="flex-1 border-none bg-transparent resize-none outline-none text-sm text-gray-900 placeholder-gray-400 px-2 py-1" placeholder="Share your design idea, fabric, size, quantity, and target date..." style="min-height: 24px; max-height: 120px; overflow-y: auto;" oninput="autoResize(this)">{{ old('message') }}</textarea>
 
                         <!-- Send Button (initially hidden, shows as submit at bottom) -->
                     </div>
@@ -127,7 +127,7 @@
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        <span id="submitText">Send Chat</span>
+                        <span id="submitText">Send Design Brief</span>
                     </button>
                     <a href="{{ route('chats.index') }}" class="flex-1 btn-outline px-6 py-3.5 rounded-lg font-semibold transition-all duration-300 text-center flex items-center justify-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -182,7 +182,7 @@
                         submitButton.disabled = false;
                         sendIcon.classList.remove('hidden');
                         sendingIcon.classList.add('hidden');
-                        submitText.textContent = 'Send Chat';
+                        submitText.textContent = 'Send Design Brief';
                     }
                 })
                 .catch(error => {
@@ -191,7 +191,7 @@
                     submitButton.disabled = false;
                     sendIcon.classList.remove('hidden');
                     sendingIcon.classList.add('hidden');
-                    submitText.textContent = 'Send Chat';
+                    submitText.textContent = 'Send Design Brief';
                 });
             });
         }
