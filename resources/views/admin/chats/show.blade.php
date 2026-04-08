@@ -26,6 +26,8 @@
     .cs-title { font-size: 1.15rem; font-weight: 700; color: #1a1a1a; display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .cs-title .icon-wrap { width: 32px; height: 32px; background: linear-gradient(135deg, #800000, #5a0000); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.8rem; flex-shrink: 0; }
     .cs-topbar-right { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+    .cs-info-toggle { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid #e5e7eb; background: #fff; color: #6b7280; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+    .cs-info-toggle:hover { color: #800000; border-color: #d9c1c1; background: #fdf8f8; }
 
     /* Status select */
     .cs-status-select { padding: 7px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: #374151; background: #f9fafb; cursor: pointer; outline: none; transition: border-color 0.2s; }
@@ -57,6 +59,17 @@
     .cs-sbadge.pending { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
     .cs-sbadge.closed  { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
     .cs-sbadge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: inline-block; }
+
+    /* Right info drawer */
+    .cs-drawer-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.35); opacity: 0; pointer-events: none; transition: opacity 0.24s ease; z-index: 70; }
+    .cs-drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+    .cs-info-drawer { position: fixed; top: 0; right: 0; width: min(380px, 95vw); height: 100dvh; background: #f8f7f5; box-shadow: -12px 0 28px rgba(0, 0, 0, 0.2); border-left: 1px solid #e9e5e0; transform: translateX(100%); transition: transform 0.28s ease; z-index: 71; display: flex; flex-direction: column; }
+    .cs-info-drawer.open { transform: translateX(0); }
+    .cs-drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #e9e5e0; background: #fff; }
+    .cs-drawer-title { font-size: 0.95rem; font-weight: 700; color: #111827; letter-spacing: 0.01em; }
+    .cs-drawer-close { width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; color: #6b7280; cursor: pointer; transition: all 0.2s; }
+    .cs-drawer-close:hover { color: #800000; border-color: #d9c1c1; background: #fdf8f8; }
+    .cs-drawer-content { padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
 
     /* Action buttons in sidebar */
     .cs-action-btn { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 9px; font-size: 0.82rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; transition: all 0.2s; width: 100%; text-align: left; }
@@ -170,6 +183,7 @@
         .cs-topbar { padding: 14px 16px; }
         .cs-messages { padding: 16px; }
         .cs-reply { padding: 10px 12px; }
+        .cs-info-drawer { width: 100vw; }
     }
 
     /* ─── Grouped messages ──────────────────────── */
@@ -200,6 +214,9 @@
             </div>
         </div>
         <div class="cs-topbar-right">
+            <button type="button" class="cs-info-toggle" onclick="toggleInfoDrawer(true)" title="Chat details">
+                <i class="fas fa-info"></i>
+            </button>
             <form action="{{ route('admin.chats.update-status', $chat) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
                 @csrf
                 @method('PATCH')
@@ -230,57 +247,6 @@
 
         <!-- Sidebar -->
         <div class="cs-sidebar">
-
-            <!-- Customer Info -->
-            <div class="cs-card">
-                <div class="cs-card-head">
-                    <div class="ch-icon"><i class="fas fa-user"></i></div>
-                    <span>Customer</span>
-                </div>
-                <div class="cs-card-body">
-                    <div class="cs-info-row">
-                        <span class="ir-label">Name</span>
-                        <span class="ir-value">{{ $chat->user_name ?? 'Guest' }}</span>
-                    </div>
-                    <div class="cs-info-row">
-                        <span class="ir-label">Email</span>
-                        <span class="ir-value">{{ $chat->user_email ?? 'N/A' }}</span>
-                    </div>
-                    @if($chat->user_phone ?? false)
-                    <div class="cs-info-row">
-                        <span class="ir-label">Phone</span>
-                        <span class="ir-value">{{ $chat->user_phone }}</span>
-                    </div>
-                    @endif
-                    <div class="cs-info-row" style="margin-top:4px;">
-                        <span class="ir-label">Status</span>
-                        <span class="cs-sbadge {{ $chat->status }}">{{ ucfirst($chat->status) }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Chat Info -->
-            <div class="cs-card">
-                <div class="cs-card-head">
-                    <div class="ch-icon"><i class="fas fa-info-circle"></i></div>
-                    <span>Chat Info</span>
-                </div>
-                <div class="cs-card-body">
-                    <div class="cs-info-row">
-                        <span class="ir-label">Created</span>
-                        <span class="ir-value">{{ $chat->created_at->format('M d, Y H:i') }}</span>
-                    </div>
-                    <div class="cs-info-row">
-                        <span class="ir-label">Last Updated</span>
-                        <span class="ir-value">{{ $chat->updated_at->format('M d, Y H:i') }}</span>
-                    </div>
-                    <div class="cs-info-row">
-                        <span class="ir-label">Messages</span>
-                        <span class="ir-value">{{ $messages->count() }} total &bull; {{ $chat->unreadCount() }} unread</span>
-                    </div>
-                </div>
-            </div>
-
             <!-- Quick Actions -->
             <div class="cs-card">
                 <div class="cs-card-head">
@@ -469,6 +435,66 @@
 
         </div><!-- /main -->
     </div><!-- /body -->
+
+    <!-- Right Details Drawer -->
+    <div class="cs-drawer-backdrop" id="infoDrawerBackdrop" onclick="toggleInfoDrawer(false)"></div>
+    <aside class="cs-info-drawer" id="infoDrawer" aria-hidden="true">
+        <div class="cs-drawer-head">
+            <span class="cs-drawer-title">Chat Details</span>
+            <button type="button" class="cs-drawer-close" onclick="toggleInfoDrawer(false)">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="cs-drawer-content">
+            <div class="cs-card">
+                <div class="cs-card-head">
+                    <div class="ch-icon"><i class="fas fa-user"></i></div>
+                    <span>Customer</span>
+                </div>
+                <div class="cs-card-body">
+                    <div class="cs-info-row">
+                        <span class="ir-label">Name</span>
+                        <span class="ir-value">{{ $chat->user_name ?? 'Guest' }}</span>
+                    </div>
+                    <div class="cs-info-row">
+                        <span class="ir-label">Email</span>
+                        <span class="ir-value">{{ $chat->user_email ?? 'N/A' }}</span>
+                    </div>
+                    @if($chat->user_phone ?? false)
+                    <div class="cs-info-row">
+                        <span class="ir-label">Phone</span>
+                        <span class="ir-value">{{ $chat->user_phone }}</span>
+                    </div>
+                    @endif
+                    <div class="cs-info-row" style="margin-top:4px;">
+                        <span class="ir-label">Status</span>
+                        <span class="cs-sbadge {{ $chat->status }}">{{ ucfirst($chat->status) }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cs-card">
+                <div class="cs-card-head">
+                    <div class="ch-icon"><i class="fas fa-info-circle"></i></div>
+                    <span>Chat Info</span>
+                </div>
+                <div class="cs-card-body">
+                    <div class="cs-info-row">
+                        <span class="ir-label">Created</span>
+                        <span class="ir-value">{{ $chat->created_at->format('M d, Y H:i') }}</span>
+                    </div>
+                    <div class="cs-info-row">
+                        <span class="ir-label">Last Updated</span>
+                        <span class="ir-value">{{ $chat->updated_at->format('M d, Y H:i') }}</span>
+                    </div>
+                    <div class="cs-info-row">
+                        <span class="ir-label">Messages</span>
+                        <span class="ir-value">{{ $messages->count() }} total &bull; {{ $chat->unreadCount() }} unread</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
 </div><!-- /wrap -->
 
 <script>
@@ -476,6 +502,22 @@
     document.addEventListener('DOMContentLoaded', function () {
         var mc = document.getElementById('messagesContainer');
         if (mc) mc.scrollTop = mc.scrollHeight;
+    });
+
+    // ─── Right details drawer ─────────────────────────────────────────────
+    function toggleInfoDrawer(open) {
+        const drawer = document.getElementById('infoDrawer');
+        const backdrop = document.getElementById('infoDrawerBackdrop');
+        if (!drawer || !backdrop) return;
+
+        drawer.classList.toggle('open', open);
+        backdrop.classList.toggle('open', open);
+        drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+        document.body.style.overflow = open ? 'hidden' : '';
+    }
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') toggleInfoDrawer(false);
     });
 
     // ─── Image Preview ─────────────────────────────────────────────────────
