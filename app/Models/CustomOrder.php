@@ -53,6 +53,8 @@ class CustomOrder extends Model
         'final_price',
         // Admin fields
         'admin_notes',
+        'previous_price',
+        'price_change_reason',
         'approved_at',
         'rejected_at',
         'rejection_reason',
@@ -357,6 +359,11 @@ class CustomOrder extends Model
         // Allow quoting for pending orders OR updating existing quotes
         if (!in_array($this->status, ['pending', 'price_quoted'])) {
             return false;
+        }
+
+        // Save previous price when re-quoting so the user can see what changed
+        if ($this->final_price && $this->final_price != $price) {
+            $this->previous_price = $this->final_price;
         }
 
         $this->final_price = $price;

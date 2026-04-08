@@ -182,7 +182,8 @@
                         </svg>
                     </button>
                     <input id="qty" name="quantity" type="number" min="1" max="{{ $availableStock ?? 999 }}" value="1" 
-                           class="w-16 text-center border-0 focus:ring-0" readonly>
+                           class="w-16 text-center border-0 focus:ring-0"
+                           oninput="validateQty(this)" onblur="clampQty(this)">
                     <button type="button" onclick="incrementQty()" class="px-3 py-2 hover:bg-gray-100 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -600,6 +601,21 @@ function updateHiddenInputs() {
     const qty = document.getElementById('qty').value;
     document.getElementById('cartQty').value = qty;
     document.getElementById('buyNowQty').value = qty;
+}
+
+function validateQty(input) {
+    input.value = input.value.replace(/[^0-9]/g, '');
+    updateHiddenInputs();
+}
+
+function clampQty(input) {
+    let val = parseInt(input.value) || 1;
+    const min = parseInt(input.min) || 1;
+    const max = parseInt(input.max) || 999;
+    if (val < min) val = min;
+    if (val > max) val = max;
+    input.value = val;
+    updateHiddenInputs();
 }
 
 // Wishlist functionality

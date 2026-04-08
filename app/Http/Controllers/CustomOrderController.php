@@ -2680,6 +2680,58 @@ class CustomOrderController extends Controller
     }
 
     /**
+     * Show edit form for a pending custom order
+     */
+    public function edit($id)
+    {
+        $order = CustomOrder::findOrFail($id);
+
+        if ($order->user_id !== Auth::id()) {
+            return redirect()->route('custom_orders.index')->with('error', 'You do not have permission to edit this order.');
+        }
+
+        if ($order->status !== 'pending') {
+            return redirect()->route('custom_orders.show', $order->id)->with('error', 'Only pending orders can be edited.');
+        }
+
+        $fabrics = \App\Models\FabricType::orderBy('name')->get();
+        $patterns = \App\Models\YakanPattern::orderBy('name')->get();
+
+        return view('custom_orders.edit', compact('order', 'fabrics', 'patterns'));
+    }
+
+    /**
+     * Update a pending custom order
+     */
+    public function update(Request $request, $id)
+    {
+        $order = CustomOrder::findOrFail($id);
+
+        if ($order->user_id !== Auth::id()) {
+            return redirect()->route('custom_orders.index')->with('error', 'You do not have permission to edit this order.');
+        }
+
+        if ($order->status !== 'pending') {
+            return redirect()->route('custom_orders.show', $order->id)->with('error', 'Only pending orders can be edited.');
+        }
+
+        $request->validate([
+            'quantity' => 'required|integer|min:1',
+            'specifications' => 'nullable|string|max:2000',
+            'delivery_type' => 'required|in:delivery,pickup',
+        ]);
+
+        $order->quantity = $request->quantity;
+        if ($request->filled('specifications')) {
+            $order->specifications = $request->specifications;
+        }
+        $order->delivery_type = $request->delivery_type;
+        $order->save();
+
+        return redirect()->route('custom_orders.show', $order->id)->with('success', 'Custom order updated successfully.');
+    }
+
+    /**
      * Handle customer response to a price quote (accept or cancel)
      */
     public function respondToQuote(Request $request, CustomOrder $order)
@@ -3599,6 +3651,13 @@ class CustomOrderController extends Controller
 
             if ($request->hasFile('receipt')) {
                 $paymentOrder->payment_status = 'paid';
+
+                // Auto-confirm payment for pattern/wizard orders (no chat_id)
+                // Chat-based custom orders require admin approval
+                if (empty($paymentOrder->chat_id)) {
+                    $paymentOrder->status = 'processing';
+                    $paymentOrder->payment_confirmed_at = now();
+                }
             } else {
                 $paymentOrder->payment_status = 'pending';
             }
@@ -3611,9 +3670,16 @@ class CustomOrderController extends Controller
         }
 
         $paidCount = $paymentOrders->count();
-        $successMessage = $paidCount > 1
-            ? "Payment confirmation submitted for {$paidCount} custom items! We will verify your payment shortly."
-            : 'Payment confirmation submitted! We will verify your payment shortly.';
+        $hasAutoConfirmed = $paymentOrders->contains(fn($o) => empty($o->chat_id) && $o->payment_status === 'paid');
+        if ($hasAutoConfirmed) {
+            $successMessage = $paidCount > 1
+                ? "Payment confirmed for {$paidCount} custom items! Your pattern orders are now being processed."
+                : 'Payment confirmed! Your order is now being processed.';
+        } else {
+            $successMessage = $paidCount > 1
+                ? "Payment confirmation submitted for {$paidCount} custom items! Admin will review and approve your payment."
+                : 'Payment confirmation submitted! Admin will review and approve your payment.';
+        }
 
         return $this->redirectToRouteWithToken('custom_orders.show', $order)->with('success', $successMessage);
     }

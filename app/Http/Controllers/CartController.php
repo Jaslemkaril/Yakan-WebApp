@@ -663,6 +663,7 @@ class CartController extends Controller
             'delivery_type'       => 'required|in:delivery,pickup',
             'address_id'          => 'required_if:delivery_type,delivery|exists:user_addresses,id',
             'customer_notes'      => 'nullable|string|max:500',
+            'coupon_code'         => 'nullable|string|exists:coupons,code',
         ]);
 
         // Map form values to database enum values for compatibility
@@ -731,8 +732,10 @@ class CartController extends Controller
         $subtotal = $cartItems->sum(fn($item) => $item->product->price * $item->quantity);
         $discount = 0;
         $coupon = null;
-        if (session()->has('coupon_code')) {
-            $coupon = Coupon::where('code', session('coupon_code'))->first();
+        // Try session first, then form hidden input fallback (for Railway session loss)
+        $couponCode = session('coupon_code') ?: $request->input('coupon_code');
+        if ($couponCode) {
+            $coupon = Coupon::where('code', $couponCode)->first();
             if ($coupon && $coupon->canBeUsedBy(Auth::user())) {
                 $discount = $coupon->calculateDiscount((float)$subtotal);
             } else {
@@ -875,6 +878,15 @@ class CartController extends Controller
         
         // Clear cart count cache
         \Cache::forget('cart_count_' . $userId);
+
+        // Send order confirmation email
+        try {
+            $order->load('orderItems.product', 'user');
+            \Illuminate\Support\Facades\Mail::to($order->user->email)
+                ->send(new \App\Mail\OrderConfirmation($order));
+        } catch (\Throwable $e) {
+            \Log::warning('Order confirmation email failed', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+        }
 
         // Create notification for user
         \App\Models\Notification::createNotification(
@@ -1517,7 +1529,7 @@ HTML
 
             $request->validate([
                 'gcash_reference' => 'nullable|string|max:191',
-                'payment_reference' => 'nullable|string|max:191',
+                'payment_reference' => 'required|string|max:191',
                 'payment_proof' => 'required|image|mimes:jpeg,jpg,png,gif|max:5120',
             ]);
 
@@ -1546,6 +1558,7 @@ HTML
             $reference = $request->input('payment_reference', $request->input('gcash_reference'));
             if (!empty($reference)) {
                 $message .= ' (Ref: ' . $reference . ')';
+                $order->payment_reference = $reference;
             }
 
             $order->appendTrackingEvent($message);

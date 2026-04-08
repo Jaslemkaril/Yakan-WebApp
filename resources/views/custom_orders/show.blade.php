@@ -423,18 +423,26 @@
                             }
                         @endphp
 
-                        <div class="rounded-xl border p-4" style="border-color:#e0b0b0; background-color:#fff;">
+                        <div class="rounded-xl border p-4 cursor-pointer hover:shadow-md transition-shadow" style="border-color:#e0b0b0; background-color:#fff;" onclick="window.location.href='{{ route('custom_orders.show', ['order' => $item->id, 'auth_token' => $authToken]) }}'">
                             <div class="flex items-start justify-between mb-3">
                                 <div class="flex items-center">
                                     <div class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center mr-2.5" style="background-color:#800000;">{{ $idx + 1 }}</div>
                                     <div>
-                                        <p class="font-bold text-gray-900 text-sm">Custom Order ID: CO-{{ str_pad((string) $item->id, 5, '0', STR_PAD_LEFT) }}</p>
+                                        <a href="{{ route('custom_orders.show', ['order' => $item->id, 'auth_token' => $authToken]) }}" class="font-bold text-sm hover:underline" style="color:#800000;" onclick="event.stopPropagation();">Custom Order ID: CO-{{ str_pad((string) $item->id, 5, '0', STR_PAD_LEFT) }}</a>
                                         <p class="text-xs text-gray-500">{{ $item->created_at->format('M d, Y g:i A') }}</p>
                                     </div>
                                 </div>
-                                <span class="inline-flex px-2 py-1 text-[11px] font-medium rounded-full {{ ($item->payment_status ?? 'pending') === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">
-                                    {{ ucfirst($item->status ?? 'pending') }}
-                                </span>
+                                <div class="flex items-center gap-2">
+                                    @if($item->status === 'pending')
+                                        <a href="{{ route('custom_orders.edit', ['order' => $item->id, 'auth_token' => $authToken]) }}" class="inline-flex items-center px-2 py-1 text-[11px] font-medium rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors" onclick="event.stopPropagation();">
+                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                            Edit
+                                        </a>
+                                    @endif
+                                    <span class="inline-flex px-2 py-1 text-[11px] font-medium rounded-full {{ ($item->payment_status ?? 'pending') === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">
+                                        {{ ucfirst($item->status ?? 'pending') }}
+                                    </span>
+                                </div>
                             </div>
 
                             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
@@ -491,12 +499,12 @@
 
                             <div class="mt-2 pt-2 border-t flex items-center justify-between" style="border-color:#f1d2d2;">
                                 <p class="text-xs text-gray-600">Delivery: <span class="font-semibold text-gray-800">{{ ($item->delivery_type ?? 'delivery') === 'pickup' ? 'Store Pickup' : 'Delivery' }}</span></p>
-                                <button type="button"
-                                        class="text-xs font-semibold hover:underline"
-                                        style="color:#800000;"
-                                        onclick="document.getElementById('item-details-{{ $item->id }}').classList.toggle('hidden')">
-                                    View Custom Order Details →
-                                </button>
+                                <a href="{{ route('custom_orders.show', ['order' => $item->id, 'auth_token' => $authToken]) }}"
+                                   class="text-xs font-semibold hover:underline"
+                                   style="color:#800000;"
+                                   onclick="event.stopPropagation();">
+                                    View Full Details →
+                                </a>
                             </div>
 
                             <div id="item-details-{{ $item->id }}" class="hidden mt-3 rounded-lg border p-3" style="border-color:#e0b0b0; background-color:#fff7f7;">
@@ -1165,6 +1173,32 @@
                                         <p class="text-sm font-medium text-gray-700 mb-1">Quoted Price</p>
                                         <p class="text-3xl font-bold" style="color:#800000;">₱{{ number_format($order->final_price, 2) }}</p>
                                         <p class="text-xs mt-1 font-semibold" style="color:#800000;">⏳ Awaiting your decision</p>
+                                        
+                                        {{-- Price Change Notice --}}
+                                        @if($order->previous_price && $order->previous_price != $order->final_price)
+                                        <div class="mt-3 p-3 rounded-lg border-2 border-amber-400 bg-amber-50">
+                                            <div class="flex items-start gap-2">
+                                                <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                                                </svg>
+                                                <div>
+                                                    <p class="text-sm font-bold text-amber-800">Price Updated</p>
+                                                    <p class="text-xs text-amber-700 mt-1">
+                                                        Previous price: <span class="line-through">₱{{ number_format($order->previous_price, 2) }}</span>
+                                                        → New price: <span class="font-bold">₱{{ number_format($order->final_price, 2) }}</span>
+                                                        @if($order->final_price > $order->previous_price)
+                                                            <span class="text-red-600">(+₱{{ number_format($order->final_price - $order->previous_price, 2) }})</span>
+                                                        @else
+                                                            <span class="text-green-600">(-₱{{ number_format($order->previous_price - $order->final_price, 2) }})</span>
+                                                        @endif
+                                                    </p>
+                                                    @if($order->price_change_reason)
+                                                    <p class="text-xs text-amber-700 mt-1"><strong>Reason:</strong> {{ $order->price_change_reason }}</p>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                        @endif
                                         
                                         {{-- Price Breakdown from Admin --}}
                                         @php

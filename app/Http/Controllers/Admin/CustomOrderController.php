@@ -162,16 +162,23 @@ class CustomOrderController extends Controller
     {
         $request->validate([
             'final_price' => 'required|numeric|min:0',
-            'admin_notes' => 'nullable|string|max:1000'
+            'admin_notes' => 'nullable|string|max:1000',
+            'price_change_reason' => 'nullable|string|max:500'
         ]);
 
         $order = CustomOrder::findOrFail($id);
 
-        if (!$order->isPendingReview()) {
+        if (!in_array($order->status, ['pending', 'price_quoted'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'This order cannot be priced at this stage'
             ], 400);
+        }
+
+        // Save price change reason if re-quoting
+        if ($request->filled('price_change_reason')) {
+            $order->price_change_reason = $request->price_change_reason;
+            $order->save();
         }
 
         if ($order->quotePrice($request->final_price, $request->admin_notes)) {

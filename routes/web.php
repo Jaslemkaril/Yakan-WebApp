@@ -966,6 +966,9 @@ Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->gr
     Route::get('/create/pattern', [\App\Http\Controllers\CustomOrderController::class, 'createPatternSelection'])->name('create.pattern');
     Route::post('/create/pattern', [\App\Http\Controllers\CustomOrderController::class, 'storePattern'])->name('store.pattern');
     
+    // Edit a pending custom order
+    Route::get('/{order}/edit', [\App\Http\Controllers\CustomOrderController::class, 'edit'])->name('edit');
+    Route::put('/{order}', [\App\Http\Controllers\CustomOrderController::class, 'update'])->name('update');
     
     Route::get('/{order}', [\App\Http\Controllers\CustomOrderController::class, 'show'])->name('show');
     

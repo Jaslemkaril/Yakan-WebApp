@@ -431,6 +431,44 @@ class OrderController extends Controller
     }
 
     /**
+     * Cancel an order (customer-initiated)
+     */
+    public function cancel(Request $request, Order $order)
+    {
+        if ($order->user_id !== auth()->id()) {
+            return redirect()->back()->with('error', 'Unauthorized action.');
+        }
+
+        if (!in_array($order->status, ['pending', 'pending_confirmation'])) {
+            return redirect()->back()->with('error', 'Only pending orders can be cancelled.');
+        }
+
+        $request->validate([
+            'cancel_reason' => 'required|string|max:255',
+        ]);
+
+        $order->update([
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+            'admin_notes' => 'Customer cancelled: ' . $request->cancel_reason,
+        ]);
+
+        // Restore product stock
+        foreach ($order->orderItems as $item) {
+            $inventory = \App\Models\Inventory::where('product_id', $item->product_id)->first();
+            if ($inventory) {
+                $inventory->increment('quantity', $item->quantity);
+            }
+            $product = \App\Models\Product::find($item->product_id);
+            if ($product) {
+                $product->increment('stock', $item->quantity);
+            }
+        }
+
+        return redirect()->back()->with('success', 'Order has been cancelled.');
+    }
+
+    /**
      * Confirm order received by customer
      * 
      * POST /orders/{order}/confirm-received

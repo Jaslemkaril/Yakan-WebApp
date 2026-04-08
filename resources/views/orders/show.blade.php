@@ -67,6 +67,53 @@
             </div>
         </div>
 
+        <!-- Customer Action Buttons -->
+        @if(in_array($order->status, ['pending', 'pending_confirmation']))
+        <div class="mb-8 bg-white rounded-xl shadow-md p-6 border border-gray-200">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Cancel Order</h3>
+            <form method="POST" action="{{ route('orders.cancel', $order) }}" onsubmit="return confirm('Are you sure you want to cancel this order?')">
+                @csrf
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Reason for Cancellation <span class="text-red-600">*</span></label>
+                    <select name="cancel_reason" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent">
+                        <option value="">-- Select a reason --</option>
+                        <option value="Changed my mind">Changed my mind</option>
+                        <option value="Found a better price elsewhere">Found a better price elsewhere</option>
+                        <option value="Ordered by mistake">Ordered by mistake</option>
+                        <option value="Delivery takes too long">Delivery takes too long</option>
+                        <option value="Duplicate order">Duplicate order</option>
+                        <option value="Want to change items">Want to change items</option>
+                        <option value="Financial reasons">Financial reasons</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <button type="submit" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    Cancel Order
+                </button>
+            </form>
+        </div>
+        @endif
+
+        @if($order->status === 'delivered')
+        <div class="mb-8 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-md p-6 border-2 border-green-200">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900">Confirm Receipt</h3>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">Your order has been delivered. Please confirm that you have received it.</p>
+            <form method="POST" action="{{ route('orders.confirm-received', $order) }}" onsubmit="return confirm('Confirm that you have received this order?')">
+                @csrf
+                <button type="submit" class="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-all flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    Yes, I Received My Order
+                </button>
+            </form>
+        </div>
+        @endif
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Main Content -->
             <div class="lg:col-span-2 space-y-6">

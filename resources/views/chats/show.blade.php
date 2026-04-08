@@ -283,6 +283,21 @@
                                     if (preg_match('/Total:\s*₱?([\d,]+\.?\d*)/i', $message->message, $matches)) {
                                         $quotedPrice = floatval(str_replace(',', '', $matches[1]));
                                     }
+
+                                    // Parse price breakdown line items from the quote message
+                                    $quoteBreakdownItems = [];
+                                    if (preg_match('/Material Cost:\s*₱?([\d,]+\.?\d*)/i', $message->message, $m)) {
+                                        $quoteBreakdownItems['Material Cost'] = floatval(str_replace(',', '', $m[1]));
+                                    }
+                                    if (preg_match('/Pattern Fee:\s*₱?([\d,]+\.?\d*)/i', $message->message, $m)) {
+                                        $quoteBreakdownItems['Pattern Fee'] = floatval(str_replace(',', '', $m[1]));
+                                    }
+                                    if (preg_match('/Labor Cost:\s*₱?([\d,]+\.?\d*)/i', $message->message, $m)) {
+                                        $quoteBreakdownItems['Labor Cost'] = floatval(str_replace(',', '', $m[1]));
+                                    }
+                                    if (preg_match('/Discount:\s*-?₱?([\d,]+\.?\d*)/i', $message->message, $m)) {
+                                        $quoteBreakdownItems['Discount'] = floatval(str_replace(',', '', $m[1]));
+                                    }
                                     
                                     // Calculate shipping fee based on canonical custom-order zone rules
                                     $shippingFee = 0;
@@ -389,10 +404,26 @@
                                                     {{-- Price Breakdown --}}
                                                     <div class="bg-white border border-blue-200 rounded-lg p-3 mb-2">
                                                         <div class="space-y-2">
-                                                            <div class="flex justify-between items-center text-sm">
-                                                                <span class="text-gray-700">Quoted Price:</span>
-                                                                <span class="font-semibold text-gray-900">₱{{ number_format($quotedPrice, 2) }}</span>
-                                                            </div>
+                                                            @if(count($quoteBreakdownItems) > 0)
+                                                                <p class="text-xs font-bold text-gray-700 mb-1">Price Breakdown:</p>
+                                                                @foreach($quoteBreakdownItems as $label => $amount)
+                                                                    <div class="flex justify-between items-center text-sm">
+                                                                        <span class="text-gray-600">{{ $label }}:</span>
+                                                                        <span class="font-semibold {{ $label === 'Discount' ? 'text-green-600' : 'text-gray-900' }}">{{ $label === 'Discount' ? '-' : '' }}₱{{ number_format($amount, 2) }}</span>
+                                                                    </div>
+                                                                @endforeach
+                                                                <div class="border-t border-gray-200 pt-1 mt-1">
+                                                                    <div class="flex justify-between items-center text-sm">
+                                                                        <span class="font-semibold text-gray-700">Subtotal:</span>
+                                                                        <span class="font-bold text-gray-900">₱{{ number_format($quotedPrice, 2) }}</span>
+                                                                    </div>
+                                                                </div>
+                                                            @else
+                                                                <div class="flex justify-between items-center text-sm">
+                                                                    <span class="text-gray-700">Quoted Price:</span>
+                                                                    <span class="font-semibold text-gray-900">₱{{ number_format($quotedPrice, 2) }}</span>
+                                                                </div>
+                                                            @endif
                                                             <div class="flex justify-between items-center text-sm">
                                                                 <span class="text-gray-700">Shipping Fee:</span>
                                                                 <span id="quoteShippingValue-{{ $message->id }}" class="font-semibold {{ $shippingFee == 0 ? 'text-green-600' : 'text-blue-700' }}">
@@ -425,10 +456,26 @@
                                                         </div>
                                                         <p class="text-xs text-gray-700 mb-3">Please add your delivery address to see the shipping fee and total amount to pay.</p>
                                                         <div class="bg-yellow-50 border border-yellow-200 rounded p-2 mb-2">
-                                                            <div class="flex justify-between items-center text-sm">
-                                                                <span class="text-gray-700">Quoted Price:</span>
-                                                                <span class="font-semibold text-gray-900">₱{{ number_format($quotedPrice, 2) }}</span>
-                                                            </div>
+                                                            @if(count($quoteBreakdownItems) > 0)
+                                                                <p class="text-xs font-bold text-gray-700 mb-1">Price Breakdown:</p>
+                                                                @foreach($quoteBreakdownItems as $label => $amount)
+                                                                    <div class="flex justify-between items-center text-sm">
+                                                                        <span class="text-gray-600">{{ $label }}:</span>
+                                                                        <span class="font-semibold {{ $label === 'Discount' ? 'text-green-600' : 'text-gray-900' }}">{{ $label === 'Discount' ? '-' : '' }}₱{{ number_format($amount, 2) }}</span>
+                                                                    </div>
+                                                                @endforeach
+                                                                <div class="border-t border-yellow-200 pt-1 mt-1">
+                                                                    <div class="flex justify-between items-center text-sm">
+                                                                        <span class="font-semibold text-gray-700">Subtotal:</span>
+                                                                        <span class="font-bold text-gray-900">₱{{ number_format($quotedPrice, 2) }}</span>
+                                                                    </div>
+                                                                </div>
+                                                            @else
+                                                                <div class="flex justify-between items-center text-sm">
+                                                                    <span class="text-gray-700">Quoted Price:</span>
+                                                                    <span class="font-semibold text-gray-900">₱{{ number_format($quotedPrice, 2) }}</span>
+                                                                </div>
+                                                            @endif
                                                             <div class="flex justify-between items-center text-sm mt-1">
                                                                 <span class="text-gray-700">Shipping Fee:</span>
                                                                 <span id="quoteShippingValue-{{ $message->id }}" class="text-xs text-gray-500 italic">Add address to calculate</span>

@@ -615,7 +615,7 @@
                         </button>
                     </form>
                 @elseif($order->status == 'shipped')
-                    <form action="{{ route('admin.orders.quickUpdateStatus', $order->id) }}" method="POST">
+                    <form action="{{ route('admin.orders.quickUpdateStatus', $order->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to mark this order as delivered? Please confirm delivery with the customer first.')">
                         @csrf
                         <input type="hidden" name="status" value="delivered">
                         <button type="submit" class="w-full bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium flex items-center justify-center">
