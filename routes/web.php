@@ -824,6 +824,7 @@ Route::middleware(['auth'])->group(function () {
         Route::match(['get', 'post'], '/bank/{order}', [CartController::class, 'showBankPayment'])->name('payment.bank');
         Route::post('/process/{order}', [CartController::class, 'processPayment'])->name('payment.process');
         Route::get('/success/{order}', [CartController::class, 'paymentSuccess'])->name('payment.success');
+        Route::get('/paymongo/success/{order}', [CartController::class, 'paymongoSuccess'])->name('payment.paymongo.success');
         Route::get('/failed/{order}', [CartController::class, 'paymentFailed'])->name('payment.failed');
     });
 

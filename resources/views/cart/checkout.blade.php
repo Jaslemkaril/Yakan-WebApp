@@ -355,10 +355,40 @@
                         </h2>
                         
                         <div class="space-y-3">
+                            <!-- PayMongo Payment Option -->
+                            <div class="border-2 border-gray-200 rounded-xl overflow-hidden transition-all duration-200" id="paymongo-option-wrap">
+                                <label class="relative flex items-center p-4 cursor-pointer hover:bg-blue-50 transition-all duration-200 group">
+                                    <input type="radio" name="payment_method" value="paymongo" required class="w-5 h-5 text-blue-600 focus:ring-blue-500 focus:ring-2" form="checkout-form" onclick="showPaymentDetails('paymongo')">
+                                    <div class="ml-4 flex-1">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-12 h-12 bg-white border border-blue-100 rounded-lg flex items-center justify-center p-1 overflow-hidden">
+                                                <svg viewBox="0 0 48 48" class="w-full h-full"><rect width="48" height="48" rx="8" fill="#0B7B3E"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="10" font-weight="bold" fill="white" font-family="Arial">Pay</text></svg>
+                                            </div>
+                                            <div>
+                                                <div class="font-bold text-gray-900">PayMongo</div>
+                                                <div class="text-sm text-gray-500">GCash, Maya, Credit/Debit Card, GrabPay</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <svg class="w-5 h-5 text-blue-600 payment-check-paymongo hidden" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                    </svg>
+                                </label>
+                                <div id="paymongo-details" class="hidden px-4 pb-4">
+                                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+                                        <span class="text-2xl">💳</span>
+                                        <div>
+                                            <p class="text-sm font-semibold text-blue-800">You'll be redirected to PayMongo Checkout</p>
+                                            <p class="text-xs text-blue-700 mt-1">Pay securely with GCash, Maya, credit/debit card, or GrabPay.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Maya Payment Option -->
                             <div class="border-2 border-gray-200 rounded-xl overflow-hidden transition-all duration-200" id="maya-option-wrap">
                                 <label class="relative flex items-center p-4 cursor-pointer hover:bg-green-50 transition-all duration-200 group">
-                                    <input type="radio" name="payment_method" value="maya" required class="w-5 h-5 text-green-600 focus:ring-green-500 focus:ring-2" form="checkout-form" onclick="showPaymentDetails('maya')">
+                                    <input type="radio" name="payment_method" value="maya" class="w-5 h-5 text-green-600 focus:ring-green-500 focus:ring-2" form="checkout-form" onclick="showPaymentDetails('maya')">
                                     <div class="ml-4 flex-1">
                                         <div class="flex items-center gap-3">
                                             <div class="w-12 h-12 bg-white border border-green-100 rounded-lg flex items-center justify-center p-1 overflow-hidden">
@@ -374,7 +404,6 @@
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                     </svg>
                                 </label>
-                                <!-- Maya redirect notice (shown on select) -->
                                 <div id="maya-details" class="hidden px-4 pb-4">
                                     <div class="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
                                         <span class="text-2xl">💚</span>
@@ -434,15 +463,21 @@
                         <script>
                         function showPaymentDetails(type) {
                             // Reset borders
+                            document.getElementById('paymongo-option-wrap').classList.remove('border-blue-400');
                             document.getElementById('maya-option-wrap').classList.remove('border-blue-400');
                             document.getElementById('bank-option-wrap').classList.remove('border-green-400');
                             // Hide all details
+                            document.getElementById('paymongo-details').classList.add('hidden');
                             document.getElementById('maya-details').classList.add('hidden');
                             document.getElementById('bank-details').classList.add('hidden');
                             // Hide checks
-                            document.querySelectorAll('.payment-check-maya, .payment-check-bank').forEach(el => el.classList.add('hidden'));
+                            document.querySelectorAll('.payment-check-paymongo, .payment-check-maya, .payment-check-bank').forEach(el => el.classList.add('hidden'));
                             // Show selected
-                            if (type === 'maya') {
+                            if (type === 'paymongo') {
+                                document.getElementById('paymongo-details').classList.remove('hidden');
+                                document.getElementById('paymongo-option-wrap').classList.add('border-blue-400');
+                                document.querySelectorAll('.payment-check-paymongo').forEach(el => el.classList.remove('hidden'));
+                            } else if (type === 'maya') {
                                 document.getElementById('maya-details').classList.remove('hidden');
                                 document.getElementById('maya-option-wrap').classList.add('border-blue-400');
                                 document.querySelectorAll('.payment-check-maya').forEach(el => el.classList.remove('hidden'));

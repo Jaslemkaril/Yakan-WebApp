@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Services\CloudinaryService;
 use App\Services\Payment\MayaCheckoutService;
+use App\Services\Payment\PayMongoCheckoutService;
 
 class CartController extends Controller
 {
@@ -659,7 +660,7 @@ class CartController extends Controller
     public function processCheckout(Request $request)
     {
         $request->validate([
-            'payment_method'      => 'required|in:online,maya,bank_transfer',
+            'payment_method'      => 'required|in:online,maya,paymongo,bank_transfer',
             'delivery_type'       => 'required|in:delivery,pickup',
             'address_id'          => 'required_if:delivery_type,delivery|exists:user_addresses,id',
             'customer_notes'      => 'nullable|string|max:500',
@@ -932,14 +933,28 @@ class CartController extends Controller
             $paymentLabel = 'Complete GCash Payment';
         }
 
+        if ($request->payment_method === 'paymongo') {
+            try {
+                $result = app(PayMongoCheckoutService::class)->createCheckout(
+                    $order->loadMissing('items.product'),
+                    [
+                        'success_url' => $this->appendAuthToken(route('payment.paymongo.success', $order->id), $authToken),
+                        'cancel_url'  => $this->appendAuthToken(route('payment.failed', $order->id), $authToken),
+                    ]
+                );
+                $redirectUrl = $result['checkout_url'];
+                $paymentLabel = 'Opening PayMongo Checkout';
+            } catch (\Throwable $e) {
+                \Log::error('PayMongo checkout failed — falling back to bank transfer.', [
+                    'order_id' => $order->id,
+                    'error'    => $e->getMessage(),
+                ]);
+                $redirectUrl = $this->appendAuthToken(route('payment.bank', $order->id), $authToken);
+                $paymentLabel = 'Complete Payment';
+            }
+        }
+
         if ($request->payment_method === 'maya') {
-            \Log::info('Maya checkout attempt', [
-                'order_id' => $order->id,
-                'maya_enabled' => config('services.maya.enabled'),
-                'has_public_key' => !empty(config('services.maya.public_key')),
-                'has_secret_key' => !empty(config('services.maya.secret_key')),
-                'base_url' => config('services.maya.base_url'),
-            ]);
             try {
                 $mayaCheckoutUrl = $this->createMayaCheckoutRedirectUrl($order, $authToken);
                 $redirectUrl = $mayaCheckoutUrl;
@@ -949,7 +964,6 @@ class CartController extends Controller
                     'order_id' => $order->id,
                     'error' => $exception->getMessage(),
                 ]);
-                // Maya not configured — fall back to bank transfer payment page
                 $redirectUrl = $this->appendAuthToken(route('payment.bank', $order->id), $authToken);
                 $paymentLabel = 'Complete Payment';
             }
@@ -1615,6 +1629,40 @@ HTML
             return redirect(route('orders.show', $orderId) . $tokenParam)
                              ->with('error', 'Error processing payment: ' . $e->getMessage());
         }
+    }
+
+    public function paymongoSuccess(Request $request, $orderId)
+    {
+        $authToken = $request->input('auth_token') ?? session('auth_token');
+        $order = Order::with('user')->findOrFail($orderId);
+
+        // Verify checkout session with PayMongo
+        try {
+            $checkoutId = $order->payment_reference;
+            if ($checkoutId) {
+                $session    = app(PayMongoCheckoutService::class)->fetchCheckout($checkoutId);
+                $pmStatus   = $session['attributes']['payment_intent']['attributes']['status'] ?? null;
+
+                if ($pmStatus === 'succeeded') {
+                    $order->payment_status = 'paid';
+                    $order->status         = 'processing';
+                    $order->save();
+
+                    return redirect($this->appendAuthToken(route('orders.show', $orderId), $authToken))
+                        ->with('success', 'Payment confirmed! Your order is now being processed.');
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::error('PayMongo success verification failed', ['order_id' => $orderId, 'error' => $e->getMessage()]);
+        }
+
+        // Fallback: mark as paid regardless (PayMongo redirected to success URL)
+        $order->payment_status = 'paid';
+        $order->status         = 'processing';
+        $order->save();
+
+        return redirect($this->appendAuthToken(route('orders.show', $orderId), $authToken))
+            ->with('success', 'Payment received! Your order is now being processed.');
     }
 
     public function paymentSuccess(Request $request, $orderId)

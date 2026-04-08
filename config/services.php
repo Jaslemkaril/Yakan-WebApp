@@ -87,6 +87,12 @@ return [
         'sandbox_url' => env('MAYA_SANDBOX_URL', 'https://pg-sandbox.paymaya.com'),
     ],
 
+    'paymongo' => [
+        'enabled'    => env('PAYMONGO_ENABLED', false),
+        'public_key' => env('PAYMONGO_PUBLIC_KEY'),
+        'secret_key' => env('PAYMONGO_SECRET_KEY'),
+    ],
+
     'online_banking' => [
         'api_key' => env('ONLINE_BANKING_API_KEY'),
         'merchant_id' => env('ONLINE_BANKING_MERCHANT_ID'),
