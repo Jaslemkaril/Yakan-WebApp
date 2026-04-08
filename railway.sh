@@ -40,7 +40,6 @@ echo "⏳ Running heavy tasks in background..."
 (
     php artisan session:table 2>/dev/null || true
     php artisan migrate --force --no-interaction 2>/dev/null || true
-    php artisan db:seed --class=PhilippineAddressSeeder --force 2>/dev/null || true
     php artisan view:cache 2>/dev/null || true
     echo "✅ Background tasks complete."
 ) &
