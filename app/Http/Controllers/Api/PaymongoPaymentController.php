@@ -31,8 +31,8 @@ class PaymongoPaymentController extends Controller
             $service = new PayMongoCheckoutService();
 
             $options = [
-                'success_url' => $validated['success_url'] ?? (config('app.url') . '/orders'),
-                'cancel_url'  => $validated['cancel_url']  ?? (config('app.url') . '/orders'),
+                'success_url' => $validated['success_url'] ?? (config('app.url') . '/mobile/payment/paymongo/success/' . $order->id),
+                'cancel_url'  => $validated['cancel_url']  ?? (config('app.url') . '/mobile/payment/paymongo/failed/' . $order->id),
             ];
 
             $result = $service->createCheckout($order, $options);

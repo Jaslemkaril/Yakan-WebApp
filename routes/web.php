@@ -1377,6 +1377,10 @@ Route::get('/cultural-heritage/{slug}', [\App\Http\Controllers\CulturalHeritageC
 | Webhook Routes
 |--------------------------------------------------------------------------
 */
+// Mobile PayMongo success/failed callbacks (public — no auth, PayMongo redirects here)
+Route::get('/mobile/payment/paymongo/success/{orderId}', [App\Http\Controllers\CartController::class, 'mobilePaymongoSuccess'])->name('mobile.payment.paymongo.success');
+Route::get('/mobile/payment/paymongo/failed/{orderId}', [App\Http\Controllers\CartController::class, 'mobilePaymongoFailed'])->name('mobile.payment.paymongo.failed');
+
 Route::prefix('webhooks')->group(function () {
     Route::post('/paymongo', [App\Http\Controllers\Webhooks\PayMongoWebhookController::class, 'handleWebhook'])->name('webhooks.paymongo');
     Route::post('/gcash', [App\Http\Controllers\Webhooks\PayMongoWebhookController::class, 'handleWebhook'])->name('webhooks.gcash');

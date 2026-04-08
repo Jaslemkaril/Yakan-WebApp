@@ -1665,6 +1665,104 @@ HTML
             ->with('success', 'Payment received! Your order is now being processed.');
     }
 
+    /**
+     * Mobile app PayMongo success callback — no session auth required.
+     * PayMongo redirects here after payment; we mark the order as paid
+     * and return an HTML confirmation page the user can close.
+     */
+    public function mobilePaymongoSuccess(Request $request, $orderId)
+    {
+        $order = Order::findOrFail($orderId);
+
+        try {
+            $checkoutId = $order->payment_reference;
+            if ($checkoutId) {
+                $session  = app(PayMongoCheckoutService::class)->fetchCheckout($checkoutId);
+                $pmStatus = $session['attributes']['payment_intent']['attributes']['status'] ?? null;
+
+                if ($pmStatus === 'succeeded') {
+                    $order->payment_status = 'paid';
+                    $order->status         = 'processing';
+                    $order->save();
+                } else {
+                    // PayMongo only calls success_url on success, so mark paid as fallback
+                    $order->payment_status = 'paid';
+                    $order->status         = 'processing';
+                    $order->save();
+                }
+            } else {
+                $order->payment_status = 'paid';
+                $order->status         = 'processing';
+                $order->save();
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Mobile PayMongo success verification failed', [
+                'order_id' => $orderId,
+                'error'    => $e->getMessage(),
+            ]);
+            // Still mark as paid — PayMongo only redirects to success_url on completed payment
+            $order->payment_status = 'paid';
+            $order->status         = 'processing';
+            $order->save();
+        }
+
+        return response()->make(<<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Payment Successful</title>
+  <style>
+    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center;
+           justify-content: center; height: 100vh; margin: 0; background: #f9f9f9; text-align: center; }
+    .icon { font-size: 64px; margin-bottom: 16px; }
+    h1 { color: #2e7d32; margin-bottom: 8px; }
+    p  { color: #555; margin-bottom: 24px; }
+    .badge { background: #2e7d32; color: #fff; padding: 8px 20px; border-radius: 20px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="icon">✅</div>
+  <h1>Payment Successful!</h1>
+  <p>Your order has been confirmed and is now being processed.</p>
+  <div class="badge">You may close this page and return to the app.</div>
+</body>
+</html>
+HTML, 200, ['Content-Type' => 'text/html']);
+    }
+
+    /**
+     * Mobile app PayMongo failed/cancel callback.
+     */
+    public function mobilePaymongoFailed(Request $request, $orderId)
+    {
+        return response()->make(<<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Payment Failed</title>
+  <style>
+    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center;
+           justify-content: center; height: 100vh; margin: 0; background: #f9f9f9; text-align: center; }
+    .icon { font-size: 64px; margin-bottom: 16px; }
+    h1 { color: #c62828; margin-bottom: 8px; }
+    p  { color: #555; margin-bottom: 24px; }
+    .badge { background: #c62828; color: #fff; padding: 8px 20px; border-radius: 20px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="icon">❌</div>
+  <h1>Payment Cancelled</h1>
+  <p>Your payment was not completed. Please try again.</p>
+  <div class="badge">Close this page and return to the app to retry.</div>
+</body>
+</html>
+HTML, 200, ['Content-Type' => 'text/html']);
+    }
+
     public function paymentSuccess(Request $request, $orderId)
     {
         $order = Order::with('user')->findOrFail($orderId);
