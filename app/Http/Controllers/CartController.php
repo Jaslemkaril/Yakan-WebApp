@@ -599,7 +599,14 @@ class CartController extends Controller
                 $addresses = \App\Models\UserAddress::forUser(Auth::id())
                     ->orderBy('is_default', 'desc')->get();
                 $defaultAddress = $addresses->firstWhere('is_default', true);
-                return view('cart.checkout', compact('cartItems', 'total', 'addresses', 'defaultAddress'))
+                $availableCoupons = Coupon::where('active', true)
+                    ->where(function ($q) { $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()); })
+                    ->where(function ($q) { $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()); })
+                    ->where(function ($q) { $q->whereNull('usage_limit')->orWhereColumn('times_redeemed', '<', 'usage_limit'); })
+                    ->get()
+                    ->filter(fn($c) => $c->canBeUsedBy(Auth::user()))
+                    ->values();
+                return view('cart.checkout', compact('cartItems', 'total', 'addresses', 'defaultAddress', 'availableCoupons'))
                     ->with('subtotal', $subtotal)
                     ->with('discount', $discount)
                     ->with('appliedCoupon', $appliedCoupon);
