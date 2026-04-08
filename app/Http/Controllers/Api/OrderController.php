@@ -31,7 +31,7 @@ class OrderController extends Controller
                 'shipping_zip' => 'nullable|string|max:20',
                 'shipping_barangay' => 'nullable|string|max:150',
                 'shipping_street' => 'nullable|string|max:255',
-                'payment_method' => 'required|string|in:gcash,maya,bank_transfer,cash,online_banking',
+                'payment_method' => 'required|string|in:gcash,maya,bank_transfer,cash,online_banking,paymongo',
                 'payment_status' => 'nullable|string|in:pending,paid,verified,failed',
                 'payment_reference' => 'nullable|string',
                 'subtotal' => 'required|numeric|min:0',
