@@ -672,12 +672,14 @@
             </div>
 
             <div class="space-y-4 mb-8">
-                <!-- Maya -->
-                <label class="payment-method-option {{ old('payment_method') === 'online_banking' ? 'selected' : '' }}">
-                    <input type="radio" name="payment_method" value="online_banking" {{ old('payment_method') === 'online_banking' ? 'checked' : '' }} class="w-5 h-5" style="accent-color:#800000;">
+                <!-- PayMongo -->
+                <label class="payment-method-option {{ old('payment_method') === 'paymongo' ? 'selected' : '' }}">
+                    <input type="radio" name="payment_method" value="paymongo" {{ old('payment_method') === 'paymongo' ? 'checked' : '' }} class="w-5 h-5" style="accent-color:#800000;">
                     <div class="payment-method-content flex-1 ml-4">
-                        <img src="{{ $mayaLogoDataUri ?? '' }}" alt="Maya" class="payment-brand-logo mb-1" style="width:44px; height:44px; border-radius:8px;">
-                        <p class="text-sm text-gray-600 mt-1">Pay securely via Maya online checkout</p>
+                        <div class="payment-brand-logo mb-1 flex items-center gap-1" style="height:44px;">
+                            <span style="font-size:1.4rem;font-weight:800;color:#0071ce;letter-spacing:-1px;">Pay</span><span style="font-size:1.4rem;font-weight:800;color:#00c2cb;">Mongo</span>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">GCash, Maya, Credit/Debit Card, GrabPay — secure online checkout</p>
                     </div>
                     <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>

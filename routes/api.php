@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\MayaPaymentController;
+use App\Http\Controllers\Api\PaymongoPaymentController;
 
 Route::prefix('v1')->group(function () {
     // ===================== PUBLIC SETTINGS =====================
@@ -65,6 +66,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/payments/upload-proof', [PaymentController::class, 'uploadProof']);
         Route::post('/payments/maya/checkout', [MayaPaymentController::class, 'createCheckout']);
         Route::get('/payments/maya/{order}/status', [MayaPaymentController::class, 'status']);
+        Route::post('/payments/paymongo/checkout', [PaymongoPaymentController::class, 'createCheckout']);
 
         // Wishlist
         Route::get('/wishlist', [\App\Http\Controllers\Api\WishlistController::class, 'index']);

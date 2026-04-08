@@ -983,6 +983,8 @@ Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->gr
     Route::get('/{order}/payment/confirm', [\App\Http\Controllers\CustomOrderController::class, 'paymentConfirm'])->name('payment.confirm');
     Route::get('/{order}/payment/maya-success', [\App\Http\Controllers\CustomOrderController::class, 'mayaPaymentSuccess'])->name('payment.maya.success');
     Route::get('/{order}/payment/maya-failed', [\App\Http\Controllers\CustomOrderController::class, 'mayaPaymentFailed'])->name('payment.maya.failed');
+    Route::get('/{order}/payment/paymongo-success', [\App\Http\Controllers\CustomOrderController::class, 'paymongoPaymentSuccess'])->name('payment.paymongo.success');
+    Route::get('/{order}/payment/paymongo-failed', [\App\Http\Controllers\CustomOrderController::class, 'paymongoPaymentFailed'])->name('payment.paymongo.failed');
     
     // Confirm order received
     Route::post('/{order}/confirm-received', [\App\Http\Controllers\CustomOrderController::class, 'confirmReceived'])->name('confirm_received');

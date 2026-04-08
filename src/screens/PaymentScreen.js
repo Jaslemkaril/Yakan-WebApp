@@ -23,7 +23,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-const MAYA_LOGO = require('../assets/images/maya-logo.jpg');
+// PayMongo replaces Maya as the online payment gateway
 
 // Payment account details — fetched from API at runtime, these are fallback defaults
 const DEFAULT_PAYMENT_ACCOUNTS = {
@@ -103,10 +103,10 @@ export default function PaymentScreen({ navigation, route }) {
 
   const paymentMethods = [
     {
-      id: 'maya',
-      name: 'Maya',
-      description: 'Redirects to Maya secure checkout',
-      logo: MAYA_LOGO,
+      id: 'paymongo',
+      name: 'PayMongo',
+      description: 'GCash, Maya, Credit/Debit Card, GrabPay',
+      logo: null,
       fee: 0,
     },
     {
@@ -143,8 +143,8 @@ export default function PaymentScreen({ navigation, route }) {
       return;
     }
     
-    // For Maya: skip instructions and go directly to sandbox checkout
-    if (selectedPaymentMethod === 'maya') {
+    // For PayMongo: skip instructions and go directly to checkout
+    if (selectedPaymentMethod === 'paymongo') {
       handleConfirmPayment();
       return;
     }
@@ -237,13 +237,13 @@ export default function PaymentScreen({ navigation, route }) {
         ...orderData,
         paymentMethod: selectedPaymentMethod,
         paymentReference: referenceNumber,
-        status: isMaya ? 'pending_payment' : 'payment_verified', // align with timeline stage
+        status: isPaymongo ? 'pending_payment' : 'payment_verified', // align with timeline stage
         backendOrderId: backendId,
         id: backendId, // Also store as 'id' for compatibility
       };
 
       // If user attached receipt, upload it after order is created (manual payment methods)
-      if (!isMaya && receiptImage && backendId) {
+      if (!isPaymongo && receiptImage && backendId) {
         try {
           await ApiService.uploadPaymentProof(backendId, receiptImage);
         } catch (uploadErr) {
@@ -251,59 +251,38 @@ export default function PaymentScreen({ navigation, route }) {
         }
       }
 
-      // For Maya: open sandbox checkout in browser; fail gracefully if API is unavailable
-      if (isMaya && backendId) {
+      // For PayMongo: open checkout in browser
+      if (isPaymongo && backendId) {
         try {
-          const mayaCheckout = await ApiService.createMayaCheckout(backendId);
-          const checkoutUrl = mayaCheckout?.data?.data?.checkout_url
-            ?? mayaCheckout?.data?.checkout_url
-            ?? mayaCheckout?.checkout_url;
+          const paymongoCheckout = await ApiService.createPaymongoCheckout(backendId);
+          const checkoutUrl = paymongoCheckout?.data?.data?.checkout_url
+            ?? paymongoCheckout?.data?.checkout_url
+            ?? paymongoCheckout?.checkout_url;
           if (checkoutUrl) {
             setIsProcessing(false);
             await WebBrowser.openBrowserAsync(checkoutUrl);
-            // Poll Maya payment status (up to 5 attempts, 2s apart) to confirm payment
-            setIsProcessing(true);
-            let paid = false;
-            for (let attempt = 0; attempt < 5; attempt++) {
-              try {
-                await new Promise(r => setTimeout(r, 2000));
-                const statusRes = await ApiService.getMayaPaymentStatus(backendId);
-                const paymentStatus = statusRes?.data?.data?.payment_status ?? statusRes?.data?.payment_status;
-                const orderStatus   = statusRes?.data?.data?.status        ?? statusRes?.data?.status;
-                if (paymentStatus === 'paid' || paymentStatus === 'verified') {
-                  finalOrderData.status = 'payment_verified';
-                  finalOrderData.paymentStatus = 'paid';
-                  if (orderStatus) finalOrderData.orderStatus = orderStatus;
-                  paid = true;
-                  break;
-                }
-                if (orderStatus) finalOrderData.orderStatus = orderStatus;
-              } catch (_) {
-                // continue polling
-              }
-            }
-            setIsProcessing(false);
+            finalOrderData.status = 'pending_payment';
             await updateOrderInStorage(finalOrderData);
             clearCart();
             notifyOrderCreated(orderData.orderRef);
             navigation.navigate('OrderDetails', { orderData: finalOrderData });
             return;
           } else {
-            throw new Error('No checkout URL in Maya response: ' + JSON.stringify(mayaCheckout?.data));
+            throw new Error('No checkout URL in PayMongo response: ' + JSON.stringify(paymongoCheckout?.data));
           }
-        } catch (mayaErr) {
-          console.warn('Maya checkout failed:', mayaErr?.message || mayaErr);
+        } catch (pmErr) {
+          console.warn('PayMongo checkout failed:', pmErr?.message || pmErr);
           setIsProcessing(false);
           Alert.alert(
-            'Maya Checkout Failed',
-            mayaErr?.message || 'Could not connect to Maya. Please try Bank Transfer or contact support.',
+            'PayMongo Checkout Failed',
+            pmErr?.message || 'Could not connect to PayMongo. Please try Bank Transfer or contact support.',
             [{ text: 'OK' }]
           );
           return;
         }
       }
 
-      if (isMaya && !backendId) {
+      if (isPaymongo && !backendId) {
         setIsProcessing(false);
         Alert.alert('Error', 'Order was created but ID could not be retrieved. Please contact support.');
         return;
@@ -323,7 +302,7 @@ export default function PaymentScreen({ navigation, route }) {
         paymentMethod: selectedPaymentMethod,
         items: orderData.items,
         shippingAddress: orderData.shippingAddress,
-        status: isMaya ? 'pending_payment' : 'pending_confirmation',
+        status: isPaymongo ? 'pending_payment' : 'pending_confirmation',
       });
 
       // Start polling for order status updates
@@ -353,7 +332,7 @@ export default function PaymentScreen({ navigation, route }) {
         ...orderData,
         paymentMethod: selectedPaymentMethod,
         paymentReference: referenceNumber,
-        status: isMaya ? 'pending_payment' : 'payment_verified',
+        status: isPaymongo ? 'pending_payment' : 'payment_verified',
       };
       await updateOrderInStorage(finalOrderData);
       
@@ -369,7 +348,7 @@ export default function PaymentScreen({ navigation, route }) {
         paymentMethod: selectedPaymentMethod,
         items: orderData.items,
         shippingAddress: orderData.shippingAddress,
-        status: isMaya ? 'pending_payment' : 'pending_confirmation',
+        status: isPaymongo ? 'pending_payment' : 'pending_confirmation',
         syncStatus: 'pending',
       });
       
@@ -392,11 +371,12 @@ export default function PaymentScreen({ navigation, route }) {
   const total = (orderData.subtotal || 0) + (orderData.shippingFee || 0);
   const selectedMethod = paymentMethods.find(m => m.id === selectedPaymentMethod);
   const finalTotal = total + (selectedMethod?.fee || 0);
-  const isMaya = selectedPaymentMethod === 'maya';
+  const isPaymongo = selectedPaymentMethod === 'paymongo';
   const isBankTransfer = selectedPaymentMethod === 'bank_transfer';
-  const walletLabel = 'Maya';
-  const walletNumber = paymentAccounts.maya.number;
-  const walletName = paymentAccounts.maya.name;
+  // Stub wallet vars — PayMongo uses redirect, only bank_transfer shows manual instructions
+  const walletLabel = 'Online Payment';
+  const walletNumber = '';
+  const walletName = '';
 
   // Payment Instructions Screen
   if (showPaymentInstructions && selectedPaymentMethod) {
@@ -513,13 +493,13 @@ export default function PaymentScreen({ navigation, route }) {
                   <Text style={styles.stepNumberText}>5</Text>
                 </View>
                 <View style={styles.stepContent}>
-                  <Text style={styles.stepTitle}>{isMaya ? 'Proceed to Maya Checkout' : 'Submit Payment Confirmation'}</Text>
+                  <Text style={styles.stepTitle}>{isPaymongo ? 'Proceed to PayMongo Checkout' : 'Submit Payment Confirmation'}</Text>
                   <Text style={styles.stepDescription}>
-                    {isMaya
-                      ? 'Tap the button below to open Maya Checkout and complete payment securely.'
+                    {isPaymongo
+                      ? 'Tap the button below to open PayMongo Checkout and complete payment securely.'
                       : 'After sending the payment, click the button below to confirm. Your payment will be verified automatically and your order will start processing immediately!'}
                   </Text>
-                  {!isMaya && (
+                  {!isPaymongo && (
                     <>
                       <TouchableOpacity style={styles.receiptButton} onPress={handlePickReceipt}>
                         <Text style={styles.receiptButtonText}>📎 Upload receipt image</Text>
@@ -704,15 +684,15 @@ export default function PaymentScreen({ navigation, route }) {
             <View style={styles.noticeContent}>
               <Text style={styles.warningTitle}>Important Reminder</Text>
               <Text style={styles.noticeDescription}>
-                {isMaya
-                  ? 'Complete payment in the Maya checkout page. Your order status will update after successful payment.'
+                {isPaymongo
+                  ? 'Complete payment in the PayMongo Checkout page. Your order status will update after successful payment.'
                   : `Please make sure to send the EXACT amount (₱${finalTotal.toFixed(2)}) and include the reference number (${orderData.orderRef}) in your ${!isBankTransfer ? walletLabel : 'bank transfer'} message.`}
               </Text>
             </View>
           </View>
 
           {/* Reference Number Input */}
-          {!isMaya && (
+          {!isPaymongo && (
           <View style={styles.referenceInputCard}>
             <Text style={styles.referenceInputLabel}>
               {!isBankTransfer ? walletLabel : 'Bank'} Reference Number (optional)
@@ -751,7 +731,7 @@ export default function PaymentScreen({ navigation, route }) {
               <ActivityIndicator color={colors.white} />
             ) : (
               <Text style={styles.confirmPaymentButtonText}>
-                {isMaya ? 'Proceed to Maya Checkout' : `I have paid via ${selectedMethod?.name}`}
+                {isPaymongo ? 'Proceed to PayMongo Checkout' : `I have paid via ${selectedMethod?.name}`}
               </Text>
             )}
           </TouchableOpacity>
@@ -821,6 +801,10 @@ export default function PaymentScreen({ navigation, route }) {
                     style={styles.methodLogoImage}
                     resizeMode="contain"
                   />
+                ) : method.id === 'paymongo' ? (
+                  <View style={[styles.bankIconCircle, { backgroundColor: '#e8f4ff' }]}>
+                    <MaterialCommunityIcons name="credit-card" size={26} color="#0071ce" />
+                  </View>
                 ) : (
                   <View style={styles.bankIconCircle}>
                     <MaterialCommunityIcons name="bank" size={26} color="#8B1A1A" />

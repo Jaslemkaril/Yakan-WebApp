@@ -76,6 +76,7 @@ export const API_CONFIG = {
       STATUS: '/payments/:orderId/status',
       MAYA_CHECKOUT: '/payments/maya/checkout',
       MAYA_STATUS: '/payments/maya/:orderId/status',
+      PAYMONGO_CHECKOUT: '/payments/paymongo/checkout',
     },
     
     // User endpoints

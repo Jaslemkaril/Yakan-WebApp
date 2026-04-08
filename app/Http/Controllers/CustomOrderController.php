@@ -3159,7 +3159,7 @@ class CustomOrderController extends Controller
             }
             
             $paymentMethod = $request->input('payment_method');
-            if (!in_array($paymentMethod, ['online_banking', 'bank_transfer'])) {
+            if (!in_array($paymentMethod, ['paymongo', 'online_banking', 'bank_transfer'])) {
                 return response()->json([
                     'success' => false,
                     'error' => 'Invalid payment method selected.'
@@ -3247,58 +3247,88 @@ class CustomOrderController extends Controller
             
             $authTokenForCallback = $request->input('auth_token') ?? $request->header('X-Auth-Token') ?? session('auth_token') ?? '';
             
-            // Handle Maya checkout
-            if ($paymentMethod === 'online_banking' && config('services.maya.enabled', false)) {
+            // Handle PayMongo checkout
+            if (in_array($paymentMethod, ['paymongo', 'online_banking']) && config('services.paymongo.enabled', false)) {
                 try {
-                    $publicKey  = config('services.maya.public_key');
-                    $baseUrl    = rtrim(config('services.maya.base_url', 'https://pg-sandbox.paymaya.com'), '/');
                     $itemsSubtotal = (float) $this->calculateOrdersTotal($paymentOrders);
-                    $buyer      = $order->user ?? User::find($order->user_id);
-                    
                     $tokenQuery = $authTokenForCallback ? '?auth_token=' . urlencode($authTokenForCallback) : '';
-                    $successUrl = route('custom_orders.payment.maya.success', $order->id) . $tokenQuery;
-                    $failureUrl = route('custom_orders.payment.maya.failed', $order->id) . $tokenQuery;
-                    
-                    // Build items array - each batch order as separate line item
-                    $items = $this->buildMayaItemsArray($paymentOrders, $shippingFee);
+                    $successUrl = route('custom_orders.payment.paymongo.success', $order->id) . $tokenQuery;
+                    $cancelUrl  = route('custom_orders.payment.paymongo.failed', $order->id) . $tokenQuery;
 
-                    // Keep Maya totalAmount exactly equal to items sum to avoid double-counting.
-                    $amount = (float) collect($items)->sum(function (array $item) {
-                        return (float) data_get($item, 'totalAmount.value', 0);
-                    });
+                    // Build line items for PayMongo
+                    $lineItems = [];
+                    foreach ($paymentOrders as $paymentOrder) {
+                        $itemPrice = (float) ($paymentOrder->final_price ?? $paymentOrder->estimated_price ?? 0);
+                        $itemShipping = (float) ($paymentOrder->shipping_fee ?? 0);
+                        // Remove shipping from item price to avoid double-counting
+                        $itemNet = max($itemPrice - $itemShipping, 0);
+                        if ($itemNet <= 0) $itemNet = $itemPrice;
+                        $lineItems[] = [
+                            'currency'    => 'PHP',
+                            'amount'      => (int) round($itemNet * 100),
+                            'description' => 'Custom Order #' . $paymentOrder->id,
+                            'name'        => 'Custom Order #' . $paymentOrder->id,
+                            'quantity'    => 1,
+                        ];
+                    }
+                    if ($shippingFee > 0) {
+                        $lineItems[] = [
+                            'currency'    => 'PHP',
+                            'amount'      => (int) round($shippingFee * 100),
+                            'description' => 'Shipping Fee',
+                            'name'        => 'Shipping Fee',
+                            'quantity'    => 1,
+                        ];
+                    }
 
+                    // Ensure total matches
+                    $lineItemsTotal = collect($lineItems)->sum(fn($i) => $i['amount'] * $i['quantity']);
+                    $grandTotal = (int) round(($itemsSubtotal + $shippingFee) * 100);
+                    if ($lineItemsTotal !== $grandTotal) {
+                        $lineItems = [[
+                            'currency'    => 'PHP',
+                            'amount'      => $grandTotal,
+                            'description' => 'Custom Order Batch',
+                            'name'        => 'Yakan Custom Order',
+                            'quantity'    => 1,
+                        ]];
+                    }
+
+                    $buyer = $order->user ?? User::find($order->user_id);
                     $payload = [
-                        'totalAmount' => ['value' => number_format($amount, 2, '.', ''), 'currency' => 'PHP'],
-                        'requestReferenceNumber' => 'ORD-CO-' . $order->id . '-' . time(),
-                        'redirectUrl' => ['success' => $successUrl, 'failure' => $failureUrl, 'cancel' => $failureUrl],
-                        'buyer' => [
-                            'firstName' => $buyer ? explode(' ', $buyer->name)[0] : 'Customer',
-                            'lastName'  => $buyer ? (explode(' ', $buyer->name, 2)[1] ?? '-') : '-',
-                            'contact'   => ['email' => $buyer->email ?? ''],
+                        'data' => [
+                            'attributes' => [
+                                'billing' => [
+                                    'name'  => $buyer->name ?? 'Customer',
+                                    'email' => $buyer->email ?? '',
+                                    'phone' => $buyer->phone ?? '',
+                                ],
+                                'line_items'           => $lineItems,
+                                'payment_method_types' => ['card', 'gcash', 'paymaya', 'grab_pay'],
+                                'success_url'          => $successUrl,
+                                'cancel_url'           => $cancelUrl,
+                                'description'          => 'Custom Order #' . $order->id,
+                                'reference_number'     => 'CO-' . $order->id,
+                                'send_email_receipt'   => false,
+                                'show_description'     => true,
+                                'show_line_items'      => true,
+                            ],
                         ],
-                        'items' => $items,
                     ];
 
-                    \Log::info('Maya checkout request', [
-                        'order_id' => $order->id, 
-                        'items_subtotal' => $itemsSubtotal,
-                        'shipping_fee' => $shippingFee,
-                        'total_amount' => $amount
-                    ]);
-
-                    $response = \Illuminate\Support\Facades\Http::withBasicAuth($publicKey, '')
+                    $secretKey = config('services.paymongo.secret_key');
+                    $response = \Illuminate\Support\Facades\Http::withBasicAuth($secretKey, '')
                         ->acceptJson()
-                        ->post($baseUrl . '/checkout/v1/checkouts', $payload);
+                        ->post('https://api.paymongo.com/v1/checkout_sessions', $payload);
 
                     if ($response->successful()) {
-                        $data = $response->json() ?? [];
-                        $checkoutId  = $data['checkoutId'] ?? $data['id'] ?? null;
-                        $checkoutUrl = $data['redirectUrl'] ?? $data['checkoutUrl'] ?? $data['url'] ?? null;
+                        $data = $response->json('data');
+                        $checkoutId  = $data['id'] ?? null;
+                        $checkoutUrl = $data['attributes']['checkout_url'] ?? null;
 
                         if ($checkoutId && $checkoutUrl) {
-                            // Update orders
                             foreach ($paymentOrders as $paymentOrder) {
-                                $paymentOrder->payment_method = 'online_banking';
+                                $paymentOrder->payment_method = 'paymongo';
                                 $paymentOrder->transaction_id = $checkoutId;
                                 $paymentOrder->payment_status = 'pending';
                                 if ($paymentOrder->id === $order->id) {
@@ -3312,32 +3342,31 @@ class CustomOrderController extends Controller
                                 }
                                 $paymentOrder->save();
                             }
-                            
-                            \Log::info('Maya checkout success', [
-                                'order_id' => $order->id,
+
+                            \Log::info('PayMongo custom order checkout created', [
+                                'order_id'    => $order->id,
                                 'checkout_id' => $checkoutId,
-                                'redirect_url' => $checkoutUrl
                             ]);
-                            
+
                             return response()->json([
-                                'success' => true,
+                                'success'      => true,
                                 'redirect_url' => $checkoutUrl,
-                                'checkout_id' => $checkoutId
+                                'checkout_id'  => $checkoutId,
                             ]);
                         }
                     }
-                    
-                    \Log::error('Maya checkout failed', [
+
+                    \Log::error('PayMongo custom order checkout failed', [
                         'order_id' => $order->id,
-                        'status' => $response->status(),
-                        'body' => $response->body()
+                        'status'   => $response->status(),
+                        'body'     => $response->body(),
                     ]);
-                    
-                    // Fall back to bank transfer on Maya failure
+
+                    // Fall back to bank transfer on PayMongo failure
                     $paymentMethod = 'bank_transfer';
-                    
+
                 } catch (\Throwable $e) {
-                    \Log::error('Maya checkout exception: ' . $e->getMessage());
+                    \Log::error('PayMongo custom order checkout exception: ' . $e->getMessage());
                     $paymentMethod = 'bank_transfer';
                 }
             }
@@ -3492,6 +3521,73 @@ class CustomOrderController extends Controller
 
         return $this->redirectToRouteWithToken('custom_orders.payment', $order)
             ->with('error', 'Maya payment was not completed. Please try again or choose Bank Transfer.');
+    }
+
+    public function paymongoPaymentSuccess(Request $request, $id)
+    {
+        $order = CustomOrder::findOrFail($id);
+
+        if (!Auth::check()) {
+            $token = $request->query('auth_token') ?? $request->input('auth_token') ?? session('auth_token');
+            if ($token) {
+                $authToken = \DB::table('auth_tokens')
+                    ->where('token', $token)
+                    ->where('expires_at', '>', now())
+                    ->first();
+                if ($authToken) {
+                    $user = \App\Models\User::find($authToken->user_id);
+                    if ($user) Auth::login($user, true);
+                }
+            }
+        }
+
+        if ($order->user_id !== Auth::id()) abort(403);
+
+        $paidAt = now();
+        $batchToMarkPaid = $this->getUserBatchOrders($order, Auth::id())
+            ->where('payment_status', '!=', 'paid')
+            ->where('status', 'approved')
+            ->values();
+
+        if ($batchToMarkPaid->isEmpty()) {
+            $batchToMarkPaid = collect([$order]);
+        }
+
+        foreach ($batchToMarkPaid as $batchOrder) {
+            $batchOrder->payment_status = 'paid';
+            if (\Schema::hasColumn('custom_orders', 'payment_verified_at')) {
+                $batchOrder->payment_verified_at = $paidAt;
+            }
+            $batchOrder->status = 'processing';
+            $batchOrder->save();
+        }
+
+        return $this->redirectToRouteWithToken('custom_orders.show', $order)
+            ->with('success', 'PayMongo payment confirmed! Your custom order is now being processed.');
+    }
+
+    public function paymongoPaymentFailed(Request $request, $id)
+    {
+        $order = CustomOrder::findOrFail($id);
+
+        if (!Auth::check()) {
+            $token = $request->query('auth_token') ?? $request->input('auth_token') ?? session('auth_token');
+            if ($token) {
+                $authToken = \DB::table('auth_tokens')
+                    ->where('token', $token)
+                    ->where('expires_at', '>', now())
+                    ->first();
+                if ($authToken) {
+                    $user = \App\Models\User::find($authToken->user_id);
+                    if ($user) Auth::login($user, true);
+                }
+            }
+        }
+
+        if ($order->user_id !== Auth::id()) abort(403);
+
+        return $this->redirectToRouteWithToken('custom_orders.payment', $order)
+            ->with('error', 'PayMongo payment was not completed. Please try again or choose Bank Transfer.');
     }
 
     /**

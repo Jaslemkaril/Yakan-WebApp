@@ -509,6 +509,17 @@ class ApiService {
   }
 
   /**
+   * Create PayMongo checkout session for an order
+   */
+  async createPaymongoCheckout(orderId, urls = {}) {
+    return this.request('POST', API_CONFIG.ENDPOINTS.PAYMENT.PAYMONGO_CHECKOUT, {
+      order_id: orderId,
+      success_url: urls.successUrl,
+      cancel_url: urls.cancelUrl,
+    });
+  }
+
+  /**
    * Get Maya payment status for an order
    */
   async getMayaPaymentStatus(orderId) {
