@@ -2,7 +2,8 @@
 
 @section('title', 'Chat: ' . $chat->subject)
 @section('hide_admin_header', '1')
-@section('admin_content_padding', 'p-3 sm:p-4 pb-0 sm:pb-0')
+@section('admin_content_padding', 'p-0')
+@section('admin_content_wrapper_class', 'h-full')
 
 @section('content')
 <style>
@@ -12,10 +13,10 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        height: calc(100dvh - 5.75rem);
-        min-height: 600px;
+        height: 100%;
+        min-height: 0;
         border: 1px solid #e9e5e0;
-        border-radius: 14px;
+        border-radius: 0;
     }
 
     /* Top bar */
@@ -158,10 +159,6 @@
     .cs-send-btn svg { width: 15px; height: 15px; color: #fff; }
 
     /* Responsive */
-    @media (max-width: 1024px) {
-        .cs-wrap { height: calc(100dvh - 5rem); min-height: 560px; }
-    }
-
     @media (max-width: 860px) { .cs-sidebar { width: 260px; } }
     @media (max-width: 640px) {
         .cs-wrap { height: auto; min-height: calc(100dvh - 7.25rem); border-radius: 10px; }

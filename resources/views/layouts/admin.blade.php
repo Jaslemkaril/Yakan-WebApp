@@ -1064,6 +1064,7 @@
             if ($contentPaddingOverride !== '') {
                 $contentPaddingClass = $contentPaddingOverride;
             }
+            $contentWrapperClass = trim($__env->yieldContent('admin_content_wrapper_class'));
         @endphp
 
         <!-- Main Content -->
@@ -1144,7 +1145,7 @@
                 @endif
 
                 <!-- Page Content -->
-                <div>
+                <div class="{{ $contentWrapperClass }}">
                     @yield('content')
                 </div>
             </div>
