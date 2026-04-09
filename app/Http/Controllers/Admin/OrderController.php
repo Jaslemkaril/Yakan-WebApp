@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Order;
+use App\Services\Payment\PayMongoCheckoutService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -85,6 +88,38 @@ class OrderController extends Controller
     {
         $order->load('user', 'orderItems.product.category');
         return view('admin.orders.show', compact('order'));
+    }
+
+    /**
+     * Fetch verified PayMongo receipt details for admin display.
+     */
+    public function paymongoReceipt(Order $order, PayMongoCheckoutService $payMongoService): JsonResponse
+    {
+        if (strtolower((string) $order->payment_method) !== 'paymongo') {
+            return response()->json([
+                'success' => false,
+                'message' => 'This order is not a PayMongo payment.',
+            ], 422);
+        }
+
+        try {
+            $receipt = $payMongoService->getVerifiedReceiptForOrder($order);
+
+            return response()->json([
+                'success' => true,
+                'receipt' => $receipt,
+            ]);
+        } catch (\Throwable $exception) {
+            Log::error('Unable to fetch verified PayMongo receipt for admin.', [
+                'order_id' => $order->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to fetch receipt from PayMongo right now. Please try again.',
+            ], 502);
+        }
     }
 
     // Update order status

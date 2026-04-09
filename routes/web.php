@@ -1235,6 +1235,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         Route::get('/{order}/edit', [AdminOrderController::class, 'edit'])->name('orders.edit');
         Route::put('/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
         Route::get('/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+        Route::get('/{order}/paymongo-receipt', [AdminOrderController::class, 'paymongoReceipt'])->name('orders.paymongo_receipt');
         Route::post('/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.update_status');
         Route::post('/{order}/tracking', [AdminOrderController::class, 'updateTracking'])->name('orders.update_tracking');
         Route::post('/{order}/cancel', [AdminOrderController::class, 'cancel'])->name('orders.cancel');

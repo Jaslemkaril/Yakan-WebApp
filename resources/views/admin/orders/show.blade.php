@@ -188,9 +188,12 @@
                             ? $receiptSource
                             : asset('storage/' . $receiptSource);
                     }
+
+                    $isPaymongo = strtolower((string) ($order->payment_method ?? '')) === 'paymongo';
                     
                     // Label based on payment method
                     $receiptLabel = match($order->payment_method) {
+                        'paymongo' => 'PayMongo Verified Receipt',
                         'maya' => 'Maya Receipt',
                         'gcash' => 'GCash Receipt',
                         'online', 'online_banking' => 'GCash Receipt',
@@ -202,7 +205,15 @@
                 <div class="mt-4 pt-4 border-t border-gray-200">
                     <div class="flex items-center justify-between">
                         <span class="text-sm font-medium text-gray-700">{{ $receiptLabel }}:</span>
-                        @if($receiptDisplayUrl)
+                        @if($isPaymongo)
+                            <button type="button" onclick="viewPaymongoReceipt('{{ route('admin.orders.paymongo_receipt', $order) }}')"
+                                class="inline-flex items-center px-3 py-2 text-white rounded-lg transition-colors text-sm font-medium" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#A05050'" onmouseout="this.style.backgroundColor='#800000'">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622C17.176 19.29 21 14.591 21 9c0-1.042-.133-2.052-.382-3.016z"/>
+                                </svg>
+                                View Verified Receipt
+                            </button>
+                        @elseif($receiptDisplayUrl)
                             <button type="button" onclick="viewAdminReceipt('{{ $receiptDisplayUrl }}')" 
                                 class="inline-flex items-center px-3 py-2 text-white rounded-lg transition-colors text-sm font-medium" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#A05050'" onmouseout="this.style.backgroundColor='#800000'">
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -946,6 +957,65 @@
     </div>
 </div>
 
+<!-- Verified PayMongo Receipt Modal -->
+<div id="paymongoReceiptModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-xl font-bold text-gray-900">Verified PayMongo Receipt</h3>
+            <button onclick="closePaymongoReceiptModal()" class="text-gray-500 hover:text-gray-700 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6">
+            <div id="paymongoReceiptLoading" class="text-sm text-gray-500">Fetching verified receipt from PayMongo...</div>
+            <div id="paymongoReceiptError" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3"></div>
+
+            <div id="paymongoReceiptBody" class="hidden space-y-3">
+                <div class="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                    Verified directly from PayMongo API. This data cannot be edited by customer uploads.
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="text-gray-500">Reference Number</p>
+                        <p id="pmRefNumber" class="font-semibold text-gray-900 break-all">-</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="text-gray-500">Payment ID</p>
+                        <p id="pmPaymentId" class="font-semibold text-gray-900 break-all">-</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="text-gray-500">Payment Method</p>
+                        <p id="pmPaymentMethod" class="font-semibold text-gray-900">-</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="text-gray-500">Status</p>
+                        <p id="pmStatus" class="font-semibold text-gray-900">-</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="text-gray-500">Amount</p>
+                        <p id="pmAmount" class="font-semibold text-gray-900">-</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="text-gray-500">Payment Date</p>
+                        <p id="pmPaidAt" class="font-semibold text-gray-900">-</p>
+                    </div>
+                </div>
+
+                <p id="pmFetchedAt" class="text-xs text-gray-400"></p>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button onclick="closePaymongoReceiptModal()" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Receipt Viewer Modal for Admin
 function viewAdminReceipt(receiptUrl) {
@@ -966,13 +1036,79 @@ function closeAdminReceiptModal() {
     modal.classList.remove('flex');
 }
 
+function closePaymongoReceiptModal() {
+    const modal = document.getElementById('paymongoReceiptModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function formatPaymongoStatus(status) {
+    if (!status) return 'N/A';
+    return String(status).replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+}
+
+async function viewPaymongoReceipt(endpointUrl) {
+    const modal = document.getElementById('paymongoReceiptModal');
+    const loading = document.getElementById('paymongoReceiptLoading');
+    const error = document.getElementById('paymongoReceiptError');
+    const body = document.getElementById('paymongoReceiptBody');
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    loading.classList.remove('hidden');
+    body.classList.add('hidden');
+    error.classList.add('hidden');
+    error.textContent = '';
+
+    try {
+        const response = await fetch(endpointUrl, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        });
+
+        const payload = await response.json();
+        if (!response.ok || !payload.success) {
+            throw new Error(payload.message || 'Unable to load verified receipt from PayMongo.');
+        }
+
+        const receipt = payload.receipt || {};
+        document.getElementById('pmRefNumber').textContent = receipt.reference_number || 'N/A';
+        document.getElementById('pmPaymentId').textContent = receipt.payment_id || 'N/A';
+        document.getElementById('pmPaymentMethod').textContent = receipt.payment_method || 'N/A';
+        document.getElementById('pmStatus').textContent = formatPaymongoStatus(receipt.status);
+        document.getElementById('pmAmount').textContent = (receipt.currency || 'PHP') + ' ' + Number(receipt.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('pmPaidAt').textContent = receipt.paid_at ? new Date(receipt.paid_at).toLocaleString() : 'N/A';
+        document.getElementById('pmFetchedAt').textContent = receipt.fetched_at
+            ? ('Fetched at ' + new Date(receipt.fetched_at).toLocaleString())
+            : '';
+
+        loading.classList.add('hidden');
+        body.classList.remove('hidden');
+    } catch (fetchError) {
+        loading.classList.add('hidden');
+        error.classList.remove('hidden');
+        error.textContent = fetchError.message || 'Unable to load verified receipt from PayMongo.';
+    }
+}
+
 // Close modal when clicking outside
 document.addEventListener('DOMContentLoaded', function() {
-    const modal = document.getElementById('adminReceiptModal');
-    if (modal) {
-        modal.addEventListener('click', function(e) {
-            if (e.target === modal) {
+    const imageModal = document.getElementById('adminReceiptModal');
+    if (imageModal) {
+        imageModal.addEventListener('click', function(e) {
+            if (e.target === imageModal) {
                 closeAdminReceiptModal();
+            }
+        });
+    }
+
+    const paymongoModal = document.getElementById('paymongoReceiptModal');
+    if (paymongoModal) {
+        paymongoModal.addEventListener('click', function(e) {
+            if (e.target === paymongoModal) {
+                closePaymongoReceiptModal();
             }
         });
     }
@@ -981,6 +1117,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeAdminReceiptModal();
+            closePaymongoReceiptModal();
         }
     });
 });

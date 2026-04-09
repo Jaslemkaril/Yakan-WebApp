@@ -141,6 +141,10 @@ class PayMongoCheckoutService
      */
     public function fetchCheckout(string $checkoutId): array
     {
+        if (empty($this->secretKey)) {
+            throw new \RuntimeException('PayMongo secret key is not configured.');
+        }
+
         $response = Http::withBasicAuth($this->secretKey, '')
             ->acceptJson()
             ->get($this->baseUrl . '/checkout_sessions/' . $checkoutId);
@@ -150,5 +154,184 @@ class PayMongoCheckoutService
         }
 
         return $response->json('data') ?? [];
+    }
+
+    /**
+     * Fetch a payment resource from PayMongo.
+     */
+    public function fetchPayment(string $paymentId): array
+    {
+        if (empty($this->secretKey)) {
+            throw new \RuntimeException('PayMongo secret key is not configured.');
+        }
+
+        $response = Http::withBasicAuth($this->secretKey, '')
+            ->acceptJson()
+            ->get($this->baseUrl . '/payments/' . $paymentId);
+
+        if (!$response->successful()) {
+            throw new \RuntimeException('Failed to fetch PayMongo payment: ' . $response->body());
+        }
+
+        return $response->json('data') ?? [];
+    }
+
+    /**
+     * Build normalized and trusted receipt data from PayMongo resources.
+     */
+    public function getVerifiedReceiptForOrder(Order $order): array
+    {
+        $reference = trim((string) ($order->payment_reference ?? ''));
+        $checkout = null;
+        $payment = null;
+
+        if ($reference !== '') {
+            if (str_starts_with($reference, 'pay_')) {
+                $payment = $this->fetchPayment($reference);
+            } else {
+                try {
+                    $checkout = $this->fetchCheckout($reference);
+                } catch (\Throwable $exception) {
+                    Log::warning('Unable to fetch PayMongo checkout by payment_reference.', [
+                        'order_id' => $order->id,
+                        'reference' => $reference,
+                        'error' => $exception->getMessage(),
+                    ]);
+                }
+
+                if ($checkout) {
+                    $checkoutPaymentId = $this->extractPaymentIdFromCheckout($checkout);
+                    if ($checkoutPaymentId) {
+                        try {
+                            $payment = $this->fetchPayment($checkoutPaymentId);
+                        } catch (\Throwable $exception) {
+                            Log::warning('Unable to fetch PayMongo payment from checkout payload.', [
+                                'order_id' => $order->id,
+                                'payment_id' => $checkoutPaymentId,
+                                'error' => $exception->getMessage(),
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
+
+        $paymentId = $this->firstNonEmpty([
+            data_get($payment, 'id'),
+            data_get($checkout, 'attributes.payments.0.id'),
+            data_get($checkout, 'attributes.payments.0.attributes.id'),
+            data_get($checkout, 'attributes.payment.id'),
+            data_get($checkout, 'attributes.payment_intent.attributes.latest_payment.id'),
+            $order->payment_reference,
+        ]);
+
+        $referenceNumber = $this->firstNonEmpty([
+            data_get($checkout, 'attributes.reference_number'),
+            data_get($checkout, 'attributes.referenceNumber'),
+            $order->order_ref,
+            'ORDER-' . $order->id,
+        ]);
+
+        $status = strtolower((string) $this->firstNonEmpty([
+            data_get($payment, 'attributes.status'),
+            data_get($checkout, 'attributes.payment_intent.attributes.status'),
+            data_get($checkout, 'attributes.payment_intent.attributes.payment_status'),
+            data_get($checkout, 'attributes.status'),
+            $order->payment_status,
+            'unknown',
+        ]));
+
+        $amountCents = $this->firstNonEmpty([
+            data_get($payment, 'attributes.amount'),
+            data_get($checkout, 'attributes.payments.0.attributes.amount'),
+            data_get($checkout, 'attributes.amount_total'),
+            data_get($checkout, 'attributes.amountTotal'),
+        ]);
+
+        $amount = is_numeric($amountCents)
+            ? ((float) $amountCents / 100)
+            : (float) ($order->total_amount ?? $order->total ?? 0);
+
+        $currency = strtoupper((string) $this->firstNonEmpty([
+            data_get($payment, 'attributes.currency'),
+            data_get($checkout, 'attributes.payments.0.attributes.currency'),
+            data_get($checkout, 'attributes.currency'),
+            'PHP',
+        ]));
+
+        $methodRaw = strtolower((string) $this->firstNonEmpty([
+            data_get($payment, 'attributes.source.type'),
+            data_get($payment, 'attributes.source.attributes.type'),
+            data_get($checkout, 'attributes.payments.0.attributes.source.type'),
+            data_get($checkout, 'attributes.payments.0.attributes.source.attributes.type'),
+            data_get($checkout, 'attributes.payment_method_used'),
+            data_get($checkout, 'attributes.paymentMethodUsed'),
+            'paymongo',
+        ]));
+
+        $method = match ($methodRaw) {
+            'paymaya', 'maya' => 'Maya',
+            'gcash' => 'GCash',
+            'card' => 'Card',
+            'grab_pay', 'grabpay' => 'GrabPay',
+            default => ucfirst(str_replace('_', ' ', $methodRaw)),
+        };
+
+        $paidAtRaw = $this->firstNonEmpty([
+            data_get($payment, 'attributes.paid_at'),
+            data_get($payment, 'attributes.created_at'),
+            data_get($checkout, 'attributes.payments.0.attributes.paid_at'),
+            data_get($checkout, 'attributes.payments.0.attributes.created_at'),
+            data_get($checkout, 'attributes.updated_at'),
+            optional($order->payment_verified_at)->toISOString(),
+        ]);
+
+        $paidAtIso = null;
+        if ($paidAtRaw) {
+            try {
+                $paidAtIso = \Carbon\Carbon::parse((string) $paidAtRaw)->toIso8601String();
+            } catch (\Throwable $exception) {
+                $paidAtIso = null;
+            }
+        }
+
+        return [
+            'gateway' => 'PayMongo',
+            'verified' => true,
+            'reference_number' => $referenceNumber,
+            'payment_id' => $paymentId,
+            'status' => $status,
+            'payment_method' => $method,
+            'amount' => round($amount, 2),
+            'currency' => $currency,
+            'paid_at' => $paidAtIso,
+            'fetched_at' => now()->toIso8601String(),
+        ];
+    }
+
+    private function extractPaymentIdFromCheckout(array $checkout): ?string
+    {
+        return $this->firstNonEmpty([
+            data_get($checkout, 'attributes.payments.0.id'),
+            data_get($checkout, 'attributes.payments.0.attributes.id'),
+            data_get($checkout, 'attributes.payment.id'),
+            data_get($checkout, 'attributes.payment_intent.attributes.latest_payment.id'),
+        ]);
+    }
+
+    private function firstNonEmpty(array $values): ?string
+    {
+        foreach ($values as $value) {
+            if ($value === null) {
+                continue;
+            }
+
+            $text = is_scalar($value) ? trim((string) $value) : '';
+            if ($text !== '') {
+                return $text;
+            }
+        }
+
+        return null;
     }
 }
