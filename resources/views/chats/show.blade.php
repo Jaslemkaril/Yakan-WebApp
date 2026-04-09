@@ -62,10 +62,19 @@
         box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
         display: flex;
         flex-direction: column;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .chat-shell {
+        height: calc(100dvh - 104px);
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
     }
 
     .uc-thread {
-        height: min(62vh, 640px);
+        height: auto;
         background: #f8f7f5;
         padding: 20px 22px;
         flex: 1;
@@ -80,6 +89,9 @@
         bottom: 0;
         z-index: 35;
         box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.06);
+        flex-shrink: 0;
+        max-height: 44vh;
+        overflow-y: auto;
     }
 
     .uc-message-label {
@@ -121,6 +133,10 @@
             top: 76px;
         }
 
+        .chat-shell {
+            height: calc(100dvh - 90px);
+        }
+
         .uc-thread {
             height: min(58vh, 560px);
             padding: 14px;
@@ -131,8 +147,8 @@
         }
     }
 </style>
-<div class="min-h-screen chat-container py-5">
-    <div class="max-w-5xl mx-auto px-4">
+<div class="min-h-screen chat-container py-2">
+    <div class="max-w-5xl mx-auto px-4 chat-shell">
         <!-- Header with Chat Info -->
         <div class="chat-header-sticky rounded-2xl shadow-lg border border-gray-200 p-3 md:p-4 mb-4">
             <div class="flex justify-between items-start gap-4">
@@ -1036,6 +1052,8 @@
 
 <script>
     document.body.classList.add('chat-page');
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
 
     // Auto-resize textarea
     function autoResize(textarea) {
