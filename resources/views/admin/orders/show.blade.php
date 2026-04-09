@@ -106,14 +106,6 @@
             </div>
             <div class="space-y-2">
                 <div class="flex items-center justify-between">
-                    <span class="text-sm text-gray-600">Subtotal:</span>
-                    <span class="text-sm font-semibold text-gray-900">₱{{ number_format($summarySubtotal, 2) }}</span>
-                </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-sm text-gray-600">Shipping Fee:</span>
-                    <span class="text-sm font-semibold text-gray-900">₱{{ number_format($summaryShippingFee, 2) }}</span>
-                </div>
-                <div class="flex items-center justify-between">
                     <span class="text-sm text-gray-600">Total Amount:</span>
                     <span class="text-lg font-bold text-gray-900">₱{{ number_format($order->total_amount, 2) }}</span>
                 </div>
@@ -311,18 +303,6 @@
                 </tbody>
                 @if($order->orderItems->count() > 0)
                 <tfoot class="bg-gray-50 border-t-2 border-gray-200">
-                    <tr>
-                        <td colspan="3" class="px-6 py-3 text-right text-sm text-gray-600">Subtotal:</td>
-                        <td class="px-6 py-3 text-right">
-                            <div class="text-sm font-semibold text-gray-900">₱{{ number_format($summarySubtotal, 2) }}</div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="3" class="px-6 py-3 text-right text-sm text-gray-600">Shipping Fee:</td>
-                        <td class="px-6 py-3 text-right">
-                            <div class="text-sm font-semibold text-gray-900">₱{{ number_format($summaryShippingFee, 2) }}</div>
-                        </td>
-                    </tr>
                     <tr>
                         <td colspan="3" class="px-6 py-4 text-right font-semibold text-gray-900">Total Amount:</td>
                         <td class="px-6 py-4 text-right">
