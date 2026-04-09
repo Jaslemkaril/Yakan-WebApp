@@ -3435,7 +3435,22 @@ class CustomOrderController extends Controller
                     $lineItems = [];
                     foreach ($paymentOrders as $paymentOrder) {
                         $itemPrice = (float) ($paymentOrder->final_price ?? $paymentOrder->estimated_price ?? 0);
+
+                        // Chat-origin orders use estimated_price as the quoted base.
+                        // final_price may already include shipping, so use estimated_price
+                        // here and add shipping only once as a separate line item.
+                        if (!empty($paymentOrder->chat_id) && (float) ($paymentOrder->estimated_price ?? 0) > 0) {
+                            $itemPrice = (float) $paymentOrder->estimated_price;
+                        }
+
                         $itemShipping = (float) ($paymentOrder->shipping_fee ?? 0);
+
+                        // For chat-origin orders, itemPrice is already the base amount
+                        // (without shipping), so avoid subtracting shipping here.
+                        if (!empty($paymentOrder->chat_id)) {
+                            $itemShipping = 0.0;
+                        }
+
                         // Remove shipping from item price to avoid double-counting
                         $itemNet = max($itemPrice - $itemShipping, 0);
                         if ($itemNet <= 0) $itemNet = $itemPrice;
@@ -3459,8 +3474,8 @@ class CustomOrderController extends Controller
 
                     // Ensure total matches
                     $lineItemsTotal = collect($lineItems)->sum(fn($i) => $i['amount'] * $i['quantity']);
-                    $grandTotal = (int) round(($itemsSubtotal + $shippingFee) * 100);
-                    if ($lineItemsTotal !== $grandTotal) {
+                    if ($lineItemsTotal <= 0) {
+                        $grandTotal = (int) round(($itemsSubtotal + $shippingFee) * 100);
                         $lineItems = [[
                             'currency'    => 'PHP',
                             'amount'      => $grandTotal,
