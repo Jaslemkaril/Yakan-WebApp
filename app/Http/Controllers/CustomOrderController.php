@@ -2815,8 +2815,26 @@ class CustomOrderController extends Controller
 
             $notApproved = $paymentOrders->where('status', '!=', 'approved')->values();
             if ($notApproved->isNotEmpty()) {
-                // If the anchor order itself is approved, filter to only approved orders and proceed
-                if ($order->status === 'approved') {
+                // If the anchor order is approved, auto-approve pending batch siblings
+                if ($order->status === 'approved' && $isBatchPayment) {
+                    foreach ($notApproved as $pendingOrder) {
+                        if (in_array($pendingOrder->status, ['pending', 'price_quoted'])) {
+                            $pendingOrder->status = 'approved';
+                            $pendingOrder->approved_at = now();
+                            $pendingOrder->save();
+                        }
+                    }
+                    // Refresh batch orders after auto-approval
+                    $batchOrders = $this->getUserBatchOrders($order, auth()->id());
+                    $paymentOrders = $batchOrders->where('payment_status', '!=', 'paid')->values();
+
+                    // Filter out any still-unapproved (e.g. cancelled/rejected)
+                    $paymentOrders = $paymentOrders->filter(fn($o) => $o->status === 'approved')->values();
+                    if ($paymentOrders->isEmpty()) {
+                        return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                            ->with('info', 'Payment is only available after admin approval.');
+                    }
+                } elseif ($order->status === 'approved') {
                     $paymentOrders = $paymentOrders->where('status', 'approved')->values();
                     if ($paymentOrders->isEmpty()) {
                         return $this->redirectToRouteWithToken('custom_orders.show', $order)
