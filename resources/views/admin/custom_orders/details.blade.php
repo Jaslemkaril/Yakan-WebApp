@@ -1116,15 +1116,6 @@
                 </div>
                 @endif
 
-                {{-- Amount Paid --}}
-                @if($order->final_price && $order->payment_status !== 'unpaid')
-                <div class="border-t border-gray-200 pt-3 mt-3">
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-semibold text-gray-700">Amount {{ $order->payment_status === 'paid' ? 'Paid' : 'Submitted' }}</span>
-                        <span class="text-lg font-bold text-green-600">₱{{ number_format($calculateAdminDisplayTotal($order), 2) }}</span>
-                    </div>
-                </div>
-                @endif
             </div>
             @endif
 
