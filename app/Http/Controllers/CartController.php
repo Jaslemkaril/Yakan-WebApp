@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Mail\OrderPaymentReceipt;
 use App\Models\Cart;
 use App\Models\Product;
 use App\Models\Order;
@@ -11,6 +12,7 @@ use App\Models\Coupon;
 use App\Models\CouponRedemption;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Services\CloudinaryService;
 use App\Services\Payment\MayaCheckoutService;
@@ -1622,6 +1624,7 @@ HTML
             }
 
             // Update payment status
+            $wasAlreadyPaid = (string) $order->payment_status === 'paid';
             $order->payment_status = 'paid';
             $order->payment_verified_at = now();
             
@@ -1642,6 +1645,10 @@ HTML
 
             $order->appendTrackingEvent($message);
             $order->save();
+
+            if (!$wasAlreadyPaid) {
+                $this->sendOrderPaymentReceiptEmail($order);
+            }
             
             \Log::info('Payment processed successfully', [
                 'order_id' => $orderId,
@@ -1825,6 +1832,7 @@ HTML, 200, ['Content-Type' => 'text/html']);
         }
 
         if ($order->payment_method === 'maya') {
+            $wasAlreadyPaid = (string) $order->payment_status === 'paid';
             $checkoutId = $request->query('checkoutId')
                 ?? $request->query('checkout_id')
                 ?? $request->query('id');
@@ -1832,6 +1840,11 @@ HTML, 200, ['Content-Type' => 'text/html']);
             $paymentStatus = $this->syncMayaPaymentStatus($order, $checkoutId);
 
             if ($paymentStatus === 'paid') {
+                if (!$wasAlreadyPaid) {
+                    $order->refresh();
+                    $this->sendOrderPaymentReceiptEmail($order);
+                }
+
                 return redirect($this->appendAuthToken(route('orders.show', $orderId), $request->input('auth_token') ?? session('auth_token')))
                     ->with('success', 'Maya payment confirmed successfully.');
             }
@@ -1850,6 +1863,7 @@ HTML, 200, ['Content-Type' => 'text/html']);
         }
 
         if ($order->payment_method === 'maya') {
+            $wasAlreadyPaid = (string) $order->payment_status === 'paid';
             $checkoutId = $request->query('checkoutId')
                 ?? $request->query('checkout_id')
                 ?? $request->query('id');
@@ -1857,6 +1871,11 @@ HTML, 200, ['Content-Type' => 'text/html']);
             $paymentStatus = $this->syncMayaPaymentStatus($order, $checkoutId);
 
             if ($paymentStatus === 'paid') {
+                if (!$wasAlreadyPaid) {
+                    $order->refresh();
+                    $this->sendOrderPaymentReceiptEmail($order);
+                }
+
                 return redirect($this->appendAuthToken(route('orders.show', $orderId), $request->input('auth_token') ?? session('auth_token')))
                     ->with('success', 'Maya payment was completed successfully.');
             }
@@ -1868,6 +1887,8 @@ HTML, 200, ['Content-Type' => 'text/html']);
 
     private function applyPayMongoPaymentResult(Order $order, ?array $session = null): void
     {
+        $wasAlreadyPaid = (string) $order->payment_status === 'paid';
+
         $order->payment_status = 'paid';
         $order->status = 'processing';
 
@@ -1880,6 +1901,28 @@ HTML, 200, ['Content-Type' => 'text/html']);
         $order->payment_verified_at = $paymentDate ?? now();
 
         $order->save();
+
+        if (!$wasAlreadyPaid) {
+            $this->sendOrderPaymentReceiptEmail($order);
+        }
+    }
+
+    private function sendOrderPaymentReceiptEmail(Order $order): void
+    {
+        try {
+            $order->loadMissing('user', 'orderItems.product');
+            $email = trim((string) optional($order->user)->email);
+            if ($email === '') {
+                return;
+            }
+
+            Mail::to($email)->send(new OrderPaymentReceipt($order));
+        } catch (\Throwable $exception) {
+            \Log::warning('Order payment receipt email failed', [
+                'order_id' => $order->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function extractPayMongoPaymentId(array $session): ?string

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Mail\CustomOrder\PaymentReceipt as CustomOrderPaymentReceipt;
 use App\Models\CustomOrder;
 use App\Models\Product;
 use App\Models\Category;
@@ -10,6 +11,7 @@ use App\Models\YakanPattern;
 use App\Models\User;
 use App\Services\CloudinaryService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -3670,6 +3672,8 @@ class CustomOrderController extends Controller
             ->where('status', 'approved')
             ->values();
 
+        $hadFreshPayment = $batchToMarkPaid->isNotEmpty();
+
         if ($batchToMarkPaid->isEmpty()) {
             $batchToMarkPaid = collect([$order]);
         }
@@ -3684,6 +3688,10 @@ class CustomOrderController extends Controller
                 $batchOrder->transaction_id = $checkoutId;
             }
             $batchOrder->save();
+        }
+
+        if ($hadFreshPayment) {
+            $this->sendCustomOrderPaymentReceiptEmail($order, $batchToMarkPaid);
         }
 
         return $this->redirectToRouteWithToken('custom_orders.show', $order)
@@ -3740,6 +3748,8 @@ class CustomOrderController extends Controller
             ->where('status', 'approved')
             ->values();
 
+        $hadFreshPayment = $batchToMarkPaid->isNotEmpty();
+
         if ($batchToMarkPaid->isEmpty()) {
             $batchToMarkPaid = collect([$order]);
         }
@@ -3751,6 +3761,10 @@ class CustomOrderController extends Controller
             }
             $batchOrder->status = 'processing';
             $batchOrder->save();
+        }
+
+        if ($hadFreshPayment) {
+            $this->sendCustomOrderPaymentReceiptEmail($order, $batchToMarkPaid);
         }
 
         return $this->redirectToRouteWithToken('custom_orders.show', $order)
@@ -3815,6 +3829,8 @@ class CustomOrderController extends Controller
             ->where('status', 'approved')
             ->values();
 
+        $hadFreshPayment = $batchToMarkPaid->isNotEmpty();
+
         if ($batchToMarkPaid->isEmpty()) {
             $batchToMarkPaid = collect([$order]);
         }
@@ -3828,6 +3844,10 @@ class CustomOrderController extends Controller
             $batchOrder->status = 'processing';
             $batchOrder->transaction_id = $demoTransactionId;
             $batchOrder->save();
+        }
+
+        if ($hadFreshPayment) {
+            $this->sendCustomOrderPaymentReceiptEmail($order, $batchToMarkPaid);
         }
 
         \Log::info('Demo payment simulation used', ['order_id' => $order->id, 'user_id' => $order->user_id]);
@@ -3956,6 +3976,14 @@ class CustomOrderController extends Controller
             $paymentOrder->save();
         }
 
+        $paidOrders = $paymentOrders
+            ->filter(fn ($paymentOrder) => (string) $paymentOrder->payment_status === 'paid')
+            ->values();
+
+        if ($paidOrders->isNotEmpty()) {
+            $this->sendCustomOrderPaymentReceiptEmail($order, $paidOrders);
+        }
+
         $paidCount = $paymentOrders->count();
         $hasAutoConfirmed = $paymentOrders->contains(fn($o) => empty($o->chat_id) && $o->payment_status === 'paid');
         if ($hasAutoConfirmed) {
@@ -3969,6 +3997,54 @@ class CustomOrderController extends Controller
         }
 
         return $this->redirectToRouteWithToken('custom_orders.show', $order)->with('success', $successMessage);
+    }
+
+    private function sendCustomOrderPaymentReceiptEmail(CustomOrder $anchorOrder, \Illuminate\Support\Collection $paidOrders): void
+    {
+        try {
+            $paidOrders = $paidOrders
+                ->filter(fn ($item) => $item instanceof CustomOrder)
+                ->values();
+
+            if ($paidOrders->isEmpty()) {
+                return;
+            }
+
+            /** @var CustomOrder $primaryOrder */
+            $primaryOrder = $paidOrders->first() ?? $anchorOrder;
+            $primaryOrder->loadMissing('user');
+            $anchorOrder->loadMissing('user');
+
+            $recipientEmail = trim((string) (
+                optional($primaryOrder->user)->email
+                ?: $primaryOrder->email
+                ?: optional($anchorOrder->user)->email
+                ?: $anchorOrder->email
+            ));
+
+            if ($recipientEmail === '') {
+                return;
+            }
+
+            $totalAmount = (float) $paidOrders->sum(function (CustomOrder $item) {
+                return (float) ($item->final_price ?? $item->estimated_price ?? 0);
+            });
+
+            if ($totalAmount <= 0) {
+                $totalAmount = (float) ($primaryOrder->final_price ?? $primaryOrder->estimated_price ?? 0);
+            }
+
+            Mail::to($recipientEmail)->send(new CustomOrderPaymentReceipt(
+                $primaryOrder,
+                $paidOrders->count(),
+                $totalAmount
+            ));
+        } catch (\Throwable $exception) {
+            \Log::warning('Custom order payment receipt email failed', [
+                'order_id' => $anchorOrder->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     /**

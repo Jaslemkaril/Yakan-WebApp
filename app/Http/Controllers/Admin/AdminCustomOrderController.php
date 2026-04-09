@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\CustomOrder\PaymentReceipt as CustomOrderPaymentReceipt;
 use App\Models\CustomOrder;
 use App\Services\Payment\PayMongoCheckoutService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class AdminCustomOrderController extends Controller
 {
@@ -804,6 +806,7 @@ class AdminCustomOrderController extends Controller
                 $order->payment_confirmed_at = now();
                 $order->status              = 'processing';
                 $order->save();
+                $this->sendCustomOrderPaymentReceiptEmail($order);
                 // Append ?paid=1 to ensure feedback survives token-auth session resets
                 $sep = strpos($redirectUrl, '?') !== false ? '&' : '?';
                 return redirect($redirectUrl . $sep . 'paid=1');
@@ -823,6 +826,7 @@ class AdminCustomOrderController extends Controller
             // (custom_orders enum only has: pending, paid, failed - no 'verified')
             $order->payment_confirmed_at = now();
             $order->save();
+            $this->sendCustomOrderPaymentReceiptEmail($order);
 
             \Log::info('Payment confirmed for custom order', [
                 'order_id' => $order->id,
@@ -837,6 +841,31 @@ class AdminCustomOrderController extends Controller
             ]);
 
             return redirect($redirectUrl)->with('error', 'Failed to confirm payment: ' . $e->getMessage());
+        }
+    }
+
+    private function sendCustomOrderPaymentReceiptEmail(CustomOrder $order): void
+    {
+        try {
+            $order->loadMissing('user');
+
+            $recipientEmail = trim((string) (
+                optional($order->user)->email
+                ?: $order->email
+            ));
+
+            if ($recipientEmail === '') {
+                return;
+            }
+
+            $totalAmount = (float) ($order->final_price ?? $order->estimated_price ?? 0);
+
+            Mail::to($recipientEmail)->send(new CustomOrderPaymentReceipt($order, 1, $totalAmount));
+        } catch (\Throwable $exception) {
+            \Log::warning('Admin custom-order payment receipt email failed', [
+                'order_id' => $order->id,
+                'error' => $exception->getMessage(),
+            ]);
         }
     }
 
