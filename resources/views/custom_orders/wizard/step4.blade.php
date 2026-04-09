@@ -1074,13 +1074,16 @@
                                         </a>
                                         @endforeach
                                         {{-- Current (live) item --}}
+                                        @php
+                                            $currentMetersModal = $wizardData['fabric']['quantity_meters'] ?? null;
+                                        @endphp
                                         <a href="{{ $editUrl }}"
                                             class="flex items-center w-full px-4 py-3 rounded-xl border-2 hover:border-maroon-600 hover:bg-red-50 transition-all text-left"
                                             style="border-color:#c88f9f; background-color:#fff5f5;">
                                             <div class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center mr-3 flex-shrink-0" style="background-color:#8b3a56;">{{ count($batchItems) + 1 }}</div>
                                             <div class="min-w-0">
                                                 <p class="text-sm font-semibold text-gray-900">Current Item (being reviewed)</p>
-                                                <p class="text-xs text-gray-500">{{ $fabricTypeName }} · Pattern: {{ $currentPatternName }}</p>
+                                                <p class="text-xs text-gray-500">{{ $fabricTypeName }}{{ $currentMetersModal ? ' · ' . $currentMetersModal . 'm' : '' }} · Pattern: {{ $currentPatternName }} · Qty {{ $currentQty }}</p>
                                             </div>
                                             <svg class="w-4 h-4 ml-auto flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
