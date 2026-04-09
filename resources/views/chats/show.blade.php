@@ -8,7 +8,7 @@
     .chat-header { background: white; border-bottom: 2px solid #f3f4f6; }
     .chat-header-sticky {
         position: sticky;
-        top: 86px;
+        top: 84px;
         z-index: 30;
         backdrop-filter: blur(6px);
         background: rgba(255, 255, 255, 0.95);
@@ -60,21 +60,26 @@
         }
     }
 </style>
-<div class="min-h-screen chat-container py-6">
+<div class="min-h-screen chat-container py-5">
     <div class="max-w-5xl mx-auto px-4">
         <!-- Header with Chat Info -->
-        <div class="chat-header-sticky rounded-2xl shadow-lg border border-gray-200 p-4 md:p-5 mb-5">
-            <div class="flex justify-between items-start gap-6">
-                <div class="flex-1">
-                    <a href="{{ route('chats.index') }}" class="inline-flex items-center gap-2 text-gray-600 hover:text-[#8B0000] font-semibold mb-3 transition hover:gap-3 group">
+        <div class="chat-header-sticky rounded-2xl shadow-lg border border-gray-200 p-3 md:p-4 mb-4">
+            <div class="flex justify-between items-start gap-4">
+                <div class="flex-1 min-w-0">
+                    <a href="{{ route('chats.index') }}" class="inline-flex items-center gap-2 text-gray-600 hover:text-[#8B0000] text-sm font-semibold mb-2 transition hover:gap-3 group">
                         <svg class="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                         </svg>
                         Back to Chats
                     </a>
-                    <h1 class="text-2xl md:text-[2rem] font-bold text-gray-900 mb-3">{{ $chat->subject }}</h1>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="w-8 h-8 bg-gradient-to-br from-[#8B0000] to-[#6B0000] rounded-lg flex items-center justify-center text-white text-xs">
+                            <i class="fas fa-comments"></i>
+                        </span>
+                        <h1 class="text-xl md:text-2xl font-bold text-gray-900 truncate">{{ $chat->subject }}</h1>
+                    </div>
                     <div class="flex flex-wrap items-center gap-3 md:gap-4">
-                        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold {{ $chat->status === 'closed' ? 'status-closed' : 'status-badge' }}">
+                        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold {{ $chat->status === 'closed' ? 'status-closed' : 'status-badge' }}">
                             <span class="inline-block w-2.5 h-2.5 rounded-full {{ $chat->status === 'closed' ? 'bg-red-600' : 'bg-green-600' }}"></span>
                             {{ ucfirst($chat->status) }}
                         </span>
@@ -98,8 +103,8 @@
                         @if(request()->get('auth_token') || session('auth_token'))
                             <input type="hidden" name="auth_token" value="{{ request()->get('auth_token') ?? session('auth_token') }}">
                         @endif
-                        <button type="submit" class="btn-outline px-5 py-2 rounded-lg font-semibold transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow-md">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <button type="submit" class="btn-outline px-4 py-1.5 rounded-lg font-semibold transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow-md whitespace-nowrap">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                             </svg>
                             Close Chat
