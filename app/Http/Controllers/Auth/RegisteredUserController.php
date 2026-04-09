@@ -140,7 +140,7 @@ class RegisteredUserController extends Controller
 
             // Render register view directly with error (no redirect)
             return view('auth.register')
-                ->with('error', 'Registration failed: ' . $e->getMessage())
+                ->with('error', 'Registration failed. Please try again in a moment.')
                 ->with('_old_input', $request->except('password', 'password_confirmation'));
         }
     }
