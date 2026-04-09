@@ -161,6 +161,10 @@
             // REMOVED - now using each pattern's individual pattern_price which is set above
         @endphp
 
+        <form method="POST" action="{{ route('custom_orders.complete.wizard') }}" id="submitOrderForm">
+        @csrf
+        <input type="hidden" name="auth_token" id="step4AuthToken" value="{{ request('auth_token') }}">
+
         <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             <!-- Left Column - Order Summary -->
@@ -438,6 +442,222 @@
                             @endif
                         </div>
                     </div>
+                </div>
+
+
+                <!-- Finalize Details -->
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 mb-2">
+                <div class="flex items-center mb-4">
+                    <svg class="w-6 h-6 mr-3" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M5 8h14M5 16h.01M5 12h.01"/>
+                    </svg>
+                    <h3 class="text-lg font-bold text-gray-900">Finalize Details</h3>
+                </div>
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label for="quantity" class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                        <input type="number" min="1" id="quantity" name="quantity" value="1" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2" style="--tw-ring-color:#800000;" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Delivery Option *</label>
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <label class="inline-flex items-center px-4 py-3 rounded-lg border-2 text-sm cursor-pointer transition-all duration-200 hover:border-maroon-800 hover:bg-maroon-50" style="border-color:#8b3a56;" id="delivery-option-label">
+                                <input type="radio" name="delivery_type" value="delivery" class="mr-3 w-4 h-4 delivery-radio" checked style="accent-color: #8b3a56;">
+                                <div class="flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #8b3a56;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                            <span class="font-medium">Delivery to Address</span>
+                                </div>
+                            </label>
+                            <label class="inline-flex items-center px-4 py-3 rounded-lg border-2 text-sm cursor-pointer transition-all duration-200 hover:border-maroon-800 hover:bg-maroon-50" style="border-color:#8b3a56;" id="pickup-option-label">
+                                <input type="radio" name="delivery_type" value="pickup" class="mr-3 w-4 h-4 delivery-radio" style="accent-color: #8b3a56;">
+                                <div class="flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #8b3a56;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span class="font-medium">Store Pickup</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Delivery Address Selection -->
+                    <div id="delivery-address-section">
+                            @if($userAddresses->count() > 0)
+                            <label class="block text-sm font-medium text-gray-700 mb-3">
+                                    Select Delivery Address *
+                            </label>
+                            <div class="space-y-3 mb-4">
+                                    @foreach($userAddresses as $address)
+                            <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md" style="border-color: {{ $address->id === ($selectedAddressForShipping->id ?? null) ? '#8b3a56' : '#d1d5db' }}; background-color: {{ $address->id === ($selectedAddressForShipping->id ?? null) ? '#f5e6e8' : 'white' }};">
+                                <input type="radio" name="address_id" value="{{ $address->id }}" class="mt-1 mr-3 w-4 h-4 flex-shrink-0" style="accent-color: #8b3a56;" {{ $address->id === ($selectedAddressForShipping->id ?? null) ? 'checked' : '' }} required />
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-start justify-between gap-2 mb-1">
+                                        <p class="font-bold text-gray-900 text-base">
+                                                @if($address->label)
+                                                <span class="text-maroon-700">{{ $address->label }}</span>
+                                                @endif
+                                        </p>
+                                            @if($address->is_default)
+                                            <span class="inline-flex items-center px-2 py-0.5 text-xs font-bold rounded-full whitespace-nowrap" style="background-color: #800000; color: white;">Default Address</span>
+                                            @endif
+                                    </div>
+                                    <p class="text-sm text-gray-800 leading-relaxed">
+                                            {{ $address->house_number }}{{ $address->street_name ? ', ' . $address->street_name : '' }}{{ $address->barangay ? ', ' . $address->barangay : '' }}
+                                    </p>
+                                    <p class="text-sm text-gray-600 mt-1">
+                                            {{ $address->city }}{{ $address->province ? ', ' . $address->province : '' }}
+                                            @if($address->region && $address->region !== $address->province)
+                                                , {{ $address->region }}
+                                            @endif
+                                            @if($address->zip_code)
+                                                {{ $address->zip_code }}
+                                            @endif
+                                    </p>
+                                        @if($address->landmark)
+                                        <p class="text-xs text-gray-500 mt-2 flex items-start">
+                                            <svg class="w-3.5 h-3.5 mr-1 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                                            </svg>
+                                            <span>{{ $address->landmark }}</span>
+                                        </p>
+                                        @endif
+                                </div>
+                            </label>
+                                    @endforeach
+                            </div>
+                            <div class="flex items-center justify-between pt-2 border-t border-gray-200">
+                                <p class="text-xs text-gray-500">
+                                Need to add or edit an address?
+                                </p>
+                                <a href="{{ route('addresses.index') }}" class="inline-flex items-center text-sm text-maroon-600 hover:text-maroon-700 font-semibold transition-colors duration-200">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                                Manage your addresses
+                                </a>
+                            </div>
+                            @else
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Delivery Address *
+                                <span class="text-xs text-gray-500 font-normal">(Please provide complete address for delivery)</span>
+                            </label>
+                            <div class="space-y-3">
+                                <input type="text" name="delivery_house" id="delivery_house" placeholder="House / Unit / Building No. *" value="{{ data_get($wizardData, 'details.delivery_house', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" required />
+                                <input type="text" name="delivery_street" id="delivery_street" placeholder="Street Name *" value="{{ data_get($wizardData, 'details.delivery_street', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" required />
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <input type="text" name="delivery_barangay" id="delivery_barangay" placeholder="Barangay *" value="{{ data_get($wizardData, 'details.delivery_barangay', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" required />
+                            <input type="text" name="delivery_city" id="delivery_city" placeholder="City / Municipality *" value="{{ data_get($wizardData, 'details.delivery_city', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" required />
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <input type="text" name="delivery_province" id="delivery_province" placeholder="Province *" value="{{ data_get($wizardData, 'details.delivery_province', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" required />
+                            <input type="text" name="delivery_zip" id="delivery_zip" placeholder="ZIP Code (optional)" value="{{ data_get($wizardData, 'details.delivery_zip', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" />
+                                </div>
+                                <input type="text" name="delivery_landmark" id="delivery_landmark" placeholder="Landmark (e.g., near SM Mall, beside gas station)" value="{{ data_get($wizardData, 'details.delivery_landmark', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" />
+                                <div class="bg-maroon-50 border border-maroon-200 rounded-lg p-3">
+                            <p class="text-xs text-maroon-800 flex items-start">
+                                <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style="color: #8b3a56;">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                </svg>
+                                    Please provide as much detail as possible so our courier can find your location easily. Landmark is very helpful!
+                            </p>
+                                </div>
+                            </div>
+                            @endif
+                    </div>
+
+                    <!-- Shipping Zone Reference (delivery only) -->
+                    <div id="shipping-zone-section" class="mt-4">
+                        <div class="p-4 rounded-xl border-2 border-gray-200" style="background:#f9fafb;">
+                            <h4 class="text-sm font-bold text-gray-700 mb-3 flex items-center">
+                                <svg class="w-4 h-4 mr-2 flex-shrink-0" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                                    Delivery Location &amp; Shipping Fee
+                                <span class="ml-2 text-xs text-gray-400 font-normal">(from Zamboanga City)</span>
+                            </h4>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs mb-4">
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
+                            <div class="font-bold text-blue-700">&#8369;100</div>
+                            <div class="text-blue-600">Within Zamboanga City</div>
+                                </div>
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
+                            <div class="font-bold text-blue-700">&#8369;100</div>
+                            <div class="text-blue-600">Zamboanga Peninsula + BARMM</div>
+                                </div>
+                                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-2 text-center">
+                            <div class="font-bold text-indigo-700">&#8369;180</div>
+                            <div class="text-indigo-600">Other Mindanao Regions</div>
+                                </div>
+                                <div class="bg-purple-50 border border-purple-200 rounded-lg p-2 text-center">
+                            <div class="font-bold text-purple-700">&#8369;250</div>
+                            <div class="text-purple-600">Visayas</div>
+                                </div>
+                                <div class="bg-orange-50 border border-orange-200 rounded-lg p-2 text-center">
+                            <div class="font-bold text-orange-700">&#8369;300</div>
+                            <div class="text-orange-600">NCR + Nearby Luzon</div>
+                                </div>
+                                <div class="bg-red-50 border border-red-200 rounded-lg p-2 text-center">
+                            <div class="font-bold text-red-700">&#8369;350</div>
+                            <div class="text-red-600">Far Luzon / Remote</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-white rounded-lg border-2 border-gray-300" id="step4ShippingFeeBox">
+                                <div>
+                            <div class="text-sm font-semibold text-gray-700">Estimated Shipping Fee</div>
+                            <div class="text-xs text-gray-500" id="step4ShippingZoneLabel">{{ $shippingZoneLabel }}</div>
+                                </div>
+                                <div class="text-xl font-bold" style="color:#800000;" id="step4ShippingFeeDisplay">{{ $shippingFee > 0 ? ('₱' . number_format($shippingFee, 2)) : 'FREE' }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Store Pickup Information -->
+                    <div id="pickup-info-section" class="hidden">
+                        <div class="bg-gradient-to-br from-maroon-50 to-maroon-100 border-2 border-maroon-200 rounded-xl p-6">
+                            <div class="flex items-start">
+                                <svg class="w-6 h-6 mr-3 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #8b3a56;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <div class="flex-1">
+                            <h4 class="font-bold text-maroon-900 mb-2 text-lg">Store Pickup Location</h4>
+                            <p class="text-sm text-maroon-800 mb-3">Pick up your order at our Yakan weaving center:</p>
+                            <div class="bg-white rounded-lg p-4 border border-maroon-300">
+                                <p class="font-semibold text-gray-900">Tuwas Yakan Weaving Center</p>
+                                <p class="text-sm text-gray-700 mt-2">
+                                        Yakan Village, Upper Calarian<br>
+                                        Labuan-Limpapa Road, National Road<br>
+                                        Zamboanga City, Philippines 7000
+                                </p>
+                                <p class="text-xs text-gray-600 mt-3">
+                                    <strong>Operating Hours:</strong><br>
+                                        Monday - Saturday: 8:00 AM - 6:00 PM<br>
+                                        Sunday: Closed
+                                </p>
+                                <p class="text-xs text-gray-600 mt-2">
+                                    <strong>Contact:</strong> 0935 569 0272
+                                </p>
+                            </div>
+                            <p class="text-xs text-maroon-700 mt-3 flex items-start">
+                                <svg class="w-4 h-4 mr-1 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" style="color: #8b3a56;">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                </svg>
+                                    We will notify you when your order is ready for pickup. Please bring a valid ID.
+                            </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="specifications" class="block text-sm font-medium text-gray-700 mb-1">Special Requests / Notes</label>
+                        <textarea id="specifications" name="specifications" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2" style="--tw-ring-color:#800000;" placeholder="Tell us any specific requests (e.g., sizing, placement, extra details)"></textarea>
+                    </div>
+                </div>
                 </div>
             </div>
 
@@ -781,222 +1001,7 @@
                             </p>
                         </div>
                     </div>
-                    <form method="POST" action="{{ route('custom_orders.complete.wizard') }}" id="submitOrderForm">
-                        @csrf
-                        <input type="hidden" name="auth_token" id="step4AuthToken" value="{{ request('auth_token') }}">
-                        <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 mb-2">
-                            <div class="flex items-center mb-4">
-                                <svg class="w-6 h-6 mr-3" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M5 8h14M5 16h.01M5 12h.01"/>
-                                </svg>
-                                <h3 class="text-lg font-bold text-gray-900">Finalize Details</h3>
-                            </div>
-                            <div class="grid grid-cols-1 gap-4">
-                                <div>
-                                    <label for="quantity" class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                                    <input type="number" min="1" id="quantity" name="quantity" value="1" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2" style="--tw-ring-color:#800000;" />
-                                </div>
 
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Delivery Option *</label>
-                                    <div class="flex flex-col sm:flex-row gap-3">
-                                        <label class="inline-flex items-center px-4 py-3 rounded-lg border-2 text-sm cursor-pointer transition-all duration-200 hover:border-maroon-800 hover:bg-maroon-50" style="border-color:#8b3a56;" id="delivery-option-label">
-                                            <input type="radio" name="delivery_type" value="delivery" class="mr-3 w-4 h-4 delivery-radio" checked style="accent-color: #8b3a56;">
-                                            <div class="flex items-center">
-                                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #8b3a56;">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                                </svg>
-                                                <span class="font-medium">Delivery to Address</span>
-                                            </div>
-                                        </label>
-                                        <label class="inline-flex items-center px-4 py-3 rounded-lg border-2 text-sm cursor-pointer transition-all duration-200 hover:border-maroon-800 hover:bg-maroon-50" style="border-color:#8b3a56;" id="pickup-option-label">
-                                            <input type="radio" name="delivery_type" value="pickup" class="mr-3 w-4 h-4 delivery-radio" style="accent-color: #8b3a56;">
-                                            <div class="flex items-center">
-                                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #8b3a56;">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                                </svg>
-                                                <span class="font-medium">Store Pickup</span>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <!-- Delivery Address Selection -->
-                                <div id="delivery-address-section">
-                                    @if($userAddresses->count() > 0)
-                                        <label class="block text-sm font-medium text-gray-700 mb-3">
-                                            Select Delivery Address *
-                                        </label>
-                                        <div class="space-y-3 mb-4">
-                                            @foreach($userAddresses as $address)
-                                                <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md" style="border-color: {{ $address->id === ($selectedAddressForShipping->id ?? null) ? '#8b3a56' : '#d1d5db' }}; background-color: {{ $address->id === ($selectedAddressForShipping->id ?? null) ? '#f5e6e8' : 'white' }};">
-                                                    <input type="radio" name="address_id" value="{{ $address->id }}" class="mt-1 mr-3 w-4 h-4 flex-shrink-0" style="accent-color: #8b3a56;" {{ $address->id === ($selectedAddressForShipping->id ?? null) ? 'checked' : '' }} required />
-                                                    <div class="flex-1 min-w-0">
-                                                        <div class="flex items-start justify-between gap-2 mb-1">
-                                                            <p class="font-bold text-gray-900 text-base">
-                                                                @if($address->label)
-                                                                    <span class="text-maroon-700">{{ $address->label }}</span>
-                                                                @endif
-                                                            </p>
-                                                            @if($address->is_default)
-                                                                <span class="inline-flex items-center px-2 py-0.5 text-xs font-bold rounded-full whitespace-nowrap" style="background-color: #800000; color: white;">Default Address</span>
-                                                            @endif
-                                                        </div>
-                                                        <p class="text-sm text-gray-800 leading-relaxed">
-                                                            {{ $address->house_number }}{{ $address->street_name ? ', ' . $address->street_name : '' }}{{ $address->barangay ? ', ' . $address->barangay : '' }}
-                                                        </p>
-                                                        <p class="text-sm text-gray-600 mt-1">
-                                                            {{ $address->city }}{{ $address->province ? ', ' . $address->province : '' }}
-                                                            @if($address->region && $address->region !== $address->province)
-                                                                , {{ $address->region }}
-                                                            @endif
-                                                            @if($address->zip_code)
-                                                                {{ $address->zip_code }}
-                                                            @endif
-                                                        </p>
-                                                        @if($address->landmark)
-                                                            <p class="text-xs text-gray-500 mt-2 flex items-start">
-                                                                <svg class="w-3.5 h-3.5 mr-1 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
-                                                                </svg>
-                                                                <span>{{ $address->landmark }}</span>
-                                                            </p>
-                                                        @endif
-                                                    </div>
-                                                </label>
-                                            @endforeach
-                                        </div>
-                                        <div class="flex items-center justify-between pt-2 border-t border-gray-200">
-                                            <p class="text-xs text-gray-500">
-                                                Need to add or edit an address?
-                                            </p>
-                                            <a href="{{ route('addresses.index') }}" class="inline-flex items-center text-sm text-maroon-600 hover:text-maroon-700 font-semibold transition-colors duration-200">
-                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                                </svg>
-                                                Manage your addresses
-                                            </a>
-                                        </div>
-                                    @else
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                                            Delivery Address *
-                                            <span class="text-xs text-gray-500 font-normal">(Please provide complete address for delivery)</span>
-                                        </label>
-                                        <div class="space-y-3">
-                                            <input type="text" name="delivery_house" id="delivery_house" placeholder="House / Unit / Building No. *" value="{{ data_get($wizardData, 'details.delivery_house', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" required />
-                                            <input type="text" name="delivery_street" id="delivery_street" placeholder="Street Name *" value="{{ data_get($wizardData, 'details.delivery_street', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" required />
-                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                <input type="text" name="delivery_barangay" id="delivery_barangay" placeholder="Barangay *" value="{{ data_get($wizardData, 'details.delivery_barangay', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" required />
-                                                <input type="text" name="delivery_city" id="delivery_city" placeholder="City / Municipality *" value="{{ data_get($wizardData, 'details.delivery_city', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" required />
-                                            </div>
-                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                <input type="text" name="delivery_province" id="delivery_province" placeholder="Province *" value="{{ data_get($wizardData, 'details.delivery_province', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" required />
-                                                <input type="text" name="delivery_zip" id="delivery_zip" placeholder="ZIP Code (optional)" value="{{ data_get($wizardData, 'details.delivery_zip', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" />
-                                            </div>
-                                            <input type="text" name="delivery_landmark" id="delivery_landmark" placeholder="Landmark (e.g., near SM Mall, beside gas station)" value="{{ data_get($wizardData, 'details.delivery_landmark', '') }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-maroon-800" style="--tw-ring-color:#8b3a56;" />
-                                            <div class="bg-maroon-50 border border-maroon-200 rounded-lg p-3">
-                                                <p class="text-xs text-maroon-800 flex items-start">
-                                                    <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style="color: #8b3a56;">
-                                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                                                    </svg>
-                                                    Please provide as much detail as possible so our courier can find your location easily. Landmark is very helpful!
-                                                </p>
-                                            </div>
-                                        </div>
-                                    @endif
-                                </div>
-
-                                <!-- Shipping Zone Reference (delivery only) -->
-                                <div id="shipping-zone-section" class="mt-4">
-                                    <div class="p-4 rounded-xl border-2 border-gray-200" style="background:#f9fafb;">
-                                        <h4 class="text-sm font-bold text-gray-700 mb-3 flex items-center">
-                                            <svg class="w-4 h-4 mr-2 flex-shrink-0" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                            </svg>
-                                            Delivery Location &amp; Shipping Fee
-                                            <span class="ml-2 text-xs text-gray-400 font-normal">(from Zamboanga City)</span>
-                                        </h4>
-                                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs mb-4">
-                                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
-                                                <div class="font-bold text-blue-700">&#8369;100</div>
-                                                <div class="text-blue-600">Within Zamboanga City</div>
-                                            </div>
-                                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
-                                                <div class="font-bold text-blue-700">&#8369;100</div>
-                                                <div class="text-blue-600">Zamboanga Peninsula + BARMM</div>
-                                            </div>
-                                            <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-2 text-center">
-                                                <div class="font-bold text-indigo-700">&#8369;180</div>
-                                                <div class="text-indigo-600">Other Mindanao Regions</div>
-                                            </div>
-                                            <div class="bg-purple-50 border border-purple-200 rounded-lg p-2 text-center">
-                                                <div class="font-bold text-purple-700">&#8369;250</div>
-                                                <div class="text-purple-600">Visayas</div>
-                                            </div>
-                                            <div class="bg-orange-50 border border-orange-200 rounded-lg p-2 text-center">
-                                                <div class="font-bold text-orange-700">&#8369;300</div>
-                                                <div class="text-orange-600">NCR + Nearby Luzon</div>
-                                            </div>
-                                            <div class="bg-red-50 border border-red-200 rounded-lg p-2 text-center">
-                                                <div class="font-bold text-red-700">&#8369;350</div>
-                                                <div class="text-red-600">Far Luzon / Remote</div>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center justify-between p-3 bg-white rounded-lg border-2 border-gray-300" id="step4ShippingFeeBox">
-                                            <div>
-                                                <div class="text-sm font-semibold text-gray-700">Estimated Shipping Fee</div>
-                                                <div class="text-xs text-gray-500" id="step4ShippingZoneLabel">{{ $shippingZoneLabel }}</div>
-                                            </div>
-                                            <div class="text-xl font-bold" style="color:#800000;" id="step4ShippingFeeDisplay">{{ $shippingFee > 0 ? ('₱' . number_format($shippingFee, 2)) : 'FREE' }}</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Store Pickup Information -->
-                                <div id="pickup-info-section" class="hidden">
-                                    <div class="bg-gradient-to-br from-maroon-50 to-maroon-100 border-2 border-maroon-200 rounded-xl p-6">
-                                        <div class="flex items-start">
-                                            <svg class="w-6 h-6 mr-3 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #8b3a56;">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                            <div class="flex-1">
-                                                <h4 class="font-bold text-maroon-900 mb-2 text-lg">Store Pickup Location</h4>
-                                                <p class="text-sm text-maroon-800 mb-3">Pick up your order at our Yakan weaving center:</p>
-                                                <div class="bg-white rounded-lg p-4 border border-maroon-300">
-                                                    <p class="font-semibold text-gray-900">Tuwas Yakan Weaving Center</p>
-                                                    <p class="text-sm text-gray-700 mt-2">
-                                                        Yakan Village, Upper Calarian<br>
-                                                        Labuan-Limpapa Road, National Road<br>
-                                                        Zamboanga City, Philippines 7000
-                                                    </p>
-                                                    <p class="text-xs text-gray-600 mt-3">
-                                                        <strong>Operating Hours:</strong><br>
-                                                        Monday - Saturday: 8:00 AM - 6:00 PM<br>
-                                                        Sunday: Closed
-                                                    </p>
-                                                    <p class="text-xs text-gray-600 mt-2">
-                                                        <strong>Contact:</strong> 0935 569 0272
-                                                    </p>
-                                                </div>
-                                                <p class="text-xs text-maroon-700 mt-3 flex items-start">
-                                                    <svg class="w-4 h-4 mr-1 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" style="color: #8b3a56;">
-                                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                                                    </svg>
-                                                    We will notify you when your order is ready for pickup. Please bring a valid ID.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label for="specifications" class="block text-sm font-medium text-gray-700 mb-1">Special Requests / Notes</label>
-                                    <textarea id="specifications" name="specifications" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2" style="--tw-ring-color:#800000;" placeholder="Tell us any specific requests (e.g., sizing, placement, extra details)"></textarea>
-                                </div>
-                            </div>
-                        </div>
 
                         {{-- Add Another Custom Item button --}}
                         <button type="button" id="addAnotherBtn"
@@ -1135,7 +1140,6 @@
                             </span>
                             <div class="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300" style="background-color:#8b3a56;"></div>
                         </button>
-                    </form>
                     
                     <script>
                     document.getElementById('submitOrderForm').addEventListener('submit', function(e) {
@@ -1249,6 +1253,7 @@
                 </div>
             </div>
         </div>
+        </form>
     </div>
 </div>
 
