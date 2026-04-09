@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -87,6 +88,12 @@ class TransactionalMailService
                 'exception' => get_class($e),
             ]);
 
+            // Railway/runtime networks may block SMTP egress. Try Brevo HTTPS API fallback.
+            $fallback = self::sendViaBrevoApi($to, $subject, $htmlContent, $textContent, $fromEmail);
+            if (($fallback['success'] ?? false) === true) {
+                return $fallback;
+            }
+
             return [
                 'success' => false,
                 'status' => null,
@@ -169,5 +176,116 @@ class TransactionalMailService
         }
 
         return trim($value);
+    }
+
+    private static function sendViaBrevoApi(
+        string $to,
+        string $subject,
+        string $htmlContent,
+        ?string $textContent,
+        string $fromEmail
+    ): array {
+        $apiKey = self::resolveBrevoApiKey();
+        $fromName = (string) config('mail.from.name', 'Yakan');
+
+        if ($apiKey === '') {
+            return [
+                'success' => false,
+                'status' => null,
+                'message_id' => null,
+                'error' => 'Brevo API fallback unavailable: missing BREVO_API_KEY/API key.',
+            ];
+        }
+
+        $payload = [
+            'sender' => [
+                'name' => $fromName,
+                'email' => $fromEmail,
+            ],
+            'to' => [
+                ['email' => $to],
+            ],
+            'subject' => $subject,
+            'htmlContent' => $htmlContent,
+        ];
+
+        if (!empty($textContent)) {
+            $payload['textContent'] = $textContent;
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'api-key' => $apiKey,
+                'accept' => 'application/json',
+                'content-type' => 'application/json',
+            ])->timeout(20)->post('https://api.brevo.com/v3/smtp/email', $payload);
+
+            if ($response->successful()) {
+                $messageId = (string) ($response->json('messageId') ?? '');
+
+                Log::info('Mail send: Brevo API fallback accepted', [
+                    'to' => $to,
+                    'subject' => $subject,
+                    'status' => $response->status(),
+                    'message_id' => $messageId,
+                ]);
+
+                return [
+                    'success' => true,
+                    'status' => $response->status(),
+                    'message_id' => $messageId !== '' ? $messageId : null,
+                    'error' => null,
+                ];
+            }
+
+            Log::error('Mail send: Brevo API fallback failed', [
+                'to' => $to,
+                'subject' => $subject,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return [
+                'success' => false,
+                'status' => $response->status(),
+                'message_id' => null,
+                'error' => $response->body(),
+            ];
+        } catch (\Throwable $exception) {
+            Log::error('Mail send: Brevo API fallback exception', [
+                'to' => $to,
+                'subject' => $subject,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'status' => null,
+                'message_id' => null,
+                'error' => $exception->getMessage(),
+            ];
+        }
+    }
+
+    private static function resolveBrevoApiKey(): string
+    {
+        $candidates = [
+            env('BREVO_API_KEY'),
+            env('SENDINBLUE_API_KEY'),
+            env('MAIL_PASSWORD'), // optional fallback if using API key in MAIL_PASSWORD
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (!is_string($candidate)) {
+                continue;
+            }
+
+            $value = self::sanitizeEnvString($candidate);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
     }
 }
