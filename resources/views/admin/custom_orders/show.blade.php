@@ -672,8 +672,8 @@
                 </div>
                 @endif
 
-                {{-- Payment Verification --}}
-                @if($order->payment_status === 'pending_verification')
+                {{-- Payment Verification (chat orders only) --}}
+                @if($order->payment_status === 'pending_verification' && !empty($order->chat_id))
                     <div class="bg-yellow-50 border border-yellow-200 mt-4 p-4 rounded-xl">
                         <h2 class="text-lg font-semibold mb-2 text-yellow-800">Payment Verification</h2>
                         @if($order->transaction_id)
@@ -726,8 +726,8 @@
                     </div>
                 @endif
 
-                {{-- Payment Verification for Processing Orders --}}
-                @if($order->status === 'processing' && in_array($order->payment_status, ['unpaid', 'pending', 'pending_verification']))
+                {{-- Payment Verification for Processing Orders (chat orders only) --}}
+                @if($order->status === 'processing' && in_array($order->payment_status, ['unpaid', 'pending', 'pending_verification']) && !empty($order->chat_id))
                     <div class="bg-yellow-50 border border-yellow-200 mt-4 p-4 rounded-xl">
                         <h2 class="text-lg font-semibold mb-2 text-yellow-800">Payment Verification Required</h2>
                         <p class="text-sm text-gray-700 mb-3">

@@ -1224,8 +1224,8 @@
                     </div>
                     @endif
 
-                    {{-- 2. Payment Verification (Only shows when payment proof uploaded) --}}
-                    @if($order->payment_receipt && $order->payment_status === 'paid' && empty($order->payment_confirmed_at))
+                    {{-- 2. Payment Verification (Only shows when payment proof uploaded, and only for chat-based orders) --}}
+                    @if($order->payment_receipt && $order->payment_status === 'paid' && empty($order->payment_confirmed_at) && !empty($order->chat_id))
                     <div class="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-lg p-5 border-2 border-yellow-200 shadow-sm">
                         <div class="flex items-center gap-2 mb-4">
                             <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
