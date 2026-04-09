@@ -279,21 +279,27 @@ class PayMongoCheckoutService
 
         $paidAtRaw = $this->firstNonEmpty([
             data_get($payment, 'attributes.paid_at'),
+            data_get($payment, 'attributes.updated_at'),
             data_get($payment, 'attributes.created_at'),
             data_get($checkout, 'attributes.payments.0.attributes.paid_at'),
+            data_get($checkout, 'attributes.payments.0.attributes.updated_at'),
             data_get($checkout, 'attributes.payments.0.attributes.created_at'),
+            data_get($checkout, 'attributes.payment_intent.attributes.paid_at'),
+            data_get($checkout, 'attributes.payment_intent.attributes.updated_at'),
+            data_get($checkout, 'attributes.payment_intent.attributes.created_at'),
+            data_get($checkout, 'attributes.completed_at'),
             data_get($checkout, 'attributes.updated_at'),
+            data_get($checkout, 'attributes.created_at'),
             optional($order->payment_verified_at)->toISOString(),
+            optional($order->updated_at)->toISOString(),
+            optional($order->created_at)->toISOString(),
         ]);
 
-        $paidAtIso = null;
-        if ($paidAtRaw) {
-            try {
-                $paidAtIso = \Carbon\Carbon::parse((string) $paidAtRaw)->toIso8601String();
-            } catch (\Throwable $exception) {
-                $paidAtIso = null;
-            }
-        }
+        $paidAtIso = $this->normalizeTimestamp($paidAtRaw)
+            ?? optional($order->payment_verified_at)->toIso8601String()
+            ?? optional($order->updated_at)->toIso8601String()
+            ?? optional($order->created_at)->toIso8601String()
+            ?? now()->toIso8601String();
 
         return [
             'gateway' => 'PayMongo',
@@ -333,5 +339,38 @@ class PayMongoCheckoutService
         }
 
         return null;
+    }
+
+    private function normalizeTimestamp(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            $timestamp = (int) $value;
+
+            // PayMongo values can arrive in milliseconds; convert when needed.
+            if ($timestamp > 9999999999) {
+                $timestamp = (int) floor($timestamp / 1000);
+            }
+
+            if ($timestamp > 0) {
+                return \Carbon\Carbon::createFromTimestampUTC($timestamp)->toIso8601String();
+            }
+
+            return null;
+        }
+
+        $text = is_scalar($value) ? trim((string) $value) : '';
+        if ($text === '') {
+            return null;
+        }
+
+        try {
+            return \Carbon\Carbon::parse($text)->toIso8601String();
+        } catch (\Throwable $exception) {
+            return null;
+        }
     }
 }
