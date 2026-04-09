@@ -17,7 +17,7 @@ class Product extends Model
 
         static::creating(function ($product) {
             if (empty($product->sku)) {
-                $product->sku = 'YKN-' . strtoupper(substr(uniqid(), -8));
+                $product->sku = 'YKN-' . strtoupper(\Illuminate\Support\Str::random(8));
             }
         });
 

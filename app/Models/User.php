@@ -22,7 +22,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $fillable = [
         'name',
         'first_name',
-        'last_name', 
+        'last_name',
         'middle_initial',
         'email',
         'password',
@@ -33,10 +33,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'email_verified_at',
         'last_login_at',
         'last_seen_at',
-        'otp_code',
-        'otp_expires_at',
-        'otp_attempts',
-        'role', // <-- Add this if you want to check admin/user
+        'role',
     ];
 
     protected $hidden = [
@@ -143,12 +140,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function generateOtp(): string
     {
         $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        
-        $this->update([
-            'otp_code' => $otp,
-            'otp_expires_at' => now()->addMinutes(10), // OTP expires in 10 minutes
-            'otp_attempts' => 0,
-        ]);
+
+        $this->otp_code = \Illuminate\Support\Facades\Hash::make($otp);
+        $this->otp_expires_at = now()->addMinutes(10);
+        $this->otp_attempts = 0;
+        $this->save();
 
         return $otp;
     }
@@ -169,17 +165,17 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         // Increment attempts
-        $this->increment('otp_attempts');
+        $this->otp_attempts += 1;
+        $this->save();
 
-        // Check if OTP matches
-        if ($this->otp_code === $otp) {
+        // Check if OTP matches (constant-time hash comparison)
+        if (\Illuminate\Support\Facades\Hash::check($otp, $this->otp_code)) {
             // Clear OTP and verify email
-            $this->update([
-                'otp_code' => null,
-                'otp_expires_at' => null,
-                'otp_attempts' => 0,
-                'email_verified_at' => now(),
-            ]);
+            $this->otp_code = null;
+            $this->otp_expires_at = null;
+            $this->otp_attempts = 0;
+            $this->email_verified_at = now();
+            $this->save();
             return true;
         }
 

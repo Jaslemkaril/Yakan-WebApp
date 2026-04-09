@@ -19,9 +19,10 @@ import * as WebBrowser from 'expo-web-browser';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import ApiService from '../services/api';
+import API_CONFIG from '../config/config';
 
-// Base URL of the deployed Laravel backend
-const BACKEND_URL = 'https://yakan-webapp-production.up.railway.app';
+// Base URL of the deployed Laravel backend (resolved from shared config)
+const BACKEND_URL = API_CONFIG.API_BASE_URL.replace(/\/api\/v1$/, '');
 
 // Parse query-string from a URL without relying on the web URL API
 const parseQueryParams = (url) => {

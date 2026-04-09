@@ -3,7 +3,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class OrderController extends Controller
 {
@@ -44,7 +46,6 @@ class OrderController extends Controller
                 'items' => 'required|array|min:1',
                 'items.*.product_id' => 'required|integer|exists:products,id',
                 'items.*.quantity' => 'required|integer|min:1',
-                'items.*.price' => 'required|numeric|min:0',
                 'gcash_receipt' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
                 'bank_receipt' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
             ]);
@@ -72,7 +73,7 @@ class OrderController extends Controller
             // status ENUM: pending_confirmation, confirmed, processing, shipped, delivered, cancelled, refunded
             $orderStatus = $paymentStatus === 'paid' ? 'processing' : 'pending_confirmation';
 
-            $orderRef = 'ORD-' . strtoupper(uniqid());
+            $orderRef = 'ORD-' . strtoupper(Str::random(12));
 
             // Use authenticated user's info (always available now)
             $customerName = $validated['customer_name'] ?? $user->name;
@@ -92,10 +93,11 @@ class OrderController extends Controller
                 'payment_method' => $dbPaymentMethod,
                 'payment_status' => $paymentStatus,
                 'payment_reference' => $validated['payment_reference'] ?? null,
-                'subtotal' => $validated['subtotal'],
+                // Totals are recalculated server-side after item prices are resolved
+                'subtotal' => 0,
                 'shipping_fee' => $validated['shipping_fee'] ?? 0,
                 'discount' => $validated['discount'] ?? 0,
-                'total_amount' => $validated['total'] ?? $validated['total_amount'],
+                'total_amount' => 0,
                 'delivery_type' => $validated['delivery_type'] ?? 'deliver',
                 'status' => $orderStatus,
                 'notes' => $validated['notes'] ?? null,
@@ -104,13 +106,25 @@ class OrderController extends Controller
                 'bank_receipt' => $bankReceiptPath,
             ]);
 
+            // Resolve server-side prices — never trust client-supplied prices
+            $serverSubtotal = 0;
             foreach ($validated['items'] as $item) {
+                $product = Product::findOrFail($item['product_id']);
+                $unitPrice = $product->price;
+                $serverSubtotal += $unitPrice * $item['quantity'];
                 $order->items()->create([
                     'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
-                    'price' => $item['price'],
+                    'quantity'   => $item['quantity'],
+                    'price'      => $unitPrice,
                 ]);
             }
+
+            $shippingFee = $validated['shipping_fee'] ?? 0;
+            $discount    = $validated['discount'] ?? 0;
+            $order->update([
+                'subtotal'     => $serverSubtotal,
+                'total_amount' => max(0, $serverSubtotal + $shippingFee - $discount),
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -118,9 +132,10 @@ class OrderController extends Controller
                 'message' => 'Order created successfully'
             ], 201);
         } catch (\Exception $e) {
+            \Log::error('Order store error', ['message' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => 'Order could not be created. Please try again.'
             ], 500);
         }
     }

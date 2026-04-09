@@ -12,7 +12,7 @@ class AdminCheck
     {
         // First, try token authentication if not already authenticated
         if (!Auth::check()) {
-            $token = $request->input('auth_token') ?? $request->query('auth_token');
+            $token = $request->post('auth_token');
             
             if ($token) {
                 // Validate token
@@ -65,8 +65,8 @@ class AdminCheck
                 'has_session_flag' => $request->session()->has('admin_authenticated')
             ]);
             
-            // Store auth_token in request for use in redirects
-            $authToken = $request->input('auth_token') ?? $request->query('auth_token') ?? $request->session()->get('admin_auth_token');
+            // Retrieve auth_token from session only (never from URL)
+            $authToken = $request->session()->get('admin_auth_token');
             if ($authToken) {
                 $request->attributes->set('admin_auth_token', $authToken);
             }

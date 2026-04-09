@@ -21,7 +21,7 @@ class AuthController extends Controller
                 'last_name' => 'required|string|max:255',
                 'middle_initial' => 'nullable|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users,email',
-                'password' => 'required|string|min:6|confirmed', // Simplified password rules
+                'password' => 'required|string|min:8|confirmed',
             ]);
 
             $validationTime = microtime(true);
@@ -96,16 +96,10 @@ class AuthController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
-            \Log::error('Registration error', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
+            \Log::error('Registration error', ['message' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Registration failed: ' . $e->getMessage()
+                'message' => 'Registration failed. Please try again.'
             ], 500);
         }
     }

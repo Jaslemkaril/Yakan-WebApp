@@ -7,7 +7,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Artisan;
 
-// DIAGNOSTIC ROUTE - Check Railway environment (public, no auth/csrf needed)
+// ============================================================
+// DEBUG / SETUP ROUTES — Non-production environments only
+// ============================================================
+if (!app()->isProduction()) {
+
+// DIAGNOSTIC ROUTE - Check Railway environment (non-production only)
 Route::get('/railway-health', function () {
     $info = [];
     
@@ -211,6 +216,8 @@ Route::get('/setup/create-sessions-table', function () {
     }
 });
 
+} // end non-production debug/setup routes block
+
 // Privacy Policy and Data Deletion Routes (Required for Facebook OAuth)
 Route::get('/privacy-policy', function () {
     return view('privacy-policy');
@@ -223,6 +230,11 @@ Route::get('/data-deletion', function () {
 Route::get('/terms-of-service', function () {
     return view('terms-of-service');
 })->name('terms-of-service');
+
+// ============================================================
+// Debug / setup routes continued (non-production only)
+// ============================================================
+if (!app()->isProduction()) {
 
 // Reset admin password route
 Route::get('/setup/reset-admin-password', function () {
@@ -551,6 +563,8 @@ Route::get('/setup/reset-user-password', function () {
     return "✓ User password reset: user@yakan.com / user123 (role: {$user->role})";
 });
 
+} // end non-production debug/setup routes block (continued)
+
 // Admin login routes
 Route::get('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'showLoginForm'])->name('admin.login.form');
 Route::post('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'login'])->name('admin.login.submit');
@@ -625,17 +639,17 @@ Route::get('/api/documentation', function() {
     ]);
 })->name('api.documentation');
 
-// Health check route for diagnostics
+// Health check route (safe, no sensitive details)
 Route::get('/health-check', function() {
+    try {
+        DB::connection()->getPdo();
+        $dbOk = true;
+    } catch (\Exception $e) {
+        $dbOk = false;
+    }
     return response()->json([
         'status' => 'ok',
-        'app_env' => config('app.env'),
-        'app_debug' => config('app.debug'),
-        'database' => DB::connection()->getDatabaseName(),
-        'storage_path' => storage_path(),
-        'view_cache' => is_dir(storage_path('framework/views')),
-        'routes_cached' => app()->routesAreCached(),
-        'config_cached' => app()->configurationIsCached(),
+        'database' => $dbOk ? 'connected' : 'unreachable',
     ]);
 })->name('health.check');
 
@@ -646,9 +660,10 @@ Route::post('/contact', [WelcomeController::class, 'submitContact'])->name('cont
 
 /*
 |--------------------------------------------------------------------------
-| Admin Creation Route (Keep for initial setup)
+| Admin Creation Route (non-production only)
 |--------------------------------------------------------------------------
 */
+if (!app()->isProduction()) {
 Route::get('/create-admin', function () {
     $existingAdmin = \App\Models\User::where('email', 'admin@yakan.com')->first();
     
@@ -682,6 +697,7 @@ Route::get('/create-admin', function () {
         ]
     ]);
 });
+} // end non-production /create-admin
 
 /*
 |--------------------------------------------------------------------------
@@ -733,7 +749,8 @@ Route::get('/auth/{provider}/mobile', [SocialAuthController::class, 'mobileRedir
 Route::get('/auth/{provider}/sandbox', [SocialAuthController::class, 'sandbox'])->name('auth.social.sandbox');
 Route::post('/auth/{provider}/sandbox', [SocialAuthController::class, 'sandboxLogin'])->name('auth.social.sandbox.login');
 
-// Debug route for testing OAuth configuration
+// Debug route for testing OAuth configuration (non-production only)
+if (!app()->isProduction()) {
 Route::get('/debug/oauth', function() {
     return response()->json([
         'google_client_id' => config('services.google.client_id'),
@@ -744,6 +761,7 @@ Route::get('/debug/oauth', function() {
         'facebook_redirect' => config('services.facebook.redirect'),
     ]);
 });
+} // end non-production /debug/oauth
 
 // Legacy routes for backward compatibility
 Route::get('/auth/google', [SocialAuthController::class, 'redirect'])->name('auth.google');
@@ -1028,6 +1046,11 @@ Route::get('/track/{trackingNumber}', function($trackingNumber) {
     return redirect()->route('track-order.show', $trackingNumber);
 });
 
+// ============================================================
+// Non-production test/debug routes
+// ============================================================
+if (!app()->isProduction()) {
+
 // Simple test route at the top level (no middleware)
 Route::get('/simple-test', function() {
     return response()->json(['success' => true, 'message' => 'Simple test works']);
@@ -1131,6 +1154,8 @@ Route::get('/test-controller', function() {
 
 // Test with DashboardController directly
 Route::get('/direct-test', [App\Http\Controllers\Admin\DashboardController::class, 'index']);
+
+} // end non-production test routes
 
 /*
 |--------------------------------------------------------------------------
@@ -1430,6 +1455,8 @@ Route::get('/custom-orders/wizard/step-2', function (Illuminate\Http\Request $re
     return redirect('/custom-orders/create/step2', 301);
 });
 
+if (!app()->isProduction()) {
+
 // Simple test route
 Route::get('/simple-test', function() {
     return 'Simple test works!';
@@ -1499,6 +1526,8 @@ Route::get('/test-sandbox-simple', function() {
         return 'Sandbox service error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine();
     }
 });
+
+} // end non-production test routes (bottom block)
 
 // Payment Sandbox Routes
 Route::prefix('payment/sandbox')->name('payment.sandbox.')->group(function () {

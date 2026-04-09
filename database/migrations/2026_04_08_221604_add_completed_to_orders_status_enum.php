@@ -12,6 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         \DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM(
+            'pending',
             'pending_confirmation',
             'confirmed',
             'processing',
