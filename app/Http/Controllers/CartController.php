@@ -1702,9 +1702,7 @@ HTML
                 $pmStatus   = $session['attributes']['payment_intent']['attributes']['status'] ?? null;
 
                 if ($pmStatus === 'succeeded') {
-                    $order->payment_status = 'paid';
-                    $order->status         = 'processing';
-                    $order->save();
+                    $this->applyPayMongoPaymentResult($order, $session);
 
                     return redirect($this->appendAuthToken(route('orders.show', $orderId), $authToken))
                         ->with('success', 'Payment confirmed! Your order is now being processed.');
@@ -1715,9 +1713,7 @@ HTML
         }
 
         // Fallback: mark as paid regardless (PayMongo redirected to success URL)
-        $order->payment_status = 'paid';
-        $order->status         = 'processing';
-        $order->save();
+        $this->applyPayMongoPaymentResult($order);
 
         return redirect($this->appendAuthToken(route('orders.show', $orderId), $authToken))
             ->with('success', 'Payment received! Your order is now being processed.');
@@ -1739,19 +1735,13 @@ HTML
                 $pmStatus = $session['attributes']['payment_intent']['attributes']['status'] ?? null;
 
                 if ($pmStatus === 'succeeded') {
-                    $order->payment_status = 'paid';
-                    $order->status         = 'processing';
-                    $order->save();
+                    $this->applyPayMongoPaymentResult($order, $session);
                 } else {
                     // PayMongo only calls success_url on success, so mark paid as fallback
-                    $order->payment_status = 'paid';
-                    $order->status         = 'processing';
-                    $order->save();
+                    $this->applyPayMongoPaymentResult($order);
                 }
             } else {
-                $order->payment_status = 'paid';
-                $order->status         = 'processing';
-                $order->save();
+                $this->applyPayMongoPaymentResult($order);
             }
         } catch (\Throwable $e) {
             \Log::error('Mobile PayMongo success verification failed', [
@@ -1759,9 +1749,7 @@ HTML
                 'error'    => $e->getMessage(),
             ]);
             // Still mark as paid — PayMongo only redirects to success_url on completed payment
-            $order->payment_status = 'paid';
-            $order->status         = 'processing';
-            $order->save();
+            $this->applyPayMongoPaymentResult($order);
         }
 
         return response()->make(<<<HTML
@@ -1869,6 +1857,69 @@ HTML, 200, ['Content-Type' => 'text/html']);
 
         return redirect($this->appendAuthToken(route('orders.show', $orderId), $request->input('auth_token') ?? session('auth_token')))
             ->with('error', 'Maya payment was not completed. You can try again from your order page.');
+    }
+
+    private function applyPayMongoPaymentResult(Order $order, ?array $session = null): void
+    {
+        $order->payment_status = 'paid';
+        $order->status = 'processing';
+
+        $paymentId = $session ? $this->extractPayMongoPaymentId($session) : null;
+        if (!empty($paymentId)) {
+            $order->payment_reference = $paymentId;
+        }
+
+        $paymentDate = $session ? $this->extractPayMongoPaymentDate($session) : null;
+        $order->payment_verified_at = $paymentDate ?? now();
+
+        $order->save();
+    }
+
+    private function extractPayMongoPaymentId(array $session): ?string
+    {
+        $candidates = [
+            data_get($session, 'attributes.payments.0.id'),
+            data_get($session, 'attributes.payments.0.attributes.id'),
+            data_get($session, 'attributes.payment.id'),
+            data_get($session, 'attributes.payment.data.id'),
+            data_get($session, 'attributes.payment_intent.attributes.latest_payment.id'),
+            data_get($session, 'attributes.payment_intent.attributes.payments.0.id'),
+            data_get($session, 'attributes.payment_intent.attributes.last_payment.id'),
+        ];
+
+        foreach ($candidates as $value) {
+            $value = is_string($value) ? trim($value) : '';
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    private function extractPayMongoPaymentDate(array $session): ?\Carbon\Carbon
+    {
+        $candidates = [
+            data_get($session, 'attributes.payments.0.attributes.paid_at'),
+            data_get($session, 'attributes.payments.0.attributes.created_at'),
+            data_get($session, 'attributes.payment.attributes.paid_at'),
+            data_get($session, 'attributes.payment.attributes.created_at'),
+            data_get($session, 'attributes.payment_intent.attributes.updated_at'),
+            data_get($session, 'attributes.payment_intent.attributes.created_at'),
+            data_get($session, 'attributes.updated_at'),
+        ];
+
+        foreach ($candidates as $value) {
+            if (!empty($value)) {
+                try {
+                    return \Carbon\Carbon::parse($value);
+                } catch (\Throwable $exception) {
+                    // Ignore invalid gateway timestamps and continue to fallback values.
+                }
+            }
+        }
+
+        return null;
     }
 
     private function syncMayaPaymentStatus(Order $order, ?string $checkoutId = null): string

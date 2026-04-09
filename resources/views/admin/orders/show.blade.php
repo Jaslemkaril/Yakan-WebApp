@@ -165,6 +165,18 @@
                         {{ in_array($order->payment_status, ['paid', 'verified']) ? 'Paid' : ucfirst($order->payment_status) }}
                     </span>
                 </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Reference Number:</span>
+                    <span class="text-sm font-medium text-gray-900">{{ $order->order_ref ?? ('ORDER-' . $order->id) }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Payment ID:</span>
+                    <span class="text-sm font-medium text-gray-900 break-all text-right">{{ $order->payment_reference ?: 'N/A' }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Payment Date:</span>
+                    <span class="text-sm font-medium text-gray-900 text-right">{{ $order->payment_verified_at ? $order->payment_verified_at->format('M j, Y g:i A') : 'N/A' }}</span>
+                </div>
 
                 <!-- Payment Receipt - Show based on actual payment method -->
                 @php
