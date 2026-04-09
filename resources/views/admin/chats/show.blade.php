@@ -100,17 +100,18 @@
     .cs-msg.admin .cs-avatar { background: linear-gradient(135deg, #800000, #5a0000); color: #fff; }
     .cs-msg-body { display: flex; flex-direction: column; gap: 4px; }
     .cs-msg.admin .cs-msg-body { align-items: flex-end; }
-    .cs-msg-sender { font-size: 0.68rem; font-weight: 700; color: #9ca3af; padding: 0 6px; letter-spacing: 0.02em; }
+    .cs-msg-sender { font-size: 0.74rem; font-weight: 700; color: #9ca3af; padding: 0 6px; letter-spacing: 0.02em; }
     .cs-msg-bubble {
-        padding: 12px 16px;
+        padding: 13px 17px;
         border-radius: 18px;
-        font-size: 0.885rem;
-        line-height: 1.5;
+        font-size: 0.95rem;
+        line-height: 1.6;
         word-break: break-word;
-        white-space: pre-wrap;
+        white-space: normal;
         box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
-        max-width: min(620px, 70vw);
+        max-width: min(540px, 64vw);
     }
+    .cs-msg-text { margin: 0; white-space: pre-line; line-height: inherit; letter-spacing: 0.01em; }
     .cs-msg.user .cs-msg-bubble {
         background: #ffffff;
         color: #1f2937;
@@ -123,7 +124,7 @@
         border: 1px solid rgba(255, 255, 255, 0.12);
         border-bottom-right-radius: 6px;
     }
-    .cs-msg-time { font-size: 0.67rem; color: #bdbdbd; padding: 0 6px; }
+    .cs-msg-time { font-size: 0.73rem; color: #bdbdbd; padding: 0 6px; }
     .cs-msg.user .cs-msg-time { color: #9ca3af; }
 
     /* Form response data block */
@@ -336,7 +337,7 @@
                                     @endif
                                 @endif
                                 @if($message->message)
-                                    <span>{{ $message->message }}</span>
+                                    <p class="cs-msg-text">{{ $message->message }}</p>
                                 @endif
                                 @if(isset($message->message_type) && $message->message_type === 'form_response' && !empty($message->form_data['responses']))
                                     <div class="cs-form-data">
