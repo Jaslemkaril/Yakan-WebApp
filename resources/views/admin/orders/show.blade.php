@@ -996,6 +996,14 @@
 
                     <div class="p-6 space-y-4">
                         <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
+                            <p class="text-sm text-gray-500">Customer Name</p>
+                            <p id="pmCustomerName" class="text-sm font-semibold text-gray-900 break-all text-right">-</p>
+                        </div>
+                        <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
+                            <p class="text-sm text-gray-500">Customer Email</p>
+                            <p id="pmCustomerEmail" class="text-sm font-semibold text-gray-900 break-all text-right">-</p>
+                        </div>
+                        <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
                             <p class="text-sm text-gray-500">Payment ID</p>
                             <p id="pmPaymentId" class="text-sm font-semibold text-gray-900 break-all text-right">-</p>
                         </div>
@@ -1070,41 +1078,41 @@ function formatPaymongoStatus(status) {
 }
 
 function safeText(value, fallback) {
-        if (value === null || value === undefined) return fallback;
-        const text = String(value).trim();
-        return text === '' ? fallback : text;
+    if (value === null || value === undefined) return fallback;
+    const text = String(value).trim();
+    return text === '' ? fallback : text;
 }
 
 function escapeHtml(value) {
-        return String(value)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
+    return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function formatReceiptDate(isoText) {
-        if (!isoText) return 'N/A';
-        const dateObj = new Date(isoText);
-        if (Number.isNaN(dateObj.getTime())) return safeText(isoText, 'N/A');
-        return dateObj.toLocaleString();
+    if (!isoText) return 'N/A';
+    const dateObj = new Date(isoText);
+    if (Number.isNaN(dateObj.getTime())) return safeText(isoText, 'N/A');
+    return dateObj.toLocaleString();
 }
 
 function printPaymongoReceipt() {
-        const receipt = window.__paymongoReceiptData;
-        if (!receipt) {
-                return;
-        }
+    const receipt = window.__paymongoReceiptData;
+    if (!receipt) {
+    return;
+    }
 
-        const printWindow = window.open('', '_blank', 'width=860,height=900');
-        if (!printWindow) {
-                alert('Please allow pop-ups to print the receipt.');
-                return;
-        }
+    const printWindow = window.open('', '_blank', 'width=860,height=900');
+    if (!printWindow) {
+    alert('Please allow pop-ups to print the receipt.');
+    return;
+    }
 
-        const amountText = `${safeText(receipt.currency, 'PHP')} ${Number(receipt.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        const html = `<!DOCTYPE html>
+    const amountText = `${safeText(receipt.currency, 'PHP')} ${Number(receipt.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const html = `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -1133,6 +1141,8 @@ function printPaymongoReceipt() {
         </div>
         <div class="section">
             <div class="row"><div class="label">Reference Number</div><div class="value">${escapeHtml(safeText(receipt.reference_number, 'N/A'))}</div></div>
+            <div class="row"><div class="label">Customer Name</div><div class="value">${escapeHtml(safeText(receipt.customer_name, 'N/A'))}</div></div>
+            <div class="row"><div class="label">Customer Email</div><div class="value">${escapeHtml(safeText(receipt.customer_email, 'N/A'))}</div></div>
             <div class="row"><div class="label">Payment ID</div><div class="value">${escapeHtml(safeText(receipt.payment_id, 'N/A'))}</div></div>
             <div class="row"><div class="label">Payment Method</div><div class="value">${escapeHtml(safeText(receipt.payment_method, 'N/A'))}</div></div>
             <div class="row"><div class="label">Payment Date</div><div class="value">${escapeHtml(formatReceiptDate(receipt.paid_at))}</div></div>
@@ -1145,9 +1155,9 @@ function printPaymongoReceipt() {
 </body>
 </html>`;
 
-        printWindow.document.open();
-        printWindow.document.write(html);
-        printWindow.document.close();
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
 }
 
 async function viewPaymongoReceipt(endpointUrl) {
@@ -1155,13 +1165,13 @@ async function viewPaymongoReceipt(endpointUrl) {
     const loading = document.getElementById('paymongoReceiptLoading');
     const error = document.getElementById('paymongoReceiptError');
     const body = document.getElementById('paymongoReceiptBody');
-        const printBtn = document.getElementById('paymongoPrintBtn');
+    const printBtn = document.getElementById('paymongoPrintBtn');
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
     loading.classList.remove('hidden');
     body.classList.add('hidden');
-        printBtn.classList.add('hidden');
+    printBtn.classList.add('hidden');
     error.classList.add('hidden');
     error.textContent = '';
 
@@ -1182,6 +1192,8 @@ async function viewPaymongoReceipt(endpointUrl) {
         window.__paymongoReceiptData = receipt;
 
         document.getElementById('pmRefNumber').textContent = safeText(receipt.reference_number, 'N/A');
+        document.getElementById('pmCustomerName').textContent = safeText(receipt.customer_name, 'N/A');
+        document.getElementById('pmCustomerEmail').textContent = safeText(receipt.customer_email, 'N/A');
         document.getElementById('pmPaymentId').textContent = safeText(receipt.payment_id, 'N/A');
         document.getElementById('pmPaymentMethod').textContent = safeText(receipt.payment_method, 'N/A');
         document.getElementById('pmStatus').textContent = formatPaymongoStatus(receipt.status);

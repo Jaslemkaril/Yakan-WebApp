@@ -301,9 +301,27 @@ class PayMongoCheckoutService
             ?? optional($order->created_at)->toIso8601String()
             ?? now()->toIso8601String();
 
+        $customerName = $this->firstNonEmpty([
+            data_get($payment, 'attributes.billing.name'),
+            data_get($checkout, 'attributes.billing.name'),
+            optional($order->user)->name,
+            $order->customer_name,
+            'Customer',
+        ]);
+
+        $customerEmail = $this->firstNonEmpty([
+            data_get($payment, 'attributes.billing.email'),
+            data_get($checkout, 'attributes.billing.email'),
+            optional($order->user)->email,
+            $order->customer_email,
+            'N/A',
+        ]);
+
         return [
             'gateway' => 'PayMongo',
             'verified' => true,
+            'customer_name' => $customerName,
+            'customer_email' => $customerEmail,
             'reference_number' => $referenceNumber,
             'payment_id' => $paymentId,
             'status' => $status,
