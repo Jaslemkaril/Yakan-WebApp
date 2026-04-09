@@ -979,6 +979,7 @@ Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->gr
     Route::post('/create/complete', [\App\Http\Controllers\CustomOrderController::class, 'completeWizard'])->name('complete.wizard');
     Route::post('/create/add-to-batch', [\App\Http\Controllers\CustomOrderController::class, 'addToBatch'])->name('add.to.batch');
     Route::delete('/create/batch-item/{index}', [\App\Http\Controllers\CustomOrderController::class, 'removeBatchItem'])->name('remove.batch.item');
+    Route::get('/create/edit-batch-item/{index}', [\App\Http\Controllers\CustomOrderController::class, 'editBatchItem'])->name('edit.batch.item');
     Route::get('/success/{order}', [\App\Http\Controllers\CustomOrderController::class, 'success'])->name('success');
     
     // Pattern-Based Approach (Fabric Flow)

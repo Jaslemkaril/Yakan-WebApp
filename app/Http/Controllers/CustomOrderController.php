@@ -1756,6 +1756,63 @@ class CustomOrderController extends Controller
     }
 
     /**
+     * Load a specific queued batch item back into the live wizard session for editing,
+     * saving the current live wizard state back into the batch at the given index.
+     */
+    public function editBatchItem(Request $request, int $index)
+    {
+        $wizardData = $this->getWizardData();
+        $batchItems = $wizardData['__batch_items'] ?? [];
+
+        if (!isset($batchItems[$index])) {
+            $token = $request->query('auth_token') ?? session('auth_token');
+            $url   = route('custom_orders.create.step4') . ($token ? '?auth_token=' . urlencode($token) : '');
+            return redirect($url)->with('error', 'Item not found in batch.');
+        }
+
+        // Snapshot the current live wizard item back into the batch
+        $currentItemWizardData = array_filter(
+            $wizardData,
+            fn($k) => $k !== '__batch_items',
+            ARRAY_FILTER_USE_KEY
+        );
+
+        // Build a summary for the re-queued current item
+        $currentFabricType = '—';
+        if (!empty($currentItemWizardData['fabric']['type'])) {
+            $ft = \App\Models\FabricType::find($currentItemWizardData['fabric']['type']);
+            $currentFabricType = $ft ? $ft->name : $currentItemWizardData['fabric']['type'];
+        }
+        $currentPatternName = '—';
+        if (!empty($currentItemWizardData['pattern']['selected_ids'])) {
+            $p = \App\Models\YakanPattern::find($currentItemWizardData['pattern']['selected_ids'][0]);
+            $currentPatternName = $p ? $p->name : '—';
+        }
+        $currentMeters = $currentItemWizardData['fabric']['quantity_meters'] ?? null;
+
+        $requeuedItem = [
+            'wizard_data' => $currentItemWizardData,
+            'form_data'   => [],   // will be filled when user reaches step4 again
+            'summary'     => "Fabric: {$currentFabricType}, Pattern: {$currentPatternName}" . ($currentMeters ? ", {$currentMeters}m" : ''),
+            'added_at'    => now()->format('Y-m-d H:i:s'),
+        ];
+
+        // Swap: put the chosen queued item into the live wizard, put current back at same index
+        $targetItem = $batchItems[$index];
+        $batchItems[$index] = $requeuedItem;
+
+        // Restore the chosen item's wizard data as the new live session
+        $newWizardData = $targetItem['wizard_data'];
+        $newWizardData['__batch_items'] = $batchItems;
+
+        $this->saveWizardData($newWizardData);
+
+        $token = $request->query('auth_token') ?? session('auth_token');
+        $url   = route('custom_orders.create.step1') . ($token ? '?auth_token=' . urlencode($token) : '');
+        return redirect($url)->with('success', 'Editing item ' . ($index + 1) . '. Make your changes and return to Review to submit all items.');
+    }
+
+    /**
      * Create a single CustomOrder from pre-saved batch item data (wizard_data + form_data).
      * Called during completeWizard to materialise previously queued batch items.
      */
