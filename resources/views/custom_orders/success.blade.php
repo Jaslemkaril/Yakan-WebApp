@@ -144,7 +144,7 @@
                         @endif
                         <div class="mt-3">
                             <a href="{{ route('custom_orders.show', $bOrder->id) }}" class="text-xs font-semibold hover:underline" style="color:#800000;">
-                                View Order Details ?
+                                View Order Details
                             </a>
                         </div>
                     </div>
