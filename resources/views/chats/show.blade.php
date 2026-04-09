@@ -54,9 +54,76 @@
         color: white;
     }
 
+    .uc-chat-frame {
+        background: #fff;
+        border: 1px solid #e9e5e0;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .uc-thread {
+        height: min(62vh, 640px);
+        background: #f8f7f5;
+        padding: 20px 22px;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .uc-composer {
+        background: #fff;
+        border-top: 1px solid #e9e5e0;
+        padding: 12px 16px;
+    }
+
+    .uc-message-label {
+        display: none;
+    }
+
+    .uc-composer-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        background: #f8f7f5;
+        border: 2px solid #e9e5e0;
+        border-radius: 24px;
+        padding: 8px 10px;
+        transition: border-color 0.2s;
+    }
+
+    .uc-composer-row:focus-within {
+        border-color: #8B0000;
+        background: #fff;
+    }
+
+    .uc-attach-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 9999px;
+        background: #fff;
+        border: 1.5px solid #e5e7eb;
+    }
+
+    .uc-send-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 9999px;
+    }
+
     @media (max-width: 768px) {
         .chat-header-sticky {
             top: 76px;
+        }
+
+        .uc-thread {
+            height: min(58vh, 560px);
+            padding: 14px;
+        }
+
+        .uc-composer {
+            padding: 10px 12px;
         }
     }
 </style>
@@ -137,11 +204,11 @@
         @endif
 
         <!-- Messages Container -->
-        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden flex flex-col" style="height: 600px;">
-            <div class="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50" id="messagesContainer">
+        <div class="uc-chat-frame">
+            <div class="flex-1 overflow-y-auto space-y-4 uc-thread" id="messagesContainer">
                 @forelse($messages as $message)
                     <div class="flex {{ $message->sender_type === 'user' ? 'justify-end' : 'justify-start' }} animate-fadeIn">
-                        <div class="flex flex-col {{ $message->sender_type === 'user' ? 'items-end' : 'items-start' }} max-w-xs">
+                        <div class="flex flex-col {{ $message->sender_type === 'user' ? 'items-end' : 'items-start' }} max-w-[78%]">
                             <p class="text-xs font-semibold text-gray-500 mb-2 px-2">
                                 {{ $message->sender_type === 'user' ? 'You' : 'Support Team' }}
                             </p>
@@ -776,19 +843,18 @@
                     </div>
                 @endforelse
             </div>
-        </div>
 
         <!-- Message Form -->
         @if($chat->status !== 'closed')
-            <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mt-6">
+            <div class="uc-composer">
                 <form id="chatMessageForm" action="{{ route('chats.send-message', $chat) }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     @if(request()->get('auth_token') || session('auth_token'))
                         <input type="hidden" name="auth_token" value="{{ request()->get('auth_token') ?? session('auth_token') }}">
                     @endif
 
-                    <div class="mb-5">
-                        <label for="message" class="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <div>
+                        <label for="message" class="uc-message-label block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                             </svg>
@@ -807,9 +873,9 @@
                         </div>
 
                         <!-- Horizontal Input Layout -->
-                        <div class="flex items-center gap-3 bg-gray-50 border-2 border-gray-300 rounded-3xl px-4 py-3 transition-all duration-200 focus-within:border-[#8B0000] focus-within:bg-white">
+                        <div class="uc-composer-row">
                             <!-- Attach Image Button (+ icon) -->
-                            <label for="image" class="cursor-pointer flex items-center justify-center w-10 h-10 bg-white border-2 border-gray-200 rounded-full hover:bg-[#8B0000] hover:border-[#8B0000] transition-all duration-200 flex-shrink-0 group" title="Attach image">
+                            <label for="image" class="uc-attach-btn cursor-pointer flex items-center justify-center hover:bg-[#8B0000] hover:border-[#8B0000] transition-all duration-200 flex-shrink-0 group" title="Attach image">
                                 <input type="file" id="image" name="image" accept="image/*" class="hidden" onchange="updateImagePreview(this)">
                                 <svg class="w-5 h-5 text-gray-600 group-hover:text-white transition-colors duration-200 block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
@@ -820,7 +886,7 @@
                             <textarea id="message" name="message" rows="1" class="flex-1 border-none bg-transparent resize-none outline-none text-sm text-gray-900 placeholder-gray-400 px-2 py-1" placeholder="Type your message here..." style="min-height: 24px; max-height: 120px; overflow-y: auto;" oninput="autoResize(this)"></textarea>
 
                             <!-- Send Button -->
-                            <button type="submit" id="sendButton" class="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] border-none rounded-full cursor-pointer transition-all duration-200 flex-shrink-0 p-0 shadow-md hover:shadow-lg" title="Send message">
+                            <button type="submit" id="sendButton" class="uc-send-btn flex items-center justify-center bg-gradient-to-br from-[#8B0000] to-[#6B0000] hover:from-[#6B0000] hover:to-[#5B0000] border-none cursor-pointer transition-all duration-200 flex-shrink-0 p-0 shadow-md hover:shadow-lg" title="Send message">
                                 <svg id="sendIcon" class="w-4 h-4 text-white block" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/>
                                 </svg>
@@ -925,6 +991,7 @@
                 <p class="text-gray-600 text-sm mt-1">You cannot send new messages. <a href="{{ route('chats.create') }}" class="text-[#8B0000] hover:text-[#6B0000] font-semibold">Start a new chat</a></p>
             </div>
         @endif
+        </div>
     </div>
 </div>
 
