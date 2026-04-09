@@ -1003,11 +1003,14 @@
                         $paymongoReceiptUrl .= (str_contains($paymongoReceiptUrl, '?') ? '&' : '?') . 'auth_token=' . urlencode($authToken);
                     }
 
-                    $paymentReferenceNumber = !empty($order->display_ref) ? $order->display_ref : ('CO-' . $order->id);
+                    $paymentReferenceNumber = $isPaymongoPayment
+                        ? ('CO-' . $order->id)
+                        : (!empty($order->display_ref) ? $order->display_ref : ('CO-' . $order->id));
                     $paymentDateRaw = $order->payment_confirmed_at
                         ?? $order->payment_verified_at
                         ?? $order->paid_at
                         ?? $order->transfer_date
+                        ?? (($order->payment_status ?? '') === 'paid' ? $order->updated_at : null)
                         ?? null;
                     $paymentDateDisplay = 'N/A';
                     if (!empty($paymentDateRaw)) {
@@ -1056,17 +1059,18 @@
 
                 {{-- PayMongo Metadata --}}
                 @if($isPaymongoPayment)
+                <div id="coPaymongoSync" class="hidden" data-endpoint="{{ $paymongoReceiptUrl }}"></div>
                 <div class="mb-4">
                     <div class="text-sm font-semibold text-gray-700 mb-1">Reference Number</div>
-                    <div class="text-xs font-mono text-gray-900 bg-gray-50 px-2 py-1 rounded">{{ $paymentReferenceNumber }}</div>
+                    <div id="coPmSummaryRef" class="text-xs font-mono text-gray-900 bg-gray-50 px-2 py-1 rounded">{{ $paymentReferenceNumber }}</div>
                 </div>
                 <div class="mb-4">
                     <div class="text-sm font-semibold text-gray-700 mb-1">Payment ID</div>
-                    <div class="text-xs font-mono text-gray-900 bg-gray-50 px-2 py-1 rounded">{{ $order->transaction_id ?: 'N/A' }}</div>
+                    <div id="coPmSummaryPaymentId" class="text-xs font-mono text-gray-900 bg-gray-50 px-2 py-1 rounded">{{ $order->transaction_id ?: 'N/A' }}</div>
                 </div>
                 <div class="mb-4">
                     <div class="text-sm font-semibold text-gray-700 mb-1">Payment Date</div>
-                    <div class="text-sm text-gray-900">{{ $paymentDateDisplay }}</div>
+                    <div id="coPmSummaryPaidAt" class="text-sm text-gray-900">{{ $paymentDateDisplay }}</div>
                 </div>
                 <div class="mb-4">
                     <button type="button" onclick="viewPaymongoReceipt('{{ $paymongoReceiptUrl }}')"
@@ -1950,38 +1954,9 @@ async function viewPaymongoReceipt(endpointUrl) {
     error.textContent = '';
 
     try {
-        const response = await fetch(endpointUrl, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            }
-        });
-
-        const responseText = await response.text();
-        let payload = null;
-
-        try {
-            payload = responseText ? JSON.parse(responseText) : null;
-        } catch (_) {
-            payload = null;
-        }
-
-        if (!payload || typeof payload !== 'object') {
-            const looksLikeHtml = /^\s*</.test(responseText || '');
-            if (response.status === 401 || response.status === 403 || response.status === 419 || response.redirected || looksLikeHtml) {
-                throw new Error('Admin session expired. Please refresh the page and login again, then retry.');
-            }
-
-            const snippet = responseText ? responseText.slice(0, 120).replace(/\s+/g, ' ').trim() : '';
-            throw new Error(snippet || 'Server returned an unexpected response while loading the verified receipt.');
-        }
-
-        if (!response.ok || !payload.success) {
-            throw new Error(payload.message || 'Unable to load verified receipt from PayMongo.');
-        }
-
-        const receipt = payload.receipt || {};
+        const receipt = await fetchPaymongoReceiptPayload(endpointUrl);
         window.__paymongoReceiptData = receipt;
+        applyPaymongoReceiptToSummary(receipt);
 
         document.getElementById('pmRefNumber').textContent = safeText(receipt.reference_number, 'N/A');
         document.getElementById('pmCustomerName').textContent = safeText(receipt.customer_name, 'N/A');
@@ -2005,6 +1980,77 @@ async function viewPaymongoReceipt(endpointUrl) {
     }
 }
 
+async function fetchPaymongoReceiptPayload(endpointUrl) {
+    const response = await fetch(endpointUrl, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    });
+
+    const responseText = await response.text();
+    let payload = null;
+
+    try {
+        payload = responseText ? JSON.parse(responseText) : null;
+    } catch (_) {
+        payload = null;
+    }
+
+    if (!payload || typeof payload !== 'object') {
+        const looksLikeHtml = /^\s*</.test(responseText || '');
+        if (response.status === 401 || response.status === 403 || response.status === 419 || response.redirected || looksLikeHtml) {
+            throw new Error('Admin session expired. Please refresh the page and login again, then retry.');
+        }
+
+        const snippet = responseText ? responseText.slice(0, 120).replace(/\s+/g, ' ').trim() : '';
+        throw new Error(snippet || 'Server returned an unexpected response while loading the verified receipt.');
+    }
+
+    if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'Unable to load verified receipt from PayMongo.');
+    }
+
+    return payload.receipt || {};
+}
+
+function applyPaymongoReceiptToSummary(receipt) {
+    const refEl = document.getElementById('coPmSummaryRef');
+    const paymentIdEl = document.getElementById('coPmSummaryPaymentId');
+    const paidAtEl = document.getElementById('coPmSummaryPaidAt');
+
+    if (refEl) {
+        refEl.textContent = safeText(receipt.reference_number, refEl.textContent || 'N/A');
+    }
+    if (paymentIdEl) {
+        paymentIdEl.textContent = safeText(receipt.payment_id, paymentIdEl.textContent || 'N/A');
+    }
+    if (paidAtEl) {
+        paidAtEl.textContent = formatReceiptDate(receipt.paid_at);
+    }
+}
+
+async function syncPaymongoSummaryFromVerifiedReceipt() {
+    const syncNode = document.getElementById('coPaymongoSync');
+    if (!syncNode) {
+        return;
+    }
+
+    const endpointUrl = syncNode.getAttribute('data-endpoint') || '';
+    if (!endpointUrl) {
+        return;
+    }
+
+    try {
+        const receipt = await fetchPaymongoReceiptPayload(endpointUrl);
+        window.__paymongoReceiptData = receipt;
+        applyPaymongoReceiptToSummary(receipt);
+    } catch (error) {
+        // Keep server-rendered fallback values when prefetch fails.
+        console.warn('Unable to prefetch verified PayMongo receipt for summary:', error?.message || error);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const messageDiv = document.getElementById('actionMessage');
@@ -2023,6 +2069,8 @@ document.addEventListener('DOMContentLoaded', function() {
             closePaymongoReceiptModal();
         }
     });
+
+    syncPaymongoSummaryFromVerifiedReceipt();
     
     // Show message helper
     function showMessage(message, type = 'success') {
