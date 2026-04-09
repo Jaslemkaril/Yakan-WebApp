@@ -13,9 +13,12 @@ class TransactionalMailService
      */
     public static function sendDetailed(string $to, string $subject, string $htmlContent, ?string $textContent = null): array
     {
+        self::syncRuntimeMailConfigFromEnv();
+
         $mailer = (string) config('mail.default', 'smtp');
         $host = (string) config('mail.mailers.smtp.host');
         $port = (string) config('mail.mailers.smtp.port');
+        $username = (string) config('mail.mailers.smtp.username');
         $fromEmail = config('mail.from.address');
 
         if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
@@ -39,9 +42,8 @@ class TransactionalMailService
         }
 
         try {
-            Mail::mailer($mailer)->send([], [], function ($message) use ($to, $subject, $htmlContent) {
+            Mail::mailer($mailer)->html($htmlContent, function ($message) use ($to, $subject) {
                 $message->to($to)->subject($subject);
-                $message->html($htmlContent);
             });
 
             Log::info('Mail send: Email accepted by transport', [
@@ -50,6 +52,8 @@ class TransactionalMailService
                 'mailer' => $mailer,
                 'host' => $host,
                 'port' => $port,
+                'username' => $username,
+                'from' => $fromEmail,
             ]);
 
             return [
@@ -65,6 +69,9 @@ class TransactionalMailService
                 'mailer' => $mailer,
                 'host' => $host,
                 'port' => $port,
+                'username' => $username,
+                'from' => $fromEmail,
+                'exception' => get_class($e),
             ]);
 
             return [
@@ -101,5 +108,34 @@ class TransactionalMailService
     {
         $html = view($view, $data)->render();
         return self::sendDetailed($to, $subject, $html);
+    }
+
+    /**
+     * Railway-safe runtime sync for mail config to avoid stale cached values.
+     */
+    private static function syncRuntimeMailConfigFromEnv(): void
+    {
+        $runtime = [
+            'mail.default' => env('MAIL_MAILER'),
+            'mail.mailers.smtp.host' => env('MAIL_HOST'),
+            'mail.mailers.smtp.port' => env('MAIL_PORT'),
+            'mail.mailers.smtp.username' => env('MAIL_USERNAME'),
+            'mail.mailers.smtp.password' => env('MAIL_PASSWORD'),
+            'mail.mailers.smtp.encryption' => env('MAIL_ENCRYPTION'),
+            'mail.from.address' => env('MAIL_FROM_ADDRESS'),
+            'mail.from.name' => env('MAIL_FROM_NAME'),
+        ];
+
+        foreach ($runtime as $key => $value) {
+            if ($value === null) {
+                continue;
+            }
+
+            if (is_string($value) && trim($value) === '') {
+                continue;
+            }
+
+            config([$key => $value]);
+        }
     }
 }
