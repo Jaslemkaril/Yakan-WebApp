@@ -1904,10 +1904,17 @@ class CustomOrderController extends Controller
                 }
             }
             // Fabric cost
-            if (isset($wizardData['fabric']['quantity_meters']) && !empty($patternIds)) {
+            if (isset($wizardData['fabric']['quantity_meters'])) {
                 $meters = (float) $wizardData['fabric']['quantity_meters'];
-                $pp = \App\Models\YakanPattern::find($patternIds[0]);
-                $fabricCost = $meters * ($pp ? ($pp->price_per_meter ?? 0) : 0);
+                $systemPpm = (float) \App\Models\SystemSetting::get('price_per_meter', 500);
+                $ppm = $systemPpm;
+                if (!empty($patternIds)) {
+                    $pp = \App\Models\YakanPattern::find($patternIds[0]);
+                    if ($pp && !is_null($pp->price_per_meter)) {
+                        $ppm = (float) $pp->price_per_meter;
+                    }
+                }
+                $fabricCost = $meters * $ppm;
             }
             $deliveryCity    = $formData['resolved_delivery_city'] ?? null;
             $deliveryProvince = $formData['resolved_delivery_province'] ?? null;
@@ -2182,12 +2189,13 @@ class CustomOrderController extends Controller
                 // 2. Calculate fabric cost (quantity × price per meter from the pattern)
                 if (isset($wizardData['fabric']['quantity_meters'])) {
                     $meters = (float) $wizardData['fabric']['quantity_meters'];
-                    // Get price per meter from the first selected pattern
-                    $pricePerMeter = 0;
+                    // Get price per meter from the first selected pattern; fall back to system setting
+                    $systemPricePerMeter = (float) \App\Models\SystemSetting::get('price_per_meter', 500);
+                    $pricePerMeter = $systemPricePerMeter; // default
                     if (!empty($patternIds)) {
                         $pattern = \App\Models\YakanPattern::find($patternIds[0]);
-                        if ($pattern) {
-                            $pricePerMeter = $pattern->price_per_meter ?? 0;
+                        if ($pattern && !is_null($pattern->price_per_meter)) {
+                            $pricePerMeter = (float) $pattern->price_per_meter;
                         }
                     }
                     $fabricCost = $meters * $pricePerMeter;

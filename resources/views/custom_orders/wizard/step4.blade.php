@@ -65,14 +65,14 @@
             $patternCount = isset($selectedPatterns) ? $selectedPatterns->count() : 0;
             
             // Get price per meter and pattern fee from the first selected pattern
-            $pricePerMeterValue = 500; // default fallback
+            $pricePerMeterValue = isset($pricePerMeter) ? (float) $pricePerMeter : 500; // use system setting
             $patternFee = 0;
             
             if ($patternCount > 0 && isset($selectedPatterns)) {
                 foreach ($selectedPatterns as $pattern) {
-                    // Use each pattern's individual price_per_meter (for fabric)
-                    $pricePerMeterValue = $pattern->price_per_meter ?? 500; // Take from first pattern
-                    // Use each pattern's individual pattern_price (for pattern fee)
+                    if (!is_null($pattern->price_per_meter)) {
+                        $pricePerMeterValue = (float) $pattern->price_per_meter;
+                    }
                     $patternFee += ($pattern->pattern_price ?? 0);
                 }
             }
