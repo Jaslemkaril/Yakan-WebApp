@@ -208,7 +208,7 @@
                             <!-- Action Buttons -->
                             @if($isCustom)
                                 {{-- Custom order buttons --}}
-                                @if($status === 'delivered' && !$order->delivered_at)
+                                @if($status === 'delivered')
                                     <form action="{{ route('custom_orders.confirm_received', $order->id) }}" method="POST" class="mb-2">
                                         @csrf
                                         <button type="submit"
@@ -216,7 +216,7 @@
                                             ✓ Confirm Received
                                         </button>
                                     </form>
-                                @elseif(in_array($status, ['delivered', 'completed']))
+                                @elseif($status === 'completed')
                                     <button type="button"
                                             class="block w-full text-center px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-semibold text-sm mb-2" disabled>
                                         ✓ Order Received
