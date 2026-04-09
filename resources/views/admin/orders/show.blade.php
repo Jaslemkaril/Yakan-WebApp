@@ -4,8 +4,15 @@
 
 @section('content')
 @php
+    $normalizedDeliveryType = strtolower((string) ($order->delivery_type ?? 'delivery'));
+    if ($normalizedDeliveryType === 'deliver') {
+        $normalizedDeliveryType = 'delivery';
+    }
+    $isPickup = $normalizedDeliveryType === 'pickup';
+    $effectiveDeliveryAddress = trim((string) ($order->delivery_address ?: $order->shipping_address ?: ''));
+
     $summaryShippingFee = (float) ($order->shipping_fee ?? 0);
-    if (($order->delivery_type ?? 'delivery') === 'pickup') {
+    if ($isPickup) {
         $summaryShippingFee = 0;
     }
 
@@ -215,13 +222,13 @@
                 <div class="flex justify-between">
                     <span class="text-sm text-gray-600">Type:</span>
                     <span class="text-sm font-medium text-gray-900">
-                        {{ $order->delivery_type == 'pickup' ? 'Store Pickup' : 'Home Delivery' }}
+                        {{ $isPickup ? 'Store Pickup' : 'Home Delivery' }}
                     </span>
                 </div>
-                @if($order->delivery_address && $order->delivery_type == 'delivery')
+                @if($effectiveDeliveryAddress && !$isPickup)
                     <div class="pt-2">
                         <p class="text-xs text-gray-500 mb-1">Delivery Address:</p>
-                        <p class="text-sm text-gray-900 bg-gray-50 p-3 rounded-lg">{{ $order->delivery_address }}</p>
+                        <p class="text-sm text-gray-900 bg-gray-50 p-3 rounded-lg">{{ $effectiveDeliveryAddress }}</p>
                     </div>
                 @endif
             </div>
