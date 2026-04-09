@@ -1295,6 +1295,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         
         // View order - MUST use /view/ prefix to avoid conflict with other routes
         Route::get('/view/{order}', [AdminCustomOrderController::class, 'show'])->name('show');
+        Route::get('/{order}/paymongo-receipt', [AdminCustomOrderController::class, 'paymongoReceipt'])->name('paymongo_receipt');
         
         // Order management actions
         Route::post('/{order}/update-status', [AdminCustomOrderController::class, 'updateStatus'])->name('update_status');

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CustomOrder;
+use App\Services\Payment\PayMongoCheckoutService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -446,6 +448,44 @@ class AdminCustomOrderController extends Controller
         }
 
         return view('admin.custom_orders.details', compact('order', 'batchOrders', 'isImplicitBatchGroup'));
+    }
+
+    /**
+     * Fetch verified PayMongo receipt details for admin custom order display.
+     */
+    public function paymongoReceipt(CustomOrder $order, PayMongoCheckoutService $payMongoService): JsonResponse
+    {
+        $paymentMethod = strtolower((string) ($order->payment_method ?? ''));
+        $transactionId = strtolower((string) ($order->transaction_id ?? ''));
+        $isPaymongoLike = in_array($paymentMethod, ['paymongo', 'online_banking'], true)
+            || str_starts_with($transactionId, 'cs_')
+            || str_starts_with($transactionId, 'pay_');
+
+        if (!$isPaymongoLike) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This custom order is not a PayMongo payment.',
+            ], 422);
+        }
+
+        try {
+            $receipt = $payMongoService->getVerifiedReceiptForCustomOrder($order);
+
+            return response()->json([
+                'success' => true,
+                'receipt' => $receipt,
+            ]);
+        } catch (\Throwable $exception) {
+            \Log::error('Unable to fetch verified PayMongo receipt for custom order.', [
+                'custom_order_id' => $order->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to fetch receipt from PayMongo right now. Please try again.',
+            ], 502);
+        }
     }
 
     public function updateStatus(Request $request, CustomOrder $order)

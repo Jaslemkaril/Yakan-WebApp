@@ -2,6 +2,7 @@
 
 namespace App\Services\Payment;
 
+use App\Models\CustomOrder;
 use App\Models\Order;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -314,6 +315,165 @@ class PayMongoCheckoutService
             data_get($checkout, 'attributes.billing.email'),
             optional($order->user)->email,
             $order->customer_email,
+            'N/A',
+        ]);
+
+        return [
+            'gateway' => 'PayMongo',
+            'verified' => true,
+            'customer_name' => $customerName,
+            'customer_email' => $customerEmail,
+            'reference_number' => $referenceNumber,
+            'payment_id' => $paymentId,
+            'status' => $status,
+            'payment_method' => $method,
+            'amount' => round($amount, 2),
+            'currency' => $currency,
+            'paid_at' => $paidAtIso,
+            'fetched_at' => now()->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Build normalized and trusted receipt data for custom orders.
+     */
+    public function getVerifiedReceiptForCustomOrder(CustomOrder $order): array
+    {
+        $reference = trim((string) ($order->transaction_id ?? ''));
+        $checkout = null;
+        $payment = null;
+
+        if ($reference !== '') {
+            if (str_starts_with($reference, 'pay_')) {
+                $payment = $this->fetchPayment($reference);
+            } else {
+                try {
+                    $checkout = $this->fetchCheckout($reference);
+                } catch (\Throwable $exception) {
+                    Log::warning('Unable to fetch PayMongo checkout by custom order transaction_id.', [
+                        'custom_order_id' => $order->id,
+                        'reference' => $reference,
+                        'error' => $exception->getMessage(),
+                    ]);
+                }
+
+                if ($checkout) {
+                    $checkoutPaymentId = $this->extractPaymentIdFromCheckout($checkout);
+                    if ($checkoutPaymentId) {
+                        try {
+                            $payment = $this->fetchPayment($checkoutPaymentId);
+                        } catch (\Throwable $exception) {
+                            Log::warning('Unable to fetch PayMongo payment from custom order checkout payload.', [
+                                'custom_order_id' => $order->id,
+                                'payment_id' => $checkoutPaymentId,
+                                'error' => $exception->getMessage(),
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
+
+        $paymentId = $this->firstNonEmpty([
+            data_get($payment, 'id'),
+            data_get($checkout, 'attributes.payments.0.id'),
+            data_get($checkout, 'attributes.payments.0.attributes.id'),
+            data_get($checkout, 'attributes.payment.id'),
+            data_get($checkout, 'attributes.payment_intent.attributes.latest_payment.id'),
+            $order->transaction_id,
+        ]);
+
+        $referenceNumber = $this->firstNonEmpty([
+            data_get($checkout, 'attributes.reference_number'),
+            data_get($checkout, 'attributes.referenceNumber'),
+            $order->display_ref,
+            'CO-' . $order->id,
+        ]);
+
+        $status = strtolower((string) $this->firstNonEmpty([
+            data_get($payment, 'attributes.status'),
+            data_get($checkout, 'attributes.payment_intent.attributes.status'),
+            data_get($checkout, 'attributes.payment_intent.attributes.payment_status'),
+            data_get($checkout, 'attributes.status'),
+            $order->payment_status,
+            'unknown',
+        ]));
+
+        $amountCents = $this->firstNonEmpty([
+            data_get($payment, 'attributes.amount'),
+            data_get($checkout, 'attributes.payments.0.attributes.amount'),
+            data_get($checkout, 'attributes.amount_total'),
+            data_get($checkout, 'attributes.amountTotal'),
+        ]);
+
+        $amount = is_numeric($amountCents)
+            ? ((float) $amountCents / 100)
+            : (float) ($order->final_price ?? $order->estimated_price ?? 0);
+
+        $currency = strtoupper((string) $this->firstNonEmpty([
+            data_get($payment, 'attributes.currency'),
+            data_get($checkout, 'attributes.payments.0.attributes.currency'),
+            data_get($checkout, 'attributes.currency'),
+            'PHP',
+        ]));
+
+        $methodRaw = strtolower((string) $this->firstNonEmpty([
+            data_get($payment, 'attributes.source.type'),
+            data_get($payment, 'attributes.source.attributes.type'),
+            data_get($checkout, 'attributes.payments.0.attributes.source.type'),
+            data_get($checkout, 'attributes.payments.0.attributes.source.attributes.type'),
+            data_get($checkout, 'attributes.payment_method_used'),
+            data_get($checkout, 'attributes.paymentMethodUsed'),
+            $order->payment_method,
+            'paymongo',
+        ]));
+
+        $method = match ($methodRaw) {
+            'paymaya', 'maya' => 'Maya',
+            'gcash' => 'GCash',
+            'card' => 'Card',
+            'grab_pay', 'grabpay' => 'GrabPay',
+            default => ucfirst(str_replace('_', ' ', $methodRaw)),
+        };
+
+        $paidAtRaw = $this->firstNonEmpty([
+            data_get($payment, 'attributes.paid_at'),
+            data_get($payment, 'attributes.updated_at'),
+            data_get($payment, 'attributes.created_at'),
+            data_get($checkout, 'attributes.payments.0.attributes.paid_at'),
+            data_get($checkout, 'attributes.payments.0.attributes.updated_at'),
+            data_get($checkout, 'attributes.payments.0.attributes.created_at'),
+            data_get($checkout, 'attributes.payment_intent.attributes.paid_at'),
+            data_get($checkout, 'attributes.payment_intent.attributes.updated_at'),
+            data_get($checkout, 'attributes.payment_intent.attributes.created_at'),
+            data_get($checkout, 'attributes.completed_at'),
+            data_get($checkout, 'attributes.updated_at'),
+            data_get($checkout, 'attributes.created_at'),
+            $order->payment_confirmed_at,
+            $order->payment_verified_at,
+            $order->paid_at,
+            $order->transfer_date,
+            optional($order->updated_at)->toISOString(),
+            optional($order->created_at)->toISOString(),
+        ]);
+
+        $paidAtIso = $this->normalizeTimestamp($paidAtRaw)
+            ?? optional($order->updated_at)->toIso8601String()
+            ?? optional($order->created_at)->toIso8601String()
+            ?? now()->toIso8601String();
+
+        $customerName = $this->firstNonEmpty([
+            data_get($payment, 'attributes.billing.name'),
+            data_get($checkout, 'attributes.billing.name'),
+            optional($order->user)->name,
+            'Customer',
+        ]);
+
+        $customerEmail = $this->firstNonEmpty([
+            data_get($payment, 'attributes.billing.email'),
+            data_get($checkout, 'attributes.billing.email'),
+            optional($order->user)->email,
+            $order->email,
             'N/A',
         ]);
 

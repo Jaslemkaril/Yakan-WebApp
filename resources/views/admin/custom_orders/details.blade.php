@@ -990,6 +990,34 @@
             @if($order->payment_method || $order->payment_status !== 'unpaid')
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 class="text-lg font-bold text-gray-900 mb-4">Payment Information</h2>
+                @php
+                    $normalizedPaymentMethod = strtolower((string) ($order->payment_method ?? ''));
+                    $normalizedTransactionId = strtolower((string) ($order->transaction_id ?? ''));
+                    $isPaymongoPayment = in_array($normalizedPaymentMethod, ['paymongo', 'online_banking'], true)
+                        || str_starts_with($normalizedTransactionId, 'cs_')
+                        || str_starts_with($normalizedTransactionId, 'pay_');
+
+                    $paymongoReceiptUrl = route('admin.custom-orders.paymongo_receipt', $order);
+                    $authToken = request()->query('auth_token');
+                    if (!empty($authToken)) {
+                        $paymongoReceiptUrl .= (str_contains($paymongoReceiptUrl, '?') ? '&' : '?') . 'auth_token=' . urlencode($authToken);
+                    }
+
+                    $paymentReferenceNumber = !empty($order->display_ref) ? $order->display_ref : ('CO-' . $order->id);
+                    $paymentDateRaw = $order->payment_confirmed_at
+                        ?? $order->payment_verified_at
+                        ?? $order->paid_at
+                        ?? $order->transfer_date
+                        ?? null;
+                    $paymentDateDisplay = 'N/A';
+                    if (!empty($paymentDateRaw)) {
+                        try {
+                            $paymentDateDisplay = \Carbon\Carbon::parse($paymentDateRaw)->format('M d, Y h:i A');
+                        } catch (\Throwable $exception) {
+                            $paymentDateDisplay = (string) $paymentDateRaw;
+                        }
+                    }
+                @endphp
                 
                 {{-- Payment Status --}}
                 <div class="mb-4">
@@ -1026,8 +1054,30 @@
                 </div>
                 @endif
 
-                {{-- Transaction ID --}}
-                @if($order->transaction_id)
+                {{-- PayMongo Metadata --}}
+                @if($isPaymongoPayment)
+                <div class="mb-4">
+                    <div class="text-sm font-semibold text-gray-700 mb-1">Reference Number</div>
+                    <div class="text-xs font-mono text-gray-900 bg-gray-50 px-2 py-1 rounded">{{ $paymentReferenceNumber }}</div>
+                </div>
+                <div class="mb-4">
+                    <div class="text-sm font-semibold text-gray-700 mb-1">Payment ID</div>
+                    <div class="text-xs font-mono text-gray-900 bg-gray-50 px-2 py-1 rounded">{{ $order->transaction_id ?: 'N/A' }}</div>
+                </div>
+                <div class="mb-4">
+                    <div class="text-sm font-semibold text-gray-700 mb-1">Payment Date</div>
+                    <div class="text-sm text-gray-900">{{ $paymentDateDisplay }}</div>
+                </div>
+                <div class="mb-4">
+                    <button type="button" onclick="viewPaymongoReceipt('{{ $paymongoReceiptUrl }}')"
+                        class="inline-flex items-center px-3 py-2 text-white rounded-lg transition-colors text-sm font-medium" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#A05050'" onmouseout="this.style.backgroundColor='#800000'">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622C17.176 19.29 21 14.591 21 9c0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                        View Verified Receipt
+                    </button>
+                </div>
+                @elseif($order->transaction_id)
                 <div class="mb-4">
                     <div class="text-sm font-semibold text-gray-700 mb-1">Transaction ID</div>
                     <div class="text-xs font-mono text-gray-900 bg-gray-50 px-2 py-1 rounded">{{ $order->transaction_id }}</div>
@@ -1693,11 +1743,286 @@
     </div>
 </div>
 
+{{-- PayMongo Verified Receipt Modal --}}
+<div id="paymongoReceiptModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50 p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-xl font-bold text-gray-900">Verified PayMongo Receipt</h3>
+            <button type="button" onclick="closePaymongoReceiptModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-6">
+            <div id="paymongoReceiptLoading" class="text-center py-8">
+                <div class="inline-flex items-center gap-3 text-gray-600">
+                    <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span>Fetching verified receipt from PayMongo...</span>
+                </div>
+            </div>
+
+            <div id="paymongoReceiptError" class="hidden rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"></div>
+
+            <div id="paymongoReceiptBody" class="hidden">
+                <div class="rounded-xl border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-5 text-white" style="background: linear-gradient(135deg, #800000 0%, #5a0000 100%);">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="text-lg font-bold">Yakan Payment Receipt</h4>
+                                <p class="text-xs text-red-100">Verified directly from PayMongo API</p>
+                            </div>
+                            <p id="pmFetchedAt" class="text-xs text-red-100 text-right"></p>
+                        </div>
+                    </div>
+
+                    <div class="p-6 space-y-3">
+                        <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
+                            <p class="text-sm text-gray-500">Reference Number</p>
+                            <p id="pmRefNumber" class="text-sm font-semibold text-gray-900 text-right">-</p>
+                        </div>
+                        <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
+                            <p class="text-sm text-gray-500">Customer Name</p>
+                            <p id="pmCustomerName" class="text-sm font-semibold text-gray-900 text-right">-</p>
+                        </div>
+                        <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
+                            <p class="text-sm text-gray-500">Customer Email</p>
+                            <p id="pmCustomerEmail" class="text-sm font-semibold text-gray-900 text-right">-</p>
+                        </div>
+                        <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
+                            <p class="text-sm text-gray-500">Payment ID</p>
+                            <p id="pmPaymentId" class="text-sm font-semibold text-gray-900 text-right">-</p>
+                        </div>
+                        <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
+                            <p class="text-sm text-gray-500">Payment Method</p>
+                            <p id="pmPaymentMethod" class="text-sm font-semibold text-gray-900 text-right">-</p>
+                        </div>
+                        <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
+                            <p class="text-sm text-gray-500">Payment Date</p>
+                            <p id="pmPaidAt" class="text-sm font-semibold text-gray-900 text-right">-</p>
+                        </div>
+                        <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
+                            <p class="text-sm text-gray-500">Status</p>
+                            <p id="pmStatus" class="text-sm font-semibold text-gray-900 text-right">-</p>
+                        </div>
+                        <div class="flex items-center justify-between pt-1">
+                            <p class="text-sm text-gray-500">Amount</p>
+                            <p id="pmAmount" class="text-xl font-bold" style="color:#800000;">-</p>
+                        </div>
+                    </div>
+
+                    <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                        <p class="text-xs text-gray-500">This receipt is generated from PayMongo API data and is safe for admin verification.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex gap-3 justify-end">
+                <button type="button" onclick="closePaymongoReceiptModal()" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold">
+                    Close
+                </button>
+                <button type="button" id="paymongoPrintBtn" onclick="printPaymongoReceipt()" class="hidden px-6 py-3 text-white rounded-lg transition-colors font-semibold" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#A05050'" onmouseout="this.style.backgroundColor='#800000'">
+                    Print Receipt
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- Automated AJAX Scripts --}}
 <script>
+function closePaymongoReceiptModal() {
+    const modal = document.getElementById('paymongoReceiptModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function formatPaymongoStatus(status) {
+    if (!status) return 'N/A';
+    return String(status).replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+}
+
+function safeText(value, fallback) {
+    if (value === null || value === undefined) return fallback;
+    const text = String(value).trim();
+    return text === '' ? fallback : text;
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatReceiptDate(isoText) {
+    if (!isoText) return 'N/A';
+    const dateObj = new Date(isoText);
+    if (Number.isNaN(dateObj.getTime())) return safeText(isoText, 'N/A');
+    return dateObj.toLocaleString();
+}
+
+function printPaymongoReceipt() {
+    const receipt = window.__paymongoReceiptData;
+    if (!receipt) {
+        return;
+    }
+
+    const printWindow = window.open('', '_blank', 'width=860,height=900');
+    if (!printWindow) {
+        alert('Please allow pop-ups to print the receipt.');
+        return;
+    }
+
+    const amountText = `${safeText(receipt.currency, 'PHP')} ${Number(receipt.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Verified PayMongo Receipt</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 24px; color: #1f2937; }
+        .receipt { border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden; }
+        .header { background: #800000; color: #fff; padding: 20px; }
+        .header h1 { margin: 0; font-size: 22px; }
+        .header p { margin: 6px 0 0 0; font-size: 12px; opacity: 0.92; }
+        .section { padding: 16px 20px; border-top: 1px solid #f0f0f0; }
+        .row { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px dashed #d1d5db; }
+        .row:last-child { border-bottom: none; }
+        .label { font-size: 12px; color: #6b7280; }
+        .value { font-size: 14px; font-weight: 700; text-align: right; word-break: break-word; }
+        .amount { font-size: 24px; color: #800000; font-weight: 700; }
+        .footer { background: #f9fafb; font-size: 11px; color: #6b7280; padding: 14px 20px; }
+    </style>
+</head>
+<body>
+    <div class="receipt">
+        <div class="header">
+            <h1>Yakan Payment Receipt</h1>
+            <p>Verified directly from PayMongo API</p>
+            <p>Fetched at ${escapeHtml(formatReceiptDate(receipt.fetched_at))}</p>
+        </div>
+        <div class="section">
+            <div class="row"><div class="label">Reference Number</div><div class="value">${escapeHtml(safeText(receipt.reference_number, 'N/A'))}</div></div>
+            <div class="row"><div class="label">Customer Name</div><div class="value">${escapeHtml(safeText(receipt.customer_name, 'N/A'))}</div></div>
+            <div class="row"><div class="label">Customer Email</div><div class="value">${escapeHtml(safeText(receipt.customer_email, 'N/A'))}</div></div>
+            <div class="row"><div class="label">Payment ID</div><div class="value">${escapeHtml(safeText(receipt.payment_id, 'N/A'))}</div></div>
+            <div class="row"><div class="label">Payment Method</div><div class="value">${escapeHtml(safeText(receipt.payment_method, 'N/A'))}</div></div>
+            <div class="row"><div class="label">Payment Date</div><div class="value">${escapeHtml(formatReceiptDate(receipt.paid_at))}</div></div>
+            <div class="row"><div class="label">Status</div><div class="value">${escapeHtml(formatPaymongoStatus(receipt.status))}</div></div>
+            <div class="row"><div class="label">Amount</div><div class="value amount">${escapeHtml(amountText)}</div></div>
+        </div>
+        <div class="footer">This document is generated from trusted gateway data and is intended for admin verification.</div>
+    </div>
+    <script>window.onload = function() { window.print(); }<\/script>
+</body>
+</html>`;
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+}
+
+async function viewPaymongoReceipt(endpointUrl) {
+    const modal = document.getElementById('paymongoReceiptModal');
+    const loading = document.getElementById('paymongoReceiptLoading');
+    const error = document.getElementById('paymongoReceiptError');
+    const body = document.getElementById('paymongoReceiptBody');
+    const printBtn = document.getElementById('paymongoPrintBtn');
+
+    if (!modal || !loading || !error || !body || !printBtn) {
+        return;
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    loading.classList.remove('hidden');
+    body.classList.add('hidden');
+    printBtn.classList.add('hidden');
+    error.classList.add('hidden');
+    error.textContent = '';
+
+    try {
+        const response = await fetch(endpointUrl, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        });
+
+        const responseText = await response.text();
+        let payload = null;
+
+        try {
+            payload = responseText ? JSON.parse(responseText) : null;
+        } catch (_) {
+            payload = null;
+        }
+
+        if (!payload || typeof payload !== 'object') {
+            const looksLikeHtml = /^\s*</.test(responseText || '');
+            if (response.status === 401 || response.status === 403 || response.status === 419 || response.redirected || looksLikeHtml) {
+                throw new Error('Admin session expired. Please refresh the page and login again, then retry.');
+            }
+
+            const snippet = responseText ? responseText.slice(0, 120).replace(/\s+/g, ' ').trim() : '';
+            throw new Error(snippet || 'Server returned an unexpected response while loading the verified receipt.');
+        }
+
+        if (!response.ok || !payload.success) {
+            throw new Error(payload.message || 'Unable to load verified receipt from PayMongo.');
+        }
+
+        const receipt = payload.receipt || {};
+        window.__paymongoReceiptData = receipt;
+
+        document.getElementById('pmRefNumber').textContent = safeText(receipt.reference_number, 'N/A');
+        document.getElementById('pmCustomerName').textContent = safeText(receipt.customer_name, 'N/A');
+        document.getElementById('pmCustomerEmail').textContent = safeText(receipt.customer_email, 'N/A');
+        document.getElementById('pmPaymentId').textContent = safeText(receipt.payment_id, 'N/A');
+        document.getElementById('pmPaymentMethod').textContent = safeText(receipt.payment_method, 'N/A');
+        document.getElementById('pmStatus').textContent = formatPaymongoStatus(receipt.status);
+        document.getElementById('pmAmount').textContent = (receipt.currency || 'PHP') + ' ' + Number(receipt.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('pmPaidAt').textContent = formatReceiptDate(receipt.paid_at);
+        document.getElementById('pmFetchedAt').textContent = receipt.fetched_at
+            ? ('Fetched at ' + formatReceiptDate(receipt.fetched_at))
+            : '';
+
+        loading.classList.add('hidden');
+        body.classList.remove('hidden');
+        printBtn.classList.remove('hidden');
+    } catch (fetchError) {
+        loading.classList.add('hidden');
+        error.classList.remove('hidden');
+        error.textContent = fetchError.message || 'Unable to load verified receipt from PayMongo.';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const messageDiv = document.getElementById('actionMessage');
+    const paymongoModal = document.getElementById('paymongoReceiptModal');
+
+    if (paymongoModal) {
+        paymongoModal.addEventListener('click', function(e) {
+            if (e.target === paymongoModal) {
+                closePaymongoReceiptModal();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closePaymongoReceiptModal();
+        }
+    });
     
     // Show message helper
     function showMessage(message, type = 'success') {
