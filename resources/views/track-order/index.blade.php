@@ -237,7 +237,7 @@
                                        class="block w-full text-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-semibold text-sm">
                                         View Order
                                     </a>
-                                @elseif($status === 'delivered' && !$order->delivered_at)
+                                                                @elseif($status === 'delivered')
                                     <form action="{{ route('orders.confirm-received', $order->id) }}" method="POST" class="mb-2"
                                           onsubmit="return confirmOrderReceived(this, {{ $order->id }})">
                                         @csrf
@@ -247,17 +247,6 @@
                                             ✓ Confirm Received
                                         </button>
                                     </form>
-                                    @if($order->tracking_number)
-                                        <a href="{{ route('track-order.show', $order->tracking_number) }}"
-                                           class="block w-full text-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-semibold text-sm">
-                                            Track This Order
-                                        </a>
-                                    @endif
-                                @elseif($status === 'delivered' && $order->delivered_at)
-                                    <button type="button"
-                                            class="block w-full text-center px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed font-semibold text-sm mb-2" disabled>
-                                        ✓ Order Received
-                                    </button>
                                     @if($order->tracking_number)
                                         <a href="{{ route('track-order.show', $order->tracking_number) }}"
                                            class="block w-full text-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors font-semibold text-sm">
@@ -326,6 +315,11 @@
 
         // Confirm order received - immediate UI feedback
         function confirmOrderReceived(form, orderId) {
+            const userConfirmed = confirm('Please confirm: Have you already received this order in good condition?');
+            if (!userConfirmed) {
+                return false;
+            }
+
             const button = document.getElementById('confirm-btn-' + orderId);
             
             // Disable button immediately

@@ -128,7 +128,12 @@ class OrderController extends Controller
         $request->validate([
             'status' => 'required|in:pending,processing,shipped,delivered,cancelled',
             'payment_status' => 'nullable|in:pending,paid,failed,refunded',
+            'confirm_delivery' => 'nullable|boolean',
         ]);
+
+        if ($request->status === 'delivered' && !$request->boolean('confirm_delivery')) {
+            return redirect()->back()->with('error', 'Please confirm delivery before marking this order as delivered.');
+        }
 
         $oldStatus = $order->status;
         $order->status = $request->status;
@@ -150,6 +155,10 @@ class OrderController extends Controller
         if ($request->status === 'cancelled') {
             $order->payment_status = 'failed';
         }
+
+        if ($request->status === 'delivered' && !$order->delivered_at) {
+            $order->delivered_at = now();
+        }
         
         // sync tracking status and history
         $order->tracking_status = ucfirst($request->status);
@@ -170,6 +179,7 @@ class OrderController extends Controller
     {
         $request->validate([
             'tracking_status' => 'nullable|string|max:255',
+            'confirm_delivery' => 'nullable|boolean',
             'courier_name' => 'nullable|string|max:255',
             'courier_contact' => 'nullable|string|max:255',
             'courier_tracking_url' => 'nullable|url|max:500',
@@ -179,6 +189,11 @@ class OrderController extends Controller
             'delivery_latitude' => 'nullable|numeric|between:-90,90',
             'delivery_longitude' => 'nullable|numeric|between:-180,180',
         ]);
+
+        $isDeliveredTrackingStatus = strcasecmp((string) $request->tracking_status, 'Delivered') === 0;
+        if ($isDeliveredTrackingStatus && !$request->boolean('confirm_delivery')) {
+            return redirect()->back()->with('error', 'Please confirm delivery before setting tracking status to Delivered.');
+        }
 
         // Update tracking fields
         if ($request->filled('tracking_status')) {
@@ -215,9 +230,14 @@ class OrderController extends Controller
         $order->delivery_longitude = $request->delivery_longitude;
 
         // If status is delivered, set delivered_at
-        if ($request->tracking_status === 'Delivered' && !$order->delivered_at) {
-            $order->delivered_at = now();
-            $order->status = 'delivered';
+        if ($isDeliveredTrackingStatus) {
+            if (!$order->delivered_at) {
+                $order->delivered_at = now();
+            }
+
+            if ($order->status !== 'completed') {
+                $order->status = 'delivered';
+            }
         }
 
         $order->save();
@@ -231,7 +251,12 @@ class OrderController extends Controller
         $request->validate([
             'status' => 'required|in:pending,processing,shipped,delivered,cancelled',
             'payment_status' => 'nullable|in:pending,paid,failed,refunded',
+            'confirm_delivery' => 'nullable|boolean',
         ]);
+
+        if ($request->status === 'delivered' && !$request->boolean('confirm_delivery')) {
+            return redirect()->back()->with('error', 'Please confirm delivery before marking this order as delivered.');
+        }
 
         $order->status = $request->status;
         
@@ -251,6 +276,10 @@ class OrderController extends Controller
         
         if ($request->status === 'cancelled') {
             $order->payment_status = 'failed';
+        }
+
+        if ($request->status === 'delivered' && !$order->delivered_at) {
+            $order->delivered_at = now();
         }
         
         // sync tracking status and history

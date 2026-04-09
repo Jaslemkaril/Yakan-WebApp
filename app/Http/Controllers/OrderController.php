@@ -497,11 +497,14 @@ class OrderController extends Controller
                 // ENUM already includes 'completed', safe to continue
             }
 
-            // Update order status to completed when customer confirms receipt
-            $order->update([
-                'status'       => 'completed',
-                'delivered_at' => now(),
-            ]);
+            // Finalize order only when customer confirms receipt.
+            $order->status = 'completed';
+            if (!$order->delivered_at) {
+                $order->delivered_at = now();
+            }
+            $order->confirmed_at = now();
+            $order->appendTrackingEvent('Order Received');
+            $order->save();
 
             \Log::info('Order marked as received by customer', [
                 'order_id' => $order->id,

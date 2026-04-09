@@ -632,6 +632,7 @@
                     <form action="{{ route('admin.orders.quickUpdateStatus', $order->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to mark this order as delivered? Please confirm delivery with the customer first.')">
                         @csrf
                         <input type="hidden" name="status" value="delivered">
+                        <input type="hidden" name="confirm_delivery" value="1">
                         <button type="submit" class="w-full bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium flex items-center justify-center">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -639,13 +640,21 @@
                             Mark as Delivered
                         </button>
                     </form>
-                @elseif($order->status == 'delivered' || $order->status == 'completed')
+                @elseif($order->status == 'delivered')
+                    <div class="text-center py-4">
+                        <svg class="w-12 h-12 text-blue-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p class="text-sm font-medium text-gray-700">Delivered to Customer</p>
+                        <p class="text-xs text-gray-500 mt-1">Awaiting customer confirmation for final completion</p>
+                    </div>
+                @elseif($order->status == 'completed')
                     <div class="text-center py-4">
                         <svg class="w-12 h-12 text-green-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                         <p class="text-sm font-medium text-gray-700">Order Completed</p>
-                        <p class="text-xs text-gray-500 mt-1">This order has been delivered</p>
+                        <p class="text-xs text-gray-500 mt-1">Confirmed as received by customer</p>
                     </div>
                 @elseif($order->status == 'cancelled')
                     <div class="text-center py-4">
@@ -754,8 +763,9 @@
             </div>
         </div>
 
-        <form action="{{ route('admin.orders.update_tracking', $order->id) }}" method="POST" class="space-y-6">
+        <form action="{{ route('admin.orders.update_tracking', $order->id) }}" method="POST" class="space-y-6" onsubmit="return confirmTrackingDelivered(this)">
             @csrf
+            <input type="hidden" name="confirm_delivery" value="0">
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Tracking Status -->
@@ -1047,6 +1057,31 @@
 </div>
 
 <script>
+function confirmTrackingDelivered(form) {
+    if (!form) {
+        return true;
+    }
+
+    const trackingStatusField = form.querySelector('select[name="tracking_status"]');
+    const confirmDeliveryField = form.querySelector('input[name="confirm_delivery"]');
+    const statusValue = (trackingStatusField?.value || '').trim().toLowerCase();
+
+    if (statusValue === 'delivered') {
+        const confirmed = confirm('Are you sure you want to set tracking status to Delivered? This should only be done after verifying delivery with the customer.');
+        if (!confirmed) {
+            return false;
+        }
+
+        if (confirmDeliveryField) {
+            confirmDeliveryField.value = '1';
+        }
+    } else if (confirmDeliveryField) {
+        confirmDeliveryField.value = '0';
+    }
+
+    return true;
+}
+
 // Receipt Viewer Modal for Admin
 function viewAdminReceipt(receiptUrl) {
     const modal = document.getElementById('adminReceiptModal');

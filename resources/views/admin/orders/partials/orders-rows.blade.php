@@ -11,14 +11,16 @@
 
     <!-- Status -->
     <td class="py-3 px-4">
-        <form action="{{ route('admin.orders.quickUpdateStatus', $order->id) }}" method="POST">
+        <form action="{{ route('admin.orders.quickUpdateStatus', $order->id) }}" method="POST" onsubmit="return confirmRowDelivered(this)">
             @csrf
             <select name="status" class="border rounded px-2 py-1 w-full" onchange="this.form.submit()">
                 <option value="pending" {{ $order->status=='pending'?'selected':'' }}>Pending</option>
                 <option value="processing" {{ $order->status=='processing'?'selected':'' }}>Processing</option>
-                <option value="completed" {{ $order->status=='completed'?'selected':'' }}>Completed</option>
+                <option value="shipped" {{ $order->status=='shipped'?'selected':'' }}>Shipped</option>
+                <option value="delivered" {{ $order->status=='delivered'?'selected':'' }}>Delivered</option>
                 <option value="cancelled" {{ $order->status=='cancelled'?'selected':'' }}>Cancelled</option>
             </select>
+            <input type="hidden" name="confirm_delivery" value="0">
         </form>
     </td>
 
@@ -51,3 +53,30 @@
     </td>
 </tr>
 @endforeach
+
+<script>
+function confirmRowDelivered(form) {
+    if (!form) {
+        return true;
+    }
+
+    const statusField = form.querySelector('select[name="status"]');
+    const confirmField = form.querySelector('input[name="confirm_delivery"]');
+    const selected = (statusField?.value || '').toLowerCase();
+
+    if (selected === 'delivered') {
+        const approved = confirm('Mark this order as delivered? Please confirm delivery with the customer first.');
+        if (!approved) {
+            return false;
+        }
+
+        if (confirmField) {
+            confirmField.value = '1';
+        }
+    } else if (confirmField) {
+        confirmField.value = '0';
+    }
+
+    return true;
+}
+</script>
