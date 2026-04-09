@@ -2279,7 +2279,7 @@ document.addEventListener('DOMContentLoaded', function() {
         finalDisplay.dataset.subtotal = (finalVal - shippingFee + appliedDiscount).toFixed(2);
     }
 
-    async function applyAvailableCoupon(code) {
+    window.applyAvailableCoupon = async function applyAvailableCoupon(code) {
         // Highlight the clicked chip and dim others
         document.querySelectorAll('.coupon-chip').forEach(c => {
             c.classList.toggle('ring-2', c.dataset.code === code);
