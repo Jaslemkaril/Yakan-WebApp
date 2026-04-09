@@ -383,11 +383,25 @@ class PayMongoCheckoutService
             $order->transaction_id,
         ]);
 
-        $referenceNumber = $this->firstNonEmpty([
+        $gatewayReferenceNumber = $this->firstNonEmpty([
+            data_get($checkout, 'id'),
+            data_get($checkout, 'attributes.id'),
+            data_get($checkout, 'attributes.checkout_id'),
+            data_get($checkout, 'attributes.checkoutId'),
+            (str_starts_with($reference, 'cs_') ? $reference : null),
+            (str_starts_with((string) ($order->transaction_id ?? ''), 'cs_') ? (string) $order->transaction_id : null),
+        ]);
+
+        $merchantReferenceNumber = $this->firstNonEmpty([
             data_get($checkout, 'attributes.reference_number'),
             data_get($checkout, 'attributes.referenceNumber'),
             $order->display_ref,
             'CO-' . $order->id,
+        ]);
+
+        $referenceNumber = $this->firstNonEmpty([
+            $gatewayReferenceNumber,
+            $merchantReferenceNumber,
         ]);
 
         $status = strtolower((string) $this->firstNonEmpty([

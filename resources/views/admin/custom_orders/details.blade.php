@@ -1006,7 +1006,7 @@
                     }
 
                     $paymentReferenceNumber = $isPaymongoPayment
-                        ? ('CO-' . $order->id)
+                        ? (!empty($order->transaction_id) ? $order->transaction_id : 'N/A')
                         : (!empty($order->display_ref) ? $order->display_ref : ('CO-' . $order->id));
                     $paymentDateRaw = $order->payment_confirmed_at
                         ?? $order->payment_verified_at
