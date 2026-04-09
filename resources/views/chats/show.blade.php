@@ -76,6 +76,10 @@
         background: #fff;
         border-top: 1px solid #e9e5e0;
         padding: 12px 16px;
+        position: sticky;
+        bottom: 0;
+        z-index: 35;
+        box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.06);
     }
 
     .uc-message-label {

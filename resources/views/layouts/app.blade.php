@@ -1090,7 +1090,7 @@
     </main>
 
     <!-- Modern Footer -->
-    <footer class="bg-gray-900 text-white {{ request()->routeIs('chats.*') ? 'mt-0' : 'mt-20' }} relative overflow-hidden">
+    <footer class="bg-gray-900 text-white {{ request()->routeIs('chats.*') ? 'mt-0' : 'mt-20' }} {{ request()->routeIs('chats.show') ? 'hidden' : '' }} relative overflow-hidden">
         <div class="absolute inset-0" style="background: linear-gradient(to bottom right, rgba(128, 0, 0, 0.2), rgba(96, 0, 0, 0.2));"></div>
         <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
