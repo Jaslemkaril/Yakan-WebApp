@@ -15,7 +15,7 @@
 
     <table width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;margin:20px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,0.08);">
         <tr>
-            <td style="background:linear-gradient(135deg,#065f46 0%,#047857 100%);padding:28px;text-align:center;">
+            <td style="background:linear-gradient(135deg,#7a0018 0%,#5a0012 100%);padding:28px;text-align:center;">
                 <h1 style="margin:0;font-size:24px;color:#fff;">Custom Order Payment Confirmed</h1>
                 <p style="margin:8px 0 0;color:rgba(255,255,255,0.92);font-size:14px;">Your payment receipt has been recorded successfully.</p>
             </td>
@@ -48,8 +48,8 @@
                         <td style="font-size:13px;text-align:right;">{{ optional($paidAt)->format('M d, Y h:i A') }}</td>
                     </tr>
                     <tr>
-                        <td style="font-size:16px;font-weight:700;color:#065f46;border-top:2px solid #10b981;">Amount Paid</td>
-                        <td style="font-size:16px;font-weight:700;color:#065f46;text-align:right;border-top:2px solid #10b981;">₱{{ number_format((float) $totalAmount, 2) }}</td>
+                        <td style="font-size:16px;font-weight:700;color:#7a0018;border-top:2px solid #8b3a56;">Amount Paid</td>
+                        <td style="font-size:16px;font-weight:700;color:#7a0018;text-align:right;border-top:2px solid #8b3a56;">₱{{ number_format((float) $totalAmount, 2) }}</td>
                     </tr>
                 </table>
 
