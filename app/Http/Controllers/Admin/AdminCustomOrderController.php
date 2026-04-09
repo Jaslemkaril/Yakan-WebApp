@@ -1001,14 +1001,32 @@ class AdminCustomOrderController extends Controller
     {
         try {
             $oldStatus = $order->status;
+            $notificationService = new \App\Services\Notification\OrderStatusNotificationService();
+
+            // Approve this order
             $order->status = 'approved';
             $order->approved_at = now();
             $order->save();
 
-            // Send notifications
             if ($oldStatus !== 'approved') {
-                $notificationService = new \App\Services\Notification\OrderStatusNotificationService();
                 $notificationService->notifyCustomOrderStatusChange($order, $oldStatus, 'approved');
+            }
+
+            // If part of a batch, approve all sibling orders too
+            if (!empty($order->batch_order_number)) {
+                $siblings = \App\Models\CustomOrder::where('batch_order_number', $order->batch_order_number)
+                    ->where('id', '!=', $order->id)
+                    ->whereNotIn('status', ['approved', 'in_production', 'production_complete', 'out_for_delivery', 'delivered', 'completed', 'cancelled'])
+                    ->get();
+
+                foreach ($siblings as $sibling) {
+                    $siblingOldStatus = $sibling->status;
+                    $sibling->status = 'approved';
+                    $sibling->approved_at = now();
+                    $sibling->save();
+
+                    $notificationService->notifyCustomOrderStatusChange($sibling, $siblingOldStatus, 'approved');
+                }
             }
 
             // If it's an AJAX request, return JSON
