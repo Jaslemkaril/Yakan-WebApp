@@ -767,7 +767,7 @@
                         </div>
                         @if($fabricCost > 0)
                         <div class="flex justify-between items-center pb-3 border-b border-gray-100" id="fabricCostRow">
-                            <span class="text-gray-600 font-medium">Fabric Cost ({{ $wizardData['fabric']['quantity_meters'] }}m × ₱{{ number_format($pricePerMeterValue, 2) }})</span>
+                            <span class="text-gray-600 font-medium" id="fabricCostLabel">Fabric Cost ({{ $wizardData['fabric']['quantity_meters'] }}m × ₱{{ number_format($pricePerMeterValue, 2) }})</span>
                             <span class="font-medium text-gray-900" id="fabricCostDisplay">₱{{ number_format($fabricCost, 2) }}</span>
                         </div>
                         @endif
@@ -956,19 +956,18 @@
                                             <p class="text-sm font-semibold text-gray-900 truncate">{{ $bItem['summary'] ?? 'Custom Item ' . ($bIdx + 1) }}</p>
                                             <p class="text-xs text-gray-500">Pattern: <span class="font-semibold text-gray-700">{{ $bPatternName }}</span></p>
                                             <p class="text-xs text-gray-500">Fabric: <span class="font-semibold text-gray-700">{{ $bFabricTypeName }}</span></p>
-                                            <form method="POST" action="{{ route('custom_orders.update.batch.item', $bIdx) }}" class="flex items-center flex-wrap gap-x-2 gap-y-1 mt-1">
+                                            <form method="POST" action="{{ route('custom_orders.update.batch.item', $bIdx) }}" class="flex items-center flex-wrap gap-x-2 gap-y-1 mt-1 batch-item-form" data-index="{{ $bIdx }}">
                                                 @csrf
                                                 @method('PATCH')
                                                 @if(request('auth_token'))<input type="hidden" name="auth_token" value="{{ request('auth_token') }}">@endif
                                                 <label class="text-xs text-gray-500">Meters:
-                                                    <input type="number" name="quantity_meters" value="{{ $bMeters ?? '' }}" min="0.1" step="0.1"
+                                                    <input type="number" name="quantity_meters" value="{{ $bMeters ?? '' }}" min="1" step="1"
                                                         class="w-14 border border-gray-300 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 ml-1" style="--tw-ring-color:#800000;">
                                                 </label>
                                                 <label class="text-xs text-gray-500">Qty:
                                                     <input type="number" name="quantity" value="{{ $bQty }}" min="1"
                                                         class="w-12 border border-gray-300 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 ml-1" style="--tw-ring-color:#800000;">
                                                 </label>
-                                                <button type="submit" class="text-xs px-2 py-0.5 rounded text-white font-medium" style="background-color:#800000;">Save</button>
                                             </form>
                                             <p class="text-xs text-gray-500 mt-0.5">Added {{ $bItem['added_at'] ?? '' }}</p>
                                         </div>
@@ -1001,11 +1000,11 @@
                                             <p class="text-sm font-semibold text-gray-900 truncate">Current Item (Ready to submit)</p>
                                             <p class="text-xs text-gray-500">Pattern: <span class="font-semibold text-gray-700">{{ $currentPatternName }}</span></p>
                                             <p class="text-xs text-gray-500">Fabric: <span class="font-semibold text-gray-700">{{ $fabricTypeName }}</span></p>
-                                            <form method="POST" action="{{ route('custom_orders.update.current.item') }}" class="flex items-center flex-wrap gap-x-2 gap-y-1 mt-1">
+                                            <form method="POST" action="{{ route('custom_orders.update.current.item') }}" id="currentItemForm" class="flex items-center flex-wrap gap-x-2 gap-y-1 mt-1">
                                                 @csrf
                                                 @if(request('auth_token'))<input type="hidden" name="auth_token" value="{{ request('auth_token') }}">@endif
                                                 <label class="text-xs text-gray-500">Meters:
-                                                    <input type="number" name="quantity_meters" value="{{ $wizardData['fabric']['quantity_meters'] ?? '' }}" min="0.1" step="0.1"
+                                                    <input type="number" name="quantity_meters" id="currentItemMeters" value="{{ $wizardData['fabric']['quantity_meters'] ?? '' }}" min="1" step="1"
                                                         class="w-14 border border-gray-300 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 ml-1" style="--tw-ring-color:#800000;">
                                                 </label>
                                                 <label class="text-xs text-gray-500">Qty:
@@ -1013,7 +1012,6 @@
                                                         class="w-12 border border-gray-300 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 ml-1" style="--tw-ring-color:#800000;"
                                                         oninput="var q=document.getElementById('quantity');if(q){q.value=this.value;q.dispatchEvent(new Event('input'));}">
                                                 </label>
-                                                <button type="submit" class="text-xs px-2 py-0.5 rounded text-white font-medium" style="background-color:#800000;">Save</button>
                                             </form>
                                         </div>
                                     </div>
@@ -1555,6 +1553,7 @@ function showNotification(message, type = 'info') {
 document.addEventListener('DOMContentLoaded', function() {
     const quantityInput = document.getElementById('quantity');
     const currentItemQty = document.getElementById('currentItemQty');
+    const currentItemMeters = document.getElementById('currentItemMeters');
 
     // Two-way sync: main qty ↔ card qty
     if (quantityInput && currentItemQty) {
@@ -1564,51 +1563,107 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const priceData = document.getElementById('priceData');
-    
-    if (quantityInput && priceData) {
-        // Get base prices from data attributes
-        const basePrice = parseFloat(priceData.dataset.basePrice) || 0;
-        const fabricCostBase = parseFloat(priceData.dataset.fabricCostBase) || 0;
+
+    // AJAX helpers
+    function ajaxPost(url, formEl) {
+        const data = new FormData(formEl);
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: data
+        }).catch(() => {}); // silent fail; UI already updated
+    }
+
+    function ajaxPatch(url, formEl) {
+        const data = new FormData(formEl);
+        // FormData with _method=PATCH — Laravel will handle it
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: data
+        }).catch(() => {});
+    }
+
+    // Auto-save current item meters (debounced)
+    if (currentItemMeters) {
+        let metersTimer;
+        currentItemMeters.addEventListener('input', function() {
+            updatePricesFromInputs();
+            clearTimeout(metersTimer);
+            metersTimer = setTimeout(function() {
+                const form = document.getElementById('currentItemForm');
+                if (form) ajaxPost(form.action, form);
+            }, 700);
+        });
+    }
+
+    // Auto-save queued batch items (debounced)
+    document.querySelectorAll('.batch-item-form').forEach(function(form) {
+        let timer;
+        form.querySelectorAll('input[type="number"]').forEach(function(inp) {
+            inp.addEventListener('input', function() {
+                clearTimeout(timer);
+                timer = setTimeout(function() {
+                    ajaxPatch(form.action, form);
+                }, 700);
+            });
+        });
+    });
+
+    if (priceData) {
+        const pricePerMeter = parseFloat(priceData.dataset.pricePerMeter) || 0;
+        const basePatternFee = parseFloat(priceData.dataset.basePrice) || 0;
         const shippingFee = parseFloat(priceData.dataset.shippingFee) || 0;
         const addonsTotal = parseFloat(priceData.dataset.addonsTotal) || 0;
-        
+
         // Listen to quantity input changes
-        quantityInput.addEventListener('change', updatePrices);
-        quantityInput.addEventListener('input', updatePrices);
-        
+        if (quantityInput) {
+            quantityInput.addEventListener('change', updatePricesFromInputs);
+            quantityInput.addEventListener('input', updatePricesFromInputs);
+        }
+
         function formatCurrency(amount) {
             return '₱' + parseFloat(amount).toLocaleString('en-PH', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });
         }
-        
-        function updatePrices() {
-            const quantity = parseInt(quantityInput.value) || 1;
-            
-            // Calculate new prices (multiply base prices by quantity)
-            const newPatternFee = basePrice * quantity;
-            const newFabricCost = fabricCostBase * quantity;
-            const newFinalTotal = (newPatternFee + newFabricCost + shippingFee + addonsTotal);
-            
-            // Update Pattern Fee display
+
+        function updatePricesFromInputs() {
+            const quantity = parseInt(quantityInput ? quantityInput.value : 1) || 1;
+            const meters = parseInt(currentItemMeters ? currentItemMeters.value : (priceData.dataset.fabricMeters || 0)) || 0;
+
+            const newFabricCostPerUnit = meters * pricePerMeter;
+            const newPatternFee = basePatternFee * quantity;
+            const newFabricCost = newFabricCostPerUnit * quantity;
+            const newFinalTotal = newPatternFee + newFabricCost + shippingFee + addonsTotal;
+
             const patternFeeDisplay = document.getElementById('patternFeeDisplay');
-            if (patternFeeDisplay) {
-                patternFeeDisplay.textContent = formatCurrency(newPatternFee);
-            }
-            
-            // Update Fabric Cost display if it exists
+            if (patternFeeDisplay) patternFeeDisplay.textContent = formatCurrency(newPatternFee);
+
             const fabricCostDisplay = document.getElementById('fabricCostDisplay');
-            if (fabricCostDisplay && newFabricCost > 0) {
-                fabricCostDisplay.textContent = formatCurrency(newFabricCost);
+            if (fabricCostDisplay && newFabricCost > 0) fabricCostDisplay.textContent = formatCurrency(newFabricCost);
+
+            const fabricCostLabel = document.getElementById('fabricCostLabel');
+            if (fabricCostLabel && meters > 0) {
+                fabricCostLabel.textContent = 'Fabric Cost (' + meters + 'm × ₱' + pricePerMeter.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ')';
             }
-            
-            // Update Final Total display
+
+            const fabricCostRow = document.getElementById('fabricCostRow');
+            if (fabricCostRow) fabricCostRow.style.display = newFabricCost > 0 ? '' : 'none';
+
             const finalTotalDisplay = document.getElementById('finalTotalDisplay');
-            if (finalTotalDisplay) {
-                finalTotalDisplay.textContent = formatCurrency(newFinalTotal);
-            }
+            if (finalTotalDisplay) finalTotalDisplay.textContent = formatCurrency(newFinalTotal);
         }
+
+        // Run once on load to sync
+        updatePricesFromInputs();
+    }
+
+    // Make updatePricesFromInputs accessible for inline oninput handlers
+    window.updatePricesFromInputs = window.updatePricesFromInputs || function() {};
+    if (typeof updatePricesFromInputs === 'function') {
+        window.updatePricesFromInputs = updatePricesFromInputs;
     }
     
     // Handle delivery option toggle to update Customer Information display

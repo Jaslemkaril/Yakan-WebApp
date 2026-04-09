@@ -1788,6 +1788,9 @@ class CustomOrderController extends Controller
 
         $token = $request->input('auth_token') ?? $request->query('auth_token') ?? session('auth_token');
         $url   = route('custom_orders.create.step4') . ($token ? '?auth_token=' . urlencode($token) : '');
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true]);
+        }
         return redirect($url)->with('success', 'Item updated.');
     }
 
@@ -1801,6 +1804,9 @@ class CustomOrderController extends Controller
         }
         $token = $request->input('auth_token') ?? session('auth_token');
         $url   = route('custom_orders.create.step4') . ($token ? '?auth_token=' . urlencode($token) : '');
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true]);
+        }
         return redirect($url);
     }
 
