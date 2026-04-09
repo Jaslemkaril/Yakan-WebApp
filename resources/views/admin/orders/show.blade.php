@@ -1236,16 +1236,18 @@ async function viewPaymongoReceipt(endpointUrl) {
             }
         });
 
-        const contentType = (response.headers.get('content-type') || '').toLowerCase();
-        if (!contentType.includes('application/json')) {
-            let responseText = '';
-            try {
-                responseText = await response.text();
-            } catch (_) {
-                responseText = '';
-            }
+        const responseText = await response.text();
+        let payload = null;
 
-            if (response.status === 401 || response.status === 403 || response.status === 419 || response.redirected) {
+        try {
+            payload = responseText ? JSON.parse(responseText) : null;
+        } catch (_) {
+            payload = null;
+        }
+
+        if (!payload || typeof payload !== 'object') {
+            const looksLikeHtml = /^\s*</.test(responseText || '');
+            if (response.status === 401 || response.status === 403 || response.status === 419 || response.redirected || looksLikeHtml) {
                 throw new Error('Admin session expired. Please refresh the page and login again, then retry.');
             }
 
@@ -1253,7 +1255,6 @@ async function viewPaymongoReceipt(endpointUrl) {
             throw new Error(snippet || 'Server returned an unexpected response while loading the verified receipt.');
         }
 
-        const payload = await response.json();
         if (!response.ok || !payload.success) {
             throw new Error(payload.message || 'Unable to load verified receipt from PayMongo.');
         }
