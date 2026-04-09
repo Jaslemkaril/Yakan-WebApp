@@ -141,10 +141,25 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
+        // Prefer hashed OTP, but gracefully fallback if an old schema still has otp_code length 6.
         $this->otp_code = \Illuminate\Support\Facades\Hash::make($otp);
         $this->otp_expires_at = now()->addMinutes(10);
         $this->otp_attempts = 0;
-        $this->save();
+
+        try {
+            $this->save();
+        } catch (\Illuminate\Database\QueryException $e) {
+            $isOtpLengthIssue = str_contains(strtolower($e->getMessage()), 'otp_code')
+                && (str_contains(strtolower($e->getMessage()), 'data too long')
+                    || str_contains(strtolower($e->getMessage()), 'right truncated'));
+
+            if (!$isOtpLengthIssue) {
+                throw $e;
+            }
+
+            $this->otp_code = $otp;
+            $this->save();
+        }
 
         return $otp;
     }
@@ -168,8 +183,15 @@ class User extends Authenticatable implements MustVerifyEmail
         $this->otp_attempts += 1;
         $this->save();
 
-        // Check if OTP matches (constant-time hash comparison)
-        if (\Illuminate\Support\Facades\Hash::check($otp, $this->otp_code)) {
+        $storedOtp = (string) $this->otp_code;
+        $looksHashed = str_starts_with($storedOtp, '$2y$') || str_starts_with($storedOtp, '$2a$') || str_starts_with($storedOtp, '$2b$');
+
+        // Check OTP using hash comparison for hashed values, or constant-time plain compare for legacy 6-char storage.
+        $otpMatches = $looksHashed
+            ? \Illuminate\Support\Facades\Hash::check($otp, $storedOtp)
+            : hash_equals($storedOtp, $otp);
+
+        if ($otpMatches) {
             // Clear OTP and verify email
             $this->otp_code = null;
             $this->otp_expires_at = null;
