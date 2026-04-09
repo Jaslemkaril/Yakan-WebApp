@@ -1011,6 +1011,22 @@
                             </span>
                         </button>
 
+                        {{-- Edit Custom Order button --}}
+                        @php
+                            $editAuthToken = request('auth_token');
+                            $editUrl = route('custom_orders.create.step1') . ($editAuthToken ? '?auth_token=' . $editAuthToken : '');
+                        @endphp
+                        <a href="{{ $editUrl }}"
+                            class="group flex items-center justify-center w-full px-8 py-3 rounded-xl font-bold transition-all duration-300 border-2 mb-3"
+                            style="color:#800000; border-color:#800000; background-color:#fff5f5;"
+                            onmouseover="this.style.backgroundColor='#fce8e8'"
+                            onmouseout="this.style.backgroundColor='#fff5f5'">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                            Edit Custom Order
+                        </a>
+
                         <button type="submit" id="submitBtn" class="group relative w-full px-8 py-4 text-white rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2" style="background-color:#8b3a56 !important;" onmouseover="this.style.backgroundColor='#7a3350 !important'" onmouseout="this.style.backgroundColor='#8b3a56 !important'">
                             <span class="flex items-center justify-center" id="submitBtnText">
                                 <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

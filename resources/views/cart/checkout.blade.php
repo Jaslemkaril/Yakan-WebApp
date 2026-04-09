@@ -932,7 +932,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const feeDisplay = document.getElementById('shippingFeeDisplay');
             const feeInput   = document.getElementById('shippingFeeInput');
             const subtotal   = parseFloat('{{ $total }}');
-            const discount   = parseFloat('{{ $discount ?? 0 }}');
+            const rawDiscount = parseFloat('{{ $discount ?? 0 }}');
             const totalEl    = document.getElementById('finalTotalDisplay');
             let activeFee;
             if (this.value === 'pickup') {
@@ -951,6 +951,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 if (feeInput) feeInput.value = deliveryShippingFee;
             }
+            const discount = Math.min(rawDiscount, activeFee);
             if (totalEl) totalEl.textContent = '₱' + (subtotal + activeFee - discount).toFixed(2);
             
             // Update visual styling for selected option
@@ -1095,9 +1096,10 @@ function selectAddress(addressId, fullName, phoneNumber, formattedAddress, city,
     }
     shippingFeeInput.value = shippingFee;
     
-    // Update total amount
+    // Update total amount (cap coupon discount to the new shipping fee)
     const subtotal = parseFloat('{{ $total }}');
-    const discount = parseFloat('{{ $discount ?? 0 }}');
+    const rawDiscount = parseFloat('{{ $discount ?? 0 }}');
+    const discount = Math.min(rawDiscount, shippingFee);
     const finalTotal = subtotal + shippingFee - discount;
     
     const finalTotalDisplay = document.getElementById('finalTotalDisplay');

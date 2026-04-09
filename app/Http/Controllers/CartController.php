@@ -205,18 +205,25 @@ class CartController extends Controller
             if ($userRedemptions >= $coupon->usage_limit_per_user) return $fail('You have already used this coupon.');
         }
 
-        $discountAmount = $coupon->calculateDiscount((float)$subtotal);
-        if ($discountAmount <= 0)
+        if ((float)($coupon->min_spend ?? 0) > 0 && $subtotal < (float)$coupon->min_spend)
             return $fail('Coupon does not apply to your current subtotal (minimum: ₱' . number_format($coupon->min_spend, 2) . ').');
+
+        $shippingFee    = max(0, (float) $request->input('shipping_fee', 0));
+        $discountAmount = $coupon->calculateShippingDiscount($shippingFee);
 
         session(['coupon_code' => $code]);
 
+        $description = $coupon->type === 'percent'
+            ? (int)$coupon->value . '% off shipping'
+            : '₱' . number_format($coupon->value, 2) . ' off shipping';
+
         if ($request->expectsJson()) {
             return response()->json([
-                'success'  => true,
-                'message'  => 'Coupon applied successfully!',
-                'discount' => $discountAmount,
-                'code'     => $code,
+                'success'     => true,
+                'message'     => 'Coupon applied! Shipping fee discounted.',
+                'discount'    => $discountAmount,
+                'code'        => $code,
+                'description' => $description,
             ]);
         }
 
