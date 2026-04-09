@@ -1755,6 +1755,55 @@ class CustomOrderController extends Controller
         return redirect($url)->with('success', 'Item removed from your batch.');
     }
 
+    public function updateBatchItem(Request $request, int $index)
+    {
+        $qty    = max(1, (int) $request->input('quantity', 1));
+        $meters = $request->input('quantity_meters');
+
+        $wizardData = $this->getWizardData();
+        $batchItems = $wizardData['__batch_items'] ?? [];
+
+        if (isset($batchItems[$index])) {
+            $batchItems[$index]['form_data']['quantity'] = $qty;
+            if ($meters !== null && $meters !== '') {
+                $batchItems[$index]['wizard_data']['fabric']['quantity_meters'] = $meters;
+            }
+            // Rebuild summary line
+            $ft = null;
+            if (!empty($batchItems[$index]['wizard_data']['fabric']['type'])) {
+                $ft = \App\Models\FabricType::find($batchItems[$index]['wizard_data']['fabric']['type']);
+            }
+            $ftName = $ft ? $ft->name : ($batchItems[$index]['wizard_data']['fabric']['type'] ?? '—');
+            $patternName = '—';
+            if (!empty($batchItems[$index]['wizard_data']['pattern']['selected_ids'])) {
+                $p = \App\Models\YakanPattern::find($batchItems[$index]['wizard_data']['pattern']['selected_ids'][0]);
+                $patternName = $p ? $p->name : '—';
+            }
+            $m = $batchItems[$index]['wizard_data']['fabric']['quantity_meters'] ?? null;
+            $batchItems[$index]['summary'] = "Fabric: {$ftName}, Pattern: {$patternName}" . ($m ? ", {$m}m" : '');
+
+            $wizardData['__batch_items'] = $batchItems;
+            $this->saveWizardData($wizardData);
+        }
+
+        $token = $request->input('auth_token') ?? $request->query('auth_token') ?? session('auth_token');
+        $url   = route('custom_orders.create.step4') . ($token ? '?auth_token=' . urlencode($token) : '');
+        return redirect($url)->with('success', 'Item updated.');
+    }
+
+    public function updateCurrentItem(Request $request)
+    {
+        $meters = $request->input('quantity_meters');
+        $wizardData = $this->getWizardData();
+        if ($meters !== null && $meters !== '') {
+            $wizardData['fabric']['quantity_meters'] = $meters;
+            $this->saveWizardData($wizardData);
+        }
+        $token = $request->input('auth_token') ?? session('auth_token');
+        $url   = route('custom_orders.create.step4') . ($token ? '?auth_token=' . urlencode($token) : '');
+        return redirect($url);
+    }
+
     /**
      * Load a specific queued batch item back into the live wizard session for editing,
      * saving the current live wizard state back into the batch at the given index.

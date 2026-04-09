@@ -955,8 +955,22 @@
                                         <div class="min-w-0">
                                             <p class="text-sm font-semibold text-gray-900 truncate">{{ $bItem['summary'] ?? 'Custom Item ' . ($bIdx + 1) }}</p>
                                             <p class="text-xs text-gray-500">Pattern: <span class="font-semibold text-gray-700">{{ $bPatternName }}</span></p>
-                                            <p class="text-xs text-gray-500">Fabric: <span class="font-semibold text-gray-700">{{ $bFabricTypeName }}</span>{{ $bMeters ? ' • ' . $bMeters . 'm' : '' }} • Qty {{ $bQty }}</p>
-                                            <p class="text-xs text-gray-500">Added {{ $bItem['added_at'] ?? '' }}</p>
+                                            <p class="text-xs text-gray-500">Fabric: <span class="font-semibold text-gray-700">{{ $bFabricTypeName }}</span></p>
+                                            <form method="POST" action="{{ route('custom_orders.update.batch.item', $bIdx) }}" class="flex items-center flex-wrap gap-x-2 gap-y-1 mt-1">
+                                                @csrf
+                                                @method('PATCH')
+                                                @if(request('auth_token'))<input type="hidden" name="auth_token" value="{{ request('auth_token') }}">@endif
+                                                <label class="text-xs text-gray-500">Meters:
+                                                    <input type="number" name="quantity_meters" value="{{ $bMeters ?? '' }}" min="0.1" step="0.1"
+                                                        class="w-14 border border-gray-300 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 ml-1" style="--tw-ring-color:#800000;">
+                                                </label>
+                                                <label class="text-xs text-gray-500">Qty:
+                                                    <input type="number" name="quantity" value="{{ $bQty }}" min="1"
+                                                        class="w-12 border border-gray-300 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 ml-1" style="--tw-ring-color:#800000;">
+                                                </label>
+                                                <button type="submit" class="text-xs px-2 py-0.5 rounded text-white font-medium" style="background-color:#800000;">Save</button>
+                                            </form>
+                                            <p class="text-xs text-gray-500 mt-0.5">Added {{ $bItem['added_at'] ?? '' }}</p>
                                         </div>
                                     </div>
                                     <div class="flex items-start gap-2 flex-shrink-0">
@@ -986,7 +1000,21 @@
                                         <div class="min-w-0">
                                             <p class="text-sm font-semibold text-gray-900 truncate">Current Item (Ready to submit)</p>
                                             <p class="text-xs text-gray-500">Pattern: <span class="font-semibold text-gray-700">{{ $currentPatternName }}</span></p>
-                                            <p class="text-xs text-gray-500">Fabric: <span class="font-semibold text-gray-700">{{ $fabricTypeName }}</span>{{ !empty($wizardData['fabric']['quantity_meters']) ? ' • ' . $wizardData['fabric']['quantity_meters'] . 'm' : '' }} • Qty {{ $currentQty }}</p>
+                                            <p class="text-xs text-gray-500">Fabric: <span class="font-semibold text-gray-700">{{ $fabricTypeName }}</span></p>
+                                            <form method="POST" action="{{ route('custom_orders.update.current.item') }}" class="flex items-center flex-wrap gap-x-2 gap-y-1 mt-1">
+                                                @csrf
+                                                @if(request('auth_token'))<input type="hidden" name="auth_token" value="{{ request('auth_token') }}">@endif
+                                                <label class="text-xs text-gray-500">Meters:
+                                                    <input type="number" name="quantity_meters" value="{{ $wizardData['fabric']['quantity_meters'] ?? '' }}" min="0.1" step="0.1"
+                                                        class="w-14 border border-gray-300 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 ml-1" style="--tw-ring-color:#800000;">
+                                                </label>
+                                                <label class="text-xs text-gray-500">Qty:
+                                                    <input type="number" name="_current_qty_sync" id="currentItemQty" value="{{ $currentQty }}" min="1"
+                                                        class="w-12 border border-gray-300 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 ml-1" style="--tw-ring-color:#800000;"
+                                                        oninput="var q=document.getElementById('quantity');if(q){q.value=this.value;q.dispatchEvent(new Event('input'));}">
+                                                </label>
+                                                <button type="submit" class="text-xs px-2 py-0.5 rounded text-white font-medium" style="background-color:#800000;">Save</button>
+                                            </form>
                                         </div>
                                     </div>
                                     @if(!empty($currentPreview))
@@ -1526,6 +1554,15 @@ function showNotification(message, type = 'info') {
 // Handle quantity changes for dynamic pricing
 document.addEventListener('DOMContentLoaded', function() {
     const quantityInput = document.getElementById('quantity');
+    const currentItemQty = document.getElementById('currentItemQty');
+
+    // Two-way sync: main qty ↔ card qty
+    if (quantityInput && currentItemQty) {
+        quantityInput.addEventListener('input', function() {
+            currentItemQty.value = this.value;
+        });
+    }
+
     const priceData = document.getElementById('priceData');
     
     if (quantityInput && priceData) {
