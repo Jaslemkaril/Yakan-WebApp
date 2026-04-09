@@ -541,11 +541,12 @@
                                 @if(!empty($availableCoupons) && $availableCoupons->count() > 0)
                                 <div class="mb-3">
                                     <p class="text-xs font-bold text-amber-800 mb-2">🎟️ Available coupons — click to apply:</p>
-                                    <div class="flex flex-wrap gap-2">
+                                    <div class="flex flex-wrap gap-2 coupon-chips-container">
                                         @foreach($availableCoupons as $ac)
                                         <button type="button"
+                                            data-code="{{ $ac->code }}"
                                             onclick="applyAvailableCoupon('{{ $ac->code }}')"
-                                            class="text-xs px-3 py-1.5 rounded-full border-2 border-amber-500 bg-white text-amber-900 font-semibold hover:bg-amber-100 transition-all shadow-sm">
+                                            class="coupon-chip text-xs px-3 py-1.5 rounded-full border-2 border-amber-500 bg-white text-amber-900 font-semibold hover:bg-amber-100 transition-all shadow-sm {{ ($appliedCoupon->code ?? '') === $ac->code ? 'bg-amber-500 text-white border-amber-600' : '' }}">
                                             🏷️ {{ $ac->code }}: {{ $ac->type === 'percent' ? (int)$ac->value.'% off shipping' : '₱'.number_format($ac->value,2).' off shipping' }}
                                         </button>
                                         @endforeach
@@ -553,6 +554,8 @@
                                 </div>
                                 @endif
                                 {{-- AJAX coupon messages --}}
+                                {{-- Hidden input kept for form submission --}}
+                                <input id="coupon-input" type="hidden" value="{{ $appliedCoupon->code ?? '' }}">
                                 <div id="coupon-msg" class="hidden mb-2 text-sm flex items-center gap-2"></div>
                                 @if(session('success'))
                                     <div class="text-green-600 text-sm mb-2">{{ session('success') }}</div>
@@ -560,26 +563,15 @@
                                 @if(session('error'))
                                     <div class="text-red-600 text-sm mb-2">{{ session('error') }}</div>
                                 @endif
-                                <div class="flex flex-col sm:flex-row gap-2">
-                                    <input id="coupon-input" type="text" placeholder="Enter coupon code"
-                                        value="{{ $appliedCoupon->code ?? '' }}"
-                                        class="flex-1 min-w-0 border-2 border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
-                                        @if(!empty($appliedCoupon)) disabled @endif>
-                                    @if(empty($appliedCoupon))
-                                        <button id="apply-coupon-btn" type="button"
-                                            class="text-white px-4 py-2 rounded-lg font-bold transition-all shadow-md whitespace-nowrap text-sm"
-                                            style="background:linear-gradient(135deg,#800000 0%,#600000 100%);"
-                                            onmouseover="this.style.background='linear-gradient(135deg,#600000 0%,#400000 100%)'"
-                                            onmouseout="this.style.background='linear-gradient(135deg,#800000 0%,#600000 100%)'">
-                                            Apply
-                                        </button>
-                                    @else
-                                        <button id="remove-coupon-btn" type="button"
-                                            class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 font-bold transition-all shadow-md whitespace-nowrap text-sm">
-                                            Remove
-                                        </button>
-                                    @endif
+                                @if(!empty($appliedCoupon))
+                                <div class="flex items-center justify-between mt-1">
+                                    <span class="text-xs text-amber-800">Applied: <strong>{{ $appliedCoupon->code }}</strong></span>
+                                    <button id="remove-coupon-btn" type="button"
+                                        class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded-full font-semibold transition-all">
+                                        ✕ Remove
+                                    </button>
                                 </div>
+                                @endif
                                 {{-- Applied badge (shown by JS after successful apply) --}}
                                 <div id="coupon-applied-info" class="{{ empty($appliedCoupon) ? 'hidden' : '' }} text-sm text-amber-900 mt-3 flex items-center gap-2 bg-white rounded-lg p-2">
                                     <svg class="w-4 h-4 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -2220,7 +2212,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // ── Coupon AJAX ──────────────────────────────────────────────────────────
     const csrfToken    = document.querySelector('meta[name="csrf-token"]')?.content
                           || '{{ csrf_token() }}';
-    const applyBtn     = document.getElementById('apply-coupon-btn');
     const removeBtn    = document.getElementById('remove-coupon-btn');
     const couponInput  = document.getElementById('coupon-input');
     const couponMsg    = document.getElementById('coupon-msg');
@@ -2255,59 +2246,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (finalDisplay) finalDisplay.textContent = '₱' + newTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 
-    if (applyBtn) {
-        applyBtn.addEventListener('click', async function () {
-            const code = couponInput?.value.trim();
-            if (!code) { showMsg('Please enter a coupon code.', 'error'); return; }
-            applyBtn.disabled = true;
-            applyBtn.textContent = 'Applying…';
-            try {
-                const body = { code };
-                body.shipping_fee = parseFloat(document.getElementById('shippingFeeInput')?.value || 0);
-                if (buyNow)    { body.buy_now = 1; body.product_id = productId; body.quantity = quantity; }
-                const res  = await fetch('{{ route("cart.coupon.apply") }}', {
-                    method:  'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
-                    body:    JSON.stringify(body),
-                });
-                const data = await res.json();
-                if (data.success) {
-                    showMsg('✓ ' + data.message, 'success');
-                    if (hiddenCode) hiddenCode.value = code;
-                    if (hiddenDisc) hiddenDisc.value = data.discount || 0;
-                    if (couponInput) { couponInput.value = code; couponInput.disabled = true; }
-                    if (appliedCode) appliedCode.textContent = code;
-                    if (appliedInfo) appliedInfo.classList.remove('hidden');
-                    // Show discount row
-                    if (discountAmt && data.discount > 0) {
-                        discountAmt.textContent = '− ₱' + parseFloat(data.discount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                        if (discountRow) discountRow.classList.remove('hidden');
-                    }
-                    recalcTotal(parseFloat(data.discount || 0));
-                    // Swap button to Remove
-                    applyBtn.style.display = 'none';
-                    if (!removeBtn) {
-                        const rb = document.createElement('button');
-                        rb.id = 'remove-coupon-btn';
-                        rb.type = 'button';
-                        rb.className = 'bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 font-bold transition-all shadow-md whitespace-nowrap text-sm';
-                        rb.textContent = 'Remove';
-                        applyBtn.parentNode.appendChild(rb);
-                        rb.addEventListener('click', removeCoupon);
-                    }
-                } else {
-                    showMsg(data.message || 'Invalid coupon.', 'error');
-                    applyBtn.disabled = false;
-                    applyBtn.textContent = 'Apply';
-                }
-            } catch (e) {
-                showMsg('Could not apply coupon. Please try again.', 'error');
-                applyBtn.disabled = false;
-                applyBtn.textContent = 'Apply';
-            }
-        });
-    }
-
     async function removeCoupon() {
         try {
             await fetch('{{ route("cart.coupon.remove") }}', {
@@ -2315,16 +2253,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json', 'Content-Type': 'application/json' },
             });
         } catch(e) {}
-        if (couponInput) { couponInput.value = ''; couponInput.disabled = false; }
+        if (couponInput) couponInput.value = '';
         if (appliedInfo) appliedInfo.classList.add('hidden');
         if (discountRow) discountRow.classList.add('hidden');
         if (hiddenCode)  hiddenCode.value = '';
         if (hiddenDisc)  hiddenDisc.value = 0;
         recalcTotal(0);
-        // Swap back to Apply
         const rb2 = document.getElementById('remove-coupon-btn');
-        if (rb2) rb2.style.display = 'none';
-        if (applyBtn) { applyBtn.style.display = ''; applyBtn.disabled = false; applyBtn.textContent = 'Apply'; }
+        if (rb2) rb2.remove();
+        // Reset chip styles
+        document.querySelectorAll('.coupon-chip').forEach(c => {
+            c.disabled = false;
+            c.classList.remove('opacity-50', 'bg-amber-500', 'text-white', 'border-amber-600', 'ring-2', 'ring-amber-500');
+        });
         showMsg('Coupon removed.', 'success');
     }
 
@@ -2338,12 +2279,66 @@ document.addEventListener('DOMContentLoaded', function() {
         finalDisplay.dataset.subtotal = (finalVal - shippingFee + appliedDiscount).toFixed(2);
     }
 
-    function applyAvailableCoupon(code) {
-        const input = document.getElementById('coupon-input');
-        if (!input || input.disabled) return;
-        input.value = code;
-        const btn = document.getElementById('apply-coupon-btn');
-        if (btn) btn.click();
+    async function applyAvailableCoupon(code) {
+        // Highlight the clicked chip and dim others
+        document.querySelectorAll('.coupon-chip').forEach(c => {
+            c.classList.toggle('ring-2', c.dataset.code === code);
+            c.classList.toggle('ring-amber-500', c.dataset.code === code);
+            c.classList.toggle('opacity-50', c.dataset.code !== code);
+            c.disabled = true;
+        });
+        try {
+            const body = { code };
+            body.shipping_fee = parseFloat(document.getElementById('shippingFeeInput')?.value || 0);
+            const urlParams2 = new URLSearchParams(window.location.search);
+            const bn = urlParams2.get('buy_now'), pid = urlParams2.get('product_id'), qty = urlParams2.get('quantity') || 1;
+            if (bn) { body.buy_now = 1; body.product_id = pid; body.quantity = qty; }
+            const res = await fetch('{{ route("cart.coupon.apply") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const data = await res.json();
+            if (data.success) {
+                showMsg('✓ ' + data.message, 'success');
+                if (hiddenCode) hiddenCode.value = code;
+                if (hiddenDisc) hiddenDisc.value = data.discount || 0;
+                if (couponInput) couponInput.value = code;
+                if (appliedCode) appliedCode.textContent = code;
+                if (appliedInfo) appliedInfo.classList.remove('hidden');
+                if (discountAmt && data.discount > 0) {
+                    discountAmt.textContent = '− ₱' + parseFloat(data.discount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                    if (discountRow) discountRow.classList.remove('hidden');
+                }
+                recalcTotal(parseFloat(data.discount || 0));
+                // Show inline remove button if not already present
+                let rb = document.getElementById('remove-coupon-btn');
+                if (!rb) {
+                    rb = document.createElement('button');
+                    rb.id = 'remove-coupon-btn';
+                    rb.type = 'button';
+                    rb.className = 'text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded-full font-semibold transition-all mt-2';
+                    rb.textContent = '✕ Remove';
+                    document.querySelector('.coupon-chips-container')?.after(rb);
+                    rb.addEventListener('click', removeCoupon);
+                }
+                // Update chip styles: mark selected
+                document.querySelectorAll('.coupon-chip').forEach(c => {
+                    const isSelected = c.dataset.code === code;
+                    c.disabled = false;
+                    c.classList.toggle('bg-amber-500', isSelected);
+                    c.classList.toggle('text-white', isSelected);
+                    c.classList.toggle('border-amber-600', isSelected);
+                    c.classList.remove('opacity-50');
+                });
+            } else {
+                showMsg(data.message || 'Invalid coupon.', 'error');
+                document.querySelectorAll('.coupon-chip').forEach(c => { c.disabled = false; c.classList.remove('opacity-50'); });
+            }
+        } catch(e) {
+            showMsg('Could not apply coupon. Please try again.', 'error');
+            document.querySelectorAll('.coupon-chip').forEach(c => { c.disabled = false; c.classList.remove('opacity-50'); });
+        }
     }
 })();
 </script>
