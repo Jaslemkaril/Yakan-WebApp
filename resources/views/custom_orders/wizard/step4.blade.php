@@ -161,6 +161,92 @@
             // REMOVED - now using each pattern's individual pattern_price which is set above
         @endphp
 
+        @php
+            // Resolve selected address first (wizard-selected > default)
+            $selectedAddressId = (int) (old('address_id', data_get($wizardData, 'details.address_id') ?? ($defaultAddress->id ?? 0)));
+            $selectedAddressForShipping = $userAddresses->firstWhere('id', $selectedAddressId) ?? $defaultAddress;
+
+            $deliveryTypeForPricing = old('delivery_type', data_get($wizardData, 'details.delivery_type') ?? 'delivery');
+            $shippingFee = 0;
+            $shippingZoneLabel = 'Store pickup (no shipping fee)';
+
+            if ($deliveryTypeForPricing !== 'pickup') {
+                $shippingFee = 350;
+                $shippingZoneLabel = 'Far Luzon / Remote';
+
+                $addressHaystack = strtolower(trim(implode(' ', array_filter([
+                    $selectedAddressForShipping->city ?? null,
+                    $selectedAddressForShipping->province ?? null,
+                    $selectedAddressForShipping->region ?? null,
+                    $selectedAddressForShipping->barangay ?? null,
+                    $selectedAddressForShipping->street_name ?? null,
+                    $selectedAddressForShipping->landmark ?? null,
+                ]))));
+
+                if ($addressHaystack === '') {
+                    $shippingFee = 100;
+                    $shippingZoneLabel = 'Within Zamboanga City';
+                } elseif (str_contains($addressHaystack, 'zamboanga')) {
+                    $shippingFee = 100;
+                    $shippingZoneLabel = 'Within Zamboanga City / Zamboanga Peninsula';
+                } elseif (
+                    str_contains($addressHaystack, 'barmm') ||
+                    str_contains($addressHaystack, 'bangsamoro') ||
+                    str_contains($addressHaystack, 'basilan') ||
+                    str_contains($addressHaystack, 'sulu') ||
+                    str_contains($addressHaystack, 'tawi')
+                ) {
+                    $shippingFee = 100;
+                    $shippingZoneLabel = 'Zamboanga Peninsula + BARMM';
+                } elseif (
+                    str_contains($addressHaystack, 'mindanao') ||
+                    str_contains($addressHaystack, 'davao') ||
+                    str_contains($addressHaystack, 'cagayan de oro') ||
+                    str_contains($addressHaystack, 'iligan') ||
+                    str_contains($addressHaystack, 'cotabato') ||
+                    str_contains($addressHaystack, 'caraga') ||
+                    str_contains($addressHaystack, 'general santos') ||
+                    str_contains($addressHaystack, 'soccsksargen')
+                ) {
+                    $shippingFee = 180;
+                    $shippingZoneLabel = 'Other Mindanao Regions';
+                } elseif (
+                    str_contains($addressHaystack, 'visaya') ||
+                    str_contains($addressHaystack, 'cebu') ||
+                    str_contains($addressHaystack, 'iloilo') ||
+                    str_contains($addressHaystack, 'bacolod') ||
+                    str_contains($addressHaystack, 'tacloban') ||
+                    str_contains($addressHaystack, 'leyte') ||
+                    str_contains($addressHaystack, 'samar') ||
+                    str_contains($addressHaystack, 'bohol') ||
+                    str_contains($addressHaystack, 'negros')
+                ) {
+                    $shippingFee = 250;
+                    $shippingZoneLabel = 'Visayas';
+                } elseif (
+                    str_contains($addressHaystack, 'ncr') ||
+                    str_contains($addressHaystack, 'metro manila') ||
+                    str_contains($addressHaystack, 'manila') ||
+                    str_contains($addressHaystack, 'quezon city') ||
+                    str_contains($addressHaystack, 'makati') ||
+                    str_contains($addressHaystack, 'calabarzon') ||
+                    str_contains($addressHaystack, 'central luzon') ||
+                    str_contains($addressHaystack, 'laguna') ||
+                    str_contains($addressHaystack, 'cavite') ||
+                    str_contains($addressHaystack, 'bulacan')
+                ) {
+                    $shippingFee = 300;
+                    $shippingZoneLabel = 'NCR + Nearby Luzon';
+                }
+            }
+
+            $addons = session('wizard.details.addons') ?? [];
+            $addonsTotal = collect($addons)->sum(function($addon) {
+                return $addon == 'priority_production' ? 500 : ($addon == 'gift_wrapping' ? 150 : ($addon == 'extra_patterns' ? 200 : 100));
+            });
+            $finalTotal = $patternFee + $fabricCost + $shippingFee + $addonsTotal;
+        @endphp
+
         <form method="POST" action="{{ route('custom_orders.complete.wizard') }}" id="submitOrderForm">
         @csrf
         <input type="hidden" name="auth_token" id="step4AuthToken" value="{{ request('auth_token') }}">
@@ -673,91 +759,7 @@
                         <h3 class="text-xl font-bold text-gray-900">Pricing Breakdown</h3>
                     </div>
                     
-                    @php
-                        // Resolve selected address first (wizard-selected > default)
-                        $selectedAddressId = (int) (old('address_id', data_get($wizardData, 'details.address_id') ?? ($defaultAddress->id ?? 0)));
-                        $selectedAddressForShipping = $userAddresses->firstWhere('id', $selectedAddressId) ?? $defaultAddress;
-
-                        $deliveryTypeForPricing = old('delivery_type', data_get($wizardData, 'details.delivery_type') ?? 'delivery');
-                        $shippingFee = 0;
-                        $shippingZoneLabel = 'Store pickup (no shipping fee)';
-
-                        if ($deliveryTypeForPricing !== 'pickup') {
-                            $shippingFee = 350;
-                            $shippingZoneLabel = 'Far Luzon / Remote';
-
-                            $addressHaystack = strtolower(trim(implode(' ', array_filter([
-                                $selectedAddressForShipping->city ?? null,
-                                $selectedAddressForShipping->province ?? null,
-                                $selectedAddressForShipping->region ?? null,
-                                $selectedAddressForShipping->barangay ?? null,
-                                $selectedAddressForShipping->street_name ?? null,
-                                $selectedAddressForShipping->landmark ?? null,
-                            ]))));
-
-                            if ($addressHaystack === '') {
-                                $shippingFee = 100;
-                                $shippingZoneLabel = 'Within Zamboanga City';
-                            } elseif (str_contains($addressHaystack, 'zamboanga')) {
-                                $shippingFee = 100;
-                                $shippingZoneLabel = 'Within Zamboanga City / Zamboanga Peninsula';
-                            } elseif (
-                                str_contains($addressHaystack, 'barmm') ||
-                                str_contains($addressHaystack, 'bangsamoro') ||
-                                str_contains($addressHaystack, 'basilan') ||
-                                str_contains($addressHaystack, 'sulu') ||
-                                str_contains($addressHaystack, 'tawi')
-                            ) {
-                                $shippingFee = 100;
-                                $shippingZoneLabel = 'Zamboanga Peninsula + BARMM';
-                            } elseif (
-                                str_contains($addressHaystack, 'mindanao') ||
-                                str_contains($addressHaystack, 'davao') ||
-                                str_contains($addressHaystack, 'cagayan de oro') ||
-                                str_contains($addressHaystack, 'iligan') ||
-                                str_contains($addressHaystack, 'cotabato') ||
-                                str_contains($addressHaystack, 'caraga') ||
-                                str_contains($addressHaystack, 'general santos') ||
-                                str_contains($addressHaystack, 'soccsksargen')
-                            ) {
-                                $shippingFee = 180;
-                                $shippingZoneLabel = 'Other Mindanao Regions';
-                            } elseif (
-                                str_contains($addressHaystack, 'visaya') ||
-                                str_contains($addressHaystack, 'cebu') ||
-                                str_contains($addressHaystack, 'iloilo') ||
-                                str_contains($addressHaystack, 'bacolod') ||
-                                str_contains($addressHaystack, 'tacloban') ||
-                                str_contains($addressHaystack, 'leyte') ||
-                                str_contains($addressHaystack, 'samar') ||
-                                str_contains($addressHaystack, 'bohol') ||
-                                str_contains($addressHaystack, 'negros')
-                            ) {
-                                $shippingFee = 250;
-                                $shippingZoneLabel = 'Visayas';
-                            } elseif (
-                                str_contains($addressHaystack, 'ncr') ||
-                                str_contains($addressHaystack, 'metro manila') ||
-                                str_contains($addressHaystack, 'manila') ||
-                                str_contains($addressHaystack, 'quezon city') ||
-                                str_contains($addressHaystack, 'makati') ||
-                                str_contains($addressHaystack, 'calabarzon') ||
-                                str_contains($addressHaystack, 'central luzon') ||
-                                str_contains($addressHaystack, 'laguna') ||
-                                str_contains($addressHaystack, 'cavite') ||
-                                str_contains($addressHaystack, 'bulacan')
-                            ) {
-                                $shippingFee = 300;
-                                $shippingZoneLabel = 'NCR + Nearby Luzon';
-                            }
-                        }
-                        
-                        $addons = session('wizard.details.addons') ?? [];
-                        $addonsTotal = collect($addons)->sum(function($addon) {
-                            return $addon == 'priority_production' ? 500 : ($addon == 'gift_wrapping' ? 150 : ($addon == 'extra_patterns' ? 200 : 100));
-                        });
-                        $finalTotal = $patternFee + $fabricCost + $shippingFee + $addonsTotal;
-                    @endphp
+                    
                     <div class="space-y-4">
                         <div class="flex justify-between items-center pb-3 border-b border-gray-100" id="patternFeeRow">
                             <span class="text-gray-600 font-medium">Pattern Fee</span>
