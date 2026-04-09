@@ -1797,12 +1797,40 @@ class CustomOrderController extends Controller
                 $pp = \App\Models\YakanPattern::find($patternIds[0]);
                 $fabricCost = $meters * ($pp ? ($pp->price_per_meter ?? 0) : 0);
             }
-            $deliveryCity = $formData['resolved_delivery_city'] ?? null;
+            $deliveryCity    = $formData['resolved_delivery_city'] ?? null;
             $deliveryProvince = $formData['resolved_delivery_province'] ?? null;
-            $deliveryType = $formData['delivery_type'] ?? 'delivery';
+            $deliveryType    = $formData['delivery_type'] ?? 'delivery';
             $deliveryAddress = $formData['resolved_delivery_address'] ?? null;
+
+            // Fallback: if city was not resolved at addToBatch time, look up the saved address_id;
+            // last resort: use the user's default address so we never fall through to the ₱350 zone.
+            if ($deliveryCity === null && $deliveryType === 'delivery') {
+                $savedAddrId = $formData['address_id'] ?? null;
+                if ($savedAddrId) {
+                    $savedAddr = \App\Models\UserAddress::where('id', $savedAddrId)
+                        ->where('user_id', $userId)
+                        ->first();
+                    if ($savedAddr) {
+                        $deliveryCity    = $savedAddr->city;
+                        $deliveryProvince = $savedAddr->province ?? $savedAddr->region ?? null;
+                        $deliveryAddress  = implode(', ', array_filter([
+                            $savedAddr->street_name, $savedAddr->barangay,
+                            $savedAddr->city, $savedAddr->province,
+                        ]));
+                    }
+                }
+                if ($deliveryCity === null) {
+                    $defaultAddr = \App\Models\UserAddress::where('user_id', $userId)
+                        ->where('is_default', true)->first();
+                    if ($defaultAddr) {
+                        $deliveryCity    = $defaultAddr->city;
+                        $deliveryProvince = $defaultAddr->province ?? $defaultAddr->region ?? null;
+                    }
+                }
+            }
+
             $shippingFee = $this->resolveAddressBasedShippingFee($deliveryType, $deliveryCity, $deliveryProvince, $deliveryAddress);
-            $basePrice = ($patternFee + $fabricCost) * $formQuantity + $shippingFee;
+            $basePrice   = ($patternFee + $fabricCost) * $formQuantity + $shippingFee;
         }
 
         // ----- Design / pattern data (mirrors completeWizard logic) -----
@@ -2063,13 +2091,23 @@ class CustomOrderController extends Controller
                 }
                 
                 // 3. Calculate shipping fee based on delivery address (aligned with step4 zones)
-                $deliveryCity = $addrCity ?? null;
+                // Resolve selected address EARLY so the correct city/province is used for shipping,
+                // before $addrCity is formally assigned further down.
+                $earlyAddressId = $validated['address_id'] ?? null;
+                if ($earlyAddressId) {
+                    $earlyAddr = auth()->user()->addresses()->find($earlyAddressId);
+                    if ($earlyAddr) {
+                        $addrCity     = $earlyAddr->city;
+                        $addrProvince = $earlyAddr->province ?? $earlyAddr->region ?? null;
+                    }
+                }
+                $deliveryCity    = $addrCity ?? null;
                 $deliveryProvince = $addrProvince ?? null;
 
                 if (!$deliveryCity) {
                     $defaultAddress = auth()->user()->addresses->where('is_default', true)->first();
                     if ($defaultAddress) {
-                        $deliveryCity = $defaultAddress->city;
+                        $deliveryCity    = $defaultAddress->city;
                         $deliveryProvince = $defaultAddress->province ?? $defaultAddress->region;
                     }
                 }

@@ -150,7 +150,7 @@
             }
             return (float) ($getAdminPriceParts($item)['shipping'] ?? 0);
         })
-        ->max();
+        ->sum();
     $batchGrandTotal = $batchQuotedSubtotal + $batchShippingTotal;
     $batchPaidCount = (int) $batchItems->filter(fn($item) => (($item->payment_status ?? '') === 'paid') || !empty($item->payment_confirmed_at))->count();
 @endphp
@@ -265,9 +265,24 @@
                                 <div class="text-xs text-gray-600">{{ $item->fabric_type_name ?? ($item->product->name ?? 'Custom item') }}</div>
                             </div>
                             <div class="text-[11px] text-right">
-                                <div class="font-semibold text-gray-900">Quoted: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
-                                <div class="text-gray-600">Shipping: Based on delivery address</div>
-                                <div class="font-bold text-[#800000]">Item quoted amount: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
+                                @php
+                                    $itemShipping = $itemPrice['shipping'] ?? 0;
+                                    $itemTotal    = $itemPrice['total'] ?? $itemPrice['quoted'];
+                                    $shippingIncluded = $itemShipping <= 0;
+                                @endphp
+                                @if($itemDeliveryType === 'pickup')
+                                    <div class="font-semibold text-gray-900">Items: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
+                                    <div class="text-green-700 font-semibold">Shipping: FREE (Pickup)</div>
+                                    <div class="font-bold text-[#800000]">Item total: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
+                                @elseif($shippingIncluded)
+                                    <div class="font-semibold text-gray-900">Items + Shipping: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
+                                    <div class="text-gray-500 text-[10px]">Shipping included in price</div>
+                                    <div class="font-bold text-[#800000]">Item total: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
+                                @else
+                                    <div class="font-semibold text-gray-900">Items: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
+                                    <div class="text-gray-600">Shipping: ₱{{ number_format($itemShipping, 2) }}</div>
+                                    <div class="font-bold text-[#800000]">Item total: ₱{{ number_format($itemTotal, 2) }}</div>
+                                @endif
                             </div>
                             <div class="flex flex-col items-end gap-1">
                                 <span class="text-[10px] px-2 py-0.5 rounded-full {{ in_array($statusPill, ['approved','in_production','production_complete','out_for_delivery','delivered','completed']) ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">{{ ucfirst(str_replace('_',' ', $statusPill)) }}</span>
