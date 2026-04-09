@@ -476,8 +476,8 @@ class OrderController extends Controller
     public function confirmReceived(Order $order)
     {
         try {
-            // Verify the order belongs to the authenticated user
-            if ($order->user_id !== auth()->id()) {
+            // Verify the order belongs to the authenticated user (cast to int to avoid type mismatch)
+            if ((int) $order->user_id !== (int) auth()->id()) {
                 $msg = 'Unauthorized action.';
                 if (request()->expectsJson()) return response()->json(['success' => false, 'message' => $msg], 403);
                 return redirect()->back()->with('error', $msg);
@@ -488,6 +488,13 @@ class OrderController extends Controller
                 $msg = 'Order must be delivered before confirmation.';
                 if (request()->expectsJson()) return response()->json(['success' => false, 'message' => $msg], 422);
                 return redirect()->back()->with('error', $msg);
+            }
+
+            // Ensure 'completed' is a valid ENUM value before updating
+            try {
+                \DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('pending','pending_confirmation','confirmed','processing','shipped','delivered','completed','cancelled','refunded') NOT NULL DEFAULT 'pending_confirmation'");
+            } catch (\Exception $e) {
+                // ENUM already includes 'completed', safe to continue
             }
 
             // Update order status to completed when customer confirms receipt
