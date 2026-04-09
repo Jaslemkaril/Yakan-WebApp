@@ -2,9 +2,11 @@
 
 namespace App\Observers;
 
+use App\Mail\OrderPaymentReceipt;
 use App\Models\Order;
 use App\Models\Inventory;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class OrderObserver
 {
@@ -13,7 +15,9 @@ class OrderObserver
      */
     public function created(Order $order): void
     {
-        //
+        if ((string) $order->payment_status === 'paid') {
+            $this->sendPaymentReceiptEmail($order);
+        }
     }
 
     /**
@@ -21,6 +25,10 @@ class OrderObserver
      */
     public function updated(Order $order): void
     {
+        if ($order->wasChanged('payment_status') && (string) $order->payment_status === 'paid') {
+            $this->sendPaymentReceiptEmail($order);
+        }
+
         // Check if status changed to 'completed' and inventory hasn't been deducted yet
         if ($order->wasChanged('status') && $order->status === 'completed') {
             $this->processOrderCompletion($order);
@@ -90,6 +98,25 @@ class OrderObserver
                 'order_id' => $order->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
+    private function sendPaymentReceiptEmail(Order $order): void
+    {
+        try {
+            $order->loadMissing('user', 'orderItems.product');
+            $email = trim((string) optional($order->user)->email);
+
+            if ($email === '') {
+                return;
+            }
+
+            Mail::to($email)->send(new OrderPaymentReceipt($order));
+        } catch (\Throwable $exception) {
+            Log::warning('Order payment receipt email failed from observer', [
+                'order_id' => $order->id,
+                'error' => $exception->getMessage(),
             ]);
         }
     }
