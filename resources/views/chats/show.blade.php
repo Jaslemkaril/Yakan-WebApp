@@ -150,38 +150,20 @@
 <div class="min-h-screen chat-container py-2">
     <div class="max-w-5xl mx-auto px-4 chat-shell">
         <!-- Header with Chat Info -->
-        <div class="chat-header-sticky rounded-2xl shadow-lg border border-gray-200 p-3 md:p-4 mb-4">
+        <div class="chat-header-sticky rounded-2xl shadow-lg border border-gray-200 p-2.5 md:p-3 mb-3">
             <div class="flex justify-between items-start gap-4">
                 <div class="flex-1 min-w-0">
-                    <a href="{{ route('chats.index') }}" class="inline-flex items-center gap-2 text-gray-600 hover:text-[#8B0000] text-sm font-semibold mb-2 transition hover:gap-3 group">
+                    <a href="{{ route('chats.index') }}" class="inline-flex items-center gap-2 text-gray-600 hover:text-[#8B0000] text-sm font-semibold mb-1.5 transition hover:gap-3 group">
                         <svg class="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                         </svg>
                         Back to Chats
                     </a>
-                    <div class="flex items-center gap-2 mb-2">
+                    <div class="flex items-center gap-2">
                         <span class="w-8 h-8 bg-gradient-to-br from-[#8B0000] to-[#6B0000] rounded-lg flex items-center justify-center text-white text-xs">
                             <i class="fas fa-comments"></i>
                         </span>
                         <h1 class="text-xl md:text-2xl font-bold text-gray-900 truncate">{{ $chat->subject }}</h1>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-3 md:gap-4">
-                        <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold {{ $chat->status === 'closed' ? 'status-closed' : 'status-badge' }}">
-                            <span class="inline-block w-2.5 h-2.5 rounded-full {{ $chat->status === 'closed' ? 'bg-red-600' : 'bg-green-600' }}"></span>
-                            {{ ucfirst($chat->status) }}
-                        </span>
-                        <span class="text-gray-600 text-sm flex items-center gap-1.5">
-                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            Started {{ $chat->created_at?->diffForHumans() ?? 'N/A' }}
-                        </span>
-                        <span class="text-gray-600 text-sm flex items-center gap-1.5">
-                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2h-3l-4 4z"/>
-                            </svg>
-                            {{ count($messages) }} message{{ count($messages) !== 1 ? 's' : '' }}
-                        </span>
                     </div>
                 </div>
                 @if($chat->status !== 'closed')
