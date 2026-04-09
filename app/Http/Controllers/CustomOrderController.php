@@ -10,8 +10,8 @@ use App\Models\Category;
 use App\Models\YakanPattern;
 use App\Models\User;
 use App\Services\CloudinaryService;
+use App\Services\TransactionalMailService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -4034,11 +4034,17 @@ class CustomOrderController extends Controller
                 $totalAmount = (float) ($primaryOrder->final_price ?? $primaryOrder->estimated_price ?? 0);
             }
 
-            Mail::to($recipientEmail)->send(new CustomOrderPaymentReceipt(
-                $primaryOrder,
-                $paidOrders->count(),
-                $totalAmount
-            ));
+            TransactionalMailService::sendView(
+                $recipientEmail,
+                'Custom Order Payment Receipt - ' . $primaryOrder->display_ref,
+                'emails.custom-orders.payment-receipt',
+                [
+                    'order' => $primaryOrder,
+                    'user' => $primaryOrder->user,
+                    'itemCount' => max(1, $paidOrders->count()),
+                    'totalAmount' => max(0, $totalAmount),
+                ]
+            );
         } catch (\Throwable $exception) {
             \Log::warning('Custom order payment receipt email failed', [
                 'order_id' => $anchorOrder->id,

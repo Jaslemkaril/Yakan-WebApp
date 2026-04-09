@@ -948,8 +948,15 @@ class CartController extends Controller
         // Send order confirmation email
         try {
             $order->load('orderItems.product', 'user');
-            \Illuminate\Support\Facades\Mail::to($order->user->email)
-                ->send(new \App\Mail\OrderConfirmation($order));
+            $orderEmail = trim((string) optional($order->user)->email);
+            if ($orderEmail !== '') {
+                \App\Services\TransactionalMailService::sendView(
+                    $orderEmail,
+                    'Order Confirmation - ' . ($order->order_ref ?? ('ORD-' . str_pad((string) $order->id, 5, '0', STR_PAD_LEFT))),
+                    'emails.order-confirmation',
+                    ['order' => $order]
+                );
+            }
         } catch (\Throwable $e) {
             \Log::warning('Order confirmation email failed', ['order_id' => $order->id, 'error' => $e->getMessage()]);
         }

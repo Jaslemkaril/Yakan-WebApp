@@ -3,13 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Mail\CustomOrder\PaymentReceipt as CustomOrderPaymentReceipt;
 use App\Models\CustomOrder;
 use App\Services\Payment\PayMongoCheckoutService;
+use App\Services\TransactionalMailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 
 class AdminCustomOrderController extends Controller
 {
@@ -860,7 +859,17 @@ class AdminCustomOrderController extends Controller
 
             $totalAmount = (float) ($order->final_price ?? $order->estimated_price ?? 0);
 
-            Mail::to($recipientEmail)->send(new CustomOrderPaymentReceipt($order, 1, $totalAmount));
+            TransactionalMailService::sendView(
+                $recipientEmail,
+                'Custom Order Payment Receipt - ' . $order->display_ref,
+                'emails.custom-orders.payment-receipt',
+                [
+                    'order' => $order,
+                    'user' => $order->user,
+                    'itemCount' => 1,
+                    'totalAmount' => max(0, $totalAmount),
+                ]
+            );
         } catch (\Throwable $exception) {
             \Log::warning('Admin custom-order payment receipt email failed', [
                 'order_id' => $order->id,

@@ -2,11 +2,10 @@
 
 namespace App\Observers;
 
-use App\Mail\OrderPaymentReceipt;
 use App\Models\Order;
 use App\Models\Inventory;
+use App\Services\TransactionalMailService;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class OrderObserver
 {
@@ -112,7 +111,12 @@ class OrderObserver
                 return;
             }
 
-            Mail::to($email)->send(new OrderPaymentReceipt($order));
+            TransactionalMailService::sendView(
+                $email,
+                'Payment Receipt - ' . ($order->order_ref ?? ('ORD-' . str_pad((string) $order->id, 5, '0', STR_PAD_LEFT))),
+                'emails.order-payment-receipt',
+                ['order' => $order]
+            );
         } catch (\Throwable $exception) {
             Log::warning('Order payment receipt email failed from observer', [
                 'order_id' => $order->id,
