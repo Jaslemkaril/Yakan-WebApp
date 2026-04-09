@@ -56,7 +56,7 @@ class TransactionalMailService
 
             $mailerInstance->send([], [], function ($message) use ($to, $subject, $htmlContent) {
                 $message->to($to)->subject($subject);
-                $message->setBody($htmlContent, 'text/html');
+                $message->html($htmlContent);
             });
 
             Log::info('Mail send: Email accepted by transport', [
