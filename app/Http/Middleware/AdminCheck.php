@@ -12,7 +12,9 @@ class AdminCheck
     {
         // First, try token authentication if not already authenticated
         if (!Auth::check()) {
-            $token = $request->post('auth_token');
+            $token = $request->post('auth_token')
+                ?? $request->query('auth_token')
+                ?? $request->header('X-Admin-Auth-Token');
             
             if ($token) {
                 // Validate token

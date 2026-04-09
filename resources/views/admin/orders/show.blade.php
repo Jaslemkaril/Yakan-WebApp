@@ -202,12 +202,19 @@
                         default => 'Payment Receipt',
                     };
                 @endphp
+                @php
+                    $paymongoReceiptUrl = route('admin.orders.paymongo_receipt', $order);
+                    $authToken = request()->query('auth_token');
+                    if (!empty($authToken)) {
+                        $paymongoReceiptUrl .= (str_contains($paymongoReceiptUrl, '?') ? '&' : '?') . 'auth_token=' . urlencode($authToken);
+                    }
+                @endphp
                 
                 <div class="mt-4 pt-4 border-t border-gray-200">
                     <div class="flex items-center justify-between">
                         <span class="text-sm font-medium text-gray-700">{{ $receiptLabel }}:</span>
                         @if($isPaymongo)
-                            <button type="button" onclick="viewPaymongoReceipt('{{ route('admin.orders.paymongo_receipt', $order) }}')"
+                            <button type="button" onclick="viewPaymongoReceipt('{{ $paymongoReceiptUrl }}')"
                                 class="inline-flex items-center px-3 py-2 text-white rounded-lg transition-colors text-sm font-medium" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#A05050'" onmouseout="this.style.backgroundColor='#800000'">
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622C17.176 19.29 21 14.591 21 9c0-1.042-.133-2.052-.382-3.016z"/>
@@ -1228,6 +1235,23 @@ async function viewPaymongoReceipt(endpointUrl) {
                 'Accept': 'application/json'
             }
         });
+
+        const contentType = (response.headers.get('content-type') || '').toLowerCase();
+        if (!contentType.includes('application/json')) {
+            let responseText = '';
+            try {
+                responseText = await response.text();
+            } catch (_) {
+                responseText = '';
+            }
+
+            if (response.status === 401 || response.status === 403 || response.status === 419 || response.redirected) {
+                throw new Error('Admin session expired. Please refresh the page and login again, then retry.');
+            }
+
+            const snippet = responseText ? responseText.slice(0, 120).replace(/\s+/g, ' ').trim() : '';
+            throw new Error(snippet || 'Server returned an unexpected response while loading the verified receipt.');
+        }
 
         const payload = await response.json();
         if (!response.ok || !payload.success) {
