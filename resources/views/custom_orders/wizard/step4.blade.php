@@ -1171,6 +1171,7 @@
                     
                     <script>
                     document.getElementById('submitOrderForm').addEventListener('submit', function(e) {
+                        const form = document.getElementById('submitOrderForm');
                         const deliveryType = document.querySelector('input[name="delivery_type"]:checked')?.value;
                         const quantity = document.getElementById('quantity').value;
                         
@@ -1217,6 +1218,10 @@
                         
                         // All validation passed - use AJAX submit with loading overlay
                         e.preventDefault();
+                        // Guard against accidental action changes from other flows.
+                        if (form) {
+                            form.action = '{{ route("custom_orders.complete.wizard") }}';
+                        }
                         var urlToken = new URLSearchParams(window.location.search).get('auth_token');
                         if (urlToken) document.getElementById('step4AuthToken').value = urlToken;
                         submitWizardForm('submitOrderForm', 'Submitting your order...', 'Creating your custom order...');
@@ -1802,6 +1807,8 @@ function submitWizardForm(formId, title, subtitle) {
         if (at) at.value = token;
     }
     var formData = new FormData(form);
+    // Final submit endpoint only accepts POST; remove leaked method overrides.
+    formData.delete('_method');
     var url = form.action;
     if (token && url.indexOf('auth_token') === -1) {
         url += (url.indexOf('?') >= 0 ? '&' : '?') + 'auth_token=' + encodeURIComponent(token);
@@ -1825,6 +1832,12 @@ function submitWizardForm(formId, title, subtitle) {
     .catch(function(err) {
         console.error('Submit error:', err);
         hideWizardLoading();
+        // Keep fallback submit as plain POST by removing method spoofing inputs.
+        form.querySelectorAll('input[name="_method"]').forEach(function(input) {
+            if (input && input.parentNode) {
+                input.parentNode.removeChild(input);
+            }
+        });
         form.submit();
     });
 }
