@@ -176,7 +176,9 @@
         <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
             {{-- Status Badge --}}
             @php
-                $displayStatusLabel = $order->status === 'completed' ? 'Delivered' : ucfirst(str_replace('_', ' ', $order->status));
+                $displayStatusLabel = $order->status === 'delivered'
+                    ? 'Delivered (Awaiting Customer Confirmation)'
+                    : ucfirst(str_replace('_', ' ', $order->status));
             @endphp
             <span class="px-4 py-2 rounded-full text-sm font-semibold
                 {{ $order->status === 'delivered' || $order->status === 'completed' ? 'bg-green-100 text-green-700' : 
@@ -1425,7 +1427,17 @@
                                 </svg>
                             </button>
                         </form>
-                        @elseif(in_array($order->status, ['delivered', 'completed']))
+                        @elseif($order->status === 'delivered')
+                        <div class="bg-gradient-to-r from-amber-50 to-yellow-100 border-2 border-amber-300 rounded-lg p-4 text-center">
+                            <div class="flex justify-center mb-2">
+                                <svg class="w-12 h-12 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div class="font-bold text-amber-800">Delivered - Waiting for Customer Confirmation</div>
+                            <div class="text-sm text-amber-800">The order is delivered. Completion happens only after the customer confirms receipt.</div>
+                        </div>
+                        @elseif($order->status === 'completed')
                         <div class="bg-gradient-to-r from-red-50 to-red-100 border-2 border-red-300 rounded-lg p-4 text-center">
                             <div class="flex justify-center mb-2">
                                 <svg class="w-12 h-12 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1433,7 +1445,7 @@
                                 </svg>
                             </div>
                             <div class="font-bold text-[#800000]">Order Completed!</div>
-                            <div class="text-sm text-[#800000]">This order has been successfully delivered</div>
+                            <div class="text-sm text-[#800000]">Customer has confirmed order received.</div>
                         </div>
                         @else
                         <div class="bg-red-50 border-2 border-red-200 rounded-lg p-3 text-center text-sm text-[#800000]">
@@ -1697,6 +1709,9 @@
                                 <div class="text-xs text-gray-600 mt-1">{{ \Carbon\Carbon::parse($order->delivered_at)->diffForHumans() }}</div>
                                 @else
                                 <div class="text-xs text-gray-700">Completed</div>
+                                @endif
+                                @if($order->status === 'delivered')
+                                <div class="text-xs font-semibold mt-2" style="color: #8b3a56;">Waiting for customer confirmation.</div>
                                 @endif
                             </div>
                         </div>
