@@ -292,8 +292,12 @@
                     </summary>
                     <div class="px-3 pb-3 pt-1 border-t" style="border-color:#f1d1d8;">
                         <div class="grid grid-cols-1 gap-2">
-                            <div class="grid grid-cols-{{ in_array($statusPill, ['approved','in_production','production_complete','out_for_delivery','delivered','completed']) ? '1' : '3' }} gap-2">
-                                @if(!in_array($statusPill, ['approved','in_production','production_complete','out_for_delivery','delivered','completed']))
+@php
+                                    $hideApproveReject = in_array($statusPill, ['approved','processing','in_production','production_complete','out_for_delivery','delivered','completed','cancelled','rejected','price_quoted'])
+                                        || $payPill === 'paid';
+                                @endphp
+                            <div class="grid grid-cols-{{ $hideApproveReject ? '1' : '3' }} gap-2">
+                                @if(!$hideApproveReject)
                                 <form action="{{ route('admin.custom-orders.approve', $item) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
                                     @csrf
                                     <button type="submit" class="w-full text-[11px] font-semibold text-white rounded px-2 py-1 bg-green-600 hover:bg-green-700">Approve</button>
