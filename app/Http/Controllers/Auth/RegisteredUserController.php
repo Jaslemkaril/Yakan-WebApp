@@ -80,7 +80,7 @@ class RegisteredUserController extends Controller
             $otp = $user->generateOtp();
             \Log::info('OTP generated', ['user_id' => $user->id]);
 
-            // Send OTP email via SendGrid HTTP API (SMTP is blocked on Railway)
+            // Send OTP email via the configured mail transport (Brevo/SMTP ready)
             $sendResult = SendGridService::sendViewDetailed(
                 $user->email,
                 'Verify Your Email - Yakan E-commerce',

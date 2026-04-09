@@ -352,7 +352,7 @@ Route::get('/test-registration-access', function () {
     ]);
 });
 
-// Test SendGrid email via HTTP API (SMTP is blocked on Railway)
+// Test email via configured Laravel mail transport (SMTP/Brevo/SendGrid)
 Route::get('/test-sendgrid', function () {
     $email = request()->get('email', 'coloresdeartes16@gmail.com');
     
@@ -365,9 +365,9 @@ Route::get('/test-sendgrid', function () {
     return response()->json([
         'status' => $result ? 'success' : 'error',
         'message' => $result ? 'Test email sent to ' . $email : 'Failed to send email - check logs',
-        'method' => 'SendGrid HTTP API (not SMTP)',
+        'method' => 'Configured Laravel mail transport',
         'from' => config('mail.from.address'),
-        'api_key_set' => !empty(config('mail.mailers.smtp.password')),
+        'smtp_password_set' => !empty(config('mail.mailers.smtp.password')),
     ], $result ? 200 : 500);
 });
 

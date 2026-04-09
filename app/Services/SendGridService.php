@@ -2,33 +2,35 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class SendGridService
 {
     /**
      * Send an email and return a detailed delivery attempt result.
-     * success=true means provider accepted the request.
+     * success=true means the configured mail transport accepted the send request.
      */
     public static function sendDetailed(string $to, string $subject, string $htmlContent, ?string $textContent = null): array
     {
-        $apiKey = config('services.sendgrid.api_key', config('mail.mailers.smtp.password'));
+        $mailer = (string) config('mail.default', 'smtp');
+        $host = (string) config('mail.mailers.smtp.host');
+        $port = (string) config('mail.mailers.smtp.port');
         $fromEmail = config('mail.from.address');
         $fromName = config('mail.from.name');
 
-        if (empty($apiKey) || !str_starts_with((string) $apiKey, 'SG.')) {
-            Log::error('SendGrid API: Missing or invalid API key format');
+        if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            Log::error('Mail send: Invalid recipient email', ['to' => $to]);
             return [
                 'success' => false,
                 'status' => null,
                 'message_id' => null,
-                'error' => 'Missing/invalid SendGrid API key',
+                'error' => 'Invalid recipient email',
             ];
         }
 
         if (empty($fromEmail) || str_contains((string) $fromEmail, 'example.com')) {
-            Log::error('SendGrid API: Invalid MAIL_FROM_ADDRESS', ['from' => $fromEmail]);
+            Log::error('Mail send: Invalid MAIL_FROM_ADDRESS', ['from' => $fromEmail]);
             return [
                 'success' => false,
                 'status' => null,
@@ -37,61 +39,36 @@ class SendGridService
             ];
         }
 
-        $content = [];
-        if ($textContent) {
-            $content[] = ['type' => 'text/plain', 'value' => $textContent];
-        }
-        $content[] = ['type' => 'text/html', 'value' => $htmlContent];
-
-        $payload = [
-            'personalizations' => [
-                ['to' => [['email' => $to]]],
-            ],
-            'from' => [
-                'email' => $fromEmail,
-                'name' => $fromName,
-            ],
-            'subject' => $subject,
-            'content' => $content,
-        ];
-
         try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $apiKey,
-                'Content-Type' => 'application/json',
-            ])->timeout(15)->post('https://api.sendgrid.com/v3/mail/send', $payload);
+            // Send using whatever SMTP provider is configured (Brevo/SendGrid/Gmail/etc).
+            Mail::mailer($mailer)->send([], [], function ($message) use ($to, $subject, $htmlContent, $textContent) {
+                $message->to($to)->subject($subject);
+                $message->html($htmlContent);
+            });
 
-            $messageId = $response->header('x-message-id');
-            if ($response->status() === 202 || $response->successful()) {
-                Log::info('SendGrid API: Email accepted', [
-                    'to' => $to,
-                    'subject' => $subject,
-                    'status' => $response->status(),
-                    'message_id' => $messageId,
-                ]);
-
-                return [
-                    'success' => true,
-                    'status' => $response->status(),
-                    'message_id' => $messageId,
-                    'error' => null,
-                ];
-            }
-
-            Log::error('SendGrid API: Failed', [
-                'status' => $response->status(),
-                'body' => $response->body(),
+            Log::info('Mail send: Email accepted by transport', [
                 'to' => $to,
+                'subject' => $subject,
+                'mailer' => $mailer,
+                'host' => $host,
+                'port' => $port,
             ]);
 
             return [
-                'success' => false,
-                'status' => $response->status(),
-                'message_id' => $messageId,
-                'error' => $response->body(),
+                'success' => true,
+                'status' => 200,
+                'message_id' => null,
+                'error' => null,
             ];
-        } catch (\Exception $e) {
-            Log::error('SendGrid API: Exception', ['error' => $e->getMessage(), 'to' => $to]);
+        } catch (\Throwable $e) {
+            Log::error('Mail send: Exception', [
+                'error' => $e->getMessage(),
+                'to' => $to,
+                'mailer' => $mailer,
+                'host' => $host,
+                'port' => $port,
+            ]);
+
             return [
                 'success' => false,
                 'status' => null,
@@ -102,8 +79,7 @@ class SendGridService
     }
 
     /**
-     * Send an email using SendGrid's v3 HTTP API.
-     * This bypasses SMTP entirely, using HTTPS (port 443) which works on Railway.
+     * Send an email using the configured Laravel mail transport.
      */
     public static function send(string $to, string $subject, string $htmlContent, ?string $textContent = null): bool
     {

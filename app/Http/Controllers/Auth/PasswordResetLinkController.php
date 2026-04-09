@@ -23,8 +23,8 @@ class PasswordResetLinkController extends Controller
     }
 
     /**
-     * Handle an incoming password reset link request.
-     * Using SendGrid HTTP API instead of SMTP (blocked on Railway).
+    * Handle an incoming password reset link request.
+    * Uses the configured Laravel mail transport (Brevo/SMTP ready).
      */
     public function store(Request $request)
     {
@@ -68,7 +68,7 @@ class PasswordResetLinkController extends Controller
             'url' => $resetUrl,
         ]);
 
-        // Send email via SendGrid HTTP API
+        // Send email via configured mail transport
         $emailSent = SendGridService::sendView(
             $user->email,
             'Reset Your Password - Yakan E-commerce',
