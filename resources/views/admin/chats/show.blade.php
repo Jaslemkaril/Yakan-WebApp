@@ -19,13 +19,13 @@
     }
 
     /* Top bar */
-    .cs-topbar { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: #fff; border-bottom: 1px solid #e9e5e0; gap: 16px; flex-wrap: wrap; position: sticky; top: 0; z-index: 5; }
-    .cs-topbar-left { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-    .cs-back { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #6b7280; text-decoration: none; font-weight: 500; transition: color 0.2s; }
+    .cs-topbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; background: rgba(255, 255, 255, 0.94); border-bottom: 1px solid #e9e5e0; gap: 12px; flex-wrap: wrap; position: sticky; top: 0; z-index: 25; backdrop-filter: blur(6px); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06); }
+    .cs-topbar-left { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .cs-back { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: #6b7280; text-decoration: none; font-weight: 500; transition: color 0.2s; }
     .cs-back:hover { color: #800000; }
-    .cs-title { font-size: 1.15rem; font-weight: 700; color: #1a1a1a; display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .cs-title .icon-wrap { width: 32px; height: 32px; background: linear-gradient(135deg, #800000, #5a0000); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.8rem; flex-shrink: 0; }
-    .cs-topbar-right { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+    .cs-title { font-size: 1.05rem; font-weight: 700; color: #1a1a1a; display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cs-title .icon-wrap { width: 30px; height: 30px; background: linear-gradient(135deg, #800000, #5a0000); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.75rem; flex-shrink: 0; }
+    .cs-topbar-right { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
     .cs-info-toggle { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid #e5e7eb; background: #fff; color: #6b7280; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
     .cs-info-toggle:hover { color: #800000; border-color: #d9c1c1; background: #fdf8f8; }
 
@@ -184,7 +184,7 @@
         .cs-wrap { height: auto; min-height: calc(100dvh - 7.25rem); border-radius: 10px; }
         .cs-body { flex-direction: column; }
         .cs-sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e9e5e0; max-height: 42vh; overflow-y: auto; }
-        .cs-topbar { padding: 14px 16px; }
+        .cs-topbar { padding: 10px 12px; }
         .cs-messages { padding: 16px; }
         .cs-reply { padding: 10px 12px; }
         .cs-info-drawer { width: 100vw; }
