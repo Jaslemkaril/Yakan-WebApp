@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Services\SendGridService;
+use App\Services\TransactionalMailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -115,7 +115,7 @@ class OtpVerificationController extends Controller
         \Log::info('OTP resend - generated new OTP', ['user_id' => $user->id, 'email' => $email]);
 
         // Send OTP email via the configured mail transport (Brevo/SMTP ready)
-        $sendResult = SendGridService::sendViewDetailed(
+        $sendResult = TransactionalMailService::sendViewDetailed(
             $user->email,
             'Verify Your Email - Yakan E-commerce',
             'emails.otp-verification',
@@ -129,7 +129,7 @@ class OtpVerificationController extends Controller
                 'error' => $sendResult['error'] ?? null,
             ]);
 
-            $sendResult = SendGridService::sendViewDetailed(
+            $sendResult = TransactionalMailService::sendViewDetailed(
                 $user->email,
                 'Verify Your Email - Yakan E-commerce',
                 'emails.otp-verification',

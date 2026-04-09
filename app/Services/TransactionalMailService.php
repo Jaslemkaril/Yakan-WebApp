@@ -5,7 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
-class SendGridService
+class TransactionalMailService
 {
     /**
      * Send an email and return a detailed delivery attempt result.
@@ -17,7 +17,6 @@ class SendGridService
         $host = (string) config('mail.mailers.smtp.host');
         $port = (string) config('mail.mailers.smtp.port');
         $fromEmail = config('mail.from.address');
-        $fromName = config('mail.from.name');
 
         if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
             Log::error('Mail send: Invalid recipient email', ['to' => $to]);
@@ -40,8 +39,7 @@ class SendGridService
         }
 
         try {
-            // Send using whatever SMTP provider is configured (Brevo/SendGrid/Gmail/etc).
-            Mail::mailer($mailer)->send([], [], function ($message) use ($to, $subject, $htmlContent, $textContent) {
+            Mail::mailer($mailer)->send([], [], function ($message) use ($to, $subject, $htmlContent) {
                 $message->to($to)->subject($subject);
                 $message->html($htmlContent);
             });
@@ -88,7 +86,7 @@ class SendGridService
     }
 
     /**
-     * Render a Blade view to HTML and send via SendGrid API.
+     * Render a Blade view to HTML and send.
      */
     public static function sendView(string $to, string $subject, string $view, array $data = []): bool
     {
@@ -97,7 +95,7 @@ class SendGridService
     }
 
     /**
-     * Render a Blade view to HTML and send via SendGrid API with detailed result.
+     * Render a Blade view to HTML and send with detailed result.
      */
     public static function sendViewDetailed(string $to, string $subject, string $view, array $data = []): array
     {

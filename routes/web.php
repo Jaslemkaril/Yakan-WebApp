@@ -301,16 +301,16 @@ Route::get('/test-welcome-email', function () {
             'last_name' => 'User',
         ]);
         
-        \Log::info('Attempting to send test welcome email via SendGrid', ['email' => $testUser->email]);
+        \Log::info('Attempting to send test welcome email via configured mail transport', ['email' => $testUser->email]);
         
         // Send the welcome email
         \Mail::to($testUser->email)->send(new \App\Mail\WelcomeEmail($testUser));
         
-        \Log::info('Test welcome email sent successfully via SendGrid');
+        \Log::info('Test welcome email sent successfully via configured mail transport');
         
         return response()->json([
             'status' => 'success',
-            'message' => 'Welcome email sent successfully via SendGrid!',
+            'message' => 'Welcome email sent successfully via configured mail transport!',
             'sent_to' => $testUser->email,
             'mail_config' => [
                 'mailer' => config('mail.default'),
@@ -352,14 +352,14 @@ Route::get('/test-registration-access', function () {
     ]);
 });
 
-// Test email via configured Laravel mail transport (SMTP/Brevo/SendGrid)
-Route::get('/test-sendgrid', function () {
+// Test email via configured Laravel mail transport (SMTP/Brevo)
+Route::get('/test-mail', function () {
     $email = request()->get('email', 'coloresdeartes16@gmail.com');
     
-    $result = \App\Services\SendGridService::send(
+    $result = \App\Services\TransactionalMailService::send(
         $email,
-        'Yakan - SendGrid Test Email',
-        '<h1>Test Email</h1><p>This is a test email from Yakan E-commerce sent via SendGrid HTTP API at ' . now() . '</p>'
+        'Yakan - Mail Test Email',
+        '<h1>Test Email</h1><p>This is a test email from Yakan E-commerce sent via the configured mail transport at ' . now() . '</p>'
     );
     
     return response()->json([
@@ -387,7 +387,7 @@ Route::get('/test-password-reset-email', function () {
     $resetUrl = 'https://yakan-webapp-production.up.railway.app/reset-password/TEST_TOKEN_123?email=' . urlencode($email);
     
     try {
-        $result = \App\Services\SendGridService::sendView(
+        $result = \App\Services\TransactionalMailService::sendView(
             $user->email,
             'Reset Your Password - Yakan E-commerce',
             'emails.password-reset',

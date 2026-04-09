@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Services\SendGridService;
+use App\Services\TransactionalMailService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -69,7 +69,7 @@ class PasswordResetLinkController extends Controller
         ]);
 
         // Send email via configured mail transport
-        $emailSent = SendGridService::sendView(
+        $emailSent = TransactionalMailService::sendView(
             $user->email,
             'Reset Your Password - Yakan E-commerce',
             'emails.password-reset',
