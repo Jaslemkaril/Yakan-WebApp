@@ -679,6 +679,10 @@
                 <h3 class="text-lg font-semibold text-gray-900">Quick Actions</h3>
             </div>
             <div class="space-y-3">
+                @php
+                    $canCancelOrder = !in_array(strtolower((string) $order->status), ['delivered', 'completed', 'refunded', 'cancelled'], true);
+                @endphp
+
                 <!-- Refund Button -->
                 @if($order->payment_status === 'paid' && $order->status !== 'cancelled')
                 <form action="{{ route('admin.orders.refund', $order->id) }}" method="POST">
@@ -701,8 +705,8 @@
                     Download Invoice
                 </a>
                 
-                <!-- Cancel Order (if not cancelled) -->
-                @if($order->status !== 'cancelled')
+                <!-- Cancel Order -->
+                @if($canCancelOrder)
                 <form action="{{ route('admin.orders.cancel', $order->id) }}" method="POST">
                     @csrf
                     <button type="submit" onclick="return confirm('Are you sure you want to cancel this order?');" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium flex items-center justify-center">
@@ -712,6 +716,13 @@
                         Cancel Order
                     </button>
                 </form>
+                @else
+                <button type="button" disabled class="w-full bg-gray-300 text-gray-600 px-4 py-2 rounded-lg cursor-not-allowed font-medium flex items-center justify-center" title="Delivered/completed orders cannot be cancelled.">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                    Cancel Order Unavailable
+                </button>
                 @endif
             </div>
         </div>

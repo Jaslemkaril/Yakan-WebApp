@@ -1,4 +1,8 @@
 @foreach($orders as $order)
+@php
+    $currentStatus = strtolower((string) ($order->status ?? ''));
+    $canTransitionToCancelled = !in_array($currentStatus, ['delivered', 'completed', 'refunded'], true);
+@endphp
 <tr class="hover:bg-gray-100">
     <td class="py-3 px-4">{{ $order->id }}</td>
     <td class="py-3 px-4">{{ $order->user->name ?? 'Guest' }}</td>
@@ -18,7 +22,7 @@
                 <option value="processing" {{ $order->status=='processing'?'selected':'' }}>Processing</option>
                 <option value="shipped" {{ $order->status=='shipped'?'selected':'' }}>Shipped</option>
                 <option value="delivered" {{ $order->status=='delivered'?'selected':'' }}>Delivered</option>
-                <option value="cancelled" {{ $order->status=='cancelled'?'selected':'' }}>Cancelled</option>
+                <option value="cancelled" {{ $order->status=='cancelled'?'selected':'' }} {{ !$canTransitionToCancelled && $order->status!=='cancelled' ? 'disabled' : '' }}>Cancelled</option>
             </select>
             <input type="hidden" name="confirm_delivery" value="0">
         </form>

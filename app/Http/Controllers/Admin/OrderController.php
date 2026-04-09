@@ -135,6 +135,13 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Please confirm delivery before marking this order as delivered.');
         }
 
+        if (
+            $request->status === 'cancelled'
+            && in_array(strtolower((string) $order->status), ['delivered', 'completed', 'refunded'], true)
+        ) {
+            return redirect()->back()->with('error', 'Delivered or completed orders can no longer be cancelled.');
+        }
+
         $oldStatus = $order->status;
         $order->status = $request->status;
         
@@ -258,6 +265,13 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Please confirm delivery before marking this order as delivered.');
         }
 
+        if (
+            $request->status === 'cancelled'
+            && in_array(strtolower((string) $order->status), ['delivered', 'completed', 'refunded'], true)
+        ) {
+            return redirect()->back()->with('error', 'Delivered or completed orders can no longer be cancelled.');
+        }
+
         $order->status = $request->status;
         
         // Update payment status if provided
@@ -321,6 +335,37 @@ class OrderController extends Controller
         }
 
         return redirect()->back()->with('success', 'Order refunded successfully.');
+    }
+
+    // Cancel order
+    public function cancel(Order $order)
+    {
+        $currentStatus = strtolower((string) $order->status);
+
+        if (in_array($currentStatus, ['delivered', 'completed', 'refunded'], true)) {
+            return redirect()->back()->with('error', 'Delivered or completed orders can no longer be cancelled.');
+        }
+
+        if ($currentStatus === 'cancelled') {
+            return redirect()->back()->with('info', 'Order is already cancelled.');
+        }
+
+        $order->status = 'cancelled';
+        $order->payment_status = $order->payment_status === 'paid' ? 'refunded' : 'failed';
+        $order->cancelled_at = now();
+        $order->tracking_status = 'Cancelled';
+        $order->appendTrackingEvent('Cancelled');
+        $order->save();
+
+        foreach ($order->orderItems as $item) {
+            $product = $item->product;
+            if ($product) {
+                $product->stock += $item->quantity;
+                $product->save();
+            }
+        }
+
+        return redirect()->back()->with('success', 'Order cancelled successfully.');
     }
 
     /**
