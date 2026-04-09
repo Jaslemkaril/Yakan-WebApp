@@ -4,192 +4,92 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reset Your Password - Yakan</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f8f9fa;
-        }
-        .container {
-            background: white;
-            border-radius: 12px;
-            padding: 40px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .logo {
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-        .logo-icon {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, #800000, #600000);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 24px;
-        }
-        .logo-text {
-            font-size: 28px;
-            font-weight: bold;
-            background: linear-gradient(135deg, #800000, #ea580c);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .reset-banner {
-            background: linear-gradient(135deg, #800000, #600000);
-            color: white;
-            padding: 30px;
-            border-radius: 12px;
-            text-align: center;
-            margin: 30px 0;
-        }
-        .reset-banner h1 {
-            margin: 0;
-            font-size: 32px;
-            margin-bottom: 10px;
-        }
-        .reset-banner p {
-            margin: 0;
-            font-size: 16px;
-            opacity: 0.9;
-        }
-        .content {
-            margin: 20px 0;
-        }
-        .content p {
-            margin-bottom: 15px;
-            color: #555;
-        }
-        .button-container {
-            text-align: center;
-            margin: 35px 0;
-        }
-        .reset-button {
-            display: inline-block;
-            padding: 16px 40px;
-            background: linear-gradient(135deg, #dc2626, #b91c1c);
-            color: white;
-            text-decoration: none;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 16px;
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-        }
-        .expiry-notice {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-        .expiry-notice p {
-            margin: 0;
-            color: #856404;
-            font-size: 14px;
-        }
-        .security-notice {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 30px;
-        }
-        .security-notice h3 {
-            margin-top: 0;
-            color: #800000;
-            font-size: 16px;
-        }
-        .security-notice ul {
-            margin: 10px 0;
-            padding-left: 20px;
-        }
-        .security-notice li {
-            margin-bottom: 8px;
-            color: #666;
-            font-size: 14px;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            padding-top: 25px;
-            border-top: 2px solid #e5e7eb;
-        }
-        .footer p {
-            color: #9ca3af;
-            font-size: 13px;
-            margin: 5px 0;
-        }
-    </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">
-                <div class="logo-icon">Y</div>
-                <div class="logo-text">Yakan</div>
-            </div>
-        </div>
+<body style="margin:0;padding:0;background-color:#f4f5f7;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+    @php
+        $displayName = trim((string) (
+            $user->first_name
+            ?? $user->name
+            ?? strtok((string) ($user->email ?? ''), '@')
+            ?? 'Customer'
+        ));
+        if ($displayName === '') {
+            $displayName = 'Customer';
+        }
+    @endphp
 
-        <div class="reset-banner">
-            <h1>Password Reset</h1>
-            <p>We received a request to reset your password</p>
-        </div>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f4f5f7;padding:24px 12px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:640px;background-color:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e5e7eb;">
+                    <tr>
+                        <td style="background:linear-gradient(135deg,#7a0018 0%,#5a0012 100%);padding:26px 28px;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr>
+                                    <td style="font-size:30px;font-weight:700;line-height:1;color:#ffffff;letter-spacing:0.2px;">Yakan</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding-top:14px;font-size:26px;line-height:1.2;font-weight:700;color:#ffffff;">Password Reset Request</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding-top:8px;font-size:14px;line-height:1.5;color:#f8d7dc;">A secure reset link was requested for your account.</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-        <div class="content">
-            <p>Hello {{ $user->first_name }},</p>
-            
-            <p>You are receiving this email because we received a password reset request for your account.</p>
-            
-            <p>Click the button below to reset your password:</p>
-        </div>
+                    <tr>
+                        <td style="padding:28px 28px 8px 28px;font-size:16px;line-height:1.6;color:#1f2937;">
+                            Hello {{ $displayName }},
+                        </td>
+                    </tr>
 
-        <div class="button-container">
-            <a href="{{ $resetUrl }}" class="reset-button">
-                Reset Password
-            </a>
-        </div>
+                    <tr>
+                        <td style="padding:0 28px 6px 28px;font-size:15px;line-height:1.7;color:#4b5563;">
+                            We received a request to reset your password. Click the button below to continue.
+                        </td>
+                    </tr>
 
-        <div class="expiry-notice">
-            <p><strong>⏰ This password reset link will expire in 60 minutes.</strong></p>
-        </div>
+                    <tr>
+                        <td align="center" style="padding:24px 28px 20px 28px;">
+                            <a href="{{ $resetUrl }}" style="display:inline-block;background-color:#7a0018;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;line-height:1;padding:14px 28px;border-radius:10px;">Reset Password</a>
+                        </td>
+                    </tr>
 
-        <div class="content">
-            <p>If you're having trouble clicking the button, copy and paste the URL below into your web browser:</p>
-            <p style="word-break: break-all; color: #800000; font-size: 13px;">{{ $resetUrl }}</p>
-        </div>
+                    <tr>
+                        <td style="padding:0 28px 18px 28px;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#fff5f5;border:1px solid #f3d6da;border-radius:10px;">
+                                <tr>
+                                    <td style="padding:12px 14px;font-size:13px;line-height:1.6;color:#7f1d1d;">
+                                        This link expires in 60 minutes. If you did not request this, you can safely ignore this email.
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-        <div class="security-notice">
-            <h3>🔒 Security Tips:</h3>
-            <ul>
-                <li>If you didn't request a password reset, please ignore this email or contact support if you have concerns.</li>
-                <li>Never share your password with anyone.</li>
-                <li>Use a strong, unique password for your Yakan account.</li>
-                <li>This link can only be used once.</li>
-            </ul>
-        </div>
+                    <tr>
+                        <td style="padding:0 28px 8px 28px;font-size:13px;line-height:1.6;color:#6b7280;">
+                            If the button does not work, copy and paste this link into your browser:
+                        </td>
+                    </tr>
 
-        <div class="footer">
-            <p><strong>Yakan E-commerce</strong></p>
-            <p>Premium quality products and custom orders tailored to your needs.</p>
-            <p style="margin-top: 15px;">
-                This email was sent to {{ $user->email }}<br>
-                If you have questions, contact us at support@yakan.com
-            </p>
-        </div>
-    </div>
+                    <tr>
+                        <td style="padding:0 28px 24px 28px;">
+                            <div style="font-size:12px;line-height:1.7;color:#7a0018;word-break:break-all;background-color:#fafafa;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;">{{ $resetUrl }}</div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="border-top:1px solid #eceff3;padding:18px 28px 24px 28px;font-size:12px;line-height:1.7;color:#9ca3af;">
+                            <div style="font-weight:700;color:#6b7280;">Yakan E-commerce</div>
+                            <div>This email was sent to {{ $user->email ?? 'your account email' }}.</div>
+                            <div>If you need help, contact support@yakan.com.</div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>
