@@ -19,7 +19,11 @@ class TransactionalMailService
         $host = (string) config('mail.mailers.smtp.host');
         $port = (string) config('mail.mailers.smtp.port');
         $username = (string) config('mail.mailers.smtp.username');
-        $fromEmail = config('mail.from.address');
+        $fromEmail = (string) config('mail.from.address', '');
+
+        if ($mailer === '' || str_contains($mailer, '"')) {
+            $mailer = 'smtp';
+        }
 
         if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
             Log::error('Mail send: Invalid recipient email', ['to' => $to]);
@@ -42,8 +46,17 @@ class TransactionalMailService
         }
 
         try {
-            Mail::mailer($mailer)->html($htmlContent, function ($message) use ($to, $subject) {
+            try {
+                $mailerInstance = Mail::mailer($mailer);
+            } catch (\Throwable $mailerException) {
+                // Fallback to smtp if MAIL_MAILER value is invalid/misconfigured.
+                $mailer = 'smtp';
+                $mailerInstance = Mail::mailer($mailer);
+            }
+
+            $mailerInstance->send([], [], function ($message) use ($to, $subject, $htmlContent) {
                 $message->to($to)->subject($subject);
+                $message->setBody($htmlContent, 'text/html');
             });
 
             Log::info('Mail send: Email accepted by transport', [
@@ -131,11 +144,30 @@ class TransactionalMailService
                 continue;
             }
 
-            if (is_string($value) && trim($value) === '') {
+            if (is_string($value)) {
+                $value = self::sanitizeEnvString($value);
+            }
+
+            if (is_string($value) && $value === '') {
                 continue;
             }
 
             config([$key => $value]);
         }
+    }
+
+    private static function sanitizeEnvString(string $value): string
+    {
+        $value = trim($value);
+
+        if (strlen($value) >= 2) {
+            $first = $value[0];
+            $last = $value[strlen($value) - 1];
+            if (($first === '"' && $last === '"') || ($first === "'" && $last === "'")) {
+                $value = substr($value, 1, -1);
+            }
+        }
+
+        return trim($value);
     }
 }
