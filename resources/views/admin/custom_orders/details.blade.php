@@ -215,75 +215,119 @@
 
     {{-- ===== Batch/Submission Panel (Image-1 Style) ===== --}}
     @if($batchItems->count() > 1)
-    <div class="border rounded-2xl p-5 mb-6" style="background:#fdf9f9; border-color:#e9bfc5;">
-        <h3 class="text-3xl font-black mb-4" style="color:#800000;">All Items From This Submission</h3>
+    <div class="border rounded-2xl p-4 mb-6" style="background:#fdf9f9; border-color:#e9bfc5;">
+        <h3 class="text-2xl font-extrabold mb-3" style="color:#800000;">All Items From This Submission</h3>
 
-        <div class="space-y-4">
+        <div class="space-y-3">
             @foreach($batchItems as $index => $item)
                 @php
                     $itemPrice = $getAdminPriceParts($item);
                     $statusPill = $item->status ?? 'pending';
                     $itemDeliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+                    $itemPaymentStatus = $item->payment_status ?? 'unpaid';
 
                     $patternLabel = 'N/A';
+                    $thumbPatternModel = null;
                     $rawPatterns = $item->patterns;
                     $patternArr = is_array($rawPatterns) ? $rawPatterns : [];
                     if (!empty($patternArr)) {
                         $firstPattern = $patternArr[0] ?? null;
                         if (is_numeric($firstPattern)) {
-                            $patternModel = \App\Models\YakanPattern::find((int) $firstPattern);
-                            $patternLabel = $patternModel?->name ?? ('Pattern #' . (int) $firstPattern);
+                            $thumbPatternModel = \App\Models\YakanPattern::find((int) $firstPattern);
+                            $patternLabel = $thumbPatternModel?->name ?? ('Pattern #' . (int) $firstPattern);
                         } else {
                             $patternLabel = (string) $firstPattern;
+                            $thumbPatternModel = \App\Models\YakanPattern::where('name', $patternLabel)->first();
                         }
                     }
+
+                    $itemSpecs = trim((string) ($item->specifications ?? ''));
+                    $itemSpecial = trim((string) ($item->special_requirements ?? ''));
                 @endphp
 
-                <div class="rounded-2xl border p-5" style="background:#fff; border-color:#e9bfc5;">
-                    <div class="flex items-start justify-between gap-3 mb-4">
+                <div class="rounded-2xl border p-4" style="background:#fff; border-color:#e9bfc5;">
+                    <div class="flex items-start justify-between gap-3 mb-3">
                         <div class="flex items-start gap-3 min-w-0">
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-extrabold" style="background:#800000;">{{ $index + 1 }}</div>
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background:#800000;">{{ $index + 1 }}</div>
                             <div class="min-w-0">
-                                <div class="text-2xl font-black truncate" style="color:#800000;">Custom Order ID: {{ $item->display_ref ?? ('CO-' . str_pad((string) $item->id, 5, '0', STR_PAD_LEFT)) }}</div>
-                                <div class="text-xl text-gray-600">{{ optional($item->created_at)->format('M d, Y g:i A') }}</div>
+                                <div class="text-xl md:text-2xl font-extrabold truncate" style="color:#800000;">Custom Order ID: {{ $item->display_ref ?? ('CO-' . str_pad((string) $item->id, 5, '0', STR_PAD_LEFT)) }}</div>
+                                <div class="text-sm text-gray-600">{{ optional($item->created_at)->format('M d, Y g:i A') }}</div>
                             </div>
                         </div>
-                        <span class="inline-flex items-center px-4 py-1.5 rounded-full text-base font-semibold {{ in_array($statusPill, ['approved','processing','in_production','production_complete','out_for_delivery','delivered','completed']) ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold {{ in_array($statusPill, ['approved','processing','in_production','production_complete','out_for_delivery','delivered','completed']) ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">
                             {{ ucfirst(str_replace('_', ' ', $statusPill)) }}
                         </span>
                     </div>
 
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
                         <div>
-                            <div class="text-gray-500 text-sm">Pattern</div>
-                            <div class="font-bold text-2xl text-gray-900">{{ $patternLabel }}</div>
+                            <div class="text-gray-500 text-xs">Pattern</div>
+                            <div class="font-bold text-xl text-gray-900">{{ $patternLabel }}</div>
+                            @if($thumbPatternModel && $thumbPatternModel->hasSvg())
+                                <div class="mt-2 w-20 h-20 rounded border border-[#e9bfc5] bg-white flex items-center justify-center overflow-hidden">
+                                    <div style="max-width:72px; max-height:72px;">{!! $thumbPatternModel->getSvgContent() !!}</div>
+                                </div>
+                            @endif
                         </div>
                         <div>
-                            <div class="text-gray-500 text-sm">Fabric Type</div>
-                            <div class="font-bold text-2xl text-gray-900">{{ $item->fabric_type_name ?? 'N/A' }}</div>
+                            <div class="text-gray-500 text-xs">Fabric Type</div>
+                            <div class="font-bold text-xl text-gray-900">{{ $item->fabric_type_name ?? 'N/A' }}</div>
                         </div>
                         <div>
-                            <div class="text-gray-500 text-sm">Intended Use</div>
-                            <div class="font-bold text-2xl text-gray-900">{{ $item->intended_use_label ?? 'N/A' }}</div>
+                            <div class="text-gray-500 text-xs">Intended Use</div>
+                            <div class="font-bold text-xl text-gray-900">{{ $item->intended_use_label ?? 'N/A' }}</div>
                         </div>
                         <div>
-                            <div class="text-gray-500 text-sm">Quantity</div>
-                            <div class="font-bold text-2xl text-gray-900">{{ number_format((float) ($item->fabric_quantity_meters ?? 0), 2) }} meters</div>
+                            <div class="text-gray-500 text-xs">Quantity</div>
+                            <div class="font-bold text-xl text-gray-900">{{ number_format((float) ($item->fabric_quantity_meters ?? 0), 2) }} meters</div>
                         </div>
                         <div>
-                            <div class="text-gray-500 text-sm">Est. Price</div>
-                            <div class="font-bold text-2xl" style="color:#800000;">₱{{ number_format((float) ($itemPrice['quoted'] ?? 0), 2) }}</div>
+                            <div class="text-gray-500 text-xs">Est. Price</div>
+                            <div class="font-bold text-xl" style="color:#800000;">₱{{ number_format((float) ($itemPrice['quoted'] ?? 0), 2) }}</div>
                         </div>
                     </div>
 
                     <div class="border-t pt-3 flex items-center justify-between" style="border-color:#efcfd3;">
-                        <div class="text-xl text-gray-700">
+                        <div class="text-base text-gray-700">
                             Delivery:
                             <span class="font-bold text-gray-900">{{ $itemDeliveryType === 'pickup' ? 'Pickup' : 'Delivery' }}</span>
                         </div>
-                        <a href="{{ route('admin.custom-orders.show', $item->id) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" class="text-2xl font-extrabold" style="color:#800000;">
+                        <a href="#" onclick="event.preventDefault(); toggleBatchItemDetails({{ $item->id }});" class="text-base font-extrabold" style="color:#800000;">
                             View Full Details→
                         </a>
+                    </div>
+
+                    <div id="batch-item-details-{{ $item->id }}" class="hidden mt-3 rounded-xl border p-3" style="border-color:#efcfd3; background:#fff9f9;">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <div class="text-gray-500 text-xs uppercase">Status</div>
+                                <div class="font-semibold text-gray-900">{{ ucfirst(str_replace('_', ' ', $statusPill)) }}</div>
+                            </div>
+                            <div>
+                                <div class="text-gray-500 text-xs uppercase">Payment</div>
+                                <div class="font-semibold text-gray-900">{{ ucfirst(str_replace('_', ' ', $itemPaymentStatus)) }}</div>
+                            </div>
+                            <div>
+                                <div class="text-gray-500 text-xs uppercase">Total Price</div>
+                                <div class="font-semibold text-gray-900">₱{{ number_format((float) ($itemPrice['total'] ?? $itemPrice['quoted'] ?? 0), 2) }}</div>
+                            </div>
+                            <div>
+                                <div class="text-gray-500 text-xs uppercase">Delivery Type</div>
+                                <div class="font-semibold text-gray-900">{{ $itemDeliveryType === 'pickup' ? 'Store Pickup' : 'Delivery' }}</div>
+                            </div>
+                        </div>
+                        @if($itemSpecs !== '')
+                            <div class="mt-3">
+                                <div class="text-gray-500 text-xs uppercase mb-1">Specifications</div>
+                                <p class="text-sm text-gray-800 whitespace-pre-wrap">{{ $itemSpecs }}</p>
+                            </div>
+                        @endif
+                        @if($itemSpecial !== '')
+                            <div class="mt-3">
+                                <div class="text-gray-500 text-xs uppercase mb-1">Special Requirements</div>
+                                <p class="text-sm text-gray-800 whitespace-pre-wrap">{{ $itemSpecial }}</p>
+                            </div>
+                        @endif
                     </div>
                 </div>
             @endforeach
@@ -1612,6 +1656,15 @@ function formatReceiptDate(isoText) {
     const dateObj = new Date(isoText);
     if (Number.isNaN(dateObj.getTime())) return safeText(isoText, 'N/A');
     return dateObj.toLocaleString();
+}
+
+function toggleBatchItemDetails(itemId) {
+    const detailsPanel = document.getElementById(`batch-item-details-${itemId}`);
+    if (!detailsPanel) {
+        return;
+    }
+
+    detailsPanel.classList.toggle('hidden');
 }
 
 function printPaymongoReceipt() {
