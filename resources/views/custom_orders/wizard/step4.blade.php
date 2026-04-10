@@ -940,6 +940,8 @@
                                 }
                                 $bPatternName = $bPatternNames->isNotEmpty() ? $bPatternNames->implode(', ') : ($bWizard['pattern']['name'] ?? '—');
                                 $bPreview = $bPreview ?? ($bWizard['pattern']['preview_image'] ?? ($bWizard['design']['image'] ?? null));
+                                $bAuthToken = request('auth_token');
+                                $bEditUrl = route('custom_orders.edit.batch.item', $bIdx) . ($bAuthToken ? '?auth_token=' . urlencode($bAuthToken) : '');
                                 $bFabricTypeName = '—';
                                 if (!empty($bWizard['fabric']['type'])) {
                                     $bFt = \App\Models\FabricType::find($bWizard['fabric']['type']);
@@ -956,6 +958,18 @@
                                             <p class="text-sm font-semibold text-gray-900 truncate">{{ $bItem['summary'] ?? 'Custom Item ' . ($bIdx + 1) }}</p>
                                             <p class="text-xs text-gray-500">Pattern: <span class="font-semibold text-gray-700">{{ $bPatternName }}</span></p>
                                             <p class="text-xs text-gray-500">Fabric: <span class="font-semibold text-gray-700">{{ $bFabricTypeName }}</span></p>
+                                            <div class="mt-1">
+                                                <a href="{{ $bEditUrl }}"
+                                                   class="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold transition-colors"
+                                                   style="border-color:#8b3a56; color:#8b3a56; background-color:#fff5f5;"
+                                                   title="View and edit this item">
+                                                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                                    </svg>
+                                                    View/Edit
+                                                </a>
+                                            </div>
                                             <form method="POST" action="{{ route('custom_orders.update.batch.item', $bIdx) }}" class="flex items-center flex-wrap gap-x-2 gap-y-1 mt-1 batch-item-form" data-index="{{ $bIdx }}">
                                                 @csrf
                                                 @method('PATCH')
@@ -974,7 +988,9 @@
                                     </div>
                                     <div class="flex items-start gap-2 flex-shrink-0">
                                         @if(!empty($bPreview))
-                                            <img src="{{ $bPreview }}" alt="Pattern preview" class="w-14 h-14 rounded-md object-cover border" style="border-color:#e0b0b0;">
+                                            <a href="{{ $bEditUrl }}" title="Open this item">
+                                                <img src="{{ $bPreview }}" alt="Pattern preview" class="w-14 h-14 rounded-md object-cover border" style="border-color:#e0b0b0;">
+                                            </a>
                                         @endif
                                         <form method="POST" action="{{ route('custom_orders.remove.batch.item', $bIdx) }}" onsubmit="return confirm('Remove this item from your order batch?');">
                                             @csrf
