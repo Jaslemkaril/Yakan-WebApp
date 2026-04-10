@@ -1999,6 +1999,10 @@ class CustomOrderController extends Controller
         $formDeliveryProv = $formData['resolved_delivery_province'] ?? ($details['delivery_province'] ?? null);
 
         // ----- Build order -----
+        $autoConfirmPatternOrder = ($designMethod === 'pattern');
+        $initialStatus = $autoConfirmPatternOrder ? 'approved' : 'pending';
+        $initialPaymentStatus = $autoConfirmPatternOrder ? 'unpaid' : 'pending';
+
         if ($isProductFlow) {
             $order = new CustomOrder();
             if ($batchColumnExists) $order->batch_order_number = $batchOrderNumber;
@@ -2006,9 +2010,13 @@ class CustomOrderController extends Controller
             $order->product_id         = $wizardData['product']['id'] ?? null;
             $order->specifications     = $formData['specifications'] ?? ($details['description'] ?? null);
             $order->quantity           = max(1, $formQuantity);
-            $order->status             = 'pending';
-            $order->payment_status     = 'pending';
+            $order->status             = $initialStatus;
+            $order->payment_status     = $initialPaymentStatus;
             $order->estimated_price    = $basePrice;
+            $order->final_price        = $basePrice;
+            if ($autoConfirmPatternOrder) {
+                $order->approved_at = now();
+            }
             $order->delivery_type      = $formDeliveryType;
             $order->delivery_address   = $formDeliveryAddr ?: ($details['delivery_address'] ?? null);
             $order->delivery_city      = $formDeliveryCity;
@@ -2047,8 +2055,8 @@ class CustomOrderController extends Controller
                 'quantity'               => max(1, $formQuantity),
                 'estimated_price'        => $basePrice,
                 'final_price'            => $basePrice,
-                'status'                 => 'pending',
-                'payment_status'         => 'pending',
+                'status'                 => $initialStatus,
+                'payment_status'         => $initialPaymentStatus,
                 'design_upload'          => $imagePath,
                 'design_method'          => $designMethod,
                 'design_metadata'        => $designMetadata,
@@ -2065,10 +2073,60 @@ class CustomOrderController extends Controller
                 'shipping_fee'           => $shippingFee,
                 'phone'                  => $details['customer_phone'] ?? null,
                 'email'                  => $details['customer_email'] ?? null,
+                'approved_at'            => $autoConfirmPatternOrder ? now() : null,
             ], $batchColumnExists ? ['batch_order_number' => $batchOrderNumber] : []));
         }
 
         return $order;
+    }
+
+    /**
+     * Pattern-based (non-chat) custom orders have deterministic pricing,
+     * so they should bypass quote-review and go straight to payment-ready.
+     */
+    private function shouldAutoConfirmPatternOrder(?CustomOrder $order): bool
+    {
+        if (!$order) {
+            return false;
+        }
+
+        return empty($order->chat_id) && (($order->design_method ?? null) === 'pattern');
+    }
+
+    /**
+     * Backfill legacy non-chat pattern orders that were left in pending/quoted state.
+     */
+    private function autoConfirmPatternOrders($orders): int
+    {
+        $updated = 0;
+
+        foreach ($orders as $item) {
+            if (!$this->shouldAutoConfirmPatternOrder($item)) {
+                continue;
+            }
+
+            if (!in_array($item->status, ['pending', 'price_quoted'], true)) {
+                continue;
+            }
+
+            $item->status = 'approved';
+            if (empty($item->approved_at)) {
+                $item->approved_at = now();
+            }
+
+            if (empty($item->final_price) && !empty($item->estimated_price)) {
+                $item->final_price = $item->estimated_price;
+            }
+
+            if (empty($item->payment_status) || $item->payment_status === 'pending') {
+                $item->payment_status = 'unpaid';
+            }
+
+            $item->save();
+            $updated++;
+        }
+
+        return $updated;
     }
 
     /**
@@ -2394,6 +2452,10 @@ class CustomOrderController extends Controller
             }
 
             // Create custom order
+            $autoConfirmPatternOrder = ($designMethod === 'pattern');
+            $initialStatus = $autoConfirmPatternOrder ? 'approved' : 'pending';
+            $initialPaymentStatus = $autoConfirmPatternOrder ? 'unpaid' : 'pending';
+
             if ($isProductFlow) {
                 // Create a product-based custom order (safe property assignment)
                 $order = new CustomOrder();
@@ -2402,9 +2464,13 @@ class CustomOrderController extends Controller
                 $order->product_id = $wizardData['product']['id'] ?? null;
                 $order->specifications = $formSpecifications ?? ($details['description'] ?? null);
                 $order->quantity = max(1, $formQuantity);
-                $order->status = 'pending';
-                $order->payment_status = 'pending';
+                $order->status = $initialStatus;
+                $order->payment_status = $initialPaymentStatus;
                 $order->estimated_price = $basePrice;
+                $order->final_price = $basePrice;
+                if ($autoConfirmPatternOrder) {
+                    $order->approved_at = now();
+                }
                 // Contact and delivery info
                 $order->delivery_type = $formDeliveryType ?: ($details['delivery_type'] ?? null);
                 $order->delivery_address = $formDeliveryAddr ?: ($details['delivery_address'] ?? null);
@@ -2459,12 +2525,13 @@ class CustomOrderController extends Controller
                     'quantity' => max(1, $formQuantity),
                     'estimated_price' => $basePrice,
                     'final_price' => $basePrice,
-                    'status' => 'pending',
-                    'payment_status' => 'pending',
+                    'status' => $initialStatus,
+                    'payment_status' => $initialPaymentStatus,
                     'design_upload' => $imagePath,
                     'design_method' => $designMethod,
                     'design_metadata' => $designMetadata,
                     'customization_settings' => $customizationSettings,
+                    'approved_at' => $autoConfirmPatternOrder ? now() : null,
                     
                     // Fabric-specific fields
                     'fabric_type' => $wizardData['fabric']['type'] ?? null,
@@ -2519,13 +2586,22 @@ class CustomOrderController extends Controller
             $orderCount   = count($allOrders);
             $batchLabel   = $orderCount > 1 ? " (Batch #{$batchOrderNumber}, {$orderCount} items)" : "";
             $orderIdsText = implode(', #', array_map(fn($o) => $o->id, $allOrders));
+            $allAutoConfirmed = collect($allOrders)->every(fn($o) => $this->shouldAutoConfirmPatternOrder($o) && $o->status === 'approved');
+
+            $userNotificationBody = $allAutoConfirmed
+                ? "Your custom order{$batchLabel} has been submitted successfully. Order ID(s): #{$orderIdsText}. You can proceed directly to payment."
+                : "Your custom order{$batchLabel} has been submitted successfully. Order ID(s): #{$orderIdsText}. Pending admin review.";
+
+            $adminNotificationBody = $allAutoConfirmed
+                ? "A new custom order{$batchLabel} has been submitted by {$customOrder->user->name}. Order ID(s): #{$orderIdsText}. This is auto-confirmed (pattern-based) and payment-ready."
+                : "A new custom order{$batchLabel} has been submitted by {$customOrder->user->name}. Order ID(s): #{$orderIdsText}.";
 
             // Create notification for user
             \App\Models\Notification::createNotification(
                 $userId,
                 'custom_order',
                 'Custom Order Submitted',
-                "Your custom order{$batchLabel} has been submitted successfully. Order ID(s): #{$orderIdsText}. Pending admin review.",
+                $userNotificationBody,
                 route('custom_orders.show', $customOrder->id),
                 [
                     'order_id'         => $customOrder->id,
@@ -2543,7 +2619,7 @@ class CustomOrderController extends Controller
                     $admin->id,
                     'custom_order',
                     'New Custom Order',
-                    "A new custom order{$batchLabel} has been submitted by {$customOrder->user->name}. Order ID(s): #{$orderIdsText}.",
+                    $adminNotificationBody,
                     url('/admin/custom-orders'),
                     [
                         'order_id'           => $customOrder->id,
@@ -2814,6 +2890,12 @@ class CustomOrderController extends Controller
 
             $order->load('product');
             $batchOrders = $this->getUserBatchOrders($order, Auth::id());
+
+            // Backfill legacy non-chat pattern orders so they skip review and are payment-ready.
+            $this->autoConfirmPatternOrders($batchOrders);
+            $order->refresh();
+            $batchOrders = $this->getUserBatchOrders($order, Auth::id());
+
             $isBatchOrder = $batchOrders->count() > 1;
             $batchPaymentTotal = $this->calculateOrdersTotalWithShipping(
                 $batchOrders->where('payment_status', '!=', 'paid')->values()
@@ -2946,6 +3028,13 @@ class CustomOrderController extends Controller
 
             $batchOrders = $this->getUserBatchOrders($order, auth()->id());
             $isBatchPayment = $batchOrders->count() > 1;
+
+            // Ensure non-chat pattern orders can go straight to payment.
+            $this->autoConfirmPatternOrders($batchOrders);
+            $order->refresh();
+            $batchOrders = $this->getUserBatchOrders($order, auth()->id());
+            $isBatchPayment = $batchOrders->count() > 1;
+
             $paymentOrders = $batchOrders->where('payment_status', '!=', 'paid')->values();
 
             // Backfill legacy chat orders accepted by user but still marked as price_quoted.
@@ -3166,6 +3255,12 @@ class CustomOrderController extends Controller
                 'delivery_city'  => 'nullable|string|max:255',
                 'delivery_province' => 'nullable|string|max:255',
             ]);
+
+            $batchOrders = $this->getUserBatchOrders($order, Auth::id());
+
+            // Ensure non-chat pattern orders can go straight to payment.
+            $this->autoConfirmPatternOrders($batchOrders);
+            $order->refresh();
 
             $paymentOrders = $this->getUserBatchOrders($order, Auth::id())
                 ->where('payment_status', '!=', 'paid')
