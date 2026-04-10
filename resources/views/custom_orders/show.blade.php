@@ -65,7 +65,9 @@
         }
 
         $fullAddress = trim((string) ($item->delivery_address ?? ''));
-        if ($fullAddress !== '') {
+        $addressPartCount = count(array_filter(array_map('trim', explode(',', $fullAddress))));
+        $looksGenericAddress = $fullAddress !== '' && $addressPartCount <= 2;
+        if ($fullAddress !== '' && !$looksGenericAddress) {
             return $fullAddress;
         }
 
@@ -108,6 +110,10 @@
                     ]));
                 }
             }
+        }
+
+        if ($fullAddress !== '') {
+            return $fullAddress;
         }
 
         if ($cityProvince !== '') {
@@ -631,9 +637,10 @@
 
                             <div class="mt-2 pt-2 border-t flex items-center justify-between" style="border-color:#f1d2d2;">
                                 <p class="text-xs text-gray-600">Delivery: <span class="font-semibold text-gray-800">{{ ($item->delivery_type ?? 'delivery') === 'pickup' ? 'Store Pickup' : 'Delivery' }}</span></p>
-                                <a href="{{ route('custom_orders.show', ['order' => $item->id, 'auth_token' => $authToken]) }}"
+                                          <a href="#"
                                    class="text-xs font-semibold hover:underline"
-                                   style="color:#800000;">
+                                              style="color:#800000;"
+                                              onclick="toggleItemDetails({{ $item->id }}); return false;">
                                     View Full Details →
                                 </a>
                             </div>
@@ -2107,6 +2114,14 @@
 </div>
 
 <script>
+function toggleItemDetails(itemId) {
+    const el = document.getElementById('item-details-' + itemId);
+    if (!el) {
+        return;
+    }
+    el.classList.toggle('hidden');
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     var anchor = document.getElementById('left-action-anchor');
     var actionBlock = document.getElementById('action-buttons-block');
