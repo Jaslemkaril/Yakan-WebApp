@@ -2001,7 +2001,7 @@ class CustomOrderController extends Controller
         // ----- Build order -----
         $autoConfirmPatternOrder = ($designMethod === 'pattern');
         $initialStatus = $autoConfirmPatternOrder ? 'approved' : 'pending';
-        $initialPaymentStatus = $autoConfirmPatternOrder ? 'unpaid' : 'pending';
+        $initialPaymentStatus = 'pending';
 
         if ($isProductFlow) {
             $order = new CustomOrder();
@@ -2119,7 +2119,7 @@ class CustomOrderController extends Controller
             }
 
             if (empty($item->payment_status) || $item->payment_status === 'pending') {
-                $item->payment_status = 'unpaid';
+                $item->payment_status = 'pending';
             }
 
             $item->save();
@@ -2454,7 +2454,7 @@ class CustomOrderController extends Controller
             // Create custom order
             $autoConfirmPatternOrder = ($designMethod === 'pattern');
             $initialStatus = $autoConfirmPatternOrder ? 'approved' : 'pending';
-            $initialPaymentStatus = $autoConfirmPatternOrder ? 'unpaid' : 'pending';
+            $initialPaymentStatus = 'pending';
 
             if ($isProductFlow) {
                 // Create a product-based custom order (safe property assignment)
@@ -2632,14 +2632,22 @@ class CustomOrderController extends Controller
                 );
             }
 
-            // Redirect to success page
+            // Redirect to payment directly for auto-confirmed non-chat pattern orders.
             $isAjax = $request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest';
+            $token = $request->input('auth_token') ?? $request->query('auth_token') ?? session('auth_token');
+            $paymentUrl = route('custom_orders.payment', ['order' => $customOrder->id]) . ($token ? '?auth_token=' . urlencode($token) : '');
+            $successUrl = route('custom_orders.success', ['order' => $customOrder->id]) . ($token ? '?auth_token=' . urlencode($token) : '');
+            $redirectToPayment = $allAutoConfirmed;
+
             if ($isAjax) {
-                $token = $request->input('auth_token') ?? $request->query('auth_token') ?? session('auth_token');
-                $successUrl = route('custom_orders.success', ['order' => $customOrder->id]) . ($token ? '?auth_token=' . urlencode($token) : '');
-                return response()->json(['success' => true, 'message' => 'Order submitted successfully!', 'redirect_url' => $successUrl]);
+                return response()->json([
+                    'success' => true,
+                    'message' => $redirectToPayment ? 'Order placed successfully! Redirecting to payment...' : 'Order submitted successfully!',
+                    'redirect_url' => $redirectToPayment ? $paymentUrl : $successUrl,
+                ]);
             }
-            return $this->redirectToRouteWithToken('custom_orders.success', ['order' => $customOrder->id]);
+
+            return redirect($redirectToPayment ? $paymentUrl : $successUrl);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::warning('Validation failed in completeWizard:', [
@@ -2667,7 +2675,7 @@ class CustomOrderController extends Controller
             if ($isAjax) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to create your order. Please try again. (' . $e->getMessage() . ')'
+                    'message' => 'Failed to create your order. Please try again.'
                 ], 500);
             }
             return redirect()->back()
@@ -2785,7 +2793,7 @@ class CustomOrderController extends Controller
                 $order->quantity = $productData['quantity'];
                 $order->specifications = $request->specifications;
                 $order->status = 'pending';
-                $order->payment_status = 'unpaid';
+                $order->payment_status = 'pending';
 
                 // Store patterns if provided
                 if ($processedPatterns && is_array($processedPatterns)) {
@@ -2990,7 +2998,7 @@ class CustomOrderController extends Controller
         if ($request->action === 'accept') {
             $order->status = 'approved';
             $order->approved_at = now();
-            $order->payment_status = 'unpaid';
+            $order->payment_status = 'pending';
             $order->save();
             $message = 'You have accepted the price quote. Please complete your payment.';
             return $this->redirectToRouteWithToken('custom_orders.payment', $order)->with('success', $message);
@@ -4481,7 +4489,7 @@ class CustomOrderController extends Controller
                 'estimated_price' => $basePrice,
                 'final_price' => $basePrice,
                 'status' => 'pending',
-                'payment_status' => 'unpaid',
+                'payment_status' => 'pending',
                 'design_upload' => $imagePath,
                 'design_method' => 'visual',
                 'design_metadata' => $designMetadata,

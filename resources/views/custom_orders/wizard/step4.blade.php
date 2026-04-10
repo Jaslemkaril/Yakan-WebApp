@@ -1081,9 +1081,9 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7"/>
                                 </svg>
                                 @if(count($batchItems) > 0)
-                                    Submit All {{ count($batchItems) + 1 }} Items
+                                    Place All {{ count($batchItems) + 1 }} Items
                                 @else
-                                    Submit Custom Order
+                                    Place Custom Order
                                 @endif
                             </span>
                             <div class="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300" style="background-color:#8b3a56;"></div>
