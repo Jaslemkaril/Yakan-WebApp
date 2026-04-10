@@ -498,7 +498,8 @@ class AdminCustomOrderController extends Controller
 
         try {
             $targetStatus = (string) $request->status;
-            $applyToBatch = $targetStatus === 'in_production';
+            $batchWorkflowStatuses = ['in_production', 'production_complete', 'out_for_delivery', 'delivered'];
+            $applyToBatch = in_array($targetStatus, $batchWorkflowStatuses, true);
             $ordersToUpdate = $applyToBatch
                 ? $this->resolveBatchOrders($order)
                 : collect([$order]);

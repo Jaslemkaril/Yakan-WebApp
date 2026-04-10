@@ -1973,8 +1973,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const authToken = urlParams.get('auth_token');
                 let success = true;
                 let data = null;
+                const batchWorkflowStatuses = ['in_production', 'production_complete', 'out_for_delivery', 'delivered'];
 
-                if (nextStatus === 'in_production' && batchOrderIds.length > 1) {
+                if (batchWorkflowStatuses.includes(nextStatus) && batchOrderIds.length > 1) {
                     const requests = batchOrderIds.map((id) => {
                         const statusUrl = `/admin/custom-orders/${id}/update-status${authToken ? '?auth_token=' + authToken : ''}`;
                         return fetch(statusUrl, {
@@ -2027,7 +2028,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         'out_for_delivery': 'Order shipped',
                         'delivered': 'Order delivered'
                     };
-                    const suffix = (nextStatus === 'in_production' && batchOrderIds.length > 1)
+                    const suffix = (batchWorkflowStatuses.includes(nextStatus) && batchOrderIds.length > 1)
                         ? ` for ${batchOrderIds.length} items`
                         : '';
                     const message = `${statusLabels[nextStatus] || 'Status updated'}${suffix} successfully! Customer has been notified.`;
