@@ -69,13 +69,9 @@
             return $fullAddress;
         }
 
-        $cityProvince = implode(', ', array_filter([
-            $item->delivery_city ?? null,
-            $item->delivery_province ?? null,
-        ]));
-        if ($cityProvince !== '') {
-            return $cityProvince;
-        }
+        $city = trim((string) ($item->delivery_city ?? ''));
+        $province = trim((string) ($item->delivery_province ?? ''));
+        $cityProvince = implode(', ', array_filter([$city, $province]));
 
         static $defaultAddressCache = [];
         $userId = (int) ($item->user_id ?? 0);
@@ -83,21 +79,39 @@
             if (!array_key_exists($userId, $defaultAddressCache)) {
                 $defaultAddressCache[$userId] = \App\Models\UserAddress::query()
                     ->where('user_id', $userId)
-                    ->where('is_default', true)
-                    ->first();
+                    ->orderByDesc('is_default')
+                    ->orderByDesc('updated_at')
+                    ->get();
             }
 
-            $defaultAddress = $defaultAddressCache[$userId];
-            if ($defaultAddress) {
-                return implode(', ', array_filter([
-                    $defaultAddress->house_number ?? null,
-                    $defaultAddress->street_name ?? null,
-                    $defaultAddress->barangay ?? null,
-                    $defaultAddress->city ?? null,
-                    $defaultAddress->province ?? ($defaultAddress->region ?? null),
-                    !empty($defaultAddress->zip_code) ? 'ZIP ' . $defaultAddress->zip_code : null,
-                ]));
+            $userAddresses = $defaultAddressCache[$userId];
+
+            if ($userAddresses->isNotEmpty()) {
+                $matched = $userAddresses->first(function ($addr) use ($city, $province) {
+                    $addrCity = strtolower(trim((string) ($addr->city ?? '')));
+                    $addrProvince = strtolower(trim((string) ($addr->province ?? ($addr->region ?? ''))));
+
+                    $cityMatch = $city !== '' ? str_contains($addrCity, strtolower($city)) : true;
+                    $provinceMatch = $province !== '' ? str_contains($addrProvince, strtolower($province)) : true;
+
+                    return $cityMatch && $provinceMatch;
+                }) ?? $userAddresses->first();
+
+                if ($matched) {
+                    return implode(', ', array_filter([
+                        $matched->house_number ?? null,
+                        $matched->street_name ?? null,
+                        $matched->barangay ?? null,
+                        $matched->city ?? null,
+                        $matched->province ?? ($matched->region ?? null),
+                        !empty($matched->zip_code) ? $matched->zip_code : null,
+                    ]));
+                }
             }
+        }
+
+        if ($cityProvince !== '') {
+            return $cityProvince;
         }
 
         return null;
@@ -543,7 +557,7 @@
                             }
                         @endphp
 
-                        <div class="rounded-xl border p-4 cursor-pointer hover:shadow-md transition-shadow" style="border-color:#e0b0b0; background-color:#fff;" onclick="window.location.href='{{ route('custom_orders.show', ['order' => $item->id, 'auth_token' => $authToken]) }}'">
+                        <div class="rounded-xl border p-4 hover:shadow-md transition-shadow" style="border-color:#e0b0b0; background-color:#fff;">
                             <div class="flex items-start justify-between mb-3">
                                 <div class="flex items-center">
                                     <div class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center mr-2.5" style="background-color:#800000;">{{ $idx + 1 }}</div>
@@ -619,15 +633,10 @@
                                 <p class="text-xs text-gray-600">Delivery: <span class="font-semibold text-gray-800">{{ ($item->delivery_type ?? 'delivery') === 'pickup' ? 'Store Pickup' : 'Delivery' }}</span></p>
                                 <a href="{{ route('custom_orders.show', ['order' => $item->id, 'auth_token' => $authToken]) }}"
                                    class="text-xs font-semibold hover:underline"
-                                   style="color:#800000;"
-                                   onclick="event.stopPropagation();">
+                                   style="color:#800000;">
                                     View Full Details →
                                 </a>
                             </div>
-                            @php $itemAddress = $getDisplayAddress($item); @endphp
-                            @if($itemAddress)
-                                <p class="text-xs text-gray-500 mt-1">Address: <span class="font-medium text-gray-700">{{ $itemAddress }}</span></p>
-                            @endif
 
                             <div id="item-details-{{ $item->id }}" class="hidden mt-3 rounded-lg border p-3" style="border-color:#e0b0b0; background-color:#fff7f7;">
                                 <h4 class="text-sm font-bold mb-2" style="color:#800000;">Traditional Yakan Patterns ({{ max(1, $itemPatterns->count()) }})</h4>
@@ -830,10 +839,6 @@
                     <div class="mt-2 pt-2 border-t" style="border-color:#f1d2d2;">
                         <p class="text-xs text-gray-600">Delivery: <span class="font-semibold text-gray-800">{{ ($order->delivery_type ?? 'delivery') === 'pickup' ? 'Store Pickup' : 'Delivery' }}</span></p>
                     </div>
-                    @php $singleAddress = $getDisplayAddress($order); @endphp
-                    @if($singleAddress)
-                        <p class="text-xs text-gray-500 mt-1">Address: <span class="font-medium text-gray-700">{{ $singleAddress }}</span></p>
-                    @endif
 
                     <div class="mt-3 rounded-lg border p-3" style="border-color:#e0b0b0; background-color:#fff7f7;">
                         <h4 class="text-sm font-bold mb-2" style="color:#800000;">Traditional Yakan Patterns ({{ max(1, $singlePatterns->count()) }})</h4>
