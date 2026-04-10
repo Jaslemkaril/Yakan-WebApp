@@ -510,7 +510,7 @@
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm">
                                 <div>
                                     <p class="text-xs text-gray-500 mb-0.5">Pattern</p>
                                     <p class="font-semibold text-gray-900">{{ $itemPatterns->pluck('name')->implode(', ') ?: 'N/A' }}</p>
@@ -551,6 +551,10 @@
                                 <div>
                                     <p class="text-xs text-gray-500 mb-0.5">Fabric Type</p>
                                     <p class="font-semibold text-gray-900">{{ $item->fabric_type_name ?? ($item->fabric_type ?? 'N/A') }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500 mb-0.5">Intended Use</p>
+                                    <p class="font-semibold text-gray-900">{{ $item->intended_use_label ?? ($item->intended_use ?? 'N/A') }}</p>
                                 </div>
                                 <div>
                                     <p class="text-xs text-gray-500 mb-0.5">Quantity</p>
@@ -1516,23 +1520,6 @@
                                 <p class="text-xs text-gray-500">{{ $order->created_at->format('h:i A') }}</p>
                             </div>
                         </div>
-
-                        @if($order->isFabricOrder())
-                            <div class="pt-3 border-t border-gray-200 mt-3 space-y-2 text-sm">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm font-medium text-gray-600">Fabric Type</span>
-                                    <span class="text-sm font-semibold text-gray-900">{{ $order->fabric_type_name }}</span>
-                                </div>
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm font-medium text-gray-600">Fabric Quantity</span>
-                                    <span class="text-sm font-semibold text-gray-900">{{ $order->formatted_fabric_quantity }}</span>
-                                </div>
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm font-medium text-gray-600">Intended Use</span>
-                                    <span class="text-sm font-semibold text-gray-900">{{ $order->intended_use_label }}</span>
-                                </div>
-                            </div>
-                        @endif
 
                         @if($order->delivery_address)
                             <div class="pt-3 border-t border-gray-200 mt-3">
