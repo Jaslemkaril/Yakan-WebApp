@@ -497,55 +497,73 @@ class AdminCustomOrderController extends Controller
         ]);
 
         try {
-            $oldStatus = $order->status;
-            $order->status = $request->status;
-            
-            if ($request->final_price) {
-                $order->final_price = $request->final_price;
-            }
-            
-            // If status changed to price_quoted, set user_notified_at
-            if ($request->status === 'price_quoted' && $oldStatus !== 'price_quoted') {
-                $order->user_notified_at = now();
-            }
-            
-            // If status changed to processing or in_production, mark payment as paid
-            if (in_array($request->status, ['processing', 'in_production']) && $order->payment_status !== 'paid') {
-                $order->payment_status = 'paid';
-            }
-            
-            // Set timestamps for workflow statuses
-            if ($request->status === 'production_complete' && !$order->production_completed_at) {
-                $order->production_completed_at = now();
-            }
-            
-            if ($request->status === 'out_for_delivery' && !$order->out_for_delivery_at) {
-                $order->out_for_delivery_at = now();
-            }
-            
-            if ($request->status === 'delivered' && !$order->delivered_at) {
-                $order->delivered_at = now();
-            }
-            
-            $order->save();
+            $targetStatus = (string) $request->status;
+            $applyToBatch = $targetStatus === 'in_production';
+            $ordersToUpdate = $applyToBatch
+                ? $this->resolveBatchOrders($order)
+                : collect([$order]);
 
-            // Send notifications to user and admin
-            if ($oldStatus !== $order->status) {
-                $notificationService = new \App\Services\Notification\OrderStatusNotificationService();
-                $notificationService->notifyCustomOrderStatusChange($order, $oldStatus, $order->status);
+            $notificationService = new \App\Services\Notification\OrderStatusNotificationService();
+            $updatedCount = 0;
+
+            foreach ($ordersToUpdate as $targetOrder) {
+                $oldStatus = $targetOrder->status;
+                $targetOrder->status = $targetStatus;
+
+                // Final price edits only apply to the selected order.
+                if ($request->filled('final_price') && $targetOrder->id === $order->id) {
+                    $targetOrder->final_price = $request->final_price;
+                }
+
+                // If status changed to price_quoted, set user_notified_at.
+                if ($targetStatus === 'price_quoted' && $oldStatus !== 'price_quoted') {
+                    $targetOrder->user_notified_at = now();
+                }
+
+                // If status changed to processing or in_production, mark payment as paid.
+                if (in_array($targetStatus, ['processing', 'in_production'], true) && $targetOrder->payment_status !== 'paid') {
+                    $targetOrder->payment_status = 'paid';
+                }
+
+                // Set timestamps for workflow statuses.
+                if ($targetStatus === 'production_complete' && !$targetOrder->production_completed_at) {
+                    $targetOrder->production_completed_at = now();
+                }
+
+                if ($targetStatus === 'out_for_delivery' && !$targetOrder->out_for_delivery_at) {
+                    $targetOrder->out_for_delivery_at = now();
+                }
+
+                if ($targetStatus === 'delivered' && !$targetOrder->delivered_at) {
+                    $targetOrder->delivered_at = now();
+                }
+
+                $targetOrder->save();
+                $updatedCount++;
+
+                // Send notifications to user and admin.
+                if ($oldStatus !== $targetOrder->status) {
+                    $notificationService->notifyCustomOrderStatusChange($targetOrder, $oldStatus, $targetOrder->status);
+                }
             }
+
+            $order->refresh();
+            $successMessage = ($applyToBatch && $updatedCount > 1)
+                ? "Order status updated for {$updatedCount} batch items successfully!"
+                : 'Order status updated successfully!';
 
             // If it's an AJAX request, return JSON
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Order status updated successfully',
+                    'message' => $successMessage,
+                    'updated_count' => $updatedCount,
                     'order' => $order
                 ]);
             }
 
             // Otherwise redirect back with success message
-            return redirect()->back()->with('success', 'Order status updated successfully!');
+            return redirect()->back()->with('success', $successMessage);
         } catch (\Exception $e) {
             if ($request->expectsJson()) {
                 return response()->json([
