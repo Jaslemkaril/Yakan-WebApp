@@ -311,6 +311,30 @@
                             
                             <!-- Pattern Preview Display -->
                             @if(isset($selectedPatterns) && $selectedPatterns->count() > 0)
+                            @php
+                                $activePatternName = $selectedPatterns->pluck('name')->implode(', ');
+                                $activePreview = null;
+                                $activeFirstPattern = $selectedPatterns->first();
+                                if ($activeFirstPattern) {
+                                    if (method_exists($activeFirstPattern, 'hasSvg') && $activeFirstPattern->hasSvg()) {
+                                        $activeSvg = $activeFirstPattern->getSvgContent();
+                                        if (!empty($activeSvg)) {
+                                            $activePreview = 'data:image/svg+xml;base64,' . base64_encode($activeSvg);
+                                        }
+                                    }
+                                    if (empty($activePreview)) {
+                                        $activePreview = optional($activeFirstPattern->media->first())->url;
+                                    }
+                                }
+                                $activePreview = $activePreview
+                                    ?? ($previewImage ?? null)
+                                    ?? ($wizardData['pattern']['preview_image'] ?? ($wizardData['design']['image'] ?? null));
+
+                                $activeCustomization = $wizardData['pattern']['customization_settings'] ?? [];
+                                $activeScale = $activeCustomization['scale'] ?? 1;
+                                $activeRotation = $activeCustomization['rotation'] ?? 0;
+                                $activeOpacity = round(($activeCustomization['opacity'] ?? 0.85) * 100);
+                            @endphp
                             <div class="mb-6">
                                 <div class="rounded-xl p-4 border-2 shadow-lg" style="background: linear-gradient(to bottom right, #f5e6e8, #e8ccd1); border-color:#8b3a56;">
                                     <div class="flex items-center justify-between mb-3">
@@ -324,57 +348,31 @@
                                         <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Final Preview</span>
                                     </div>
                                     <div class="bg-white rounded-lg p-3 shadow-inner">
-                                        @foreach($selectedPatterns as $pattern)
-                                        <div class="mb-4 last:mb-0">
-                                            <div class="text-xs font-semibold text-gray-600 mb-2">{{ $pattern->name }}</div>
-                                            @if($pattern->hasSvg())
-                                            @php
-                                                $customization = $wizardData['pattern']['customization_settings'] ?? [];
-                                                $scale = $customization['scale'] ?? 1;
-                                                $rotation = $customization['rotation'] ?? 0;
-                                                $opacity = $customization['opacity'] ?? 1;
-                                                $hue = $customization['hue'] ?? 0;
-                                                $saturation = $customization['saturation'] ?? 100;
-                                                $brightness = $customization['brightness'] ?? 100;
-                                                
-                                                // Build CSS filter string for color customization
-                                                $filterStyle = sprintf(
-                                                    'filter: hue-rotate(%ddeg) saturate(%d%%) brightness(%d%%); opacity: %s; transform: scale(%s) rotate(%ddeg);',
-                                                    $hue,
-                                                    $saturation,
-                                                    $brightness,
-                                                    $opacity,
-                                                    $scale,
-                                                    $rotation
-                                                );
-                                            @endphp
-                                            <div class="w-full rounded-lg border-2 shadow-md overflow-hidden" style="border-color:#e0b0b0; max-height: 350px;">
-                                                <div class="w-full h-64 flex items-center justify-center bg-gray-50 p-4">
-                                                    <div style="{{ $filterStyle }} transform-origin: center; transition: all 0.3s ease;">
-                                                        {!! $pattern->getSvgContent() !!}
-                                                    </div>
-                                                </div>
+                                        <div class="text-xs font-semibold text-gray-600 mb-2" id="step4ActivePatternName">{{ $activePatternName }}</div>
+                                        <div class="w-full rounded-lg border-2 shadow-md overflow-hidden" style="border-color:#e0b0b0; max-height: 350px;">
+                                            <div class="w-full h-64 flex items-center justify-center bg-gray-50 p-4">
+                                                @if(!empty($activePreview))
+                                                    <img id="step4ActivePreviewImage" src="{{ $activePreview }}" alt="Selected pattern preview" class="max-h-full max-w-full object-contain">
+                                                    <span id="step4ActivePreviewEmpty" class="hidden text-gray-400">No preview available</span>
+                                                @else
+                                                    <img id="step4ActivePreviewImage" src="" alt="Selected pattern preview" class="hidden max-h-full max-w-full object-contain">
+                                                    <span id="step4ActivePreviewEmpty" class="text-gray-400">No preview available</span>
+                                                @endif
                                             </div>
-                                            @else
-                                            <div class="w-full h-64 rounded-lg border-2 shadow-md flex items-center justify-center bg-gray-100" style="border-color:#e0b0b0;">
-                                                <span class="text-gray-400">No preview available</span>
-                                            </div>
-                                            @endif
                                         </div>
-                                        @endforeach
                                     </div>
                                     <div class="mt-4 grid grid-cols-3 gap-3">
                                         <div class="bg-white rounded-lg px-3 py-2 text-center border-2" style="border-color:#d9a3b3;">
                                             <div class="text-xs font-semibold text-gray-600 mb-1">Scale</div>
-                                            <div class="font-bold text-lg" style="color:#8b3a56;">{{ $wizardData['pattern']['customization_settings']['scale'] ?? 1 }}x</div>
+                                            <div class="font-bold text-lg" style="color:#8b3a56;" id="step4ActiveScale">{{ $activeScale }}x</div>
                                         </div>
                                         <div class="bg-white rounded-lg px-3 py-2 text-center border-2" style="border-color:#d9a3b3;">
                                             <div class="text-xs font-semibold text-gray-600 mb-1">Rotation</div>
-                                            <div class="font-bold text-lg" style="color:#8b3a56;">{{ $wizardData['pattern']['customization_settings']['rotation'] ?? 0 }}°</div>
+                                            <div class="font-bold text-lg" style="color:#8b3a56;" id="step4ActiveRotation">{{ $activeRotation }}°</div>
                                         </div>
                                         <div class="bg-white rounded-lg px-3 py-2 text-center border-2" style="border-color:#d9a3b3;">
                                             <div class="text-xs font-semibold text-gray-600 mb-1">Opacity</div>
-                                            <div class="font-bold text-lg" style="color:#8b3a56;">{{ round(($wizardData['pattern']['customization_settings']['opacity'] ?? 0.85) * 100) }}%</div>
+                                            <div class="font-bold text-lg" style="color:#8b3a56;" id="step4ActiveOpacity">{{ $activeOpacity }}%</div>
                                         </div>
                                     </div>
                                 </div>
@@ -942,6 +940,10 @@
                                 $bPreview = $bPreview ?? ($bWizard['pattern']['preview_image'] ?? ($bWizard['design']['image'] ?? null));
                                 $bAuthToken = request('auth_token');
                                 $bEditUrl = route('custom_orders.edit.batch.item', $bIdx) . ($bAuthToken ? '?auth_token=' . urlencode($bAuthToken) : '');
+                                $bCustomization = $bWizard['pattern']['customization_settings'] ?? [];
+                                $bScale = $bCustomization['scale'] ?? 1;
+                                $bRotation = $bCustomization['rotation'] ?? 0;
+                                $bOpacity = round(($bCustomization['opacity'] ?? 0.85) * 100);
                                 $bFabricTypeName = '—';
                                 if (!empty($bWizard['fabric']['type'])) {
                                     $bFt = \App\Models\FabricType::find($bWizard['fabric']['type']);
@@ -950,7 +952,13 @@
                                 $bMeters = $bWizard['fabric']['quantity_meters'] ?? null;
                                 $bQty = (int) ($bItem['form_data']['quantity'] ?? 1);
                             @endphp
-                            <div class="rounded-xl px-4 py-3" style="background-color:#fff5f5; border:1px solid #e0b0b0;">
+                            <div class="rounded-xl px-4 py-3 submission-item-card cursor-pointer" style="background-color:#fff5f5; border:1px solid #e0b0b0;"
+                                 data-preview="{{ e((string) ($bPreview ?? '')) }}"
+                                 data-pattern-name="{{ e((string) $bPatternName) }}"
+                                 data-scale="{{ $bScale }}"
+                                 data-rotation="{{ $bRotation }}"
+                                 data-opacity="{{ $bOpacity }}"
+                                 data-item-label="Item {{ $bIdx + 1 }}">
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="flex items-start min-w-0">
                                         <div class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center mr-3 flex-shrink-0" style="background-color:#800000;">{{ $bIdx + 1 }}</div>
@@ -962,12 +970,8 @@
                                                 <a href="{{ $bEditUrl }}"
                                                    class="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold transition-colors"
                                                    style="border-color:#8b3a56; color:#8b3a56; background-color:#fff5f5;"
-                                                   title="View and edit this item">
-                                                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                                    </svg>
-                                                    View/Edit
+                                                   title="Edit this item">
+                                                    Edit
                                                 </a>
                                             </div>
                                             <form method="POST" action="{{ route('custom_orders.update.batch.item', $bIdx) }}" class="flex items-center flex-wrap gap-x-2 gap-y-1 mt-1 batch-item-form" data-index="{{ $bIdx }}">
@@ -988,9 +992,7 @@
                                     </div>
                                     <div class="flex items-start gap-2 flex-shrink-0">
                                         @if(!empty($bPreview))
-                                            <a href="{{ $bEditUrl }}" title="Open this item">
-                                                <img src="{{ $bPreview }}" alt="Pattern preview" class="w-14 h-14 rounded-md object-cover border" style="border-color:#e0b0b0;">
-                                            </a>
+                                            <img src="{{ $bPreview }}" alt="Pattern preview" class="w-14 h-14 rounded-md object-cover border" style="border-color:#e0b0b0;">
                                         @endif
                                         <form method="POST" action="{{ route('custom_orders.remove.batch.item', $bIdx) }}" onsubmit="return confirm('Remove this item from your order batch?');">
                                             @csrf
@@ -1008,7 +1010,20 @@
                             @endforeach
 
                             {{-- Current item being reviewed --}}
-                            <div class="rounded-xl px-4 py-3 border-2" style="background-color:#fff5f5; border-color:#c88f9f;">
+                            @php
+                                $currentCustomization = $wizardData['pattern']['customization_settings'] ?? [];
+                                $currentScale = $currentCustomization['scale'] ?? 1;
+                                $currentRotation = $currentCustomization['rotation'] ?? 0;
+                                $currentOpacity = round(($currentCustomization['opacity'] ?? 0.85) * 100);
+                            @endphp
+                            <div class="rounded-xl px-4 py-3 border-2 submission-item-card" style="background-color:#fff5f5; border-color:#c88f9f;"
+                                 data-preview="{{ e((string) ($currentPreview ?? '')) }}"
+                                 data-pattern-name="{{ e((string) $currentPatternName) }}"
+                                 data-scale="{{ $currentScale }}"
+                                 data-rotation="{{ $currentRotation }}"
+                                 data-opacity="{{ $currentOpacity }}"
+                                 data-item-label="Current Item"
+                                 data-default-active="true">
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="flex items-start min-w-0">
                                         <div class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center mr-3 flex-shrink-0" style="background-color:#800000;">{{ count($batchItems) + 1 }}</div>
@@ -1342,10 +1357,74 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Load SVG design from session/localStorage
     loadSVGDesignPreview();
+
+    // Click any submission card to view its pattern in the preview panel.
+    initSubmissionItemPreviewSwitcher();
     
     // Initialize delivery/pickup toggle
     initDeliveryToggle();
 });
+
+function initSubmissionItemPreviewSwitcher() {
+    const cards = Array.from(document.querySelectorAll('.submission-item-card'));
+    const previewImg = document.getElementById('step4ActivePreviewImage');
+    const previewEmpty = document.getElementById('step4ActivePreviewEmpty');
+    const patternNameEl = document.getElementById('step4ActivePatternName');
+    const scaleEl = document.getElementById('step4ActiveScale');
+    const rotationEl = document.getElementById('step4ActiveRotation');
+    const opacityEl = document.getElementById('step4ActiveOpacity');
+
+    if (!cards.length || !patternNameEl || !scaleEl || !rotationEl || !opacityEl) {
+        return;
+    }
+
+    function setActiveCard(card) {
+        cards.forEach(function(c) {
+            c.classList.remove('ring-2', 'ring-red-300', 'ring-offset-1');
+        });
+        card.classList.add('ring-2', 'ring-red-300', 'ring-offset-1');
+
+        const patternName = card.dataset.patternName || 'No pattern selected';
+        const preview = card.dataset.preview || '';
+        const scale = card.dataset.scale || '1';
+        const rotation = card.dataset.rotation || '0';
+        const opacity = card.dataset.opacity || '100';
+
+        patternNameEl.textContent = patternName;
+        scaleEl.textContent = scale + 'x';
+        rotationEl.textContent = rotation + '°';
+        opacityEl.textContent = opacity + '%';
+
+        if (previewImg) {
+            if (preview) {
+                previewImg.src = preview;
+                previewImg.classList.remove('hidden');
+                if (previewEmpty) previewEmpty.classList.add('hidden');
+            } else {
+                previewImg.src = '';
+                previewImg.classList.add('hidden');
+                if (previewEmpty) previewEmpty.classList.remove('hidden');
+            }
+        }
+    }
+
+    const ignoreSelectors = 'a, button, input, select, textarea, form, label';
+
+    cards.forEach(function(card) {
+        card.addEventListener('click', function(event) {
+            if (event.target.closest(ignoreSelectors)) {
+                return;
+            }
+            setActiveCard(card);
+        });
+    });
+
+    const defaultCard = cards.find(function(card) {
+        return card.dataset.defaultActive === 'true';
+    }) || cards[0];
+
+    setActiveCard(defaultCard);
+}
 
 function initDeliveryToggle() {
     const deliveryRadios = document.querySelectorAll('input[name="delivery_type"]');
