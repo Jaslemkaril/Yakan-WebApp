@@ -1446,7 +1446,6 @@
                                         </div>
                                         <p class="text-sm font-medium text-gray-700 mt-2 mb-1">Total Paid</p>
                                         <p class="text-2xl font-bold" style="color:#800000;">₱{{ number_format($displayPaidTotal ?? ($displayOrderTotal ?? ($order->final_price ?? 0)), 2) }}</p>
-                                        <p class="text-xs text-indigo-600 mt-1 font-semibold">Payment accepted, waiting for production start</p>
                                     </div>
                                 @elseif($order->status === 'in_production' && $order->final_price)
                                     <div>
