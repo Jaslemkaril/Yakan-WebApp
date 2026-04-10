@@ -372,7 +372,245 @@
             </div>
             @endif
             
-            {{-- Requested: removed Pattern Preview, Customization Settings, and Order Information sections. --}}
+            @if($batchItems->count() <= 1)
+            {{-- Pattern Preview Section (single-order only) --}}
+            @php
+                // Load pattern for SVG display
+                $patternModel = null;
+                if (!empty($order->design_metadata) && isset($order->design_metadata['pattern_id'])) {
+                    $patternModel = \App\Models\YakanPattern::find($order->design_metadata['pattern_id']);
+                } elseif (!empty($order->patterns) && is_array($order->patterns)) {
+                    if (!empty($order->patterns) && is_numeric($order->patterns[0])) {
+                        $patternModel = \App\Models\YakanPattern::find($order->patterns[0]);
+                    } elseif (!empty($order->patterns)) {
+                        $patternModel = \App\Models\YakanPattern::where('name', $order->patterns[0])->first();
+                    }
+                }
+            @endphp
+
+            @if($patternModel && $patternModel->hasSvg())
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    Pattern Preview
+                    @if($order->design_method === 'pattern')
+                        <span class="text-sm font-normal text-[#800000]">(Customized Pattern: {{ $patternModel->name }})</span>
+                    @endif
+                </h2>
+
+                @php
+                    // Get customization settings from order
+                    $customization = $order->customization_settings ?? [];
+                    $filterStyle = '';
+                    if (!empty($customization)) {
+                        $hue = $customization['hue'] ?? 0;
+                        $saturation = $customization['saturation'] ?? 100;
+                        $brightness = $customization['brightness'] ?? 100;
+                        $scale = $customization['scale'] ?? 1;
+                        $rotation = $customization['rotation'] ?? 0;
+                        $opacity = $customization['opacity'] ?? 1;
+
+                        $filterStyle = sprintf(
+                            'filter: hue-rotate(%ddeg) saturate(%d%%) brightness(%d%%); opacity: %s; transform: scale(%s) rotate(%ddeg);',
+                            $hue,
+                            $saturation,
+                            $brightness,
+                            $opacity,
+                            $scale,
+                            $rotation
+                        );
+                    }
+                @endphp
+
+                <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border-2 border-red-200">
+                    <div class="w-full max-w-2xl mx-auto rounded-lg shadow-lg bg-white p-4 overflow-hidden">
+                        <div class="w-full h-96 flex items-center justify-center">
+                            <div style="{{ $filterStyle }} transform-origin: center; max-width: 100%; max-height: 100%;">
+                                {!! $patternModel->getSvgContent() !!}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Customization Settings --}}
+                @if($order->design_metadata && is_array($order->design_metadata))
+                    @if(isset($order->design_metadata['customization_settings']))
+                        <div class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3">
+                            <h3 class="col-span-full text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                <svg class="w-4 h-4 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+                                </svg>
+                                Customization Settings
+                            </h3>
+                            @foreach($order->design_metadata['customization_settings'] as $key => $value)
+                                <div class="bg-white rounded-lg p-3 border-2 border-red-200 hover:border-[#800000] transition-colors">
+                                    <div class="text-xs text-gray-500 uppercase font-semibold">{{ ucfirst(str_replace('_', ' ', $key)) }}</div>
+                                    <div class="text-sm font-bold text-[#800000]">{{ $value }}</div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                @endif
+            </div>
+            @elseif($order->design_upload)
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    Design References
+                </h2>
+
+                <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border-2 border-red-200">
+                    @php
+                        // Handle multiple images (comma-separated)
+                        $designImages = is_string($order->design_upload) ? explode(',', $order->design_upload) : [$order->design_upload];
+                        $designImages = array_filter(array_map('trim', $designImages));
+                    @endphp
+
+                    @if(count($designImages) > 1)
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            @foreach($designImages as $imageUrl)
+                                <div class="bg-white rounded-lg p-2 shadow-md">
+                                    @if(str_starts_with($imageUrl, 'http'))
+                                        <img src="{{ $imageUrl }}" alt="Design Reference"
+                                             class="w-full h-64 object-contain rounded cursor-pointer hover:scale-105 transition-transform"
+                                             onclick="window.open('{{ $imageUrl }}', '_blank')">
+                                    @elseif(str_starts_with($imageUrl, 'data:image'))
+                                        <img src="{{ $imageUrl }}" alt="Design Reference"
+                                             class="w-full h-64 object-contain rounded">
+                                    @else
+                                        <img src="{{ asset('storage/' . $imageUrl) }}" alt="Design Reference"
+                                             class="w-full h-64 object-contain rounded cursor-pointer hover:scale-105 transition-transform"
+                                             onclick="window.open('{{ asset('storage/' . $imageUrl) }}', '_blank')">
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        @php
+                            $singleImage = $designImages[0] ?? $order->design_upload;
+                        @endphp
+                        @if(str_starts_with($singleImage, 'http'))
+                            <img src="{{ $singleImage }}" alt="Design Reference"
+                                 class="w-full max-h-96 object-contain rounded-lg shadow-lg cursor-pointer hover:scale-105 transition-transform"
+                                 onclick="window.open('{{ $singleImage }}', '_blank')">
+                        @elseif(str_starts_with($singleImage, 'data:image'))
+                            <img src="{{ $singleImage }}" alt="Design Reference"
+                                 class="w-full max-h-96 object-contain rounded-lg shadow-lg">
+                        @else
+                            <img src="{{ asset('storage/' . $singleImage) }}" alt="Design Reference"
+                                 class="w-full max-h-96 object-contain rounded-lg shadow-lg cursor-pointer hover:scale-105 transition-transform"
+                                 onclick="window.open('{{ asset('storage/' . $singleImage) }}', '_blank')">
+                        @endif
+                    @endif
+                </div>
+
+                @if(count($designImages) > 1)
+                    <p class="text-sm text-gray-600 mt-2">
+                        <svg class="w-4 h-4 inline text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Click on any image to view in full size
+                    </p>
+                @endif
+
+                {{-- Customization Settings --}}
+                @if($order->design_metadata && is_array($order->design_metadata))
+                    @if(isset($order->design_metadata['customization_settings']))
+                        <div class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3">
+                            <h3 class="col-span-full text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                <svg class="w-4 h-4 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+                                </svg>
+                                Customization Settings
+                            </h3>
+                            @foreach($order->design_metadata['customization_settings'] as $key => $value)
+                                <div class="bg-white rounded-lg p-3 border-2 border-red-200 hover:border-[#800000] transition-colors">
+                                    <div class="text-xs text-gray-500 uppercase font-semibold">{{ ucfirst(str_replace('_', ' ', $key)) }}</div>
+                                    <div class="text-sm font-bold text-[#800000]">{{ $value }}</div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                @endif
+            </div>
+            @endif
+
+            {{-- Order Details (single-order only) --}}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Order Information</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {{-- Fabric Type --}}
+                    @if($order->fabric_type)
+                    <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+                        <div class="text-sm text-[#800000] font-semibold mb-1">Fabric Type</div>
+                        <div class="text-lg font-bold text-gray-900">{{ $order->fabric_type_name }}</div>
+                    </div>
+                    @endif
+
+                    {{-- Quantity --}}
+                    @if($order->fabric_quantity_meters)
+                    <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+                        <div class="text-sm text-[#800000] font-semibold mb-1">Quantity</div>
+                        <div class="text-lg font-bold text-gray-900">{{ $order->fabric_quantity_meters }} meters</div>
+                    </div>
+                    @endif
+
+                    {{-- Intended Use --}}
+                    @if($order->intended_use)
+                    <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                        <div class="text-sm text-green-600 font-semibold mb-1">Intended Use</div>
+                        <div class="text-lg font-bold text-gray-900">{{ $order->intended_use_label }}</div>
+                    </div>
+                    @endif
+
+                    {{-- Design Method --}}
+                    @if($order->design_method)
+                    <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+                        <div class="text-sm text-indigo-600 font-semibold mb-1">Design Method</div>
+                        <div class="text-lg font-bold text-gray-900">{{ ucfirst($order->design_method) }}</div>
+                    </div>
+                    @endif
+                </div>
+
+                @php
+                    $rawSpecifications = trim((string) ($order->specifications ?? ''));
+                    $specLines = preg_split('/\r\n|\r|\n/', $rawSpecifications) ?: [];
+                    $meaningfulSpecLines = collect($specLines)
+                        ->map(fn($line) => trim((string) $line))
+                        ->filter(fn($line) => $line !== '')
+                        ->reject(function ($line) {
+                            $lower = strtolower($line);
+                            return $lower === 'custom fabric order'
+                                || str_starts_with($lower, 'fabric type:')
+                                || str_starts_with($lower, 'quantity:')
+                                || str_starts_with($lower, 'intended use:');
+                        })
+                        ->values();
+                    $hasMeaningfulSpecifications = $meaningfulSpecLines->isNotEmpty();
+                @endphp
+
+                {{-- Specifications --}}
+                @if($hasMeaningfulSpecifications)
+                <div class="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="text-sm text-gray-600 font-semibold mb-2">Specifications:</div>
+                    <p class="text-gray-800 whitespace-pre-wrap">{{ $meaningfulSpecLines->implode("\n") }}</p>
+                </div>
+                @endif
+
+                {{-- Special Requirements --}}
+                @if($order->special_requirements)
+                <div class="mt-4 bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                    <div class="text-sm text-yellow-800 font-semibold mb-2">Special Requirements:</div>
+                    <p class="text-gray-800 whitespace-pre-wrap">{{ $order->special_requirements }}</p>
+                </div>
+                @endif
+            </div>
+            @endif
 
             {{-- Pricing Information --}}
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
