@@ -243,6 +243,27 @@
 
                     $itemSpecs = trim((string) ($item->specifications ?? ''));
                     $itemSpecial = trim((string) ($item->special_requirements ?? ''));
+                    $itemDesignMeta = is_array($item->design_metadata) ? $item->design_metadata : [];
+                    $itemCustomization = [];
+                    if (isset($itemDesignMeta['customization_settings']) && is_array($itemDesignMeta['customization_settings'])) {
+                        $itemCustomization = $itemDesignMeta['customization_settings'];
+                    } elseif (is_array($item->customization_settings ?? null)) {
+                        $itemCustomization = $item->customization_settings;
+                    }
+
+                    $previewImageUrls = [];
+                    if (!empty($item->design_upload)) {
+                        $rawUploads = is_string($item->design_upload) ? explode(',', $item->design_upload) : [$item->design_upload];
+                        foreach ($rawUploads as $upload) {
+                            $cleanUpload = trim((string) $upload);
+                            if ($cleanUpload === '') {
+                                continue;
+                            }
+                            $previewImageUrls[] = (str_starts_with($cleanUpload, 'http://') || str_starts_with($cleanUpload, 'https://') || str_starts_with($cleanUpload, 'data:image'))
+                                ? $cleanUpload
+                                : asset('storage/' . ltrim($cleanUpload, '/'));
+                        }
+                    }
                 @endphp
 
                 <div class="rounded-2xl border p-4" style="background:#fff; border-color:#e9bfc5;">
@@ -298,6 +319,47 @@
                     </div>
 
                     <div id="batch-item-details-{{ $item->id }}" class="hidden mt-3 rounded-xl border p-3" style="border-color:#efcfd3; background:#fff9f9;">
+                        <div class="mb-4">
+                            <div class="text-[#800000] font-bold text-sm mb-2">Pattern Preview</div>
+                            <div class="rounded-xl border border-[#e9bfc5] bg-white p-3">
+                                @if($thumbPatternModel && $thumbPatternModel->hasSvg())
+                                    <div class="w-full h-72 flex items-center justify-center overflow-hidden rounded-lg bg-[#fff7f7]">
+                                        <div style="max-width:95%; max-height:95%;">{!! $thumbPatternModel->getSvgContent() !!}</div>
+                                    </div>
+                                @elseif(!empty($previewImageUrls))
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        @foreach($previewImageUrls as $imgUrl)
+                                            <div class="w-full h-72 rounded-lg bg-[#fff7f7] border border-[#efcfd3] overflow-hidden flex items-center justify-center">
+                                                <img src="{{ $imgUrl }}" alt="Design Preview" class="max-w-full max-h-full object-contain">
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <div class="w-full h-40 rounded-lg bg-[#fff7f7] border border-dashed border-[#efcfd3] flex items-center justify-center text-sm text-gray-500">
+                                        No pattern preview available.
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="text-[#800000] font-bold text-sm mb-2">Customization Settings</div>
+                            @if(!empty($itemCustomization))
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                    @foreach($itemCustomization as $settingKey => $settingValue)
+                                        <div class="rounded-lg border border-[#efcfd3] bg-white p-2">
+                                            <div class="text-[11px] text-gray-500 uppercase">{{ ucfirst(str_replace('_', ' ', (string) $settingKey)) }}</div>
+                                            <div class="text-sm font-semibold text-gray-900">{{ is_scalar($settingValue) ? $settingValue : json_encode($settingValue) }}</div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="rounded-lg border border-dashed border-[#efcfd3] bg-white p-3 text-sm text-gray-500">
+                                    No customization settings available.
+                                </div>
+                            @endif
+                        </div>
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                             <div>
                                 <div class="text-gray-500 text-xs uppercase">Status</div>
