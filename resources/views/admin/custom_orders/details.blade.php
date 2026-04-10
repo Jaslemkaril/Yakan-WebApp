@@ -213,190 +213,6 @@
         </div>
     </div>
 
-    {{-- ===== Batch/Submission Panel (Image-1 Style) ===== --}}
-    @if($batchItems->count() > 1)
-    <div class="border rounded-2xl p-4 mb-6" style="background:#fdf9f9; border-color:#e9bfc5;">
-        <h3 class="text-2xl font-extrabold mb-3" style="color:#800000;">All Items From This Submission</h3>
-
-        <div class="space-y-3">
-            @foreach($batchItems as $index => $item)
-                @php
-                    $itemPrice = $getAdminPriceParts($item);
-                    $statusPill = $item->status ?? 'pending';
-                    $itemDeliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
-                    $itemPaymentStatus = $item->payment_status ?? 'unpaid';
-
-                    $patternLabel = 'N/A';
-                    $thumbPatternModel = null;
-                    $rawPatterns = $item->patterns;
-                    $patternArr = is_array($rawPatterns) ? $rawPatterns : [];
-                    if (!empty($patternArr)) {
-                        $firstPattern = $patternArr[0] ?? null;
-                        if (is_numeric($firstPattern)) {
-                            $thumbPatternModel = \App\Models\YakanPattern::find((int) $firstPattern);
-                            $patternLabel = $thumbPatternModel?->name ?? ('Pattern #' . (int) $firstPattern);
-                        } else {
-                            $patternLabel = (string) $firstPattern;
-                            $thumbPatternModel = \App\Models\YakanPattern::where('name', $patternLabel)->first();
-                        }
-                    }
-
-                    $itemSpecs = trim((string) ($item->specifications ?? ''));
-                    $itemSpecial = trim((string) ($item->special_requirements ?? ''));
-                    $itemDesignMeta = is_array($item->design_metadata) ? $item->design_metadata : [];
-                    $itemCustomization = [];
-                    if (isset($itemDesignMeta['customization_settings']) && is_array($itemDesignMeta['customization_settings'])) {
-                        $itemCustomization = $itemDesignMeta['customization_settings'];
-                    } elseif (is_array($item->customization_settings ?? null)) {
-                        $itemCustomization = $item->customization_settings;
-                    }
-
-                    $previewImageUrls = [];
-                    if (!empty($item->design_upload)) {
-                        $rawUploads = is_string($item->design_upload) ? explode(',', $item->design_upload) : [$item->design_upload];
-                        foreach ($rawUploads as $upload) {
-                            $cleanUpload = trim((string) $upload);
-                            if ($cleanUpload === '') {
-                                continue;
-                            }
-                            $previewImageUrls[] = (str_starts_with($cleanUpload, 'http://') || str_starts_with($cleanUpload, 'https://') || str_starts_with($cleanUpload, 'data:image'))
-                                ? $cleanUpload
-                                : asset('storage/' . ltrim($cleanUpload, '/'));
-                        }
-                    }
-                @endphp
-
-                <div class="rounded-2xl border p-4" style="background:#fff; border-color:#e9bfc5;">
-                    <div class="flex items-start justify-between gap-3 mb-3">
-                        <div class="flex items-start gap-3 min-w-0">
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background:#800000;">{{ $index + 1 }}</div>
-                            <div class="min-w-0">
-                                <div class="text-xl md:text-2xl font-extrabold truncate" style="color:#800000;">Custom Order ID: {{ $item->display_ref ?? ('CO-' . str_pad((string) $item->id, 5, '0', STR_PAD_LEFT)) }}</div>
-                                <div class="text-sm text-gray-600">{{ optional($item->created_at)->format('M d, Y g:i A') }}</div>
-                            </div>
-                        </div>
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold {{ in_array($statusPill, ['approved','processing','in_production','production_complete','out_for_delivery','delivered','completed']) ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">
-                            {{ ucfirst(str_replace('_', ' ', $statusPill)) }}
-                        </span>
-                    </div>
-
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
-                        <div>
-                            <div class="text-gray-500 text-xs">Pattern</div>
-                            <div class="font-bold text-xl text-gray-900">{{ $patternLabel }}</div>
-                            @if($thumbPatternModel && $thumbPatternModel->hasSvg())
-                                <div class="mt-2 w-20 h-20 rounded border border-[#e9bfc5] bg-white flex items-center justify-center overflow-hidden">
-                                    <div style="max-width:72px; max-height:72px;">{!! $thumbPatternModel->getSvgContent() !!}</div>
-                                </div>
-                            @endif
-                        </div>
-                        <div>
-                            <div class="text-gray-500 text-xs">Fabric Type</div>
-                            <div class="font-bold text-xl text-gray-900">{{ $item->fabric_type_name ?? 'N/A' }}</div>
-                        </div>
-                        <div>
-                            <div class="text-gray-500 text-xs">Intended Use</div>
-                            <div class="font-bold text-xl text-gray-900">{{ $item->intended_use_label ?? 'N/A' }}</div>
-                        </div>
-                        <div>
-                            <div class="text-gray-500 text-xs">Quantity</div>
-                            <div class="font-bold text-xl text-gray-900">{{ number_format((float) ($item->fabric_quantity_meters ?? 0), 2) }} meters</div>
-                        </div>
-                        <div>
-                            <div class="text-gray-500 text-xs">Est. Price</div>
-                            <div class="font-bold text-xl" style="color:#800000;">₱{{ number_format((float) ($itemPrice['quoted'] ?? 0), 2) }}</div>
-                        </div>
-                    </div>
-
-                    <div class="border-t pt-3 flex items-center justify-between" style="border-color:#efcfd3;">
-                        <div class="text-base text-gray-700">
-                            Delivery:
-                            <span class="font-bold text-gray-900">{{ $itemDeliveryType === 'pickup' ? 'Pickup' : 'Delivery' }}</span>
-                        </div>
-                        <a href="#" onclick="event.preventDefault(); toggleBatchItemDetails({{ $item->id }});" class="text-base font-extrabold" style="color:#800000;">
-                            View Full Details→
-                        </a>
-                    </div>
-
-                    <div id="batch-item-details-{{ $item->id }}" class="hidden mt-3 rounded-xl border p-3" style="border-color:#efcfd3; background:#fff9f9;">
-                        <div class="mb-4">
-                            <div class="text-[#800000] font-bold text-sm mb-2">Pattern Preview</div>
-                            <div class="rounded-xl border border-[#e9bfc5] bg-white p-3">
-                                @if($thumbPatternModel && $thumbPatternModel->hasSvg())
-                                    <div class="w-full h-72 flex items-center justify-center overflow-hidden rounded-lg bg-[#fff7f7]">
-                                        <div style="max-width:95%; max-height:95%;">{!! $thumbPatternModel->getSvgContent() !!}</div>
-                                    </div>
-                                @elseif(!empty($previewImageUrls))
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        @foreach($previewImageUrls as $imgUrl)
-                                            <div class="w-full h-72 rounded-lg bg-[#fff7f7] border border-[#efcfd3] overflow-hidden flex items-center justify-center">
-                                                <img src="{{ $imgUrl }}" alt="Design Preview" class="max-w-full max-h-full object-contain">
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <div class="w-full h-40 rounded-lg bg-[#fff7f7] border border-dashed border-[#efcfd3] flex items-center justify-center text-sm text-gray-500">
-                                        No pattern preview available.
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <div class="text-[#800000] font-bold text-sm mb-2">Customization Settings</div>
-                            @if(!empty($itemCustomization))
-                                <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                    @foreach($itemCustomization as $settingKey => $settingValue)
-                                        <div class="rounded-lg border border-[#efcfd3] bg-white p-2">
-                                            <div class="text-[11px] text-gray-500 uppercase">{{ ucfirst(str_replace('_', ' ', (string) $settingKey)) }}</div>
-                                            <div class="text-sm font-semibold text-gray-900">{{ is_scalar($settingValue) ? $settingValue : json_encode($settingValue) }}</div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @else
-                                <div class="rounded-lg border border-dashed border-[#efcfd3] bg-white p-3 text-sm text-gray-500">
-                                    No customization settings available.
-                                </div>
-                            @endif
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                            <div>
-                                <div class="text-gray-500 text-xs uppercase">Status</div>
-                                <div class="font-semibold text-gray-900">{{ ucfirst(str_replace('_', ' ', $statusPill)) }}</div>
-                            </div>
-                            <div>
-                                <div class="text-gray-500 text-xs uppercase">Payment</div>
-                                <div class="font-semibold text-gray-900">{{ ucfirst(str_replace('_', ' ', $itemPaymentStatus)) }}</div>
-                            </div>
-                            <div>
-                                <div class="text-gray-500 text-xs uppercase">Total Price</div>
-                                <div class="font-semibold text-gray-900">₱{{ number_format((float) ($itemPrice['total'] ?? $itemPrice['quoted'] ?? 0), 2) }}</div>
-                            </div>
-                            <div>
-                                <div class="text-gray-500 text-xs uppercase">Delivery Type</div>
-                                <div class="font-semibold text-gray-900">{{ $itemDeliveryType === 'pickup' ? 'Store Pickup' : 'Delivery' }}</div>
-                            </div>
-                        </div>
-                        @if($itemSpecs !== '')
-                            <div class="mt-3">
-                                <div class="text-gray-500 text-xs uppercase mb-1">Specifications</div>
-                                <p class="text-sm text-gray-800 whitespace-pre-wrap">{{ $itemSpecs }}</p>
-                            </div>
-                        @endif
-                        @if($itemSpecial !== '')
-                            <div class="mt-3">
-                                <div class="text-gray-500 text-xs uppercase mb-1">Special Requirements</div>
-                                <p class="text-sm text-gray-800 whitespace-pre-wrap">{{ $itemSpecial }}</p>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-            @endforeach
-        </div>
-    </div>
-    @endif
-
     {{-- Payment confirmed banner (shown via URL param to survive token-auth session resets) --}}
     @if(request('paid') == '1')
     <div class="mb-4 bg-green-100 border border-green-400 text-green-800 rounded-lg px-4 py-3 flex items-center gap-2">
@@ -408,6 +224,156 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {{-- Main Content - Left Column --}}
         <div class="lg:col-span-2 space-y-6">
+
+            {{-- ===== Batch/Submission Panel (Image-1 Style) ===== --}}
+            @if($batchItems->count() > 1)
+            <div class="border rounded-2xl p-4" style="background:#fdf9f9; border-color:#e9bfc5;">
+                <h3 class="text-2xl font-extrabold mb-3" style="color:#800000;">All Items From This Submission</h3>
+
+                <div class="space-y-3">
+                    @foreach($batchItems as $index => $item)
+                        @php
+                            $itemPrice = $getAdminPriceParts($item);
+                            $statusPill = $item->status ?? 'pending';
+                            $itemDeliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+
+                            $patternLabel = 'N/A';
+                            $thumbPatternModel = null;
+                            $rawPatterns = $item->patterns;
+                            $patternArr = is_array($rawPatterns) ? $rawPatterns : [];
+                            if (!empty($patternArr)) {
+                                $firstPattern = $patternArr[0] ?? null;
+                                if (is_numeric($firstPattern)) {
+                                    $thumbPatternModel = \App\Models\YakanPattern::find((int) $firstPattern);
+                                    $patternLabel = $thumbPatternModel?->name ?? ('Pattern #' . (int) $firstPattern);
+                                } else {
+                                    $patternLabel = (string) $firstPattern;
+                                    $thumbPatternModel = \App\Models\YakanPattern::where('name', $patternLabel)->first();
+                                }
+                            }
+
+                            $itemDesignMeta = is_array($item->design_metadata) ? $item->design_metadata : [];
+                            $itemCustomization = [];
+                            if (isset($itemDesignMeta['customization_settings']) && is_array($itemDesignMeta['customization_settings'])) {
+                                $itemCustomization = $itemDesignMeta['customization_settings'];
+                            } elseif (is_array($item->customization_settings ?? null)) {
+                                $itemCustomization = $item->customization_settings;
+                            }
+
+                            $previewImageUrls = [];
+                            if (!empty($item->design_upload)) {
+                                $rawUploads = is_string($item->design_upload) ? explode(',', $item->design_upload) : [$item->design_upload];
+                                foreach ($rawUploads as $upload) {
+                                    $cleanUpload = trim((string) $upload);
+                                    if ($cleanUpload === '') {
+                                        continue;
+                                    }
+                                    $previewImageUrls[] = (str_starts_with($cleanUpload, 'http://') || str_starts_with($cleanUpload, 'https://') || str_starts_with($cleanUpload, 'data:image'))
+                                        ? $cleanUpload
+                                        : asset('storage/' . ltrim($cleanUpload, '/'));
+                                }
+                            }
+                        @endphp
+
+                        <div class="rounded-2xl border p-4" style="background:#fff; border-color:#e9bfc5;">
+                            <div class="flex items-start justify-between gap-3 mb-3">
+                                <div class="flex items-start gap-3 min-w-0">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background:#800000;">{{ $index + 1 }}</div>
+                                    <div class="min-w-0">
+                                        <div class="text-xl md:text-2xl font-extrabold truncate" style="color:#800000;">Custom Order ID: {{ $item->display_ref ?? ('CO-' . str_pad((string) $item->id, 5, '0', STR_PAD_LEFT)) }}</div>
+                                        <div class="text-sm text-gray-600">{{ optional($item->created_at)->format('M d, Y g:i A') }}</div>
+                                    </div>
+                                </div>
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold {{ in_array($statusPill, ['approved','processing','in_production','production_complete','out_for_delivery','delivered','completed']) ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">
+                                    {{ ucfirst(str_replace('_', ' ', $statusPill)) }}
+                                </span>
+                            </div>
+
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
+                                <div>
+                                    <div class="text-gray-500 text-xs">Pattern</div>
+                                    <div class="font-bold text-xl text-gray-900">{{ $patternLabel }}</div>
+                                    @if($thumbPatternModel && $thumbPatternModel->hasSvg())
+                                        <div class="mt-2 w-20 h-20 rounded border border-[#e9bfc5] bg-white flex items-center justify-center overflow-hidden">
+                                            <div style="max-width:72px; max-height:72px;">{!! $thumbPatternModel->getSvgContent() !!}</div>
+                                        </div>
+                                    @endif
+                                </div>
+                                <div>
+                                    <div class="text-gray-500 text-xs">Fabric Type</div>
+                                    <div class="font-bold text-xl text-gray-900">{{ $item->fabric_type_name ?? 'N/A' }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-gray-500 text-xs">Intended Use</div>
+                                    <div class="font-bold text-xl text-gray-900">{{ $item->intended_use_label ?? 'N/A' }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-gray-500 text-xs">Quantity</div>
+                                    <div class="font-bold text-xl text-gray-900">{{ number_format((float) ($item->fabric_quantity_meters ?? 0), 2) }} meters</div>
+                                </div>
+                                <div>
+                                    <div class="text-gray-500 text-xs">Est. Price</div>
+                                    <div class="font-bold text-xl" style="color:#800000;">₱{{ number_format((float) ($itemPrice['quoted'] ?? 0), 2) }}</div>
+                                </div>
+                            </div>
+
+                            <div class="border-t pt-3 flex items-center justify-between" style="border-color:#efcfd3;">
+                                <div class="text-base text-gray-700">
+                                    Delivery:
+                                    <span class="font-bold text-gray-900">{{ $itemDeliveryType === 'pickup' ? 'Pickup' : 'Delivery' }}</span>
+                                </div>
+                                <a href="#" onclick="event.preventDefault(); toggleBatchItemDetails({{ $item->id }});" class="text-base font-extrabold" style="color:#800000;">
+                                    View Full Details→
+                                </a>
+                            </div>
+
+                            <div id="batch-item-details-{{ $item->id }}" class="hidden mt-3 rounded-xl border p-3" style="border-color:#efcfd3; background:#fff9f9;">
+                                <div class="mb-4">
+                                    <div class="text-[#800000] font-bold text-sm mb-2">Pattern Preview</div>
+                                    <div class="rounded-xl border border-[#e9bfc5] bg-white p-3">
+                                        @if($thumbPatternModel && $thumbPatternModel->hasSvg())
+                                            <div class="w-full h-72 flex items-center justify-center overflow-hidden rounded-lg bg-[#fff7f7]">
+                                                <div style="max-width:95%; max-height:95%;">{!! $thumbPatternModel->getSvgContent() !!}</div>
+                                            </div>
+                                        @elseif(!empty($previewImageUrls))
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                @foreach($previewImageUrls as $imgUrl)
+                                                    <div class="w-full h-72 rounded-lg bg-[#fff7f7] border border-[#efcfd3] overflow-hidden flex items-center justify-center">
+                                                        <img src="{{ $imgUrl }}" alt="Design Preview" class="max-w-full max-h-full object-contain">
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @else
+                                            <div class="w-full h-40 rounded-lg bg-[#fff7f7] border border-dashed border-[#efcfd3] flex items-center justify-center text-sm text-gray-500">
+                                                No pattern preview available.
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="text-[#800000] font-bold text-sm mb-2">Customization Settings</div>
+                                    @if(!empty($itemCustomization))
+                                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                            @foreach($itemCustomization as $settingKey => $settingValue)
+                                                <div class="rounded-lg border border-[#efcfd3] bg-white p-2">
+                                                    <div class="text-[11px] text-gray-500 uppercase">{{ ucfirst(str_replace('_', ' ', (string) $settingKey)) }}</div>
+                                                    <div class="text-sm font-semibold text-gray-900">{{ is_scalar($settingValue) ? $settingValue : json_encode($settingValue) }}</div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="rounded-lg border border-dashed border-[#efcfd3] bg-white p-3 text-sm text-gray-500">
+                                            No customization settings available.
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+            @endif
             
             {{-- Requested: removed Pattern Preview, Customization Settings, and Order Information sections. --}}
 
