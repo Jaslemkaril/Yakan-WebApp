@@ -1408,7 +1408,7 @@ function initSubmissionItemPreviewSwitcher() {
         }
     }
 
-    const ignoreSelectors = 'a, button, input, select, textarea, form, label';
+    const ignoreSelectors = 'a, button, input, select, textarea, label';
 
     cards.forEach(function(card) {
         card.addEventListener('click', function(event) {
