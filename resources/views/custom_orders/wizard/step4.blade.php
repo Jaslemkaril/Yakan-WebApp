@@ -1234,6 +1234,9 @@
                      */
                     function submitAddToBatch() {
                         const form = document.getElementById('submitOrderForm');
+                        if (!form) {
+                            return;
+                        }
                         const deliveryType = document.querySelector('input[name="delivery_type"]:checked')?.value;
                         const quantity = document.getElementById('quantity').value;
 
@@ -1269,9 +1272,38 @@
                         var urlToken = new URLSearchParams(window.location.search).get('auth_token');
                         if (urlToken) document.getElementById('step4AuthToken').value = urlToken;
 
-                        // Change form target and submit normally (non-AJAX so we get the full redirect)
+                        // Force POST for add-to-batch and remove any leaked method spoofing input.
                         form.action = '{{ route("custom_orders.add.to.batch") }}';
-                        form.submit();
+                        form.method = 'POST';
+                        form.querySelectorAll('input[name="_method"]').forEach(function(input) {
+                            if (input && input.parentNode) {
+                                input.parentNode.removeChild(input);
+                            }
+                        });
+
+                        const formData = new FormData(form);
+                        formData.delete('_method');
+
+                        fetch(form.action, {
+                            method: 'POST',
+                            body: formData,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        })
+                        .then(function(response) {
+                            if (response.redirected && response.url) {
+                                window.location.href = response.url;
+                                return;
+                            }
+                            return response.text().then(function(html) {
+                                document.open();
+                                document.write(html);
+                                document.close();
+                            });
+                        })
+                        .catch(function() {
+                            // Fallback to classic form submit as plain POST.
+                            form.submit();
+                        });
                     }
                     </script>
                     
