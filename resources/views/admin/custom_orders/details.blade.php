@@ -213,111 +213,79 @@
         </div>
     </div>
 
-    {{-- ===== Batch/Submission Siblings Panel ===== --}}
-    @if(isset($batchOrders) && $batchOrders->count() > 0)
-    <div class="border-2 rounded-xl p-5 mb-6" style="background-color:#fff5f5; border-color:#e0b0b0;">
-        <div class="flex items-center gap-3 mb-4">
-            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background-color:#f5e6e8;">
-                <svg class="w-5 h-5" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
-                </svg>
-            </div>
-            <div>
-                <h3 class="font-bold" style="color:#800000;">Batch Order — {{ $batchOrders->count() + 1 }} Items Total</h3>
-                @if(!empty($order->batch_order_number))
-                    <p class="text-xs font-mono" style="color:#8b3a56;">Batch #{{ $order->batch_order_number }}</p>
-                @elseif(!empty($isImplicitBatchGroup))
-                    <p class="text-xs" style="color:#8b3a56;">Grouped from same submission process</p>
-                @endif
-            </div>
-            <span class="ml-auto inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold" style="background-color:#f5e6e8; color:#800000;">
-                BATCH &times;{{ $batchOrders->count() + 1 }}
-            </span>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs mb-4">
-            <div class="rounded-lg border p-2" style="border-color:#e0b0b0; background-color:#fffafb;">
-                <div style="color:#8b3a56;" class="font-semibold">Items in submission</div>
-                <div class="text-base font-bold text-[#800000]">{{ $batchItems->count() }}</div>
-            </div>
-            <div class="rounded-lg border p-2" style="border-color:#e0b0b0; background-color:#fffafb;">
-                <div style="color:#8b3a56;" class="font-semibold">Quoted subtotal</div>
-                <div class="text-base font-bold text-gray-900">₱{{ number_format($batchQuotedSubtotal, 2) }}</div>
-            </div>
-            <div class="rounded-lg border p-2" style="border-color:#e0b0b0; background-color:#fffafb;">
-                <div style="color:#8b3a56;" class="font-semibold">Grand total to pay</div>
-                <div class="text-base font-extrabold text-[#800000]">₱{{ number_format($batchGrandTotal, 2) }}</div>
-            </div>
-        </div>
-        <div class="text-xs flex items-center justify-between mb-4" style="color:#8b3a56;">
-            <span class="font-semibold">Payment progress</span>
-            <span class="font-bold">{{ $batchPaidCount }}/{{ $batchItems->count() }} paid</span>
-        </div>
+    {{-- ===== Batch/Submission Panel (Image-1 Style) ===== --}}
+    @if($batchItems->count() > 1)
+    <div class="border rounded-2xl p-5 mb-6" style="background:#fdf9f9; border-color:#e9bfc5;">
+        <h3 class="text-3xl font-black mb-4" style="color:#800000;">All Items From This Submission</h3>
 
-        <div class="space-y-2">
-            @foreach($batchItems as $item)
+        <div class="space-y-4">
+            @foreach($batchItems as $index => $item)
                 @php
                     $itemPrice = $getAdminPriceParts($item);
+                    $statusPill = $item->status ?? 'pending';
                     $itemDeliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
-                    $statusPill = ($item->status ?? 'pending');
-                    $payPill = ($item->payment_status ?? 'unpaid');
+
+                    $patternLabel = 'N/A';
+                    $rawPatterns = $item->patterns;
+                    $patternArr = is_array($rawPatterns) ? $rawPatterns : [];
+                    if (!empty($patternArr)) {
+                        $firstPattern = $patternArr[0] ?? null;
+                        if (is_numeric($firstPattern)) {
+                            $patternModel = \App\Models\YakanPattern::find((int) $firstPattern);
+                            $patternLabel = $patternModel?->name ?? ('Pattern #' . (int) $firstPattern);
+                        } else {
+                            $patternLabel = (string) $firstPattern;
+                        }
+                    }
                 @endphp
-                <details class="rounded-lg border" style="border-color:#e0b0b0; background-color:#fffafb;" {{ $item->id == $order->id ? 'open' : '' }}>
-                    <summary class="cursor-pointer list-none px-3 py-2">
-                        <div class="flex items-center justify-between gap-3">
+
+                <div class="rounded-2xl border p-5" style="background:#fff; border-color:#e9bfc5;">
+                    <div class="flex items-start justify-between gap-3 mb-4">
+                        <div class="flex items-start gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-extrabold" style="background:#800000;">{{ $index + 1 }}</div>
                             <div class="min-w-0">
-                                <div class="font-bold text-[#800000] text-sm">#{{ $item->id }} {{ $item->id == $order->id ? '(current)' : '' }}</div>
-                                <div class="text-xs text-gray-600">{{ $item->fabric_type_name ?? ($item->product->name ?? 'Custom item') }}</div>
-                            </div>
-                            <div class="text-[11px] text-right">
-                                @php
-                                    $itemShipping = $itemPrice['shipping'] ?? 0;
-                                    $itemTotal    = $itemPrice['total'] ?? $itemPrice['quoted'];
-                                    $shippingIncluded = $itemShipping <= 0;
-                                @endphp
-                                @if($itemDeliveryType === 'pickup')
-                                    <div class="font-semibold text-gray-900">Items: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
-                                    <div class="text-green-700 font-semibold">Shipping: FREE (Pickup)</div>
-                                    <div class="font-bold text-[#800000]">Item total: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
-                                @elseif($shippingIncluded)
-                                    <div class="font-semibold text-gray-900">Items + Shipping: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
-                                    <div class="text-gray-500 text-[10px]">Shipping included in price</div>
-                                    <div class="font-bold text-[#800000]">Item total: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
-                                @else
-                                    <div class="font-semibold text-gray-900">Items: ₱{{ number_format($itemPrice['quoted'], 2) }}</div>
-                                    <div class="text-gray-600">Shipping: ₱{{ number_format($itemShipping, 2) }}</div>
-                                    <div class="font-bold text-[#800000]">Item total: ₱{{ number_format($itemTotal, 2) }}</div>
-                                @endif
-                            </div>
-                            <div class="flex flex-col items-end gap-1">
-                                <span class="text-[10px] px-2 py-0.5 rounded-full {{ in_array($statusPill, ['approved','in_production','production_complete','out_for_delivery','delivered','completed']) ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">{{ ucfirst(str_replace('_',' ', $statusPill)) }}</span>
-                                <span class="text-[10px] px-2 py-0.5 rounded-full {{ $payPill === 'paid' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700' }}">{{ ucfirst(str_replace('_',' ', $payPill)) }}</span>
+                                <div class="text-2xl font-black truncate" style="color:#800000;">Custom Order ID: {{ $item->display_ref ?? ('CO-' . str_pad((string) $item->id, 5, '0', STR_PAD_LEFT)) }}</div>
+                                <div class="text-xl text-gray-600">{{ optional($item->created_at)->format('M d, Y g:i A') }}</div>
                             </div>
                         </div>
-                    </summary>
-                    <div class="px-3 pb-3 pt-1 border-t" style="border-color:#f1d1d8;">
-                        <div class="grid grid-cols-1 gap-2">
-@php
-                                    $hideApproveReject = in_array($statusPill, ['approved','processing','in_production','production_complete','out_for_delivery','delivered','completed','cancelled','rejected','price_quoted'])
-                                        || $payPill === 'paid'
-                                        || $isNonChatPatternOrder($item);
-                                @endphp
-                            <div class="grid grid-cols-{{ $hideApproveReject ? '1' : '3' }} gap-2">
-                                @if(!$hideApproveReject)
-                                <form action="{{ route('admin.custom-orders.approve', $item) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
-                                    @csrf
-                                    <button type="submit" class="w-full text-[11px] font-semibold text-white rounded px-2 py-1 bg-green-600 hover:bg-green-700">Approve</button>
-                                </form>
-                                <form action="{{ route('admin.custom-orders.reject', $item) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" method="POST">
-                                    @csrf
-                                    <input type="hidden" name="rejection_reason" value="Rejected from compact batch panel">
-                                    <button type="submit" class="w-full text-[11px] font-semibold text-white rounded px-2 py-1 bg-red-600 hover:bg-red-700">Reject</button>
-                                </form>
-                                @endif
-                                <a href="{{ route('admin.custom-orders.show', $item->id) }}{{ request('auth_token') ? '?auth_token='.request('auth_token') : '' }}" class="w-full text-[11px] font-semibold text-[#800000] border border-[#c08080] rounded px-2 py-1 text-center bg-white hover:bg-[#fff5f5]">View</a>
-                            </div>
+                        <span class="inline-flex items-center px-4 py-1.5 rounded-full text-base font-semibold {{ in_array($statusPill, ['approved','processing','in_production','production_complete','out_for_delivery','delivered','completed']) ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">
+                            {{ ucfirst(str_replace('_', ' ', $statusPill)) }}
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                        <div>
+                            <div class="text-gray-500 text-sm">Pattern</div>
+                            <div class="font-bold text-2xl text-gray-900">{{ $patternLabel }}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 text-sm">Fabric Type</div>
+                            <div class="font-bold text-2xl text-gray-900">{{ $item->fabric_type_name ?? 'N/A' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 text-sm">Intended Use</div>
+                            <div class="font-bold text-2xl text-gray-900">{{ $item->intended_use_label ?? 'N/A' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 text-sm">Quantity</div>
+                            <div class="font-bold text-2xl text-gray-900">{{ number_format((float) ($item->fabric_quantity_meters ?? 0), 2) }} meters</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 text-sm">Est. Price</div>
+                            <div class="font-bold text-2xl" style="color:#800000;">₱{{ number_format((float) ($itemPrice['quoted'] ?? 0), 2) }}</div>
                         </div>
                     </div>
-                </details>
+
+                    <div class="border-t pt-3 flex items-center justify-between" style="border-color:#efcfd3;">
+                        <div class="text-xl text-gray-700">
+                            Delivery:
+                            <span class="font-bold text-gray-900">{{ $itemDeliveryType === 'pickup' ? 'Pickup' : 'Delivery' }}</span>
+                        </div>
+                        <a href="{{ route('admin.custom-orders.show', $item->id) }}{{ request('auth_token') ? '?auth_token=' . request('auth_token') : '' }}" class="text-2xl font-extrabold" style="color:#800000;">
+                            View Full Details→
+                        </a>
+                    </div>
+                </div>
             @endforeach
         </div>
     </div>
@@ -335,243 +303,7 @@
         {{-- Main Content - Left Column --}}
         <div class="lg:col-span-2 space-y-6">
             
-            {{-- Pattern Preview Section --}}
-            @php
-                // Load pattern for SVG display
-                $patternModel = null;
-                if (!empty($order->design_metadata) && isset($order->design_metadata['pattern_id'])) {
-                    $patternModel = \App\Models\YakanPattern::find($order->design_metadata['pattern_id']);
-                } elseif (!empty($order->patterns) && is_array($order->patterns)) {
-                    if (!empty($order->patterns) && is_numeric($order->patterns[0])) {
-                        $patternModel = \App\Models\YakanPattern::find($order->patterns[0]);
-                    } elseif (!empty($order->patterns)) {
-                        $patternModel = \App\Models\YakanPattern::where('name', $order->patterns[0])->first();
-                    }
-                }
-            @endphp
-            
-            @if($patternModel && $patternModel->hasSvg())
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
-                    Pattern Preview
-                    @if($order->design_method === 'pattern')
-                        <span class="text-sm font-normal text-[#800000]">(Customized Pattern: {{ $patternModel->name }})</span>
-                    @endif
-                </h2>
-                
-                @php
-                    // Get customization settings from order
-                    $customization = $order->customization_settings ?? [];
-                    $filterStyle = '';
-                    if (!empty($customization)) {
-                        $hue = $customization['hue'] ?? 0;
-                        $saturation = $customization['saturation'] ?? 100;
-                        $brightness = $customization['brightness'] ?? 100;
-                        $scale = $customization['scale'] ?? 1;
-                        $rotation = $customization['rotation'] ?? 0;
-                        $opacity = $customization['opacity'] ?? 1;
-                        
-                        $filterStyle = sprintf(
-                            'filter: hue-rotate(%ddeg) saturate(%d%%) brightness(%d%%); opacity: %s; transform: scale(%s) rotate(%ddeg);',
-                            $hue,
-                            $saturation,
-                            $brightness,
-                            $opacity,
-                            $scale,
-                            $rotation
-                        );
-                    }
-                @endphp
-                
-                <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border-2 border-red-200">
-                    <div class="w-full max-w-2xl mx-auto rounded-lg shadow-lg bg-white p-4 overflow-hidden">
-                        <div class="w-full h-96 flex items-center justify-center">
-                            <div style="{{ $filterStyle }} transform-origin: center; max-width: 100%; max-height: 100%;">
-                                {!! $patternModel->getSvgContent() !!}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                {{-- Customization Settings --}}
-                @if($order->design_metadata && is_array($order->design_metadata))
-                    @if(isset($order->design_metadata['customization_settings']))
-                        <div class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3">
-                            <h3 class="col-span-full text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                <svg class="w-4 h-4 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
-                                </svg>
-                                Customization Settings
-                            </h3>
-                            @foreach($order->design_metadata['customization_settings'] as $key => $value)
-                                <div class="bg-white rounded-lg p-3 border-2 border-red-200 hover:border-[#800000] transition-colors">
-                                    <div class="text-xs text-gray-500 uppercase font-semibold">{{ ucfirst(str_replace('_', ' ', $key)) }}</div>
-                                    <div class="text-sm font-bold text-[#800000]">{{ $value }}</div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
-                @endif
-            </div>
-            @elseif($order->design_upload)
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
-                    Design References
-                </h2>
-                
-                <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border-2 border-red-200">
-                    @php
-                        // Handle multiple images (comma-separated)
-                        $designImages = is_string($order->design_upload) ? explode(',', $order->design_upload) : [$order->design_upload];
-                        $designImages = array_filter(array_map('trim', $designImages));
-                    @endphp
-                    
-                    @if(count($designImages) > 1)
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            @foreach($designImages as $imageUrl)
-                                <div class="bg-white rounded-lg p-2 shadow-md">
-                                    @if(str_starts_with($imageUrl, 'http'))
-                                        <img src="{{ $imageUrl }}" alt="Design Reference" 
-                                             class="w-full h-64 object-contain rounded cursor-pointer hover:scale-105 transition-transform"
-                                             onclick="window.open('{{ $imageUrl }}', '_blank')">
-                                    @elseif(str_starts_with($imageUrl, 'data:image'))
-                                        <img src="{{ $imageUrl }}" alt="Design Reference" 
-                                             class="w-full h-64 object-contain rounded">
-                                    @else
-                                        <img src="{{ asset('storage/' . $imageUrl) }}" alt="Design Reference" 
-                                             class="w-full h-64 object-contain rounded cursor-pointer hover:scale-105 transition-transform"
-                                             onclick="window.open('{{ asset('storage/' . $imageUrl) }}', '_blank')">
-                                    @endif
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        @php
-                            $singleImage = $designImages[0] ?? $order->design_upload;
-                        @endphp
-                        @if(str_starts_with($singleImage, 'http'))
-                            <img src="{{ $singleImage }}" alt="Design Reference" 
-                                 class="w-full max-h-96 object-contain rounded-lg shadow-lg cursor-pointer hover:scale-105 transition-transform"
-                                 onclick="window.open('{{ $singleImage }}', '_blank')">
-                        @elseif(str_starts_with($singleImage, 'data:image'))
-                            <img src="{{ $singleImage }}" alt="Design Reference" 
-                                 class="w-full max-h-96 object-contain rounded-lg shadow-lg">
-                        @else
-                            <img src="{{ asset('storage/' . $singleImage) }}" alt="Design Reference" 
-                                 class="w-full max-h-96 object-contain rounded-lg shadow-lg cursor-pointer hover:scale-105 transition-transform"
-                                 onclick="window.open('{{ asset('storage/' . $singleImage) }}', '_blank')">
-                        @endif
-                    @endif
-                </div>
-                
-                @if(count($designImages) > 1)
-                    <p class="text-sm text-gray-600 mt-2">
-                        <svg class="w-4 h-4 inline text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        Click on any image to view in full size
-                    </p>
-                @endif
-                
-                {{-- Customization Settings --}}
-                @if($order->design_metadata && is_array($order->design_metadata))
-                    @if(isset($order->design_metadata['customization_settings']))
-                        <div class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3">
-                            <h3 class="col-span-full text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                <svg class="w-4 h-4 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
-                                </svg>
-                                Customization Settings
-                            </h3>
-                            @foreach($order->design_metadata['customization_settings'] as $key => $value)
-                                <div class="bg-white rounded-lg p-3 border-2 border-red-200 hover:border-[#800000] transition-colors">
-                                    <div class="text-xs text-gray-500 uppercase font-semibold">{{ ucfirst(str_replace('_', ' ', $key)) }}</div>
-                                    <div class="text-sm font-bold text-[#800000]">{{ $value }}</div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
-                @endif
-            </div>
-            @endif
-
-            {{-- Order Details --}}
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 class="text-xl font-bold text-gray-900 mb-4">Order Information</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {{-- Fabric Type --}}
-                    @if($order->fabric_type)
-                    <div class="bg-red-50 rounded-lg p-4 border border-red-200">
-                        <div class="text-sm text-[#800000] font-semibold mb-1">Fabric Type</div>
-                        <div class="text-lg font-bold text-gray-900">{{ $order->fabric_type_name }}</div>
-                    </div>
-                    @endif
-                    
-                    {{-- Quantity --}}
-                    @if($order->fabric_quantity_meters)
-                    <div class="bg-red-50 rounded-lg p-4 border border-red-200">
-                        <div class="text-sm text-[#800000] font-semibold mb-1">Quantity</div>
-                        <div class="text-lg font-bold text-gray-900">{{ $order->fabric_quantity_meters }} meters</div>
-                    </div>
-                    @endif
-                    
-                    {{-- Intended Use --}}
-                    @if($order->intended_use)
-                    <div class="bg-green-50 rounded-lg p-4 border border-green-200">
-                        <div class="text-sm text-green-600 font-semibold mb-1">Intended Use</div>
-                        <div class="text-lg font-bold text-gray-900">{{ $order->intended_use_label }}</div>
-                    </div>
-                    @endif
-                    
-                    {{-- Design Method --}}
-                    @if($order->design_method)
-                    <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
-                        <div class="text-sm text-indigo-600 font-semibold mb-1">Design Method</div>
-                        <div class="text-lg font-bold text-gray-900">{{ ucfirst($order->design_method) }}</div>
-                    </div>
-                    @endif
-                </div>
-
-                @php
-                    $rawSpecifications = trim((string) ($order->specifications ?? ''));
-                    $specLines = preg_split('/\r\n|\r|\n/', $rawSpecifications) ?: [];
-                    $meaningfulSpecLines = collect($specLines)
-                        ->map(fn($line) => trim((string) $line))
-                        ->filter(fn($line) => $line !== '')
-                        ->reject(function ($line) {
-                            $lower = strtolower($line);
-                            return $lower === 'custom fabric order'
-                                || str_starts_with($lower, 'fabric type:')
-                                || str_starts_with($lower, 'quantity:')
-                                || str_starts_with($lower, 'intended use:');
-                        })
-                        ->values();
-                    $hasMeaningfulSpecifications = $meaningfulSpecLines->isNotEmpty();
-                @endphp
-                
-                {{-- Specifications --}}
-                @if($hasMeaningfulSpecifications)
-                <div class="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <div class="text-sm text-gray-600 font-semibold mb-2">Specifications:</div>
-                    <p class="text-gray-800 whitespace-pre-wrap">{{ $meaningfulSpecLines->implode("\n") }}</p>
-                </div>
-                @endif
-                
-                {{-- Special Requirements --}}
-                @if($order->special_requirements)
-                <div class="mt-4 bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                    <div class="text-sm text-yellow-800 font-semibold mb-2">Special Requirements:</div>
-                    <p class="text-gray-800 whitespace-pre-wrap">{{ $order->special_requirements }}</p>
-                </div>
-                @endif
-            </div>
+            {{-- Requested: removed Pattern Preview, Customization Settings, and Order Information sections. --}}
 
             {{-- Pricing Information --}}
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
