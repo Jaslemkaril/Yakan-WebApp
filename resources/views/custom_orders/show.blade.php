@@ -394,6 +394,77 @@
             <!-- Main Content -->
             <div class="lg:col-span-2 space-y-6">
 
+        @php
+            $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
+            $showDeliveryBanner = false;
+            $deliveryLabel = null;
+            $deliveryDescription = null;
+            $deliveryIcon = null;
+
+            if ($deliveryType === 'delivery') {
+                if ($order->status === 'out_for_delivery') {
+                    $showDeliveryBanner = true;
+                    $deliveryLabel = 'Out for Delivery';
+                    $deliveryDescription = 'Your custom order has been handed to our courier and is on the way to you.';
+                    $deliveryIcon = '🚛';
+                } elseif ($order->status === 'delivered') {
+                    $showDeliveryBanner = true;
+                    $deliveryLabel = 'Delivered';
+                    $deliveryDescription = 'Your custom order has been delivered. Please confirm receipt below.';
+                    $deliveryIcon = '📦';
+                } elseif ($order->status === 'completed') {
+                    $showDeliveryBanner = true;
+                    $deliveryLabel = 'Order Received';
+                    $deliveryDescription = 'Thank you for confirming! Your order is now complete.';
+                    $deliveryIcon = '✅';
+                } elseif (in_array($order->status, ['processing', 'in_production', 'production_complete'])) {
+                    $showDeliveryBanner = true;
+                    if ($order->status === 'processing') {
+                        $deliveryLabel = 'Payment Accepted';
+                        $deliveryDescription = 'Your payment is confirmed. Production will start once our team begins work on your order.';
+                        $deliveryIcon = '⚙️';
+                    } elseif ($order->status === 'in_production') {
+                        $deliveryLabel = 'In Production';
+                        $deliveryDescription = 'Your custom order is being produced by our artisans.';
+                        $deliveryIcon = '👨‍🎨';
+                    } elseif ($order->status === 'production_complete') {
+                        $deliveryLabel = 'Preparing for Delivery';
+                        $deliveryDescription = 'Production completed! Your custom order is being prepared and will be handed to our courier soon.';
+                        $deliveryIcon = '📦';
+                    }
+                }
+            } elseif ($deliveryType === 'pickup') {
+                if ($order->status === 'delivered') {
+                    $showDeliveryBanner = true;
+                    $deliveryLabel = 'Ready for Pickup';
+                    $deliveryDescription = 'Your custom order is ready for pickup at our store. Please confirm when picked up.';
+                    $deliveryIcon = '🏬';
+                } elseif ($order->status === 'completed') {
+                    $showDeliveryBanner = true;
+                    $deliveryLabel = 'Order Received';
+                    $deliveryDescription = 'Thank you for confirming! Your order is now complete.';
+                    $deliveryIcon = '✅';
+                }
+            }
+        @endphp
+
+        @if($showDeliveryBanner)
+            <div class="mb-4 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-300 rounded-lg p-3 flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gray-800 text-white flex-shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-semibold text-gray-900">{{ $deliveryLabel }}</p>
+                    <p class="text-xs text-gray-700 mt-0.5">{{ $deliveryDescription }}</p>
+                    @if($order->delivery_address && $deliveryType === 'delivery')
+                        <p class="text-xs text-gray-600 mt-0.5">Destination: <span class="font-medium">{{ $order->delivery_address }}</span></p>
+                    @endif
+                </div>
+            </div>
+        @endif
+
         @if($isBatchOrder)
             <div class="mb-6 rounded-xl border-2 p-5" style="border-color:#e0b0b0; background-color:#fff5f5;">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -601,77 +672,6 @@
                         </div>
                         <p class="text-xs text-gray-600 mt-1 italic">We apologize for the inconvenience. Our team is working to resolve this as quickly as possible.</p>
                     </div>
-                </div>
-            </div>
-        @endif
-
-        @php
-            $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
-            $showDeliveryBanner = false;
-            $deliveryLabel = null;
-            $deliveryDescription = null;
-            $deliveryIcon = null;
-
-            if ($deliveryType === 'delivery') {
-                if ($order->status === 'out_for_delivery') {
-                    $showDeliveryBanner = true;
-                    $deliveryLabel = 'Out for Delivery';
-                    $deliveryDescription = 'Your custom order has been handed to our courier and is on the way to you.';
-                    $deliveryIcon = '🚛';
-                } elseif ($order->status === 'delivered') {
-                    $showDeliveryBanner = true;
-                    $deliveryLabel = 'Delivered';
-                    $deliveryDescription = 'Your custom order has been delivered. Please confirm receipt below.';
-                    $deliveryIcon = '📦';
-                } elseif ($order->status === 'completed') {
-                    $showDeliveryBanner = true;
-                    $deliveryLabel = 'Order Received';
-                    $deliveryDescription = 'Thank you for confirming! Your order is now complete.';
-                    $deliveryIcon = '✅';
-                } elseif (in_array($order->status, ['processing', 'in_production', 'production_complete'])) {
-                    $showDeliveryBanner = true;
-                    if ($order->status === 'processing') {
-                        $deliveryLabel = 'Payment Accepted';
-                        $deliveryDescription = 'Your payment is confirmed. Production will start once our team begins work on your order.';
-                        $deliveryIcon = '⚙️';
-                    } elseif ($order->status === 'in_production') {
-                        $deliveryLabel = 'In Production';
-                        $deliveryDescription = 'Your custom order is being produced by our artisans.';
-                        $deliveryIcon = '👨‍🎨';
-                    } elseif ($order->status === 'production_complete') {
-                        $deliveryLabel = 'Preparing for Delivery';
-                        $deliveryDescription = 'Production completed! Your custom order is being prepared and will be handed to our courier soon.';
-                        $deliveryIcon = '📦';
-                    }
-                }
-            } elseif ($deliveryType === 'pickup') {
-                if ($order->status === 'delivered') {
-                    $showDeliveryBanner = true;
-                    $deliveryLabel = 'Ready for Pickup';
-                    $deliveryDescription = 'Your custom order is ready for pickup at our store. Please confirm when picked up.';
-                    $deliveryIcon = '🏬';
-                } elseif ($order->status === 'completed') {
-                    $showDeliveryBanner = true;
-                    $deliveryLabel = 'Order Received';
-                    $deliveryDescription = 'Thank you for confirming! Your order is now complete.';
-                    $deliveryIcon = '✅';
-                }
-            }
-        @endphp
-
-        @if($showDeliveryBanner)
-            <div class="mb-4 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-300 rounded-lg p-3 flex items-start gap-3">
-                <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gray-800 text-white flex-shrink-0">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
-                <div class="flex-1">
-                    <p class="text-sm font-semibold text-gray-900">{{ $deliveryLabel }}</p>
-                    <p class="text-xs text-gray-700 mt-0.5">{{ $deliveryDescription }}</p>
-                    @if($order->delivery_address && $deliveryType === 'delivery')
-                        <p class="text-xs text-gray-600 mt-0.5">Destination: <span class="font-medium">{{ $order->delivery_address }}</span></p>
-                    @endif
                 </div>
             </div>
         @endif
