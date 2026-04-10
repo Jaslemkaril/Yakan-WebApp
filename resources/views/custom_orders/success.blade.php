@@ -129,7 +129,7 @@
                             @if($bOrder->estimated_price)
                             <div>
                                 <p class="text-xs text-gray-500 mb-0.5">Est. Price</p>
-                                <p class="font-semibold" style="color:#800000;">?{{ number_format($bOrder->estimated_price, 2) }}</p>
+                                <p class="font-semibold" style="color:#800000;">&#8369;{{ number_format($bOrder->estimated_price, 2) }}</p>
                             </div>
                             @endif
                             <div>
@@ -155,7 +155,7 @@
                 @if($totalEstimated > 0)
                 <div class="mt-5 pt-4 border-t flex justify-between items-center" style="border-color:#e0b0b0;">
                     <span class="text-sm font-semibold text-gray-700">Combined Estimated Total:</span>
-                    <span class="text-xl font-bold" style="color:#800000;">?{{ number_format($totalEstimated, 2) }}</span>
+                    <span class="text-xl font-bold" style="color:#800000;">&#8369;{{ number_format($totalEstimated, 2) }}</span>
                 </div>
                 @endif
             </div>
