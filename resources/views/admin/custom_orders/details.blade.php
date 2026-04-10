@@ -227,10 +227,10 @@
 
             {{-- ===== Batch/Submission Panel (Image-1 Style) ===== --}}
             @if($batchItems->count() > 1)
-            <div class="border rounded-2xl p-4" style="background:#fdf9f9; border-color:#e9bfc5;">
-                <h3 class="text-2xl font-extrabold mb-3" style="color:#800000;">All Items From This Submission</h3>
+            <div class="border rounded-xl p-3" style="background:#fdf9f9; border-color:#e9bfc5;">
+                <h3 class="text-xl font-extrabold mb-2" style="color:#800000;">All Items From This Submission</h3>
 
-                <div class="space-y-3">
+                <div class="space-y-2.5">
                     @foreach($batchItems as $index => $item)
                         @php
                             $itemPrice = $getAdminPriceParts($item);
@@ -275,54 +275,54 @@
                             }
                         @endphp
 
-                        <div class="rounded-2xl border p-4" style="background:#fff; border-color:#e9bfc5;">
-                            <div class="flex items-start justify-between gap-3 mb-3">
+                        <div class="rounded-xl border p-3" style="background:#fff; border-color:#e9bfc5;">
+                            <div class="flex items-start justify-between gap-2 mb-2">
                                 <div class="flex items-start gap-3 min-w-0">
-                                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background:#800000;">{{ $index + 1 }}</div>
+                                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs" style="background:#800000;">{{ $index + 1 }}</div>
                                     <div class="min-w-0">
-                                        <div class="text-xl md:text-2xl font-extrabold truncate" style="color:#800000;">Custom Order ID: {{ $item->display_ref ?? ('CO-' . str_pad((string) $item->id, 5, '0', STR_PAD_LEFT)) }}</div>
-                                        <div class="text-sm text-gray-600">{{ optional($item->created_at)->format('M d, Y g:i A') }}</div>
+                                        <div class="text-lg md:text-xl font-extrabold truncate" style="color:#800000;">Custom Order ID: {{ $item->display_ref ?? ('CO-' . str_pad((string) $item->id, 5, '0', STR_PAD_LEFT)) }}</div>
+                                        <div class="text-xs text-gray-600">{{ optional($item->created_at)->format('M d, Y g:i A') }}</div>
                                     </div>
                                 </div>
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold {{ in_array($statusPill, ['approved','processing','in_production','production_complete','out_for_delivery','delivered','completed']) ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ in_array($statusPill, ['approved','processing','in_production','production_complete','out_for_delivery','delivered','completed']) ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">
                                     {{ ucfirst(str_replace('_', ' ', $statusPill)) }}
                                 </span>
                             </div>
 
-                            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-2">
                                 <div>
                                     <div class="text-gray-500 text-xs">Pattern</div>
-                                    <div class="font-bold text-xl text-gray-900">{{ $patternLabel }}</div>
+                                    <div class="font-bold text-base text-gray-900">{{ $patternLabel }}</div>
                                     @if($thumbPatternModel && $thumbPatternModel->hasSvg())
-                                        <div class="mt-2 w-20 h-20 rounded border border-[#e9bfc5] bg-white flex items-center justify-center overflow-hidden">
-                                            <div style="max-width:72px; max-height:72px;">{!! $thumbPatternModel->getSvgContent() !!}</div>
+                                        <div class="mt-1.5 w-14 h-14 rounded border border-[#e9bfc5] bg-white flex items-center justify-center overflow-hidden">
+                                            <div style="max-width:50px; max-height:50px;">{!! $thumbPatternModel->getSvgContent() !!}</div>
                                         </div>
                                     @endif
                                 </div>
                                 <div>
                                     <div class="text-gray-500 text-xs">Fabric Type</div>
-                                    <div class="font-bold text-xl text-gray-900">{{ $item->fabric_type_name ?? 'N/A' }}</div>
+                                    <div class="font-bold text-base text-gray-900">{{ $item->fabric_type_name ?? 'N/A' }}</div>
                                 </div>
                                 <div>
                                     <div class="text-gray-500 text-xs">Intended Use</div>
-                                    <div class="font-bold text-xl text-gray-900">{{ $item->intended_use_label ?? 'N/A' }}</div>
+                                    <div class="font-bold text-base text-gray-900">{{ $item->intended_use_label ?? 'N/A' }}</div>
                                 </div>
                                 <div>
                                     <div class="text-gray-500 text-xs">Quantity</div>
-                                    <div class="font-bold text-xl text-gray-900">{{ number_format((float) ($item->fabric_quantity_meters ?? 0), 2) }} meters</div>
+                                    <div class="font-bold text-base text-gray-900">{{ number_format((float) ($item->fabric_quantity_meters ?? 0), 2) }} meters</div>
                                 </div>
                                 <div>
                                     <div class="text-gray-500 text-xs">Est. Price</div>
-                                    <div class="font-bold text-xl" style="color:#800000;">₱{{ number_format((float) ($itemPrice['quoted'] ?? 0), 2) }}</div>
+                                    <div class="font-bold text-base" style="color:#800000;">₱{{ number_format((float) ($itemPrice['quoted'] ?? 0), 2) }}</div>
                                 </div>
                             </div>
 
-                            <div class="border-t pt-3 flex items-center justify-between" style="border-color:#efcfd3;">
-                                <div class="text-base text-gray-700">
+                            <div class="border-t pt-2.5 flex items-center justify-between" style="border-color:#efcfd3;">
+                                <div class="text-sm text-gray-700">
                                     Delivery:
                                     <span class="font-bold text-gray-900">{{ $itemDeliveryType === 'pickup' ? 'Pickup' : 'Delivery' }}</span>
                                 </div>
-                                <a href="#" onclick="event.preventDefault(); toggleBatchItemDetails({{ $item->id }});" class="text-base font-extrabold" style="color:#800000;">
+                                <a href="#" onclick="event.preventDefault(); toggleBatchItemDetails({{ $item->id }});" class="text-sm font-extrabold" style="color:#800000;">
                                     View Full Details→
                                 </a>
                             </div>
@@ -1213,7 +1213,7 @@
                         @endphp
                         
                         @if($nextAction)
-                        <form id="workflowForm" data-order-id="{{ $order->id }}" data-next-status="{{ $nextAction['status'] }}">
+                        <form id="workflowForm" data-order-id="{{ $order->id }}" data-next-status="{{ $nextAction['status'] }}" data-batch-order-ids="{{ $batchItems->pluck('id')->implode(',') }}">
                             @csrf
                             <button type="submit" id="workflowBtn" class="workflow-btn w-full text-white font-bold py-3.5 px-4 rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 transform hover:scale-[1.02]" style="background: linear-gradient(to right, {{ $colorMap[$nextAction['color']]['bg'] }}, {{ $colorMap[$nextAction['color']]['bg'] }}dd);">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1951,6 +1951,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const button = document.getElementById('workflowBtn');
             const orderId = this.dataset.orderId;
             const nextStatus = this.dataset.nextStatus;
+            const batchOrderIds = (this.dataset.batchOrderIds || '')
+                .split(',')
+                .map(id => id.trim())
+                .filter(Boolean);
             
             if (!button) {
                 showMessage('❌ Button not found. Please refresh the page.', 'error');
@@ -1967,41 +1971,68 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 const authToken = urlParams.get('auth_token');
-                const statusUrl = `/admin/custom-orders/${orderId}/update-status${authToken ? '?auth_token=' + authToken : ''}`;
-                const response = await fetch(statusUrl, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        status: nextStatus
-                    })
-                });
-                
-                const responseText = await response.text();
-                
-                let data;
-                try {
-                    data = JSON.parse(responseText);
-                } catch (parseError) {
-                    console.error('JSON parse error:', parseError);
-                    showMessage('❌ Server returned invalid response', 'error');
-                    setButtonLoading(button, false);
-                    return;
+                let success = true;
+                let data = null;
+
+                if (nextStatus === 'in_production' && batchOrderIds.length > 1) {
+                    const requests = batchOrderIds.map((id) => {
+                        const statusUrl = `/admin/custom-orders/${id}/update-status${authToken ? '?auth_token=' + authToken : ''}`;
+                        return fetch(statusUrl, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ status: nextStatus })
+                        });
+                    });
+
+                    const responses = await Promise.all(requests);
+                    const payloads = await Promise.all(responses.map(async (r) => {
+                        const txt = await r.text();
+                        try { return JSON.parse(txt); } catch { return { success: false, message: 'Invalid response' }; }
+                    }));
+
+                    success = responses.every((r, idx) => r.ok && payloads[idx]?.success);
+                    data = payloads[0] || { success };
+                } else {
+                    const statusUrl = `/admin/custom-orders/${orderId}/update-status${authToken ? '?auth_token=' + authToken : ''}`;
+                    const response = await fetch(statusUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ status: nextStatus })
+                    });
+
+                    const responseText = await response.text();
+                    try {
+                        data = JSON.parse(responseText);
+                    } catch (parseError) {
+                        console.error('JSON parse error:', parseError);
+                        showMessage('❌ Server returned invalid response', 'error');
+                        setButtonLoading(button, false);
+                        return;
+                    }
+                    success = response.ok && data.success;
                 }
-                
-                if (data.success) {
+
+                if (success) {
                     const statusLabels = {
                         'in_production': 'Production started',
                         'production_complete': 'Production completed',
                         'out_for_delivery': 'Order shipped',
                         'delivered': 'Order delivered'
                     };
-                    const message = `${statusLabels[nextStatus] || 'Status updated'} successfully! Customer has been notified.`;
+                    const suffix = (nextStatus === 'in_production' && batchOrderIds.length > 1)
+                        ? ` for ${batchOrderIds.length} items`
+                        : '';
+                    const message = `${statusLabels[nextStatus] || 'Status updated'}${suffix} successfully! Customer has been notified.`;
                     showMessage(message, 'success');
-                    setTimeout(() => { window.location.reload(); }, 100);
+                    setTimeout(() => { window.location.reload(); }, 250);
                 } else {
                     showMessage('❌ ' + (data.message || 'Failed to update status'), 'error');
                     setButtonLoading(button, false);
