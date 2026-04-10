@@ -56,6 +56,52 @@
         }
         return 350.0;
     };
+
+    // Resolve delivery address with fallback: explicit address -> city/province -> user's default address.
+    $getDisplayAddress = function ($item) {
+        $deliveryType = $item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup');
+        if ($deliveryType === 'pickup') {
+            return null;
+        }
+
+        $fullAddress = trim((string) ($item->delivery_address ?? ''));
+        if ($fullAddress !== '') {
+            return $fullAddress;
+        }
+
+        $cityProvince = implode(', ', array_filter([
+            $item->delivery_city ?? null,
+            $item->delivery_province ?? null,
+        ]));
+        if ($cityProvince !== '') {
+            return $cityProvince;
+        }
+
+        static $defaultAddressCache = [];
+        $userId = (int) ($item->user_id ?? 0);
+        if ($userId > 0) {
+            if (!array_key_exists($userId, $defaultAddressCache)) {
+                $defaultAddressCache[$userId] = \App\Models\UserAddress::query()
+                    ->where('user_id', $userId)
+                    ->where('is_default', true)
+                    ->first();
+            }
+
+            $defaultAddress = $defaultAddressCache[$userId];
+            if ($defaultAddress) {
+                return implode(', ', array_filter([
+                    $defaultAddress->house_number ?? null,
+                    $defaultAddress->street_name ?? null,
+                    $defaultAddress->barangay ?? null,
+                    $defaultAddress->city ?? null,
+                    $defaultAddress->province ?? ($defaultAddress->region ?? null),
+                    !empty($defaultAddress->zip_code) ? 'ZIP ' . $defaultAddress->zip_code : null,
+                ]));
+            }
+        }
+
+        return null;
+    };
     
     // Get price parts for each order (same logic as admin, with shipping inclusion detection)
     $getPriceParts = function ($item) use ($calculateShippingFromAddress) {
@@ -458,8 +504,11 @@
                 <div class="flex-1">
                     <p class="text-sm font-semibold text-gray-900">{{ $deliveryLabel }}</p>
                     <p class="text-xs text-gray-700 mt-0.5">{{ $deliveryDescription }}</p>
-                    @if($order->delivery_address && $deliveryType === 'delivery')
-                        <p class="text-xs text-gray-600 mt-0.5">Destination: <span class="font-medium">{{ $order->delivery_address }}</span></p>
+                    @php
+                        $orderDestinationAddress = $getDisplayAddress($order);
+                    @endphp
+                    @if($orderDestinationAddress && $deliveryType === 'delivery')
+                        <p class="text-xs text-gray-600 mt-0.5">Destination: <span class="font-medium">{{ $orderDestinationAddress }}</span></p>
                     @endif
                 </div>
             </div>
@@ -575,6 +624,10 @@
                                     View Full Details →
                                 </a>
                             </div>
+                            @php $itemAddress = $getDisplayAddress($item); @endphp
+                            @if($itemAddress)
+                                <p class="text-xs text-gray-500 mt-1">Address: <span class="font-medium text-gray-700">{{ $itemAddress }}</span></p>
+                            @endif
 
                             <div id="item-details-{{ $item->id }}" class="hidden mt-3 rounded-lg border p-3" style="border-color:#e0b0b0; background-color:#fff7f7;">
                                 <h4 class="text-sm font-bold mb-2" style="color:#800000;">Traditional Yakan Patterns ({{ max(1, $itemPatterns->count()) }})</h4>
@@ -777,6 +830,10 @@
                     <div class="mt-2 pt-2 border-t" style="border-color:#f1d2d2;">
                         <p class="text-xs text-gray-600">Delivery: <span class="font-semibold text-gray-800">{{ ($order->delivery_type ?? 'delivery') === 'pickup' ? 'Store Pickup' : 'Delivery' }}</span></p>
                     </div>
+                    @php $singleAddress = $getDisplayAddress($order); @endphp
+                    @if($singleAddress)
+                        <p class="text-xs text-gray-500 mt-1">Address: <span class="font-medium text-gray-700">{{ $singleAddress }}</span></p>
+                    @endif
 
                     <div class="mt-3 rounded-lg border p-3" style="border-color:#e0b0b0; background-color:#fff7f7;">
                         <h4 class="text-sm font-bold mb-2" style="color:#800000;">Traditional Yakan Patterns ({{ max(1, $singlePatterns->count()) }})</h4>
@@ -1521,10 +1578,11 @@
                             </div>
                         </div>
 
-                        @if($order->delivery_address)
+                        @php $summaryDeliveryAddress = $getDisplayAddress($order); @endphp
+                        @if($summaryDeliveryAddress)
                             <div class="pt-3 border-t border-gray-200 mt-3">
                                 <p class="text-sm font-medium text-gray-600 mb-1">Delivery Address</p>
-                                <p class="text-sm text-gray-900 whitespace-pre-line">{{ $order->delivery_address }}</p>
+                                <p class="text-sm text-gray-900 whitespace-pre-line">{{ $summaryDeliveryAddress }}</p>
                             </div>
                         @endif
 
