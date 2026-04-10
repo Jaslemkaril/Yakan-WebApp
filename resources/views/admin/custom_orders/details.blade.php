@@ -139,6 +139,8 @@
     };
 
     $calculateAdminDisplayTotal = fn($item) => ($getAdminPriceParts($item)['total'] ?? 0);
+    $isNonChatPatternOrder = fn($item) => empty($item->chat_id) && (($item->design_method ?? null) === 'pattern');
+    $mainOrderSkipsReview = $isNonChatPatternOrder($order);
 
     $batchItems = collect([$order])->merge($batchOrders)->sortBy('id')->values();
     $batchQuotedSubtotal = (float) $batchItems->sum(fn($item) => $getAdminPriceParts($item)['quoted'] ?? 0);
@@ -296,7 +298,8 @@
                         <div class="grid grid-cols-1 gap-2">
 @php
                                     $hideApproveReject = in_array($statusPill, ['approved','processing','in_production','production_complete','out_for_delivery','delivered','completed','cancelled','rejected','price_quoted'])
-                                        || $payPill === 'paid';
+                                        || $payPill === 'paid'
+                                        || $isNonChatPatternOrder($item);
                                 @endphp
                             <div class="grid grid-cols-{{ $hideApproveReject ? '1' : '3' }} gap-2">
                                 @if(!$hideApproveReject)
@@ -1146,7 +1149,7 @@
                 
                 <div class="space-y-4" id="adminActions">
                     {{-- 1. Quote Final Price (Show for pending, or allow editing for price_quoted status) --}}
-                    @if(in_array($order->status, ['pending', 'price_quoted']))
+                    @if(in_array($order->status, ['pending', 'price_quoted']) && !$mainOrderSkipsReview)
                     @php
                         $existingBreakdown = $order->getPriceBreakdown();
                         $breakdown = $existingBreakdown['breakdown'] ?? [];
@@ -1223,7 +1226,7 @@
                     @endif
 
                     {{-- 1.5 Approve Custom Order (Pending only) --}}
-                    @if($order->status === 'pending')
+                    @if($order->status === 'pending' && !$mainOrderSkipsReview)
                     <div class="bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg p-4 border border-emerald-200">
                         <label class="block text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
                             <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
