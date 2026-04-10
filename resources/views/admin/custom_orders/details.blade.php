@@ -276,7 +276,7 @@
                         @endphp
 
                         <div class="rounded-xl border p-3" style="background:#fff; border-color:#e9bfc5;">
-                            <div class="flex items-start justify-between gap-2 mb-2">
+                            <div class="flex items-start gap-2 mb-2">
                                 <div class="flex items-start gap-3 min-w-0">
                                     <div class="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs" style="background:#800000;">{{ $index + 1 }}</div>
                                     <div class="min-w-0">
@@ -284,9 +284,6 @@
                                         <div class="text-xs text-gray-600">{{ optional($item->created_at)->format('M d, Y g:i A') }}</div>
                                     </div>
                                 </div>
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ in_array($statusPill, ['approved','processing','in_production','production_complete','out_for_delivery','delivered','completed']) ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800' }}">
-                                    {{ ucfirst(str_replace('_', ' ', $statusPill)) }}
-                                </span>
                             </div>
 
                             <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-2">
