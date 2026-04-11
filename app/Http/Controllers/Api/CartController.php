@@ -20,6 +20,33 @@ class CartController extends Controller
     }
 
     /**
+     * Return all active coupons the current user can apply.
+     */
+    public function getAvailableCoupons(Request $request)
+    {
+        $user = $request->user();
+
+        $coupons = Coupon::where('active', true)
+            ->where(function ($q) { $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()); })
+            ->where(function ($q) { $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()); })
+            ->where(function ($q) { $q->whereNull('usage_limit')->orWhereColumn('times_redeemed', '<', 'usage_limit'); })
+            ->get()
+            ->filter(fn($c) => $c->canBeUsedBy($user))
+            ->map(fn($c) => [
+                'code'        => $c->code,
+                'type'        => $c->type,
+                'value'       => (float) $c->value,
+                'min_spend'   => (float) ($c->min_spend ?? 0),
+                'description' => $c->type === 'percent'
+                    ? (int)$c->value . '% off shipping'
+                    : '₱' . number_format($c->value, 2) . ' off shipping',
+            ])
+            ->values();
+
+        return response()->json(['success' => true, 'data' => $coupons]);
+    }
+
+    /**
      * Validate a coupon code and return the discount amount.
      * Accepts optional subtotal directly (for buy-now or pre-calculated carts).
      */
