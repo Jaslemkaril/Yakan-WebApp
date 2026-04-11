@@ -289,7 +289,7 @@ const CheckoutScreen = ({ navigation }) => {
 
   const shippingFeeDisplay = deliveryOption === 'pickup' ? 0 : shippingFee;
   const subtotal = itemsToCheckout.reduce((total, item) => total + (item.price * item.quantity), 0);
-  const discount = appliedCoupon ? Math.min(appliedCoupon.discount, shippingFeeDisplay) : 0;
+  const discount = appliedCoupon ? Math.min(parseFloat(appliedCoupon.discount) || 0, shippingFeeDisplay) : 0;
   const total = subtotal + shippingFeeDisplay - discount;
 
   const generateOrderRef = () => {
@@ -313,12 +313,13 @@ const CheckoutScreen = ({ navigation }) => {
     setApplyingCoupon(true);
     try {
       const response = await ApiService.validateCoupon(normalizedCode, subtotal, shippingFeeDisplay);
-      if (response.success) {
-        setAppliedCoupon({ code: response.code, discount: response.discount, description: response.description });
-        setCouponCode(response.code);
+      const payload = response.data || {};
+      if (response.success && payload.success) {
+        setAppliedCoupon({ code: payload.code, discount: parseFloat(payload.discount) || 0, description: payload.description });
+        setCouponCode(payload.code);
         setCouponError('');
       } else {
-        setCouponError(response.message || 'Invalid coupon code');
+        setCouponError(payload.message || response.error || 'Invalid coupon code');
         setAppliedCoupon(null);
       }
     } catch {
