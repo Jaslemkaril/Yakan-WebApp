@@ -301,22 +301,22 @@ const CheckoutScreen = ({ navigation }) => {
     return yy + mm + dd + rand;
   };
 
-  const handleApplyCoupon = async () => {
+  const handleApplyCoupon = async (code) => {
     setCouponError('');
-    const code = couponCode.trim().toUpperCase();
+    const normalizedCode = (code || couponCode).trim().toUpperCase();
 
-    if (!code) {
-      setCouponError('Please enter a coupon code');
+    if (!normalizedCode) {
+      setCouponError('Please select a coupon');
       return;
     }
 
     setApplyingCoupon(true);
     try {
-      const response = await ApiService.validateCoupon(code, subtotal, shippingFeeDisplay);
+      const response = await ApiService.validateCoupon(normalizedCode, subtotal, shippingFeeDisplay);
       if (response.success) {
         setAppliedCoupon({ code: response.code, discount: response.discount, description: response.description });
+        setCouponCode(response.code);
         setCouponError('');
-        Alert.alert('Success', `Coupon "${response.code}" applied! ${response.description}`);
       } else {
         setCouponError(response.message || 'Invalid coupon code');
         setAppliedCoupon(null);
@@ -730,64 +730,48 @@ const CheckoutScreen = ({ navigation }) => {
 
           {/* Coupon Section */}
           <View style={styles.couponSection}>
-            {/* Available coupons chips */}
-            {availableCoupons.length > 0 && !appliedCoupon && (
-              <View style={{ marginBottom: 10 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400e', marginBottom: 6 }}>
-                  🎟️ Available coupons — tap to apply:
-                </Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                  {availableCoupons.map(c => (
-                    <TouchableOpacity
-                      key={c.code}
-                      onPress={() => { setCouponCode(c.code); }}
-                      style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1.5,
-                                borderColor: '#d97706', backgroundColor: '#fffbeb' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#92400e' }}>
-                        🏷️ {c.code}: {c.description}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            )}
-            <View style={styles.couponRow}>
-              <MaterialCommunityIcons name="tag-outline" size={18} color="#8B1A1A" style={{ marginRight: 6 }} />
-              <TextInput
-                style={styles.couponInput}
-                placeholder="Enter coupon code"
-                placeholderTextColor={theme.textMuted}
-                value={couponCode}
-                onChangeText={t => { setCouponCode(t); setCouponError(''); setCouponSuccess(''); }}
-                autoCapitalize="characters"
-                editable={!appliedCoupon}
-              />
-              {appliedCoupon ? (
-                <TouchableOpacity style={styles.couponRemoveBtn} onPress={handleRemoveCoupon}>
-                  <Text style={styles.couponRemoveBtnText}>Remove</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.couponApplyBtn, applyingCoupon && { opacity: 0.6 }]}
-                  onPress={handleApplyCoupon}
-                  disabled={applyingCoupon}
-                >
-                  {applyingCoupon
-                    ? <ActivityIndicator size="small" color="#fff" />
-                    : <Text style={styles.couponApplyBtnText}>Apply</Text>}
-                </TouchableOpacity>
-              )}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <MaterialCommunityIcons name="tag-outline" size={16} color="#92400e" style={{ marginRight: 6 }} />
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#92400e' }}>🎟️ Available Coupons</Text>
             </View>
-            {!!couponError   && <Text style={styles.couponErrorText}>{couponError}</Text>}
-            {!!couponSuccess && <Text style={styles.couponSuccessText}>{couponSuccess}</Text>}
-            {appliedCoupon && (
+
+            {appliedCoupon ? (
               <View style={styles.couponAppliedBadge}>
-                <MaterialCommunityIcons name="check-circle" size={14} color="#16A34A" />
-                <Text style={styles.couponAppliedText}>
+                <MaterialCommunityIcons name="check-circle" size={16} color="#16A34A" />
+                <Text style={[styles.couponAppliedText, { flex: 1 }]}>
                   {appliedCoupon.code} — {appliedCoupon.description}
                 </Text>
+                <TouchableOpacity onPress={handleRemoveCoupon} style={styles.couponRemoveBtn}>
+                  <Text style={styles.couponRemoveBtnText}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            ) : availableCoupons.length > 0 ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {availableCoupons.map(c => (
+                  <TouchableOpacity
+                    key={c.code}
+                    onPress={() => handleApplyCoupon(c.code)}
+                    disabled={applyingCoupon}
+                    style={[{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5,
+                              borderColor: '#d97706', backgroundColor: '#fffbeb' },
+                              applyingCoupon && { opacity: 0.5 }]}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400e' }}>
+                      🏷️ {c.code}: {c.description}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              <Text style={{ fontSize: 12, color: theme.textMuted, fontStyle: 'italic' }}>No coupons available</Text>
+            )}
+
+            {applyingCoupon && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 6 }}>
+                <ActivityIndicator size="small" color="#d97706" />
+                <Text style={{ fontSize: 12, color: '#92400e' }}>Applying coupon...</Text>
               </View>
             )}
+            {!!couponError && <Text style={styles.couponErrorText}>{couponError}</Text>}
           </View>
 
           {appliedCoupon && (
