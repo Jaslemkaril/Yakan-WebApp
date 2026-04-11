@@ -30,6 +30,10 @@ php artisan view:clear   2>/dev/null || true
 echo "📦 Running migrations..."
 php artisan migrate --force --no-interaction 2>/dev/null || echo "⚠️ Migrations failed, continuing..."
 
+# ── 4b. Ensure Philippine address data is populated (idempotent) ─────────────
+echo "🗺️ Syncing Philippine address data..."
+php artisan db:seed --class=PhilippineSyncSeeder --force 2>/dev/null || echo "⚠️ Address sync failed, continuing..."
+
 # ── 5. Storage symlink (fast) ─────────────────────────────────────────────────
 echo "🔗 Creating storage link..."
 rm -f public/storage 2>/dev/null || true
