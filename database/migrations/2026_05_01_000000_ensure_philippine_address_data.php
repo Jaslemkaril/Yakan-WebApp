@@ -174,6 +174,9 @@ return new class extends Migration
                 continue;
             }
 
+            // Counter for newly-inserted provinces in this region (gives collision-free codes)
+            $pNewIdx = 0;
+
             foreach ($provinces as $prov) {
                 // Find or create province
                 $province = DB::table('philippine_provinces')
@@ -182,8 +185,9 @@ return new class extends Migration
                     ->first();
 
                 if (!$province) {
-                    $code = strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $prov['name']), 0, 5))
-                          . '-' . $regionCode;
+                    $pNewIdx++;
+                    // Format: "III-001", "III-002" — never used by previous migrations
+                    $code = $regionCode . '-' . str_pad($pNewIdx, 3, '0', STR_PAD_LEFT);
                     $provinceId = DB::table('philippine_provinces')->insertGetId([
                         'region_id'     => $region->id,
                         'province_code' => $code,
@@ -195,16 +199,16 @@ return new class extends Migration
                     $provinceId = $province->id;
                 }
 
-                // Insert only missing cities
-                foreach ($prov['cities'] as $cityName) {
+                // Insert only missing cities; use array index as tiebreaker for unique city_code
+                foreach ($prov['cities'] as $cityIdx => $cityName) {
                     $cityExists = DB::table('philippine_cities')
                         ->where('province_id', $provinceId)
                         ->whereRaw('LOWER(name) = ?', [strtolower($cityName)])
                         ->exists();
 
                     if (!$cityExists) {
-                        $ccode = strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $cityName), 0, 4))
-                               . '-P' . $provinceId;
+                        // "P{provinceId}I{arrayIndex}" is unique: same province & same position = same city
+                        $ccode = 'P' . $provinceId . 'I' . $cityIdx;
                         DB::table('philippine_cities')->insert([
                             'province_id' => $provinceId,
                             'city_code'   => $ccode,
