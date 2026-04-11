@@ -1781,6 +1781,10 @@ HTML
     p  { color: #555; margin-bottom: 24px; }
     .badge { background: #2e7d32; color: #fff; padding: 8px 20px; border-radius: 20px; font-size: 14px; }
   </style>
+  <script>
+    // Redirect back to the mobile app via deep link so openAuthSessionAsync auto-closes the browser
+    window.location.href = 'yakanapp://payment/success/{$orderId}';
+  </script>
 </head>
 <body>
   <div class="icon">✅</div>
@@ -1812,6 +1816,10 @@ HTML, 200, ['Content-Type' => 'text/html']);
     p  { color: #555; margin-bottom: 24px; }
     .badge { background: #c62828; color: #fff; padding: 8px 20px; border-radius: 20px; font-size: 14px; }
   </style>
+  <script>
+    // Redirect back to the mobile app via deep link so openAuthSessionAsync auto-closes the browser
+    window.location.href = 'yakanapp://payment/failed/{$orderId}';
+  </script>
 </head>
 <body>
   <div class="icon">❌</div>

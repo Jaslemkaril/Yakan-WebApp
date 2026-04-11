@@ -251,7 +251,7 @@ export default function PaymentScreen({ navigation, route }) {
         }
       }
 
-      // For PayMongo: open checkout in browser
+      // For PayMongo: open checkout in browser and detect redirect back to app
       if (isPaymongo && backendId) {
         try {
           const paymongoCheckout = await ApiService.createPaymongoCheckout(backendId);
@@ -260,12 +260,30 @@ export default function PaymentScreen({ navigation, route }) {
             ?? paymongoCheckout?.checkout_url;
           if (checkoutUrl) {
             setIsProcessing(false);
-            await WebBrowser.openBrowserAsync(checkoutUrl);
-            finalOrderData.status = 'pending_payment';
+            // openAuthSessionAsync watches for the yakanapp:// redirect and auto-closes the browser
+            const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, 'yakanapp://');
+
+            const paid =
+              result.type === 'success' && result.url?.includes('payment/success');
+            const cancelled =
+              result.type === 'cancel' ||
+              result.type === 'dismiss' ||
+              (result.type === 'success' && result.url?.includes('payment/failed'));
+
+            finalOrderData.status = paid ? 'processing' : 'pending_payment';
             await updateOrderInStorage(finalOrderData);
             clearCart();
             notifyOrderCreated(orderData.orderRef);
-            navigation.navigate('OrderDetails', { orderData: finalOrderData });
+
+            if (cancelled) {
+              Alert.alert(
+                'Payment Not Completed',
+                'Your order has been saved. You can complete payment from My Orders.',
+                [{ text: 'View Order', onPress: () => navigation.navigate('OrderDetails', { orderData: finalOrderData }) }]
+              );
+            } else {
+              navigation.navigate('OrderDetails', { orderData: finalOrderData });
+            }
             return;
           } else {
             throw new Error('No checkout URL in PayMongo response: ' + JSON.stringify(paymongoCheckout?.data));
