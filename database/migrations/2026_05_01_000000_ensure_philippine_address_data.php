@@ -12,6 +12,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // This migration was superseded by 2026_05_02_000000_sync_philippine_locations.php
+        // which uses insertOrIgnore with collision-safe md5 codes.
+        // Kept as a no-op so it can be recorded and no longer blocks the migrate run.
+        return;
+
         $now = now();
 
         // ── 1. Ensure all 17 regions exist ───────────────────────────
