@@ -108,10 +108,21 @@ const mSt = StyleSheet.create({
 const TrackOrderScreen = ({ navigation }) => {
   const { theme } = useTheme();
   const st = getStyles(theme);
-  const { orders, loading, refreshing, loadOrders, onRefresh, savePaymentProof } = useOrders();
+  const { orders, loading, refreshing, loadOrders, onRefresh, savePaymentProof, confirmOrderReceived } = useOrders();
 
   useEffect(() => { const u = navigation.addListener('focus', loadOrders); return u; }, [navigation]);
   useEffect(() => { loadOrders(); }, []);
+
+  const handleConfirmReceived = (order) => {
+    Alert.alert(
+      'Confirm Order Received',
+      'Have you received your order? This will mark the order as completed.',
+      [
+        { text: 'Yes, Received', onPress: () => confirmOrderReceived(order) },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
 
   const handleUploadPaymentProof = (order) => {
     Alert.alert('Upload Payment Proof', 'Choose how to upload', [
@@ -265,6 +276,20 @@ const TrackOrderScreen = ({ navigation }) => {
           </View>
         )}
 
+        {order.status === 'delivered' && (
+          <TouchableOpacity style={st.confirmReceivedBtn} onPress={() => handleConfirmReceived(order)} activeOpacity={0.8}>
+            <MaterialCommunityIcons name='check-circle' size={20} color='#fff' style={{ marginRight: 8 }} />
+            <Text style={st.confirmReceivedText}>Order Received</Text>
+          </TouchableOpacity>
+        )}
+
+        {order.status === 'completed' && (
+          <View style={st.orderCompletedBanner}>
+            <MaterialCommunityIcons name='check-circle' size={18} color='#4CAF50' style={{ marginRight: 8 }} />
+            <Text style={st.orderCompletedBannerText}>Order Completed</Text>
+          </View>
+        )}
+
         <View style={st.viewDetailsContainer}>
           <Text style={st.viewDetailsText}>View Details</Text>
           <MaterialCommunityIcons name='chevron-right' size={18} color={theme.primary} />
@@ -378,6 +403,10 @@ const getStyles = (theme) => StyleSheet.create({
   proofUploaded:   { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E8F5E9', padding: 10, marginTop: 12, borderRadius: 10, borderWidth: 1, borderColor: '#A5D6A7' },
   proofUploadedText: { fontSize: 12, color: '#2E7D32', fontWeight: '700', flex: 1 },
   proofThumbnail:  { width: 40, height: 40, borderRadius: 8 },
+  confirmReceivedBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#4CAF50', borderRadius: 12, paddingVertical: 13, marginTop: 12 },
+  confirmReceivedText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  orderCompletedBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8F5E9', borderRadius: 12, paddingVertical: 13, marginTop: 12, borderWidth: 1, borderColor: '#A5D6A7' },
+  orderCompletedBannerText: { color: '#2E7D32', fontSize: 15, fontWeight: '700' },
   viewDetailsContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: theme.borderLight },
   viewDetailsText: { fontSize: 13, color: theme.primary, fontWeight: '700', marginRight: 2 },
 });

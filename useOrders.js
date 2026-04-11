@@ -140,6 +140,51 @@ export const useOrders = () => {
     }
   };
 
+  const confirmOrderReceived = async (order) => {
+    try {
+      const backendId = order.backendOrderId || order.id;
+      if (!backendId) {
+        Alert.alert('Error', 'Order ID not found');
+        return false;
+      }
+
+      const response = await ApiService.request('PATCH', `/orders/${backendId}/status`, {
+        status: 'completed',
+      });
+
+      if (response?.success) {
+        setOrders((prev) =>
+          prev.map((o) =>
+            String(o.backendOrderId) === String(backendId) || String(o.id) === String(backendId)
+              ? { ...o, status: 'completed' }
+              : o
+          )
+        );
+
+        const ordersJson = await AsyncStorage.getItem(ORDERS_KEY);
+        if (ordersJson) {
+          const storedOrders = JSON.parse(ordersJson);
+          const updatedOrders = storedOrders.map((o) =>
+            String(o.backendOrderId) === String(backendId) || String(o.id) === String(backendId)
+              ? { ...o, status: 'completed' }
+              : o
+          );
+          await AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(updatedOrders));
+        }
+
+        Alert.alert('Order Received', 'Thank you! Your order has been marked as received.');
+        return true;
+      } else {
+        Alert.alert('Error', response?.error || 'Failed to confirm order received');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error confirming order received:', error);
+      Alert.alert('Error', 'Failed to confirm order received');
+      return false;
+    }
+  };
+
   return {
     orders,
     loading,
@@ -147,5 +192,6 @@ export const useOrders = () => {
     loadOrders,
     onRefresh,
     savePaymentProof,
+    confirmOrderReceived,
   };
 };
