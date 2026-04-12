@@ -1192,9 +1192,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::post('/products/{product}/stock-in', [AdminProductController::class, 'stockIn'])->name('products.stockIn');
     Route::post('/products/{product}/stock-out', [AdminProductController::class, 'stockOut'])->name('products.stockOut');
 
-    // System Settings
-    Route::get('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings.index');
-    Route::post('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('settings.update');
+
 
     // Combined Patterns & Types Management
     Route::get('/patterns-management', [\App\Http\Controllers\Admin\PatternsManagementController::class, 'index'])->name('patterns_management.index');

@@ -1014,16 +1014,6 @@
         <span class="sidebar-text font-medium text-gray-700 group-hover:text-gray-900">Analytics</span>
     </a> -->
     
-    <!-- Settings Section -->
-    <div class="pt-4 mt-4 border-t" style="border-color: rgba(255,255,255,0.1);">
-        <div class="px-4 py-2">
-            <span class="sidebar-text text-xs font-semibold" style="color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.05em;">System</span>
-        </div>
-        <a href="{{ route('admin.settings.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ request()->routeIs('admin.settings.*') ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
-            <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Settings</span>
-        </a>
-    </div>
 </nav>
 
             <!-- User Profile & Logout Section -->
@@ -1158,8 +1148,6 @@
                 <p class="text-sm font-medium text-gray-900">{{ auth()->user()?->name ?? 'Admin User' }}</p>
                 <p class="text-xs text-gray-500">{{ auth()->user()?->email ?? 'admin@example.com' }}</p>
             </div>
-            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">Profile</a>
-            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">Settings</a>
             <form method="POST" action="{{ route('admin.logout') }}" class="block">
                 @csrf
                 <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg">Logout</button>
