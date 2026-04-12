@@ -561,62 +561,86 @@
 
     <!-- Testimonials -->
     <section class="py-12 md:py-16 lg:py-20 bg-gray-50 yakan-pattern-bg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-10 md:mb-14">
                 <h2 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gradient mb-3 md:mb-4">What Our Customers Say</h2>
-                <p class="text-base sm:text-lg md:text-xl text-gray-600 px-4">Real experiences from real customers</p>
+                <p class="text-base sm:text-lg md:text-xl text-gray-600 px-4">Real reviews from verified buyers</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                <div class="testimonial-card animate-fade-in-up" style="animation-delay: 0.1s">
-                    <div class="relative z-10">
-                        <div class="flex items-center mb-4">
-                            <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-500 rounded-full flex items-center justify-center text-white font-bold mr-4">
-                                JD
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-gray-900">John Doe</h4>
-                                <div class="flex text-yellow-400">
-                                    ★★★★★
+            @if($testimonials->count() > 0)
+                @php
+                    $avatarGradients = [
+                        'from-red-500 to-orange-500',
+                        'from-blue-500 to-purple-500',
+                        'from-green-500 to-teal-500',
+                        'from-pink-500 to-rose-500',
+                        'from-yellow-500 to-amber-500',
+                        'from-indigo-500 to-blue-500',
+                    ];
+                @endphp
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                    @foreach($testimonials as $i => $review)
+                        @php
+                            $initials = strtoupper(substr($review->user->name ?? 'U', 0, 1) . (strpos($review->user->name ?? '', ' ') !== false ? substr($review->user->name, strpos($review->user->name, ' ') + 1, 1) : ''));
+                            $gradient = $avatarGradients[$i % count($avatarGradients)];
+                        @endphp
+                        <div class="testimonial-card animate-fade-in-up" style="animation-delay: {{ $i * 0.1 }}s">
+                            <div class="relative z-10 flex flex-col h-full">
+                                {{-- Reviewer Info --}}
+                                <div class="flex items-center mb-4">
+                                    <div class="w-12 h-12 bg-gradient-to-br {{ $gradient }} rounded-full flex items-center justify-center text-white font-bold mr-4 flex-shrink-0 text-sm">
+                                        {{ $initials }}
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="font-bold text-gray-900 truncate">{{ $review->user->name }}</h4>
+                                        <div class="flex items-center gap-1">
+                                            @for($s = 1; $s <= 5; $s++)
+                                                <svg class="w-4 h-4 {{ $s <= $review->rating ? 'text-yellow-400' : 'text-gray-200' }}" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                                </svg>
+                                            @endfor
+                                            <span class="text-xs text-gray-500 ml-1">{{ $review->rating }}/5</span>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                        <p class="text-gray-600 italic">"Amazing quality products and exceptional customer service. The custom order process was smooth and the final product exceeded my expectations!"</p>
-                    </div>
-                </div>
 
-                <div class="testimonial-card animate-fade-in-up" style="animation-delay: 0.2s">
-                    <div class="relative z-10">
-                        <div class="flex items-center mb-4">
-                            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold mr-4">
-                                JS
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-gray-900">Jane Smith</h4>
-                                <div class="flex text-yellow-400">
-                                    ★★★★★
-                                </div>
-                            </div>
-                        </div>
-                        <p class="text-gray-600 italic">"I love the variety of products available. The website is easy to navigate and the delivery was faster than expected. Highly recommend!"</p>
-                    </div>
-                </div>
+                                {{-- Product Ordered --}}
+                                @if($review->product)
+                                    <div class="flex items-center gap-2 mb-3 px-3 py-2 bg-gray-50 rounded-xl border border-gray-100">
+                                        @if($review->product->hasImage())
+                                            <img src="{{ $review->product->image_url }}" alt="{{ $review->product->name }}" class="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-200">
+                                        @else
+                                            <div class="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center flex-shrink-0">
+                                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                                            </div>
+                                        @endif
+                                        <div class="min-w-0">
+                                            <p class="text-xs text-gray-500">Ordered</p>
+                                            <p class="text-xs font-semibold text-gray-800 truncate">{{ $review->product->name }}</p>
+                                        </div>
+                                    </div>
+                                @endif
 
-                <div class="testimonial-card animate-fade-in-up" style="animation-delay: 0.3s">
-                    <div class="relative z-10">
-                        <div class="flex items-center mb-4">
-                            <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-teal-500 rounded-full flex items-center justify-center text-white font-bold mr-4">
-                                MJ
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-gray-900">Mike Johnson</h4>
-                                <div class="flex text-yellow-400">
-                                    ★★★★★
-                                </div>
+                                {{-- Review comment --}}
+                                <p class="text-gray-600 italic text-sm leading-relaxed flex-1">"{{ Str::limit($review->comment, 160) }}"</p>
+
+                                {{-- Date --}}
+                                <p class="text-xs text-gray-400 mt-3">{{ $review->created_at->format('M d, Y') }}</p>
                             </div>
                         </div>
-                        <p class="text-gray-600 italic">"The custom order feature is fantastic! I got exactly what I wanted and the team was very helpful throughout the process."</p>
-                    </div>
+                    @endforeach
                 </div>
-            </div>
+            @else
+                {{-- Empty state: no approved reviews yet --}}
+                <div class="text-center py-16">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                    </div>
+                    <p class="text-gray-500 font-medium">Be the first to leave a review!</p>
+                    <p class="text-gray-400 text-sm mt-1">Purchase a product and share your experience.</p>
+                    <a href="{{ route('products.index') }}" class="inline-block mt-4 px-6 py-2 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-opacity" style="background:#800000;">Shop Now</a>
+                </div>
+            @endif
         </div>
     </section>
 

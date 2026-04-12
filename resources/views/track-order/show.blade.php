@@ -179,7 +179,7 @@
 
 @php
     $orderStatus = $order->status;
-    $trackStatus = $order->tracking_status ?? 'Order Placed';
+    $trackStatus = $order->tracking_status; // null if not set — do NOT fallback here
     $isCompleted = in_array($orderStatus, ['completed', 'delivered']);
     $isCancelled = in_array($orderStatus, ['cancelled', 'refunded']);
 
@@ -206,10 +206,15 @@
         'pending_confirmation' => 'Pending Confirmation',
         'verification_pending' => 'Payment Verification',
         'completed'            => 'Order Received',
+        'processing'           => 'Processing',
+        'confirmed'            => 'Confirmed',
+        'shipped'              => 'Shipped',
+        'delivered'            => 'Delivered',
         default                => ucfirst($orderStatus),
     };
-    if ($trackStatus && !in_array($orderStatus, ['completed','cancelled','refunded'])) {
-        $statusLabel = $trackStatus;
+    // Only override with tracking_status if admin has explicitly set it
+    if ($order->tracking_status && !in_array($orderStatus, ['completed','cancelled','refunded'])) {
+        $statusLabel = $order->tracking_status;
     }
     $statusSlug = strtolower(str_replace([' ','/'], ['_','_'], $statusLabel));
 
@@ -440,7 +445,10 @@
                                         <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-semibold">Current</span>
                                     @endif
                                 </div>
-                                <p class="text-xs text-gray-500 mt-0.5">{{ $event['date'] ?? '' }}</p>
+                                <p class="text-xs text-gray-500 mt-0.5">@php
+                                try { echo $event['date'] ? \Carbon\Carbon::parse($event['date'])->format('M d, Y h:i A') : ''; }
+                                catch(\Exception $e) { echo $event['date'] ?? ''; }
+                            @endphp</p>
                                 @if(!empty($event['note']))
                                     <p class="text-sm text-gray-600 mt-1.5 leading-relaxed">{{ $event['note'] }}</p>
                                 @endif
@@ -574,7 +582,7 @@
                     <div class="flex justify-between">
                         <dt class="text-gray-500">Delivery Type</dt>
                         <dd class="font-semibold text-gray-900">
-                            {{ ($order->delivery_type ?? 'delivery') === 'pickup' ? '&#127976; Store Pickup' : '&#128666; Delivery' }}
+                            {!! ($order->delivery_type ?? 'delivery') === 'pickup' ? '🏬 Store Pickup' : '🚚 Delivery' !!}
                         </dd>
                     </div>
                     <div class="flex justify-between">

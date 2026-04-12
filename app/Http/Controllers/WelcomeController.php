@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
@@ -66,13 +67,25 @@ class WelcomeController extends Controller
             }
         }
 
+        // Real approved reviews for testimonials section
+        $testimonials = Review::with(['user', 'product'])
+            ->where('is_approved', true)
+            ->whereNotNull('comment')
+            ->whereHas('user')
+            ->whereHas('product')
+            ->orderByDesc('rating')
+            ->orderByDesc('created_at')
+            ->take(6)
+            ->get();
+
         // Pass all variables to the view
         return view('welcome', compact(
             'latestProducts',
             'featuredProducts',
             'categories',
             'totalProducts',
-            'wishlistProductIds'
+            'wishlistProductIds',
+            'testimonials'
         ));
     }
 
