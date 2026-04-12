@@ -22,8 +22,10 @@
     </div>
 
     <div class="mb-4">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-        <input type="tel" name="phone_number" value="{{ old('phone_number', $address->phone_number) }}" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number <span class="text-red-500">*</span></label>
+        <input type="tel" name="phone_number" value="{{ old('phone_number', $address->phone_number) }}" required placeholder="e.g. 09171234567" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent @error('phone_number') border-red-500 @enderror">
+        @error('phone_number')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+        <p class="text-xs text-gray-400 mt-1">Shared with courier for delivery coordination.</p>
     </div>
     
     <div class="mb-4">

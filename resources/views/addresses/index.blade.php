@@ -74,8 +74,10 @@
                                     <div>
                                         <div class="flex flex-wrap items-center gap-2 mb-1">
                                             <span class="font-bold text-gray-900 text-base">{{ $address->full_name }}</span>
-                                            <span class="text-gray-400 text-sm">·</span>
-                                            <span class="text-gray-500 text-sm">{{ $address->phone_number }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1.5 mb-1">
+                                            <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                            <span class="text-gray-700 text-sm font-medium">{{ $address->phone_number }}</span>
                                         </div>
                                         <p class="text-gray-700 text-sm mb-1">{{ $address->street }}</p>
                                         <p class="text-gray-500 text-sm">
@@ -210,8 +212,9 @@
             </div>
 
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                <input type="tel" name="phone_number" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number <span class="text-red-500">*</span></label>
+                <input type="tel" name="phone_number" required placeholder="e.g. 09171234567" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent">
+                <p class="text-xs text-gray-400 mt-1">Shared with courier for delivery coordination.</p>
             </div>
             
             <div class="mb-4">
