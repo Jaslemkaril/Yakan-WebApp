@@ -74,7 +74,7 @@ class AddressController extends Controller
             $barangay = !empty($validated['barangay_id']) ? PhilippineBarangay::find($validated['barangay_id']) : null;
             $cityName     = $city->name;
             $provinceName = $province->name;
-            $barangayName = $barangay ? $barangay->name : '';
+            $barangayName = $barangay ? $barangay->name : $request->input('barangay_text', '');
         } else {
             $cityName     = $validated['city'];
             $provinceName = $validated['region'];
@@ -223,7 +223,7 @@ class AddressController extends Controller
             $barangay = !empty($validated['barangay_id']) ? PhilippineBarangay::find($validated['barangay_id']) : null;
             $cityName     = $city->name;
             $provinceName = $province->name;
-            $barangayName = $barangay ? $barangay->name : '';
+            $barangayName = $barangay ? $barangay->name : $request->input('barangay_text', '');
         } else {
             $cityName     = $validated['city'];
             $provinceName = $validated['region'];

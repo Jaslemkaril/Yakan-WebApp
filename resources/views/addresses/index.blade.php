@@ -238,12 +238,12 @@
                 </select>
             </div>
             
-            <div class="mb-4">
+            <div class="mb-4" id="barangay_wrapper">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Barangay</label>
                 <select name="barangay_id" id="barangay_id" disabled class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent bg-gray-100">
                     <option value="">-- Select Barangay --</option>
                 </select>
-                <p id="barangay_hint" class="hidden text-xs text-gray-400 mt-1">No barangays listed for this city — you can skip this field.</p>
+                <input type="hidden" id="barangay_text_active" value="0">
             </div>
             
             <div class="mb-4">
@@ -588,19 +588,43 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadBarangays(cityId) {
         barangaySelect.disabled = true;
         barangaySelect.classList.add('bg-gray-100');
-        const hint = document.getElementById('barangay_hint');
-        if (hint) hint.classList.add('hidden');
         
         fetch(apiUrl(`/addresses/api/barangays/${cityId}`))
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     if (data.data.length === 0) {
-                        // No barangays for this city — allow skipping
-                        barangaySelect.innerHTML = '<option value="">-- No barangays available --</option>';
-                        barangaySelect.disabled = true;
-                        if (hint) hint.classList.remove('hidden');
+                        // Swap to free-text input
+                        const wrapper = document.getElementById('barangay_wrapper');
+                        barangaySelect.style.display = 'none';
+                        let textInput = document.getElementById('barangay_text');
+                        if (!textInput) {
+                            textInput = document.createElement('input');
+                            textInput.type = 'text';
+                            textInput.id = 'barangay_text';
+                            textInput.name = 'barangay_text';
+                            textInput.placeholder = 'Type your barangay name';
+                            textInput.className = 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B1A1A] focus:border-transparent';
+                            wrapper.appendChild(textInput);
+                            const note = document.createElement('p');
+                            note.className = 'text-xs text-gray-400 mt-1';
+                            note.id = 'barangay_note';
+                            note.textContent = 'Type your barangay — not in our dropdown list yet.';
+                            wrapper.appendChild(note);
+                        } else {
+                            textInput.style.display = '';
+                            const note = document.getElementById('barangay_note');
+                            if (note) note.style.display = '';
+                        }
+                        document.getElementById('barangay_text_active').value = '1';
                     } else {
+                        // Restore select
+                        barangaySelect.style.display = '';
+                        const textInput = document.getElementById('barangay_text');
+                        if (textInput) textInput.style.display = 'none';
+                        const note = document.getElementById('barangay_note');
+                        if (note) note.style.display = 'none';
+                        document.getElementById('barangay_text_active').value = '0';
                         barangaySelect.innerHTML = '<option value="">-- Select Barangay --</option>';
                         data.data.forEach(barangay => {
                             const option = document.createElement('option');
