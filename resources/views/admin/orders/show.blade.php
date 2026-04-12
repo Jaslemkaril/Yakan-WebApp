@@ -691,10 +691,9 @@
                 @endphp
 
                 <!-- Refund Button -->
-                @if($order->payment_status === 'paid' && $order->status !== 'cancelled')
+                @if($order->payment_status === 'paid' && in_array($order->status, ['completed', 'delivered']))
                 <form action="{{ route('admin.orders.refund', $order->id) }}" method="POST">
                     @csrf
-                    @method('PUT')
                     <button type="submit" onclick="return confirm('Are you sure you want to refund this order? This action cannot be undone.');" class="w-full text-white px-4 py-2 rounded-lg transition-colors duration-200 font-medium flex items-center justify-center" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#A05050'" onmouseout="this.style.backgroundColor='#800000'">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
@@ -705,7 +704,7 @@
                 @endif
                 
                 <!-- Download Invoice -->
-                <a href="{{ route('admin.orders.invoice', $order->id) }}" class="w-full bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors duration-200 font-medium flex items-center justify-center inline-block text-center">
+                <a href="{{ route('admin.orders.invoice', $order->id) }}" target="_blank" class="w-full bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors duration-200 font-medium flex items-center justify-center inline-block text-center">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>

@@ -320,8 +320,8 @@ class OrderController extends Controller
     // Refund order
     public function refund(Request $request, Order $order)
     {
-        if ($order->status !== 'completed') {
-            return redirect()->back()->with('error', 'Only completed orders can be refunded.');
+        if (!in_array($order->status, ['completed', 'delivered'])) {
+            return redirect()->back()->with('error', 'Only completed or delivered orders can be refunded.');
         }
 
         $order->status = 'refunded';
