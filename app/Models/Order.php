@@ -96,6 +96,11 @@ class Order extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function userAddress(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\UserAddress::class, 'user_address_id');
+    }
+
     /**
      * Get the order items
      */

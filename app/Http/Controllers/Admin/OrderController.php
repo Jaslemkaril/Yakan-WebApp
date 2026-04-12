@@ -86,7 +86,7 @@ class OrderController extends Controller
     // Show single order
     public function show(Order $order)
     {
-        $order->load('user', 'orderItems.product.category');
+        $order->load('user', 'userAddress', 'orderItems.product.category');
         return view('admin.orders.show', compact('order'));
     }
 

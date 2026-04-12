@@ -249,6 +249,10 @@
                 </div>
                 <h3 class="text-lg font-semibold text-gray-900">Delivery Information</h3>
             </div>
+            @php
+                $recipientName  = $order->userAddress->full_name  ?? $order->customer_name  ?? $order->user?->name  ?? null;
+                $recipientPhone = $order->userAddress->phone_number ?? $order->customer_phone ?? null;
+            @endphp
             <div class="space-y-3">
                 <div class="flex justify-between">
                     <span class="text-sm text-gray-600">Type:</span>
@@ -256,6 +260,20 @@
                         {{ $isPickup ? 'Store Pickup' : 'Home Delivery' }}
                     </span>
                 </div>
+                @if($recipientName)
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Recipient:</span>
+                        <span class="text-sm font-medium text-gray-900">{{ $recipientName }}</span>
+                    </div>
+                @endif
+                @if($recipientPhone)
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Contact Number:</span>
+                        <span class="text-sm font-semibold text-gray-900">
+                            <a href="tel:{{ $recipientPhone }}" class="hover:underline" style="color:#800000">{{ $recipientPhone }}</a>
+                        </span>
+                    </div>
+                @endif
                 @if($effectiveDeliveryAddress && !$isPickup)
                     <div class="pt-2">
                         <p class="text-xs text-gray-500 mb-1">Delivery Address:</p>
