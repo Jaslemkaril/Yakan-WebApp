@@ -428,6 +428,11 @@
             </button>
         </div>
         <div class="cs-drawer-content">
+            @php
+                $displayName = $chat->user_name ?: ($chat->user?->name ?? 'Guest');
+                $displayEmail = $chat->user_email ?: ($chat->user?->email ?? 'N/A');
+                $displayPhone = $chat->user_phone ?: ($chat->user?->phone ?? null);
+            @endphp
             <div class="cs-card">
                 <div class="cs-card-head">
                     <div class="ch-icon"><i class="fas fa-user"></i></div>
@@ -436,16 +441,16 @@
                 <div class="cs-card-body">
                     <div class="cs-info-row">
                         <span class="ir-label">Name</span>
-                        <span class="ir-value">{{ $chat->user_name ?? 'Guest' }}</span>
+                        <span class="ir-value">{{ $displayName }}</span>
                     </div>
                     <div class="cs-info-row">
                         <span class="ir-label">Email</span>
-                        <span class="ir-value">{{ $chat->user_email ?? 'N/A' }}</span>
+                        <span class="ir-value">{{ $displayEmail }}</span>
                     </div>
-                    @if($chat->user_phone ?? false)
+                    @if($displayPhone)
                     <div class="cs-info-row">
                         <span class="ir-label">Phone</span>
-                        <span class="ir-value">{{ $chat->user_phone }}</span>
+                        <span class="ir-value">{{ $displayPhone }}</span>
                     </div>
                     @endif
                     <div class="cs-info-row" style="margin-top:4px;">

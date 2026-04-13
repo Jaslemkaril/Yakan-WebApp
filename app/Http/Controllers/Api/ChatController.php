@@ -12,6 +12,32 @@ use Illuminate\Support\Facades\Validator;
 class ChatController extends Controller
 {
     /**
+     * Normalize stored chat image path into a URL consumable by mobile clients.
+     */
+    private function formatImageUrl(?string $imagePath): ?string
+    {
+        if (!$imagePath) {
+            return null;
+        }
+
+        $imagePath = trim($imagePath);
+
+        if (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://') || str_starts_with($imagePath, 'data:image')) {
+            return $imagePath;
+        }
+
+        if (str_starts_with($imagePath, 'storage/')) {
+            return asset($imagePath);
+        }
+
+        if (str_starts_with($imagePath, '/storage/')) {
+            return url($imagePath);
+        }
+
+        return asset('storage/' . ltrim($imagePath, '/'));
+    }
+
+    /**
      * Get all chats for authenticated user
      */
     public function index(Request $request)
@@ -97,7 +123,8 @@ class ChatController extends Controller
                     'message' => $message->message,
                     'sender_type' => $message->sender_type,
                     'is_read' => $message->is_read,
-                    'image_url' => $message->image_path ? url('storage/' . $message->image_path) : null,
+                    'image_url' => $this->formatImageUrl($message->image_path),
+                    'image_path' => $message->image_path,
                     'created_at' => $message->created_at->toISOString(),
                 ];
             });
@@ -146,6 +173,9 @@ class ChatController extends Controller
             // Create chat
             $chat = Chat::create([
                 'user_id' => $user->id,
+                'user_name' => $user->name,
+                'user_email' => $user->email,
+                'user_phone' => $user->phone ?? null,
                 'subject' => $request->subject,
                 'status' => 'open',
             ]);
@@ -217,6 +247,21 @@ class ChatController extends Controller
                 ], 404);
             }
 
+            // Backfill identity fields for older chats created without profile columns.
+            $updates = [];
+            if (empty($chat->user_name) && !empty($user->name)) {
+                $updates['user_name'] = $user->name;
+            }
+            if (empty($chat->user_email) && !empty($user->email)) {
+                $updates['user_email'] = $user->email;
+            }
+            if (empty($chat->user_phone) && !empty($user->phone)) {
+                $updates['user_phone'] = $user->phone;
+            }
+            if (!empty($updates)) {
+                $chat->update($updates);
+            }
+
             $imagePath = null;
             
             // Handle image upload
@@ -245,7 +290,8 @@ class ChatController extends Controller
                     'id' => $message->id,
                     'message' => $message->message,
                     'sender_type' => $message->sender_type,
-                    'image_url' => $imagePath ? url('storage/' . $imagePath) : null,
+                    'image_url' => $this->formatImageUrl($imagePath),
+                    'image_path' => $imagePath,
                     'created_at' => $message->created_at->toISOString(),
                 ],
             ], 201);

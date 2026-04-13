@@ -182,13 +182,17 @@
                     </thead>
                     <tbody>
                         @foreach($chats as $chat)
+                            @php
+                                $displayName = $chat->user_name ?: ($chat->user?->name ?? 'Guest');
+                                $displayEmail = $chat->user_email ?: ($chat->user?->email ?? 'N/A');
+                            @endphp
                             <tr>
                                 <td>
                                     <div style="display:flex; align-items:center; gap:10px;">
-                                        <div class="ci-avatar">{{ strtoupper(substr($chat->user_name ?? 'G', 0, 1)) }}</div>
+                                        <div class="ci-avatar">{{ strtoupper(substr($displayName, 0, 1)) }}</div>
                                         <div>
-                                            <div style="font-weight:600; font-size:0.875rem; color:#1a1a1a;">{{ $chat->user_name ?? 'Guest' }}</div>
-                                            <div style="font-size:0.75rem; color:#9ca3af;">{{ $chat->user_email ?? 'N/A' }}</div>
+                                            <div style="font-weight:600; font-size:0.875rem; color:#1a1a1a;">{{ $displayName }}</div>
+                                            <div style="font-size:0.75rem; color:#9ca3af;">{{ $displayEmail }}</div>
                                         </div>
                                     </div>
                                 </td>

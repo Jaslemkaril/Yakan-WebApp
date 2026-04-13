@@ -15,7 +15,7 @@ class ChatController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Chat::query();
+        $query = Chat::query()->with('user');
 
         // Filter by status
         if ($request->has('status') && $request->status !== 'all') {
@@ -28,7 +28,11 @@ class ChatController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('user_name', 'like', "%{$search}%")
                   ->orWhere('user_email', 'like', "%{$search}%")
-                  ->orWhere('subject', 'like', "%{$search}%");
+                  ->orWhere('subject', 'like', "%{$search}%")
+                  ->orWhereHas('user', function ($userQuery) use ($search) {
+                      $userQuery->where('name', 'like', "%{$search}%")
+                          ->orWhere('email', 'like', "%{$search}%");
+                  });
             });
         }
 
