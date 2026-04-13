@@ -45,5 +45,42 @@ if ($uri !== '/' && file_exists(__DIR__.'/public'.$uri)) {
     exit;
 }
 
+// Fallback for storage files when public/storage symlink is unavailable
+// (common in ephemeral/container environments).
+if (str_starts_with($uri, '/storage/')) {
+    $relativePath = ltrim(substr($uri, strlen('/storage/')), '/');
+    $storageFile = __DIR__.'/storage/app/public/'.$relativePath;
+
+    if (file_exists($storageFile)) {
+        $ext  = strtolower(pathinfo($storageFile, PATHINFO_EXTENSION));
+        $mime = [
+            'css'   => 'text/css',
+            'js'    => 'application/javascript',
+            'png'   => 'image/png',
+            'jpg'   => 'image/jpeg',
+            'jpeg'  => 'image/jpeg',
+            'gif'   => 'image/gif',
+            'svg'   => 'image/svg+xml',
+            'ico'   => 'image/x-icon',
+            'webp'  => 'image/webp',
+            'woff'  => 'font/woff',
+            'woff2' => 'font/woff2',
+            'ttf'   => 'font/ttf',
+            'otf'   => 'font/otf',
+            'txt'   => 'text/plain',
+            'json'  => 'application/json',
+            'xml'   => 'application/xml',
+            'pdf'   => 'application/pdf',
+            'map'   => 'application/json',
+        ][$ext] ?? 'application/octet-stream';
+
+        header('Content-Type: '   . $mime);
+        header('Content-Length: ' . filesize($storageFile));
+        header('Cache-Control: public, max-age=31536000');
+        readfile($storageFile);
+        exit;
+    }
+}
+
 // Route everything else through Laravel's front controller
 require_once __DIR__.'/public/index.php';
