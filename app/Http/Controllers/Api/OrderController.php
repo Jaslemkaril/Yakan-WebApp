@@ -262,6 +262,82 @@ class OrderController extends Controller
         ], 400);
     }
 
+    public function cancel(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated',
+                ], 401);
+            }
+
+            $validated = $request->validate([
+                'reason' => 'required|string|max:255',
+            ]);
+
+            $order = Order::where('id', $id)->where('user_id', $user->id)->first();
+
+            if (!$order) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order not found',
+                ], 404);
+            }
+
+            if (!in_array($order->status, ['pending', 'pending_confirmation'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only pending orders can be cancelled.',
+                ], 422);
+            }
+
+            \DB::beginTransaction();
+
+            $order->update([
+                'status' => 'cancelled',
+                'cancelled_at' => now(),
+                'admin_notes' => 'Customer cancelled: ' . $validated['reason'],
+            ]);
+
+            foreach ($order->items as $item) {
+                $inventory = \App\Models\Inventory::where('product_id', $item->product_id)->first();
+                if ($inventory) {
+                    $inventory->increment('quantity', $item->quantity);
+                }
+
+                $product = Product::find($item->product_id);
+                if ($product) {
+                    $product->increment('stock', $item->quantity);
+                }
+            }
+
+            \DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order has been cancelled.',
+                'data' => $order->fresh(['items.product', 'user']),
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Order cancel error', ['message' => $e->getMessage(), 'order_id' => $id]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to cancel order. Please try again.',
+            ], 500);
+        }
+    }
+
     public function adminIndex()
     {
         $orders = Order::with('items', 'user')

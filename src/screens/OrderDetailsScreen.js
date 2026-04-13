@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Animated,
   Image,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -42,10 +44,25 @@ const normalizeStatus = (apiStatus, paymentStatus, fallback) => {
   return status;
 };
 
+const CANCEL_REASONS = [
+  'Changed my mind',
+  'Found a better price elsewhere',
+  'Ordered by mistake',
+  'Delivery takes too long',
+  'Duplicate order',
+  'Want to change items',
+  'Financial reasons',
+  'Other',
+];
+
 const OrderDetailsScreen = ({ navigation, route }) => {
   const { theme } = useTheme();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedCancelReason, setSelectedCancelReason] = useState('');
+  const [customCancelReason, setCustomCancelReason] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
   const scaleAnim = new Animated.Value(0);
   const slideAnim = new Animated.Value(100);
 
@@ -243,6 +260,64 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     );
   };
 
+  const canCancelOrder = order?.status === 'pending' || order?.status === 'pending_confirmation';
+
+  const openCancelModal = () => {
+    setSelectedCancelReason('');
+    setCustomCancelReason('');
+    setShowCancelModal(true);
+  };
+
+  const confirmCancelOrder = async () => {
+    const reason = selectedCancelReason === 'Other'
+      ? customCancelReason.trim()
+      : selectedCancelReason;
+
+    if (!reason) {
+      Alert.alert('Reason Required', 'Please select or enter a cancellation reason.');
+      return;
+    }
+
+    const backendId = order?.backendOrderId || order?.id;
+    if (!backendId) {
+      Alert.alert('Error', 'Order ID not found');
+      return;
+    }
+
+    setIsCancelling(true);
+    try {
+      const response = await ApiService.cancelOrder(backendId, reason);
+      if (response?.success) {
+        setOrder((prev) => ({
+          ...prev,
+          status: 'cancelled',
+          adminNotes: `Customer cancelled: ${reason}`,
+        }));
+
+        const ordersJson = await AsyncStorage.getItem('pendingOrders');
+        if (ordersJson) {
+          const orders = JSON.parse(ordersJson);
+          const updatedOrders = orders.map((o) =>
+            String(o.backendOrderId) === String(backendId) || String(o.id) === String(backendId)
+              ? { ...o, status: 'cancelled', adminNotes: `Customer cancelled: ${reason}` }
+              : o
+          );
+          await AsyncStorage.setItem('pendingOrders', JSON.stringify(updatedOrders));
+        }
+
+        setShowCancelModal(false);
+        Alert.alert('Order Cancelled', 'Your order has been cancelled successfully.');
+      } else {
+        Alert.alert('Error', response?.error || response?.message || 'Failed to cancel order');
+      }
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      Alert.alert('Error', 'Failed to cancel order');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   // Show loading state
   if (loading) {
     return (
@@ -270,6 +345,18 @@ const OrderDetailsScreen = ({ navigation, route }) => {
 
   const currentStageIndex = trackingStages.findIndex(s => s.key === order.status);
   const displayStageIndex = Math.max(0, currentStageIndex);
+  const isCancelled = order.status === 'cancelled';
+  const isRefunded = order.status === 'refunded';
+  const currentStatusColor = isCancelled
+    ? '#DC2626'
+    : isRefunded
+      ? '#92400E'
+      : (trackingStages[displayStageIndex]?.color || colors.primary);
+  const currentStatusLabel = isCancelled
+    ? 'Cancelled'
+    : isRefunded
+      ? 'Refunded'
+      : (trackingStages[displayStageIndex]?.label || 'Pending');
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -290,10 +377,10 @@ const OrderDetailsScreen = ({ navigation, route }) => {
               <Text style={styles.orderRefHeaderDate}>{formatDate(order.createdAt || order.date)}</Text>
             ) : null}
           </View>
-          <View style={[styles.orderRefStatusPill, { backgroundColor: (trackingStages[displayStageIndex]?.color || colors.primary) + '22' }]}>
-            <View style={[styles.orderRefStatusDot, { backgroundColor: trackingStages[displayStageIndex]?.color || colors.primary }]} />
-            <Text style={[styles.orderRefStatusPillText, { color: trackingStages[displayStageIndex]?.color || colors.primary }]}>
-              {trackingStages[displayStageIndex]?.label || 'Pending'}
+          <View style={[styles.orderRefStatusPill, { backgroundColor: currentStatusColor + '22' }]}>
+            <View style={[styles.orderRefStatusDot, { backgroundColor: currentStatusColor }]} />
+            <Text style={[styles.orderRefStatusPillText, { color: currentStatusColor }]}>
+              {currentStatusLabel}
             </Text>
           </View>
         </View>
@@ -303,7 +390,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
           <View style={styles.statusSummaryItem}>
             <Ionicons name="cube-outline" size={28} color={colors.primary} style={styles.statusSummaryIconStyle} />
             <Text style={styles.statusSummaryLabel}>Status</Text>
-            <Text style={styles.statusSummaryValue}>{trackingStages[displayStageIndex]?.label || 'Pending'}</Text>
+            <Text style={styles.statusSummaryValue}>{currentStatusLabel}</Text>
           </View>
           <View style={styles.statusSummaryDivider} />
           <View style={styles.statusSummaryItem}>
@@ -320,6 +407,18 @@ const OrderDetailsScreen = ({ navigation, route }) => {
             </Text>
           </View>
         </View>
+
+        {isCancelled && (
+          <View style={styles.cancelledNoticeCard}>
+            <Ionicons name="close-circle" size={22} color="#B91C1C" />
+            <View style={styles.cancelledNoticeContent}>
+              <Text style={styles.cancelledNoticeTitle}>Order Cancelled</Text>
+              <Text style={styles.cancelledNoticeText}>
+                {order.adminNotes || order.admin_notes || 'This order was cancelled by the customer.'}
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Tracking Timeline - Enhanced */}
         <View style={styles.trackingSection}>
@@ -508,6 +607,17 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         )}
 
         {/* Order Received/Completed Button */}
+        {canCancelOrder && (
+          <TouchableOpacity
+            style={[styles.cancelOrderButton, isCancelling && styles.cancelOrderButtonDisabled]}
+            onPress={openCancelModal}
+            disabled={isCancelling}
+          >
+            <Ionicons name="close-circle-outline" size={22} color={colors.white} />
+            <Text style={styles.cancelOrderButtonText}>{isCancelling ? 'Cancelling...' : 'Cancel Order'}</Text>
+          </TouchableOpacity>
+        )}
+
         {order.status === 'delivered' && (
           <TouchableOpacity 
             style={styles.orderReceivedButton}
@@ -542,6 +652,62 @@ const OrderDetailsScreen = ({ navigation, route }) => {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <Modal
+        visible={showCancelModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCancelModal(false)}
+      >
+        <View style={styles.cancelModalOverlay}>
+          <View style={styles.cancelModalCard}>
+            <Text style={styles.cancelModalTitle}>Cancel Order</Text>
+            <Text style={styles.cancelModalSubtitle}>Please select a reason for cancellation.</Text>
+
+            {CANCEL_REASONS.map((reason) => {
+              const isSelected = selectedCancelReason === reason;
+              return (
+                <TouchableOpacity
+                  key={reason}
+                  style={[styles.cancelReasonOption, isSelected && styles.cancelReasonOptionSelected]}
+                  onPress={() => setSelectedCancelReason(reason)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.cancelReasonText, isSelected && styles.cancelReasonTextSelected]}>{reason}</Text>
+                  {isSelected ? <Ionicons name="checkmark-circle" size={18} color={colors.primary} /> : null}
+                </TouchableOpacity>
+              );
+            })}
+
+            {selectedCancelReason === 'Other' && (
+              <TextInput
+                value={customCancelReason}
+                onChangeText={setCustomCancelReason}
+                style={styles.cancelReasonInput}
+                placeholder="Type your reason"
+                placeholderTextColor="#9CA3AF"
+              />
+            )}
+
+            <View style={styles.cancelModalActions}>
+              <TouchableOpacity
+                style={styles.cancelModalSecondaryButton}
+                onPress={() => setShowCancelModal(false)}
+                disabled={isCancelling}
+              >
+                <Text style={styles.cancelModalSecondaryText}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.cancelModalPrimaryButton, isCancelling && styles.cancelOrderButtonDisabled]}
+                onPress={confirmCancelOrder}
+                disabled={isCancelling}
+              >
+                <Text style={styles.cancelModalPrimaryText}>{isCancelling ? 'Cancelling...' : 'Confirm'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -974,6 +1140,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  cancelOrderButton: {
+    backgroundColor: '#DC2626',
+    borderRadius: 14,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  cancelOrderButtonDisabled: {
+    opacity: 0.7,
+  },
+  cancelOrderButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 10,
+  },
   orderReceivedButton: {
     backgroundColor: colors.primary,
     borderRadius: 14,
@@ -1090,6 +1274,31 @@ const styles = StyleSheet.create({
     width: 1,
     height: 55,
     backgroundColor: colors.border,
+  },
+  cancelledNoticeCard: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FCA5A5',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  cancelledNoticeContent: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  cancelledNoticeTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#B91C1C',
+    marginBottom: 4,
+  },
+  cancelledNoticeText: {
+    fontSize: 12,
+    color: '#7F1D1D',
+    lineHeight: 18,
   },
   stageInfoCurrent: {
     backgroundColor: '#FFF0F0',
@@ -1218,6 +1427,94 @@ const styles = StyleSheet.create({
   orderRefStatusPillText: {
     fontSize: 13,
     fontWeight: '700',
+  },
+  cancelModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  cancelModalCard: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 16,
+  },
+  cancelModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  cancelModalSubtitle: {
+    fontSize: 13,
+    color: colors.textLight,
+    marginBottom: 12,
+  },
+  cancelReasonOption: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cancelReasonOptionSelected: {
+    borderColor: colors.primary,
+    backgroundColor: '#FFF5F5',
+  },
+  cancelReasonText: {
+    fontSize: 13,
+    color: colors.text,
+    fontWeight: '500',
+    flex: 1,
+    paddingRight: 8,
+  },
+  cancelReasonTextSelected: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  cancelReasonInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 6,
+    marginBottom: 6,
+    fontSize: 13,
+    color: colors.text,
+  },
+  cancelModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 10,
+    gap: 10,
+  },
+  cancelModalSecondaryButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  cancelModalSecondaryText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  cancelModalPrimaryButton: {
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  cancelModalPrimaryText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.white,
   },
 });
 

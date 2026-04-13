@@ -185,6 +185,54 @@ export const useOrders = () => {
     }
   };
 
+  const cancelOrder = async (order, reason) => {
+    try {
+      const backendId = order.backendOrderId || order.id;
+      if (!backendId) {
+        Alert.alert('Error', 'Order ID not found');
+        return false;
+      }
+
+      if (!reason || !reason.trim()) {
+        Alert.alert('Reason Required', 'Please select or enter a cancellation reason.');
+        return false;
+      }
+
+      const response = await ApiService.cancelOrder(backendId, reason.trim());
+
+      if (response?.success) {
+        setOrders((prev) =>
+          prev.map((o) =>
+            String(o.backendOrderId) === String(backendId) || String(o.id) === String(backendId)
+              ? { ...o, status: 'cancelled', adminNotes: `Customer cancelled: ${reason.trim()}` }
+              : o
+          )
+        );
+
+        const ordersJson = await AsyncStorage.getItem(ORDERS_KEY);
+        if (ordersJson) {
+          const storedOrders = JSON.parse(ordersJson);
+          const updatedOrders = storedOrders.map((o) =>
+            String(o.backendOrderId) === String(backendId) || String(o.id) === String(backendId)
+              ? { ...o, status: 'cancelled', adminNotes: `Customer cancelled: ${reason.trim()}` }
+              : o
+          );
+          await AsyncStorage.setItem(ORDERS_KEY, JSON.stringify(updatedOrders));
+        }
+
+        Alert.alert('Order Cancelled', 'Your order has been cancelled successfully.');
+        return true;
+      }
+
+      Alert.alert('Error', response?.error || response?.message || 'Failed to cancel order');
+      return false;
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      Alert.alert('Error', 'Failed to cancel order');
+      return false;
+    }
+  };
+
   return {
     orders,
     loading,
@@ -193,5 +241,6 @@ export const useOrders = () => {
     onRefresh,
     savePaymentProof,
     confirmOrderReceived,
+    cancelOrder,
   };
 };
