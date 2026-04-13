@@ -254,42 +254,6 @@ export default function ProductDetailScreen({ route, navigation }) {
             </Text>
           </View>
 
-          {/* Details */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              <MaterialCommunityIcons name="information-outline" size={20} color="#8B1A1A" style={{ marginRight: 8 }} />
-              Details
-            </Text>
-            <View style={styles.detailRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <MaterialCommunityIcons name="palette" size={18} color="#8B1A1A" style={{ marginRight: 8 }} />
-                <Text style={styles.detailLabel}>Material:</Text>
-              </View>
-              <Text style={styles.detailValue}>100% Cotton</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <MaterialCommunityIcons name="ruler" size={18} color="#3498DB" style={{ marginRight: 8 }} />
-                <Text style={styles.detailLabel}>Size:</Text>
-              </View>
-              <Text style={styles.detailValue}>42" x 42"</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <MaterialCommunityIcons name="map-marker" size={18} color="#27AE60" style={{ marginRight: 8 }} />
-                <Text style={styles.detailLabel}>Origin:</Text>
-              </View>
-              <Text style={styles.detailValue}>Basilan, Philippines</Text>
-            </View>
-            <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <MaterialCommunityIcons name="water" size={18} color="#E74C3C" style={{ marginRight: 8 }} />
-                <Text style={styles.detailLabel}>Care:</Text>
-              </View>
-              <Text style={styles.detailValue}>Hand wash only</Text>
-            </View>
-          </View>
-
           {/* Quantity Selector */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
@@ -476,28 +440,6 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 14,
     color: theme.textMuted,
     lineHeight: 21,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.borderLight,
-  },
-  detailLabel: {
-    fontSize: 15,
-    color: theme.textMuted,
-    flex: 0.5,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  detailValue: {
-    fontSize: 15,
-    color: theme.text,
-    fontWeight: '600',
-    flex: 0.5,
-    textAlign: 'right',
   },
   quantityContainer: {
     flexDirection: 'row',

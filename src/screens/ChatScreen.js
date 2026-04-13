@@ -20,6 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useCart } from '../context/CartContext';
 import ApiService from '../services/api';
 import colors from '../constants/colors';
+import API_CONFIG from '../config/config';
 import BottomNav from '../components/BottomNav';
 import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
@@ -37,6 +38,8 @@ export default function ChatScreen({ navigation }) {
   const [newChatMessage, setNewChatMessage] = useState('');
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [newChatImage, setNewChatImage] = useState(null);
+  const [failedImageMessageIds, setFailedImageMessageIds] = useState({});
   const { isLoggedIn } = useCart();
   const { theme } = useTheme();
   const styles = getStyles(theme);
@@ -70,6 +73,42 @@ export default function ChatScreen({ navigation }) {
       };
     }
   }, [selectedChat?.id]);
+
+  const getAppBaseUrl = () => API_CONFIG.API_BASE_URL.replace('/api/v1', '');
+
+  const resolveMessageImageUri = (message) => {
+    const firstReferenceImage = Array.isArray(message?.reference_images) && message.reference_images.length > 0
+      ? message.reference_images[0]
+      : null;
+    const candidate = message?.image_url || message?.image_path || firstReferenceImage;
+
+    if (!candidate || typeof candidate !== 'string') return null;
+
+    const appBaseUrl = getAppBaseUrl();
+    const trimmed = candidate.trim();
+
+    if (trimmed.startsWith('data:image')) return trimmed;
+    if (trimmed.startsWith('//')) return `https:${trimmed}`;
+
+    // Recover from malformed URLs like /storage/https://... by extracting the real URL.
+    const nestedHttpIndex = trimmed.indexOf('http', 8);
+    if (nestedHttpIndex > 0) {
+      return trimmed.substring(nestedHttpIndex);
+    }
+
+    if (trimmed.startsWith('http://')) return trimmed.replace('http://', 'https://');
+    if (trimmed.startsWith('https://')) return trimmed;
+
+    if (trimmed.startsWith('/storage/') || trimmed.startsWith('/chat-image/')) {
+      return `${appBaseUrl}${trimmed}`;
+    }
+
+    if (trimmed.startsWith('storage/') || trimmed.startsWith('chat-image/')) {
+      return `${appBaseUrl}/${trimmed}`;
+    }
+
+    return `${appBaseUrl}/storage/${trimmed.replace(/^\/+/, '')}`;
+  };
 
   useEffect(() => {
     Animated.spring(scaleAnim, {
@@ -127,6 +166,7 @@ export default function ChatScreen({ navigation }) {
         previousMessageCount.current = messageCount;
         
         setMessages(newMessages);
+        setFailedImageMessageIds({});
         setSelectedChat(chatData);
         
         // Auto-scroll only when needed
@@ -184,6 +224,30 @@ export default function ChatScreen({ navigation }) {
     }
   };
 
+  const handlePickNewChatImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please allow access to your photos to upload images.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setNewChatImage(result.assets[0]);
+      }
+    } catch (error) {
+      console.error('Error picking new chat image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!newMessage.trim() && !selectedImage) {
       Alert.alert('Error', 'Please enter a message or select an image');
@@ -219,8 +283,22 @@ export default function ChatScreen({ navigation }) {
     try {
       const response = await ApiService.createChat(newChatSubject, newChatMessage);
       if (response.success) {
+        const createdChatId =
+          response?.data?.data?.id ??
+          response?.data?.id ??
+          response?.id ??
+          null;
+
+        if (newChatImage && createdChatId) {
+          const imageResponse = await ApiService.sendChatMessage(createdChatId, '', newChatImage);
+          if (!imageResponse?.success) {
+            console.warn('[ChatScreen] Chat created but initial image upload failed:', imageResponse?.error);
+          }
+        }
+
         setNewChatSubject('');
         setNewChatMessage('');
+        setNewChatImage(null);
         setShowNewChatForm(false);
         fetchChats();
         Alert.alert('Success', 'Chat created successfully!');
@@ -357,6 +435,8 @@ export default function ChatScreen({ navigation }) {
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => {
               const isPriceQuote = item.sender_type === 'admin' && item.message.includes('PRICE QUOTE');
+              const imageUri = resolveMessageImageUri(item);
+              const hasImage = !!imageUri && !failedImageMessageIds[item.id];
               const hasResponded = messages.some(msg => 
                 msg.sender_type === 'user' && 
                 msg.created_at > item.created_at &&
@@ -373,19 +453,32 @@ export default function ChatScreen({ navigation }) {
                         : styles.adminMessage,
                   ]}
                 >
-                    {item.image_url && (
+                    {hasImage && (
                       <Image 
-                        source={{ uri: item.image_url }}
+                        source={{ uri: imageUri }}
                         style={styles.messageImage}
                         resizeMode="cover"
+                        onError={() => {
+                          setFailedImageMessageIds(prev => ({ ...prev, [item.id]: true }));
+                        }}
                       />
                     )}
-                    <Text style={[
-                      styles.messageText,
-                      item.sender_type === 'user' ? styles.userMessageText : styles.adminMessageText
-                    ]}>
-                      {item.message}
-                    </Text>
+                    {!!item.message && (
+                      <Text style={[
+                        styles.messageText,
+                        item.sender_type === 'user' ? styles.userMessageText : styles.adminMessageText
+                      ]}>
+                        {item.message}
+                      </Text>
+                    )}
+                    {!hasImage && !item.message && (
+                      <Text style={[
+                        styles.messageText,
+                        item.sender_type === 'user' ? styles.userMessageText : styles.adminMessageText
+                      ]}>
+                        Image unavailable
+                      </Text>
+                    )}
                     <Text style={[
                       styles.messageTime,
                       item.sender_type === 'user' ? styles.userMessageTime : styles.adminMessageTime
@@ -535,7 +628,7 @@ export default function ChatScreen({ navigation }) {
             <Text style={styles.label}>Message *</Text>
             <TextInput
               style={[styles.input, styles.messageInput]}
-              placeholder="Describe your issue..."
+              placeholder="Type your message..."
               placeholderTextColor="#999"
               value={newChatMessage}
               onChangeText={setNewChatMessage}
@@ -544,6 +637,29 @@ export default function ChatScreen({ navigation }) {
               maxLength={1000}
             />
             <Text style={styles.charCount}>{newChatMessage.length}/1000</Text>
+          </View>
+
+          <View style={styles.formSection}>
+            <Text style={styles.label}>Photo (optional)</Text>
+            <TouchableOpacity
+              style={styles.formImagePickerButton}
+              onPress={handlePickNewChatImage}
+              disabled={sending}
+            >
+              <Text style={styles.formImagePickerButtonText}>+ Add Photo</Text>
+            </TouchableOpacity>
+
+            {newChatImage && (
+              <View style={styles.formImagePreviewWrap}>
+                <Image source={{ uri: newChatImage.uri }} style={styles.formImagePreview} />
+                <TouchableOpacity
+                  style={styles.formImageRemoveButton}
+                  onPress={() => setNewChatImage(null)}
+                >
+                  <Text style={styles.formImageRemoveText}>×</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           <TouchableOpacity
@@ -1159,5 +1275,46 @@ const getStyles = (theme) => StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  formImagePickerButton: {
+    borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: theme.inputBg,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  formImagePickerButtonText: {
+    color: theme.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  formImagePreviewWrap: {
+    marginTop: 12,
+    position: 'relative',
+    alignSelf: 'flex-start',
+  },
+  formImagePreview: {
+    width: 96,
+    height: 96,
+    borderRadius: 10,
+    backgroundColor: theme.surfaceBg,
+  },
+  formImageRemoveButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: theme.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  formImageRemoveText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    lineHeight: 18,
   },
 });

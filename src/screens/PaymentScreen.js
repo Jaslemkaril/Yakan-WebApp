@@ -118,6 +118,14 @@ export default function PaymentScreen({ navigation, route }) {
     },
   ];
 
+  const subtotalAmount = Number(orderData?.subtotal) || 0;
+  const shippingAmount = Number(orderData?.shippingFee) || 0;
+  const discountAmount = Math.max(0, Number(orderData?.discount) || 0);
+  const baseTotal = Math.max(
+    0,
+    Number(orderData?.total) || (subtotalAmount + shippingAmount - discountAmount)
+  );
+
   const updateOrderInStorage = async (updatedOrder) => {
     try {
       const savedOrders = await AsyncStorage.getItem('pendingOrders');
@@ -195,10 +203,13 @@ export default function PaymentScreen({ navigation, route }) {
           quantity: item.quantity || 1,
           price: item.price,
         })),
-        subtotal: orderData.subtotal,
-        shipping_fee: orderData.shippingFee,
-        total: orderData.total,
-        total_amount: orderData.total,
+        subtotal: subtotalAmount,
+        shipping_fee: shippingAmount,
+        discount: discountAmount,
+        discount_amount: discountAmount,
+        coupon_code: orderData.couponCode || null,
+        total: finalTotal,
+        total_amount: finalTotal,
         notes: 'Order from mobile app',
       };
 
@@ -235,6 +246,10 @@ export default function PaymentScreen({ navigation, route }) {
 
       const finalOrderData = {
         ...orderData,
+        subtotal: subtotalAmount,
+        shippingFee: shippingAmount,
+        discount: discountAmount,
+        total: finalTotal,
         paymentMethod: selectedPaymentMethod,
         paymentReference: referenceNumber,
         status: isPaymongo ? 'pending_payment' : 'payment_verified', // align with timeline stage
@@ -315,7 +330,7 @@ export default function PaymentScreen({ navigation, route }) {
         orderRef: finalOrderData.orderRef,
         customerName: orderData.shippingAddress.fullName,
         customerPhone: orderData.shippingAddress.phoneNumber,
-        total: orderData.total,
+        total: finalTotal,
         itemCount: orderData.items.length,
         paymentMethod: selectedPaymentMethod,
         items: orderData.items,
@@ -348,6 +363,10 @@ export default function PaymentScreen({ navigation, route }) {
       
       const finalOrderData = {
         ...orderData,
+        subtotal: subtotalAmount,
+        shippingFee: shippingAmount,
+        discount: discountAmount,
+        total: finalTotal,
         paymentMethod: selectedPaymentMethod,
         paymentReference: referenceNumber,
         status: isPaymongo ? 'pending_payment' : 'payment_verified',
@@ -361,7 +380,7 @@ export default function PaymentScreen({ navigation, route }) {
         orderRef: finalOrderData.orderRef,
         customerName: orderData.shippingAddress.fullName,
         customerPhone: orderData.shippingAddress.phoneNumber,
-        total: orderData.total,
+        total: finalTotal,
         itemCount: orderData.items.length,
         paymentMethod: selectedPaymentMethod,
         items: orderData.items,
@@ -386,9 +405,8 @@ export default function PaymentScreen({ navigation, route }) {
     }
   };
 
-  const total = (orderData.subtotal || 0) + (orderData.shippingFee || 0);
   const selectedMethod = paymentMethods.find(m => m.id === selectedPaymentMethod);
-  const finalTotal = total + (selectedMethod?.fee || 0);
+  const finalTotal = Math.max(0, baseTotal + (selectedMethod?.fee || 0));
   const isPaymongo = selectedPaymentMethod === 'paymongo';
   const isBankTransfer = selectedPaymentMethod === 'bank_transfer';
   // Stub wallet vars — PayMongo uses redirect, only bank_transfer shows manual instructions
@@ -620,13 +638,20 @@ export default function PaymentScreen({ navigation, route }) {
               
               <View style={styles.orderSummaryRow}>
                 <Text style={styles.orderSummaryLabel}>Subtotal</Text>
-                <Text style={styles.orderSummaryValue}>₱{(orderData.subtotal || 0).toFixed(2)}</Text>
+                <Text style={styles.orderSummaryValue}>₱{subtotalAmount.toFixed(2)}</Text>
               </View>
               
               <View style={styles.orderSummaryRow}>
                 <Text style={styles.orderSummaryLabel}>Shipping</Text>
-                <Text style={styles.orderSummaryValue}>₱{(orderData.shippingFee || 0).toFixed(2)}</Text>
+                <Text style={styles.orderSummaryValue}>₱{shippingAmount.toFixed(2)}</Text>
               </View>
+
+              {discountAmount > 0 && (
+                <View style={styles.orderSummaryRow}>
+                  <Text style={[styles.orderSummaryLabel, { color: '#16A34A' }]}>Discount</Text>
+                  <Text style={[styles.orderSummaryValue, { color: '#16A34A' }]}>-₱{discountAmount.toFixed(2)}</Text>
+                </View>
+              )}
               
               <View style={styles.orderSummaryDivider} />
               
@@ -781,12 +806,18 @@ export default function PaymentScreen({ navigation, route }) {
         <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Subtotal</Text>
-            <Text style={styles.summaryValue}>₱{(orderData.subtotal || 0).toFixed(2)}</Text>
+            <Text style={styles.summaryValue}>₱{subtotalAmount.toFixed(2)}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Shipping</Text>
-            <Text style={styles.summaryValue}>₱{(orderData.shippingFee || 0).toFixed(2)}</Text>
+            <Text style={styles.summaryValue}>₱{shippingAmount.toFixed(2)}</Text>
           </View>
+          {discountAmount > 0 && (
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: '#16A34A' }]}>Discount</Text>
+              <Text style={[styles.summaryValue, { color: '#16A34A' }]}>-₱{discountAmount.toFixed(2)}</Text>
+            </View>
+          )}
           {selectedMethod && selectedMethod.fee > 0 && (
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Payment Fee</Text>
