@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Chat;
 use App\Models\ChatMessage;
+use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -267,8 +268,21 @@ class ChatController extends Controller
             // Handle image upload
             if ($request->hasFile('image')) {
                 $image = $request->file('image');
-                $imageName = 'chat_' . time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-                $imagePath = $image->storeAs('chat_images', $imageName, 'public');
+                $cloudinary = new CloudinaryService();
+
+                // Prefer Cloudinary for persistent cross-instance storage in production.
+                if ($cloudinary->isEnabled()) {
+                    $result = $cloudinary->uploadFile($image, 'chats');
+                    if ($result && !empty($result['url'])) {
+                        $imagePath = $result['url'];
+                    }
+                }
+
+                // Fallback to local storage when Cloudinary is unavailable.
+                if (!$imagePath) {
+                    $imageName = 'chat_' . time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                    $imagePath = $image->storeAs('chat_images', $imageName, 'public');
+                }
             }
 
             // Create message
