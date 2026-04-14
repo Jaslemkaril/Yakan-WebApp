@@ -149,7 +149,9 @@ class InventoryController extends Controller
             'low_stock_alert' => $validated['quantity'] <= $validated['min_stock_level'],
         ];
 
-        Inventory::create($inventoryData);
+        $inventory = Inventory::create($inventoryData);
+        $inventory->product?->update(['stock' => $inventory->quantity]);
+        \Cache::flush();
 
         return $this->redirectToIndex()
             ->with('success', 'Inventory record created successfully for ' . $product->name . '.');
@@ -192,6 +194,8 @@ class InventoryController extends Controller
         $validated['low_stock_alert'] = $validated['quantity'] <= $validated['min_stock_level'];
 
         $inventory->update($validated);
+        $inventory->product?->update(['stock' => $inventory->quantity]);
+        \Cache::flush();
 
         return $this->redirectToIndex()
             ->with('success', 'Inventory record updated successfully.');
@@ -208,6 +212,7 @@ class InventoryController extends Controller
         ]);
 
         $inventory->restock($validated['quantity']);
+        $inventory->product?->update(['stock' => $inventory->quantity]);
 
         $this->logStockMovement(
             $inventory->product_id,
@@ -239,6 +244,7 @@ class InventoryController extends Controller
         $inventory->quantity -= $validated['quantity'];
         $inventory->low_stock_alert = $inventory->quantity <= $inventory->min_stock_level;
         $inventory->save();
+        $inventory->product?->update(['stock' => $inventory->quantity]);
 
         $this->logStockMovement(
             $inventory->product_id,

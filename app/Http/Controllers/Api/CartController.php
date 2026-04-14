@@ -11,6 +11,11 @@ use Illuminate\Support\Facades\Auth;
 
 class CartController extends Controller
 {
+    private function getEffectiveStock(Product $product): int
+    {
+        return (int) ($product->inventory?->quantity ?? $product->stock ?? 0);
+    }
+
     /**
      * Remove coupon (no-op for stateless API — client just discards)
      */
@@ -103,10 +108,11 @@ class CartController extends Controller
      */
     public function index()
     {
-        $cartItems = Cart::with('product')
+        $cartItems = Cart::with('product.inventory')
                         ->where('user_id', Auth::id())
                         ->get()
                         ->map(function ($item) {
+                            $effectiveStock = $this->getEffectiveStock($item->product);
                             return [
                                 'id' => $item->id,
                                 'product_id' => $item->product_id,
@@ -116,7 +122,7 @@ class CartController extends Controller
                                     'name' => $item->product->name,
                                     'price' => $item->product->price,
                                     'image' => $item->product->image,
-                                    'stock' => $item->product->stock,
+                                    'stock' => $effectiveStock,
                                 ],
                                 'created_at' => $item->created_at,
                                 'updated_at' => $item->updated_at,
@@ -144,8 +150,10 @@ class CartController extends Controller
         $quantity = $request->quantity;
 
         // Check if product exists and has stock
-        $product = Product::findOrFail($productId);
-        if ($product->stock < $quantity) {
+        $product = Product::with('inventory')->findOrFail($productId);
+        $availableStock = $this->getEffectiveStock($product);
+
+        if ($availableStock < $quantity) {
             return response()->json([
                 'success' => false,
                 'message' => 'Insufficient stock available'
@@ -159,7 +167,7 @@ class CartController extends Controller
 
         if ($cartItem) {
             $newQuantity = $cartItem->quantity + $quantity;
-            if ($product->stock < $newQuantity) {
+            if ($availableStock < $newQuantity) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Insufficient stock for requested quantity'
@@ -176,7 +184,7 @@ class CartController extends Controller
         }
 
         // Return the updated cart item
-        $cartItem->load('product');
+        $cartItem->load('product.inventory');
 
         return response()->json([
             'success' => true,
@@ -189,6 +197,7 @@ class CartController extends Controller
                     'name' => $cartItem->product->name,
                     'price' => $cartItem->product->price,
                     'image' => $cartItem->product->image,
+                    'stock' => $this->getEffectiveStock($cartItem->product),
                 ],
             ],
             'message' => 'Product added to cart successfully'
@@ -212,7 +221,7 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:1',
         ]);
 
-        $cartItem = Cart::with('product')
+        $cartItem = Cart::with('product.inventory')
                         ->where('id', $id)
                         ->where('user_id', Auth::id())
                         ->first();
@@ -225,7 +234,8 @@ class CartController extends Controller
         }
 
         $product = $cartItem->product;
-        if ($product->stock < $request->quantity) {
+        $availableStock = $this->getEffectiveStock($product);
+        if ($availableStock < $request->quantity) {
             return response()->json([
                 'success' => false,
                 'message' => 'Insufficient stock available'
@@ -246,6 +256,7 @@ class CartController extends Controller
                     'name' => $cartItem->product->name,
                     'price' => $cartItem->product->price,
                     'image' => $cartItem->product->image,
+                    'stock' => $this->getEffectiveStock($cartItem->product),
                 ],
             ],
             'message' => 'Cart item updated successfully'

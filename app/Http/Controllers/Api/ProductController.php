@@ -12,6 +12,11 @@ use Illuminate\Support\Facades\Cache;
 
 class ProductController extends Controller
 {
+    private function getEffectiveStock(Product $product): int
+    {
+        return (int) ($product->inventory?->quantity ?? $product->stock ?? 0);
+    }
+
     public function index(Request $request): JsonResponse
     {
         try {
@@ -20,7 +25,7 @@ class ProductController extends Controller
             $products = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 300), function () use ($request) {
                 $query = Product::select([
                     'id', 'name', 'description', 'price', 'stock', 'category_id', 'image', 'status', 'sku', 'created_at'
-                ])->with('category:id,name,slug')->active(); // show all active products; out-of-stock handled in app
+                ])->with(['category:id,name,slug', 'inventory:product_id,quantity'])->active(); // show all active products; out-of-stock handled in app
                 
                 if ($request->has('category')) {
                     $query->where('category_id', $request->category);
@@ -53,10 +58,16 @@ class ProductController extends Controller
                 $perPage = $request->get('per_page', 12);
                 
                 if ($request->has('limit')) {
-                    return $query->limit($request->limit)->get();
+                    $products = $query->limit($request->limit)->get();
+                } else {
+                    $products = $query->limit($perPage)->get();
                 }
-                
-                return $query->limit($perPage)->get();
+
+                $products->each(function ($product) {
+                    $product->stock = $this->getEffectiveStock($product);
+                });
+
+                return $products;
             });
 
             return response()->json([
@@ -80,15 +91,24 @@ class ProductController extends Controller
             $cacheKey = 'products:featured';
             
             $products = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 7200), function () use ($request) {
-                return Product::select([
+                $products = Product::select([
                     'id', 'name', 'description', 'price', 'stock', 'category_id', 'image', 'status'
                 ])
-                ->with('category:id,name,slug')
+                ->with(['category:id,name,slug', 'inventory:product_id,quantity'])
                 ->active()
-                ->where('stock', '>', 0)
                 ->where('featured', true)
                 ->limit($request->get('limit', 6))
                 ->get();
+
+                $products = $products->filter(function ($product) {
+                    return $this->getEffectiveStock($product) > 0;
+                })->values();
+
+                $products->each(function ($product) {
+                    $product->stock = $this->getEffectiveStock($product);
+                });
+
+                return $products;
             });
 
             return response()->json([
@@ -111,7 +131,9 @@ class ProductController extends Controller
         $cacheKey = "product:{$product->id}";
         
         $product = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 7200), function () use ($product) {
-            return $product->load(['category', 'orderItems']);
+            $product->load(['category', 'orderItems', 'inventory']);
+            $product->stock = $this->getEffectiveStock($product);
+            return $product;
         });
 
         return response()->json([
@@ -125,13 +147,17 @@ class ProductController extends Controller
         $cacheKey = "products:category:{$category}";
         
         $products = Cache::remember($cacheKey, env('CATEGORY_CACHE_TTL', 86400), function () use ($category) {
-            return Product::with('category')
+            return Product::with(['category', 'inventory:product_id,quantity'])
                 ->whereHas('category', function($query) use ($category) {
                     $query->where('slug', $category);
                 })
                 ->active()
-                ->where('stock', '>', 0)
                 ->paginate(12);
+        });
+
+        $products->getCollection()->transform(function ($product) {
+            $product->stock = $this->getEffectiveStock($product);
+            return $product;
         });
 
         return response()->json([
