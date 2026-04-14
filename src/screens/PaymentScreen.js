@@ -850,8 +850,9 @@ export default function PaymentScreen({ navigation, route }) {
                     resizeMode="contain"
                   />
                 ) : method.id === 'paymongo' ? (
-                  <View style={[styles.bankIconCircle, { backgroundColor: '#e8f4ff' }]}>
-                    <MaterialCommunityIcons name="credit-card" size={26} color="#0071ce" />
+                  <View style={styles.paymongoLogoBadge}>
+                    <Text style={styles.paymongoPayText}>Pay</Text>
+                    <Text style={styles.paymongoMongoText}>Mongo</Text>
                   </View>
                 ) : (
                   <View style={styles.bankIconCircle}>
@@ -1516,7 +1517,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(139, 26, 26, 0.05)',
   },
   paymentMethodIcon: {
-    width: 50,
+    width: 72,
     height: 50,
     borderRadius: 10,
     backgroundColor: colors.lightGray,
@@ -1539,6 +1540,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF0F0',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  paymongoLogoBadge: {
+    width: 64,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  paymongoPayText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0071ce',
+    letterSpacing: -0.3,
+    marginRight: 1,
+  },
+  paymongoMongoText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#00c2cb',
+    letterSpacing: -0.3,
   },
   paymentMethodInfo: {
     flex: 1,

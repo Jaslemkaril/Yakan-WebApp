@@ -509,6 +509,7 @@ class AdminCustomOrderController extends Controller
 
             foreach ($ordersToUpdate as $targetOrder) {
                 $oldStatus = $targetOrder->status;
+                $wasPaid = (string) $targetOrder->payment_status === 'paid';
                 $targetOrder->status = $targetStatus;
 
                 // Final price edits only apply to the selected order.
@@ -524,6 +525,12 @@ class AdminCustomOrderController extends Controller
                 // If status changed to processing or in_production, mark payment as paid.
                 if (in_array($targetStatus, ['processing', 'in_production'], true) && $targetOrder->payment_status !== 'paid') {
                     $targetOrder->payment_status = 'paid';
+                    if (\Schema::hasColumn('custom_orders', 'payment_verified_at')) {
+                        $targetOrder->payment_verified_at = now();
+                    }
+                    if (\Schema::hasColumn('custom_orders', 'payment_confirmed_at')) {
+                        $targetOrder->payment_confirmed_at = now();
+                    }
                 }
 
                 // Set timestamps for workflow statuses.
@@ -541,6 +548,10 @@ class AdminCustomOrderController extends Controller
 
                 $targetOrder->save();
                 $updatedCount++;
+
+                if (!$wasPaid && (string) $targetOrder->payment_status === 'paid') {
+                    $this->sendCustomOrderPaymentReceiptEmail($targetOrder);
+                }
 
                 // Send notifications to user and admin.
                 if ($oldStatus !== $targetOrder->status) {
@@ -736,11 +747,21 @@ class AdminCustomOrderController extends Controller
 
             $paymentStatus = $request->payment_status;
             $notes = $request->payment_notes ?? '';
+            $wasPaid = (string) $order->payment_status === 'paid';
 
             // Update payment status
             $order->payment_status = $paymentStatus;
             if ($notes) {
                 $order->payment_notes = $notes;
+            }
+
+            if ($paymentStatus === 'paid') {
+                if (\Schema::hasColumn('custom_orders', 'payment_verified_at')) {
+                    $order->payment_verified_at = now();
+                }
+                if (\Schema::hasColumn('custom_orders', 'payment_confirmed_at')) {
+                    $order->payment_confirmed_at = now();
+                }
             }
             
             // Auto-progression: If payment verified, move to approved status
@@ -755,6 +776,10 @@ class AdminCustomOrderController extends Controller
             }
             
             $order->save();
+
+            if ($paymentStatus === 'paid' && !$wasPaid) {
+                $this->sendCustomOrderPaymentReceiptEmail($order);
+            }
 
             \Log::info('Payment verified for custom order', [
                 'order_id' => $order->id,
