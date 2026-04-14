@@ -3439,8 +3439,12 @@ class CustomOrderController extends Controller
                 ], 403);
             }
             
-            $paymentMethod = $request->input('payment_method');
-            if (!in_array($paymentMethod, ['paymongo', 'online_banking', 'bank_transfer'])) {
+            $paymentMethod = (string) $request->input('payment_method');
+            if ($paymentMethod === 'online_banking') {
+                $paymentMethod = 'paymongo';
+            }
+
+            if ($paymentMethod !== 'paymongo') {
                 return response()->json([
                     'success' => false,
                     'error' => 'Invalid payment method selected.'
@@ -3529,7 +3533,7 @@ class CustomOrderController extends Controller
             $authTokenForCallback = $request->input('auth_token') ?? $request->header('X-Auth-Token') ?? session('auth_token') ?? '';
             
             // Handle PayMongo checkout
-            if (in_array($paymentMethod, ['paymongo', 'online_banking']) && config('services.paymongo.enabled', false)) {
+            if (config('services.paymongo.enabled', false)) {
                 try {
                     $itemsSubtotal = (float) $this->calculateOrdersTotal($paymentOrders);
                     $tokenQuery = $authTokenForCallback ? '?auth_token=' . urlencode($authTokenForCallback) : '';
@@ -3600,7 +3604,7 @@ class CustomOrderController extends Controller
                                     'phone' => $buyer->phone ?? '',
                                 ],
                                 'line_items'           => $lineItems,
-                                'payment_method_types' => ['card', 'gcash', 'paymaya', 'grab_pay'],
+                                'payment_method_types' => ['card', 'gcash', 'grab_pay'],
                                 'success_url'          => $successUrl,
                                 'cancel_url'           => $cancelUrl,
                                 'description'          => 'Custom Order #' . $order->id,
@@ -3658,38 +3662,24 @@ class CustomOrderController extends Controller
                         'body'     => $response->body(),
                     ]);
 
-                    // Fall back to bank transfer on PayMongo failure
-                    $paymentMethod = 'bank_transfer';
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'PayMongo checkout is currently unavailable. Please try again in a few minutes.'
+                    ], 502);
 
                 } catch (\Throwable $e) {
                     \Log::error('PayMongo custom order checkout exception: ' . $e->getMessage());
-                    $paymentMethod = 'bank_transfer';
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'Unable to start PayMongo checkout right now. Please try again.'
+                    ], 500);
                 }
             }
-            
-            // Handle Bank Transfer
-            foreach ($paymentOrders as $paymentOrder) {
-                $paymentOrder->payment_method = $paymentMethod;
-                if ($paymentOrder->id === $order->id) {
-                    $paymentOrder->shipping_fee = $shippingFee;
-                    if ($request->filled('delivery_city')) {
-                        $paymentOrder->delivery_city = $request->input('delivery_city');
-                    }
-                    if ($request->filled('delivery_province')) {
-                        $paymentOrder->delivery_province = $request->input('delivery_province');
-                    }
-                }
-                $paymentOrder->save();
-            }
-            
-            $tokenQuery = $authTokenForCallback ? '?auth_token=' . urlencode($authTokenForCallback) : '';
-            $instructionsUrl = route('custom_orders.payment.instructions', $order->id) . $tokenQuery;
-            
+
             return response()->json([
-                'success' => true,
-                'redirect_url' => $instructionsUrl,
-                'payment_method' => $paymentMethod
-            ]);
+                'success' => false,
+                'error' => 'PayMongo checkout is currently disabled. Please contact support.'
+            ], 503);
             
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([

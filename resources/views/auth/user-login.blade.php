@@ -558,7 +558,7 @@
                         <!-- Download Mobile App -->
                         <div class="download-app-section">
                             <p class="download-app-label">🔥 Also available on Android</p>
-                            <a href="https://expo.dev/artifacts/eas/jtjon8MW5ukmzvaYe66Qe6.apk"
+                            <a href="https://expo.dev/artifacts/eas/eGrcnKnshjoDXTDFpvCMLN.apk"
                                download
                                class="download-app-btn">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">

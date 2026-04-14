@@ -939,12 +939,12 @@
                                     <div class="mb-5">
                                         <label class="block text-sm font-semibold text-gray-700 mb-3">Select Payment Method</label>
                                         <div class="space-y-3">
-                                            <!-- Bank Transfer -->
-                                            <label class="flex items-center p-4 border-2 border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition {{ old('payment_method') === 'bank_transfer' ? 'border-blue-500 bg-blue-50' : '' }}">
-                                                <input type="radio" name="payment_method" value="bank_transfer" {{ old('payment_method') === 'bank_transfer' ? 'checked' : '' }} class="w-5 h-5 text-blue-600">
+                                            <!-- PayMongo -->
+                                            <label class="flex items-center p-4 border-2 border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition {{ old('payment_method', 'online_banking') === 'online_banking' ? 'border-blue-500 bg-blue-50' : '' }}">
+                                                <input type="radio" name="payment_method" value="online_banking" {{ old('payment_method', 'online_banking') === 'online_banking' ? 'checked' : '' }} class="w-5 h-5 text-blue-600">
                                                 <span class="ml-3 flex-1">
-                                                    <span class="font-bold text-gray-900">🏦 Bank Transfer</span>
-                                                    <p class="text-sm text-gray-600">Direct transfer to our bank account - Secure & Reliable</p>
+                                                    <span class="font-bold text-gray-900">💳 PayMongo</span>
+                                                    <p class="text-sm text-gray-600">Secure checkout via GCash, cards, and GrabPay</p>
                                                 </span>
                                             </label>
                                         </div>

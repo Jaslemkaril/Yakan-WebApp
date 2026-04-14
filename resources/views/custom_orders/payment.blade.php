@@ -115,11 +115,6 @@
     $batchOrderNumber = $order->batch_order_number ?? null;
     $batchItemsCount = $paymentOrders->count();
 
-    $mayaLogoPath = public_path('images/payment/maya-logo.jpg');
-    $mayaLogoDataUri = file_exists($mayaLogoPath)
-        ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($mayaLogoPath))
-        : null;
-
     // Determine shipping fee
     // Priority: stored shipping_fee > calculate from stored city/province > user default address > default fee
     $storedCity = $order->delivery_city ?? '';
@@ -672,41 +667,20 @@
             </div>
 
             <div class="space-y-4 mb-8">
+                @php
+                    $selectedPaymentMethod = old('payment_method');
+                    if ($selectedPaymentMethod !== 'paymongo') {
+                        $selectedPaymentMethod = 'paymongo';
+                    }
+                @endphp
                 <!-- PayMongo -->
-                <label class="payment-method-option {{ old('payment_method') === 'paymongo' ? 'selected' : '' }}">
-                    <input type="radio" name="payment_method" value="paymongo" {{ old('payment_method') === 'paymongo' ? 'checked' : '' }} class="w-5 h-5" style="accent-color:#800000;">
+                <label class="payment-method-option {{ $selectedPaymentMethod === 'paymongo' ? 'selected' : '' }}">
+                    <input type="radio" name="payment_method" value="paymongo" {{ $selectedPaymentMethod === 'paymongo' ? 'checked' : '' }} class="w-5 h-5" style="accent-color:#800000;">
                     <div class="payment-method-content flex-1 ml-4">
                         <div class="payment-brand-logo mb-1 flex items-center gap-1" style="height:44px;">
                             <span style="font-size:1.4rem;font-weight:800;color:#0071ce;letter-spacing:-1px;">Pay</span><span style="font-size:1.4rem;font-weight:800;color:#00c2cb;">Mongo</span>
                         </div>
-                        <p class="text-sm text-gray-600 mt-1">GCash, Maya, Credit/Debit Card, GrabPay — secure online checkout</p>
-                    </div>
-                    <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </label>
-
-                <!-- Bank Transfer -->
-                <label class="payment-method-option {{ old('payment_method') === 'bank_transfer' ? 'selected' : '' }}">
-                    <input type="radio" name="payment_method" value="bank_transfer" {{ old('payment_method') === 'bank_transfer' ? 'checked' : '' }} class="w-5 h-5" style="accent-color:#800000;">
-                    <div class="payment-method-content flex-1 ml-4">
-                        <div class="payment-brand-logo mb-1" aria-label="Bank Transfer">
-                            <svg viewBox="0 0 160 48" class="w-full h-full" role="img" aria-label="Bank Transfer">
-                                <rect x="0" y="0" width="160" height="48" rx="10" fill="#f3f4f6"/>
-                                <g transform="translate(12 9)">
-                                    <path d="M18 0L0 8h36L18 0z" fill="#7a0f0f"/>
-                                    <rect x="3" y="10" width="30" height="3" fill="#7a0f0f"/>
-                                    <rect x="4" y="14" width="4" height="10" fill="#9b1111"/>
-                                    <rect x="11" y="14" width="4" height="10" fill="#9b1111"/>
-                                    <rect x="18" y="14" width="4" height="10" fill="#9b1111"/>
-                                    <rect x="25" y="14" width="4" height="10" fill="#9b1111"/>
-                                    <rect x="3" y="25" width="30" height="3" fill="#7a0f0f"/>
-                                </g>
-                                <text x="56" y="20" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#7a0f0f">BANK</text>
-                                <text x="56" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#7a0f0f">TRANSFER</text>
-                            </svg>
-                        </div>
-                        <p class="text-sm text-gray-600 mt-1">Direct transfer to our bank account — Secure &amp; Reliable</p>
+                        <p class="text-sm text-gray-600 mt-1">GCash, Credit/Debit Card, GrabPay — secure online checkout</p>
                     </div>
                     <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -1176,7 +1150,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 
                 if (data.success && data.redirect_url) {
-                    // Redirect to Maya checkout or payment instructions
+                    // Redirect to secure checkout
                     window.location.href = data.redirect_url;
                 } else if (data.error) {
                     if (loadingOverlay) loadingOverlay.classList.add('hidden');

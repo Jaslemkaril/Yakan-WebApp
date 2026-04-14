@@ -53,7 +53,7 @@ class ChatPaymentController extends Controller
 
         $validated = $request->validate([
             'payment_id' => 'required|exists:chat_payments,id',
-            'payment_method' => 'required|in:online_banking,bank_transfer',
+            'payment_method' => 'required|in:online_banking',
             'payment_proof' => 'required|image|max:5120',
         ]);
 
@@ -109,7 +109,7 @@ class ChatPaymentController extends Controller
                     'chat_id' => $chat->id,
                     'user_id' => Auth::id(),
                     'sender_type' => 'user',
-                    'message' => "Payment proof uploaded for Payment ID: #" . $payment->id . "\n\nPayment Method: " . ucfirst(str_replace('_', ' ', $validated['payment_method'])),
+                    'message' => "Payment proof uploaded for Payment ID: #" . $payment->id . "\n\nPayment Method: PayMongo",
                     'image_path' => $storedPath,
                 ]);
             } catch (\Exception $e) {

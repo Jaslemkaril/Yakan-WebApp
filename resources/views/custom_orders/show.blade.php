@@ -1861,7 +1861,7 @@
                                 <span class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style="background-color:#800000;">1</span>
                                 <div>
                                     <p class="font-semibold text-gray-900">Click "Proceed to Payment" button</p>
-                                    <p class="text-sm text-gray-600">Choose your preferred payment method (Maya or Bank Transfer)</p>
+                                    <p class="text-sm text-gray-600">Proceed using PayMongo secure checkout</p>
                                 </div>
                             </div>
                             <div class="flex items-start gap-3">

@@ -718,7 +718,7 @@ class CartController extends Controller
     public function processCheckout(Request $request)
     {
         $request->validate([
-            'payment_method'      => 'required|in:online,maya,paymongo,bank_transfer',
+            'payment_method'      => 'required|in:paymongo',
             'delivery_type'       => 'required|in:delivery,pickup',
             'address_id'          => 'required_if:delivery_type,delivery|exists:user_addresses,id',
             'customer_notes'      => 'nullable|string|max:500',
@@ -997,8 +997,8 @@ class CartController extends Controller
 
         $authToken = request()->input('auth_token') ?? session('auth_token');
 
-        $redirectUrl = $this->appendAuthToken(route('payment.bank', $order->id), $authToken);
-        $paymentLabel = 'Complete Bank Transfer';
+        $redirectUrl = $this->appendAuthToken(route('payment.failed', $order->id), $authToken);
+        $paymentLabel = 'Preparing Payment';
 
         if ($request->payment_method === 'online') {
             $redirectUrl = $this->appendAuthToken(route('payment.online', $order->id), $authToken);
@@ -1017,12 +1017,12 @@ class CartController extends Controller
                 $redirectUrl = $result['checkout_url'];
                 $paymentLabel = 'Opening PayMongo Checkout';
             } catch (\Throwable $e) {
-                \Log::error('PayMongo checkout failed — falling back to bank transfer.', [
+                \Log::error('PayMongo checkout failed.', [
                     'order_id' => $order->id,
                     'error'    => $e->getMessage(),
                 ]);
-                $redirectUrl = $this->appendAuthToken(route('payment.bank', $order->id), $authToken);
-                $paymentLabel = 'Complete Payment';
+                $redirectUrl = $this->appendAuthToken(route('payment.failed', $order->id), $authToken);
+                $paymentLabel = 'Payment Unavailable';
             }
         }
 

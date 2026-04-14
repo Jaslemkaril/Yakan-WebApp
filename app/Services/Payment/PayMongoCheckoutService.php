@@ -82,7 +82,7 @@ class PayMongoCheckoutService
                         'phone' => $order->user->phone ?? '',
                     ],
                     'line_items'           => $lineItems,
-                    'payment_method_types' => ['card', 'gcash', 'paymaya', 'grab_pay'],
+                    'payment_method_types' => ['card', 'gcash', 'grab_pay'],
                     'success_url'          => $successUrl,
                     'cancel_url'           => $cancelUrl,
                     'description'          => 'Order ' . ($order->order_ref ?? $order->id),

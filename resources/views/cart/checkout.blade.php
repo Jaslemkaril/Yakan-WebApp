@@ -341,12 +341,6 @@
 
                     <!-- Payment Method Card -->
                     <div id="payment-method-section" class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hidden">
-                        @php
-                            $checkoutMayaLogoPath = public_path('images/payment/maya-logo.jpg');
-                            $checkoutMayaLogoDataUri = file_exists($checkoutMayaLogoPath)
-                                ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($checkoutMayaLogoPath))
-                                : null;
-                        @endphp
                         <h2 class="text-xl font-bold text-gray-900 mb-6 pb-4 border-b border-gray-200 flex items-center gap-2">
                             <svg class="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -358,7 +352,7 @@
                             <!-- PayMongo Payment Option -->
                             <div class="border-2 border-gray-200 rounded-xl overflow-hidden transition-all duration-200" id="paymongo-option-wrap">
                                 <label class="relative flex items-center p-4 cursor-pointer hover:bg-blue-50 transition-all duration-200 group">
-                                    <input type="radio" name="payment_method" value="paymongo" required class="w-5 h-5 text-blue-600 focus:ring-blue-500 focus:ring-2" form="checkout-form" onclick="showPaymentDetails('paymongo')">
+                                    <input type="radio" name="payment_method" value="paymongo" checked required class="w-5 h-5 text-blue-600 focus:ring-blue-500 focus:ring-2" form="checkout-form" onclick="showPaymentDetails('paymongo')">
                                     <div class="ml-4 flex-1">
                                         <div class="flex items-center gap-3">
                                             <div class="w-12 h-12 bg-white border border-blue-100 rounded-lg flex items-center justify-center p-1 overflow-hidden">
@@ -366,7 +360,7 @@
                                             </div>
                                             <div>
                                                 <div class="font-bold text-gray-900">PayMongo</div>
-                                                <div class="text-sm text-gray-500">GCash, Maya, Credit/Debit Card, GrabPay</div>
+                                                <div class="text-sm text-gray-500">GCash, Credit/Debit Card, GrabPay</div>
                                             </div>
                                         </div>
                                     </div>
@@ -379,81 +373,7 @@
                                         <span class="text-2xl">💳</span>
                                         <div>
                                             <p class="text-sm font-semibold text-blue-800">You'll be redirected to PayMongo Checkout</p>
-                                            <p class="text-xs text-blue-700 mt-1">Pay securely with GCash, Maya, credit/debit card, or GrabPay.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Maya Payment Option -->
-                            <div class="border-2 border-gray-200 rounded-xl overflow-hidden transition-all duration-200" id="maya-option-wrap">
-                                <label class="relative flex items-center p-4 cursor-pointer hover:bg-green-50 transition-all duration-200 group">
-                                    <input type="radio" name="payment_method" value="maya" class="w-5 h-5 text-green-600 focus:ring-green-500 focus:ring-2" form="checkout-form" onclick="showPaymentDetails('maya')">
-                                    <div class="ml-4 flex-1">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-12 h-12 bg-white border border-green-100 rounded-lg flex items-center justify-center p-1 overflow-hidden">
-                                                <img src="{{ $checkoutMayaLogoDataUri ?? '' }}" alt="Maya" class="w-full h-full object-contain rounded-md">
-                                            </div>
-                                            <div>
-                                                <div class="font-bold text-gray-900">Maya</div>
-                                                <div class="text-sm text-gray-500">Pay securely via Maya online checkout</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <svg class="w-5 h-5 text-green-600 payment-check-maya hidden" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                    </svg>
-                                </label>
-                                <div id="maya-details" class="hidden px-4 pb-4">
-                                    <div class="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
-                                        <span class="text-2xl">💚</span>
-                                        <div>
-                                            <p class="text-sm font-semibold text-green-800">You'll be redirected to Maya Checkout</p>
-                                            <p class="text-xs text-green-700 mt-1">After placing your order, you'll be taken to the secure Maya payment page to complete your payment using your Maya wallet or debit/credit card.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Bank Transfer Option -->
-                            <div class="border-2 border-gray-200 rounded-xl overflow-hidden transition-all duration-200" id="bank-option-wrap">
-                                <label class="relative flex items-center p-4 cursor-pointer hover:bg-green-50 transition-all duration-200 group">
-                                    <input type="radio" name="payment_method" value="bank_transfer" class="w-5 h-5 text-green-600 focus:ring-green-500 focus:ring-2" form="checkout-form" onclick="showPaymentDetails('bank')">
-                                    <div class="ml-4 flex-1">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-32 h-10 bg-white border border-green-100 rounded-lg flex items-center justify-center px-1 overflow-hidden">
-                                                <svg viewBox="0 0 160 48" class="w-full h-full" role="img" aria-label="Bank Transfer">
-                                                    <rect x="0" y="0" width="160" height="48" rx="10" fill="#f3f4f6"/>
-                                                    <g transform="translate(12 9)">
-                                                        <path d="M18 0L0 8h36L18 0z" fill="#7a0f0f"/>
-                                                        <rect x="3" y="10" width="30" height="3" fill="#7a0f0f"/>
-                                                        <rect x="4" y="14" width="4" height="10" fill="#9b1111"/>
-                                                        <rect x="11" y="14" width="4" height="10" fill="#9b1111"/>
-                                                        <rect x="18" y="14" width="4" height="10" fill="#9b1111"/>
-                                                        <rect x="25" y="14" width="4" height="10" fill="#9b1111"/>
-                                                        <rect x="3" y="25" width="30" height="3" fill="#7a0f0f"/>
-                                                    </g>
-                                                    <text x="56" y="20" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#7a0f0f">BANK</text>
-                                                    <text x="56" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#7a0f0f">TRANSFER</text>
-                                                </svg>
-                                            </div>
-                                            <div>
-                                                <div class="font-bold text-gray-900">Bank Transfer</div>
-                                                <div class="text-sm text-gray-500">Direct transfer to our bank account</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <svg class="w-5 h-5 text-green-600 payment-check-bank hidden" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                    </svg>
-                                </label>
-                                <!-- Bank Transfer notice (shown on select) -->
-                                <div id="bank-details" class="hidden px-4 pb-4">
-                                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
-                                        <span class="text-2xl">🏦</span>
-                                        <div>
-                                            <p class="text-sm font-semibold text-blue-800">Bank account details shown after order</p>
-                                            <p class="text-xs text-blue-700 mt-1">After placing your order, you'll see the full bank account details and a form to upload your payment receipt for verification.</p>
+                                            <p class="text-xs text-blue-700 mt-1">Pay securely with GCash, credit/debit card, or GrabPay.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -462,31 +382,29 @@
 
                         <script>
                         function showPaymentDetails(type) {
-                            // Reset borders
-                            document.getElementById('paymongo-option-wrap').classList.remove('border-blue-400');
-                            document.getElementById('maya-option-wrap').classList.remove('border-blue-400');
-                            document.getElementById('bank-option-wrap').classList.remove('border-green-400');
-                            // Hide all details
-                            document.getElementById('paymongo-details').classList.add('hidden');
-                            document.getElementById('maya-details').classList.add('hidden');
-                            document.getElementById('bank-details').classList.add('hidden');
-                            // Hide checks
-                            document.querySelectorAll('.payment-check-paymongo, .payment-check-maya, .payment-check-bank').forEach(el => el.classList.add('hidden'));
-                            // Show selected
+                            const paymongoWrap = document.getElementById('paymongo-option-wrap');
+                            const paymongoDetails = document.getElementById('paymongo-details');
+
+                            if (paymongoWrap) {
+                                paymongoWrap.classList.remove('border-blue-400');
+                            }
+                            if (paymongoDetails) {
+                                paymongoDetails.classList.add('hidden');
+                            }
+                            document.querySelectorAll('.payment-check-paymongo').forEach(el => el.classList.add('hidden'));
+
                             if (type === 'paymongo') {
-                                document.getElementById('paymongo-details').classList.remove('hidden');
-                                document.getElementById('paymongo-option-wrap').classList.add('border-blue-400');
+                                if (paymongoDetails) {
+                                    paymongoDetails.classList.remove('hidden');
+                                }
+                                if (paymongoWrap) {
+                                    paymongoWrap.classList.add('border-blue-400');
+                                }
                                 document.querySelectorAll('.payment-check-paymongo').forEach(el => el.classList.remove('hidden'));
-                            } else if (type === 'maya') {
-                                document.getElementById('maya-details').classList.remove('hidden');
-                                document.getElementById('maya-option-wrap').classList.add('border-blue-400');
-                                document.querySelectorAll('.payment-check-maya').forEach(el => el.classList.remove('hidden'));
-                            } else {
-                                document.getElementById('bank-details').classList.remove('hidden');
-                                document.getElementById('bank-option-wrap').classList.add('border-green-400');
-                                document.querySelectorAll('.payment-check-bank').forEach(el => el.classList.remove('hidden'));
                             }
                         }
+
+                        showPaymentDetails('paymongo');
                         </script>
                     </div>
 
