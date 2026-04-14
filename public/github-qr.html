@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yakan GitHub QR</title>
+  <style>
+    :root {
+      --bg1: #f8f5ef;
+      --bg2: #ece4d8;
+      --ink: #1f1f1f;
+      --accent: #7a1f1f;
+      --card: #ffffff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at 15% 20%, var(--bg1), transparent 45%),
+                  radial-gradient(circle at 85% 80%, var(--bg2), transparent 45%),
+                  linear-gradient(135deg, #f4efe6 0%, #efe6d8 100%);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: min(920px, 100%);
+      background: var(--card);
+      border: 1px solid #e3d8c7;
+      border-radius: 20px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      padding: 28px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.6rem, 2.3vw, 2.4rem);
+      letter-spacing: 0.3px;
+      color: var(--accent);
+    }
+
+    p {
+      margin: 0;
+      font-size: clamp(1rem, 1.4vw, 1.2rem);
+      line-height: 1.45;
+    }
+
+    .qr-wrap {
+      display: grid;
+      place-items: center;
+      margin: 8px 0;
+    }
+
+    .qr {
+      width: min(560px, 85vw);
+      height: auto;
+      border-radius: 16px;
+      border: 12px solid #fff;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+      background: #fff;
+    }
+
+    .url {
+      display: inline-block;
+      margin-top: 8px;
+      word-break: break-all;
+      color: #444;
+      font-size: 0.98rem;
+      text-decoration: none;
+    }
+
+    .hint {
+      font-size: 0.95rem;
+      opacity: 0.85;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Yakan WebApp Repository</h1>
+    <p>Scan this QR code to open the GitHub folder instantly.</p>
+
+    <div class="qr-wrap">
+      <img class="qr" src="/github-folder-qr.png" alt="QR code for Yakan WebApp GitHub folder" />
+    </div>
+
+    <a class="url" href="https://github.com/Jaslemkaril/Yakan-WebApp/tree/main" target="_blank" rel="noreferrer">
+      https://github.com/Jaslemkaril/Yakan-WebApp/tree/main
+    </a>
+
+    <p class="hint">Tip: Open this page in full screen during your presentation.</p>
+  </main>
+</body>
+</html>

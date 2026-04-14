@@ -1,5 +1,11 @@
 # 🎉 YAKAN - Real-Time Order Notification System Complete!
 
+## 📱 Scan To Open This Repository
+
+[![Yakan WebApp GitHub QR](public/github-folder-qr.png)](https://github.com/Jaslemkaril/Yakan-WebApp/tree/main)
+
+Direct link: [https://github.com/Jaslemkaril/Yakan-WebApp/tree/main](https://github.com/Jaslemkaril/Yakan-WebApp/tree/main)
+
 ## 🚀 Quick Start
 
 ### First Time Setup
