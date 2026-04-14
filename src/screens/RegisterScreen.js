@@ -16,12 +16,29 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { useCart } from '../context/CartContext';
 import ApiService from '../services/api';
+import API_CONFIG from '../config/config';
 
-WebBrowser.maybeCompleteAuthSession();
+const BACKEND_URL = API_CONFIG.API_BASE_URL.replace(/\/api\/v1$/, '');
+
+const parseQueryParams = (url) => {
+  const idx = url.indexOf('?');
+  if (idx === -1) return {};
+
+  return url
+    .slice(idx + 1)
+    .split('&')
+    .reduce((acc, pair) => {
+      const eqIdx = pair.indexOf('=');
+      if (eqIdx === -1) return acc;
+      const key = decodeURIComponent(pair.slice(0, eqIdx));
+      const val = decodeURIComponent(pair.slice(eqIdx + 1).replace(/\+/g, ' '));
+      acc[key] = val;
+      return acc;
+    }, {});
+};
 
 export default function RegisterScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -36,6 +53,7 @@ export default function RegisterScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const [firstFocused, setFirstFocused] = useState(false);
   const [lastFocused, setLastFocused] = useState(false);
@@ -46,43 +64,48 @@ export default function RegisterScreen({ navigation }) {
 
   const { registerWithBackend, login } = useCart();
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId: '406025644598-hsd1i2a5lnrvjpdi3lrdlfblhd1bmf2s.apps.googleusercontent.com',
-    iosClientId: '406025644598-hsd1i2a5lnrvjpdi3lrdlfblhd1bmf2s.apps.googleusercontent.com',
-    androidClientId: '406025644598-hsd1i2a5lnrvjpdi3lrdlfblhd1bmf2s.apps.googleusercontent.com',
-    webClientId: '406025644598-hsd1i2a5lnrvjpdi3lrdlfblhd1bmf2s.apps.googleusercontent.com',
-  });
+  const handleGoogleSignup = async () => {
+    if (googleLoading || isLoading) return;
 
-  React.useEffect(() => {
-    if (response?.type === 'success') {
-      handleGoogleUser(response.authentication.accessToken);
-    }
-  }, [response]);
-
-  const handleGoogleUser = async (token) => {
+    setGoogleLoading(true);
     try {
-      setIsLoading(true);
-      const res = await fetch('https://www.googleapis.com/userinfo/v2/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const user = await res.json();
-      const loginResponse = await ApiService.loginWithGoogle({
-        idToken: token,
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        photo: user.picture,
-      });
-      if (loginResponse.success) {
-        const userData = loginResponse.data?.data?.user || loginResponse.data?.user;
-        if (userData) login(userData);
-      } else {
-        Alert.alert('Error', loginResponse.message || 'Google sign up failed');
+      const result = await WebBrowser.openAuthSessionAsync(
+        `${BACKEND_URL}/auth/google/mobile`,
+        'yakanapp://auth-callback'
+      );
+
+      if (result.type === 'success' && result.url) {
+        const params = parseQueryParams(result.url);
+
+        if (params.error) {
+          Alert.alert('Google Sign-Up Failed', params.error);
+          return;
+        }
+
+        if (!params.token) {
+          Alert.alert('Google Sign-Up Failed', 'No authentication token received. Please try again.');
+          return;
+        }
+
+        await ApiService.saveToken(params.token);
+
+        const userData = {
+          id: params.id ? Number(params.id) : undefined,
+          name: params.name || '',
+          email: params.email || '',
+          role: params.role || 'user',
+          avatar: params.avatar || null,
+        };
+
+        login(userData);
+      } else if (!(result.type === 'cancel' || result.type === 'dismiss')) {
+        Alert.alert('Google Sign-Up', 'Sign-up was cancelled or could not be completed.');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to sign up with Google');
+      console.error('[Google Register] Error:', error);
+      Alert.alert('Error', 'Could not open Google Sign-Up. Please try again.');
     } finally {
-      setIsLoading(false);
+      setGoogleLoading(false);
     }
   };
 
@@ -147,12 +170,18 @@ export default function RegisterScreen({ navigation }) {
 
               {/* Google Sign Up */}
               <TouchableOpacity
-                style={[styles.googleButton, (isLoading || !request) && styles.buttonDisabled]}
-                onPress={() => promptAsync()}
-                disabled={isLoading || !request}
+                style={[styles.googleButton, (isLoading || googleLoading) && styles.buttonDisabled]}
+                onPress={handleGoogleSignup}
+                disabled={isLoading || googleLoading}
               >
-                <Ionicons name="logo-google" size={20} color="#4285F4" style={styles.socialIcon} />
-                <Text style={styles.googleButtonText}>Sign up with Google</Text>
+                {googleLoading ? (
+                  <ActivityIndicator size="small" color="#4285F4" style={styles.socialIcon} />
+                ) : (
+                  <Ionicons name="logo-google" size={20} color="#4285F4" style={styles.socialIcon} />
+                )}
+                <Text style={styles.googleButtonText}>
+                  {googleLoading ? 'Opening Google...' : 'Sign up with Google'}
+                </Text>
               </TouchableOpacity>
 
               {/* Divider */}

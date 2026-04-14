@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\TransactionalMailService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -51,6 +52,33 @@ class AuthController extends Controller
                 ], 500);
             }
 
+            // Keep mobile registration consistent with web registration by generating OTP
+            // and attempting to send a verification email immediately.
+            $otpSent = false;
+            try {
+                $otp = $user->generateOtp();
+
+                $otpSent = TransactionalMailService::sendView(
+                    $user->email,
+                    'Verify Your Email - Yakan E-commerce',
+                    'emails.otp-verification',
+                    ['user' => $user, 'otp' => $otp]
+                );
+
+                if (!$otpSent) {
+                    \Log::warning('API register: OTP email send failed', [
+                        'user_id' => $user->id,
+                        'email' => $user->email,
+                    ]);
+                }
+            } catch (\Throwable $otpException) {
+                \Log::warning('API register: OTP generation/send exception', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'error' => $otpException->getMessage(),
+                ]);
+            }
+
             // Create token
             try {
                 $token = $user->createToken('api-token')->plainTextToken;
@@ -85,7 +113,8 @@ class AuthController extends Controller
                         'role' => $user->role,
                         'created_at' => $user->created_at,
                     ],
-                    'token' => $token
+                    'token' => $token,
+                    'otp_sent' => $otpSent,
                 ]
             ]);
             
