@@ -286,75 +286,11 @@
         </div>
     </div>
 
-    <!-- Production Queue -->
-    <div class="bg-white rounded-lg shadow-lg p-6">
-        <div class="flex items-center justify-between mb-6">
-            <h3 class="text-lg font-semibold text-gray-900">Production Queue</h3>
-            <div class="flex space-x-2">
-                <button onclick="filterQueue('all')" class="px-3 py-1 text-sm rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">
-                    All
-                </button>
-                <button onclick="filterQueue('urgent')" class="px-3 py-1 text-sm rounded-lg bg-red-100 text-red-700 hover:bg-red-200">
-                    Urgent
-                </button>
-                <button onclick="filterQueue('today')" class="px-3 py-1 text-sm rounded-lg bg-red-50 text-[#800000] hover:bg-red-100">
-                    Due Today
-                </button>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <!-- This would be populated with actual production queue items -->
-            <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-gray-900">Order #1234</span>
-                    <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">Pending</span>
-                </div>
-                <p class="text-sm text-gray-600 mb-2">Customer: John Doe</p>
-                <p class="text-xs text-gray-500 mb-3">Custom Yakan Bag - Diamond Pattern</p>
-                <div class="flex items-center justify-between text-xs">
-                    <span class="text-gray-500">Due: Tomorrow</span>
-                    <button class="text-[#800000] hover:text-[#800000]">View Details</button>
-                </div>
-            </div>
-
-            <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-gray-900">Order #1235</span>
-                    <span class="px-2 py-1 bg-red-50 text-[#800000] text-xs rounded-full">Processing</span>
-                </div>
-                <p class="text-sm text-gray-600 mb-2">Customer: Jane Smith</p>
-                <p class="text-xs text-gray-500 mb-3">Silk Fabric - Custom Pattern</p>
-                <div class="flex items-center justify-between text-xs">
-                    <span class="text-gray-500">Due: In 3 days</span>
-                    <button class="text-[#800000] hover:text-[#800000]">View Details</button>
-                </div>
-            </div>
-
-            <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-gray-900">Order #1236</span>
-                    <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Completed</span>
-                </div>
-                <p class="text-sm text-gray-600 mb-2">Customer: Bob Wilson</p>
-                <p class="text-xs text-gray-500 mb-3">Cotton Shirt - Geometric Pattern</p>
-                <div class="flex items-center justify-between text-xs">
-                    <span class="text-gray-500">Completed: Today</span>
-                    <button class="text-[#800000] hover:text-[#800000]">View Details</button>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <script>
 function refreshDashboard() {
     location.reload();
-}
-
-function filterQueue(filter) {
-    // Implement queue filtering logic
-    console.log('Filtering queue by:', filter);
 }
 
 // Auto-refresh every 30 seconds
