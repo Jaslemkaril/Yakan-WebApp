@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   ImageBackground,
 } from 'react-native';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import colors from '../constants/colors';
 import ApiService from '../services/api';
 
@@ -23,6 +24,8 @@ export default function ForgotPasswordScreen({ navigation }) {
   const [token, setToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const parseResetLink = (value) => {
@@ -43,6 +46,12 @@ export default function ForgotPasswordScreen({ navigation }) {
     }
 
     return { token: input, email: '' };
+  };
+
+  const getCurrentStep = () => {
+    if (step === 'email') return 1;
+    if (step === 'link') return 2;
+    return 3;
   };
 
   const handleSendResetLink = async () => {
@@ -153,32 +162,49 @@ export default function ForgotPasswordScreen({ navigation }) {
           resizeMode="cover"
         >
           <View style={styles.overlay}>
-            {/* Header */}
             <View style={styles.headerContainer}>
-              <TouchableOpacity onPress={() => navigation.goBack()}>
-                <Text style={styles.backButton}>← Back</Text>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButtonWrap}>
+                <Ionicons name="arrow-back" size={20} color={colors.white} />
+                <Text style={styles.backButton}>Back</Text>
               </TouchableOpacity>
+              <Text style={styles.headerTitle}>Account Recovery</Text>
             </View>
 
-            {/* Content */}
             <View style={styles.formContainer}>
+              <View style={styles.stepperContainer}>
+                <View style={[styles.stepDot, getCurrentStep() >= 1 && styles.stepDotActive]}>
+                  <Text style={[styles.stepDotText, getCurrentStep() >= 1 && styles.stepDotTextActive]}>1</Text>
+                </View>
+                <View style={[styles.stepLine, getCurrentStep() >= 2 && styles.stepLineActive]} />
+                <View style={[styles.stepDot, getCurrentStep() >= 2 && styles.stepDotActive]}>
+                  <Text style={[styles.stepDotText, getCurrentStep() >= 2 && styles.stepDotTextActive]}>2</Text>
+                </View>
+                <View style={[styles.stepLine, getCurrentStep() >= 3 && styles.stepLineActive]} />
+                <View style={[styles.stepDot, getCurrentStep() >= 3 && styles.stepDotActive]}>
+                  <Text style={[styles.stepDotText, getCurrentStep() >= 3 && styles.stepDotTextActive]}>3</Text>
+                </View>
+              </View>
+
               {step === 'email' && (
                 <>
                   <Text style={styles.title}>Forgot Password</Text>
                   <Text style={styles.subtitle}>
-                    Enter your email and we will send you the same reset link flow used on the website
+                    Enter your account email to receive a secure password reset link
                   </Text>
 
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Email Address"
-                    placeholderTextColor={colors.placeholder}
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    editable={!isLoading}
-                  />
+                  <View style={styles.inputGroup}>
+                    <MaterialIcons name="email" size={20} color={colors.placeholder} style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Email address"
+                      placeholderTextColor={colors.placeholder}
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      editable={!isLoading}
+                    />
+                  </View>
 
                   <TouchableOpacity
                     style={[styles.submitButton, isLoading && styles.buttonDisabled]}
@@ -191,6 +217,10 @@ export default function ForgotPasswordScreen({ navigation }) {
                       <Text style={styles.submitButtonText}>Send Reset Link</Text>
                     )}
                   </TouchableOpacity>
+
+                  <Text style={styles.helperText}>
+                    We will send the same reset link used by the website flow.
+                  </Text>
                 </>
               )}
 
@@ -201,16 +231,19 @@ export default function ForgotPasswordScreen({ navigation }) {
                     Copy the reset link from your email and paste it below
                   </Text>
 
-                  <TextInput
-                    style={[styles.input, styles.linkInput]}
-                    placeholder="https://.../reset-password/{token}?email=..."
-                    placeholderTextColor={colors.placeholder}
-                    value={resetLink}
-                    onChangeText={setResetLink}
-                    autoCapitalize="none"
-                    multiline
-                    editable={!isLoading}
-                  />
+                  <View style={[styles.inputGroup, styles.inputGroupTop]}>
+                    <MaterialIcons name="link" size={20} color={colors.placeholder} style={[styles.inputIcon, styles.inputIconTop]} />
+                    <TextInput
+                      style={[styles.input, styles.linkInput]}
+                      placeholder="https://.../reset-password/{token}?email=..."
+                      placeholderTextColor={colors.placeholder}
+                      value={resetLink}
+                      onChangeText={setResetLink}
+                      autoCapitalize="none"
+                      multiline
+                      editable={!isLoading}
+                    />
+                  </View>
 
                   <TouchableOpacity
                     style={[styles.submitButton, isLoading && styles.buttonDisabled]}
@@ -220,13 +253,15 @@ export default function ForgotPasswordScreen({ navigation }) {
                     <Text style={styles.submitButtonText}>Continue</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity onPress={handleSendResetLink} disabled={isLoading}>
-                    <Text style={styles.changeEmailText}>Send New Reset Link</Text>
-                  </TouchableOpacity>
+                  <View style={styles.linkActions}>
+                    <TouchableOpacity onPress={handleSendResetLink} disabled={isLoading}>
+                      <Text style={styles.changeEmailText}>Send New Reset Link</Text>
+                    </TouchableOpacity>
 
-                  <TouchableOpacity onPress={() => setStep('email')}>
-                    <Text style={styles.changeEmailText}>Change Email</Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setStep('email')}>
+                      <Text style={styles.changeEmailText}>Change Email</Text>
+                    </TouchableOpacity>
+                  </View>
                 </>
               )}
 
@@ -237,25 +272,37 @@ export default function ForgotPasswordScreen({ navigation }) {
                     Enter your new password for {email}
                   </Text>
 
-                  <TextInput
-                    style={styles.input}
-                    placeholder="New Password"
-                    placeholderTextColor={colors.placeholder}
-                    value={newPassword}
-                    onChangeText={setNewPassword}
-                    secureTextEntry
-                    editable={!isLoading}
-                  />
+                  <View style={styles.inputGroup}>
+                    <MaterialIcons name="lock" size={20} color={colors.placeholder} style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="New password"
+                      placeholderTextColor={colors.placeholder}
+                      value={newPassword}
+                      onChangeText={setNewPassword}
+                      secureTextEntry={!showNewPassword}
+                      editable={!isLoading}
+                    />
+                    <TouchableOpacity style={styles.eyeButton} onPress={() => setShowNewPassword((prev) => !prev)}>
+                      <Ionicons name={showNewPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.placeholder} />
+                    </TouchableOpacity>
+                  </View>
 
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Confirm Password"
-                    placeholderTextColor={colors.placeholder}
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry
-                    editable={!isLoading}
-                  />
+                  <View style={styles.inputGroup}>
+                    <MaterialIcons name="lock-outline" size={20} color={colors.placeholder} style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Confirm password"
+                      placeholderTextColor={colors.placeholder}
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      secureTextEntry={!showConfirmPassword}
+                      editable={!isLoading}
+                    />
+                    <TouchableOpacity style={styles.eyeButton} onPress={() => setShowConfirmPassword((prev) => !prev)}>
+                      <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.placeholder} />
+                    </TouchableOpacity>
+                  </View>
 
                   <TouchableOpacity
                     style={[styles.submitButton, isLoading && styles.buttonDisabled]}
@@ -268,6 +315,8 @@ export default function ForgotPasswordScreen({ navigation }) {
                       <Text style={styles.submitButtonText}>Reset Password</Text>
                     )}
                   </TouchableOpacity>
+
+                  <Text style={styles.helperText}>Use at least 8 characters for better security.</Text>
                 </>
               )}
             </View>
@@ -291,62 +340,135 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.42)',
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 24,
   },
   headerContainer: {
-    marginTop: 10,
-    marginBottom: 30,
+    marginTop: 6,
+    marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButtonWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginRight: 12,
   },
   backButton: {
     fontSize: 16,
     color: colors.white,
     fontWeight: '600',
+    marginLeft: 4,
+  },
+  headerTitle: {
+    fontSize: 18,
+    color: colors.white,
+    fontWeight: '700',
   },
   formContainer: {
-    flex: 1,
-    justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
-    padding: 25,
+    borderRadius: 22,
+    padding: 22,
+    marginTop: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
   },
+  stepperContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
+  },
+  stepDot: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  stepDotActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
+  },
+  stepDotText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#9ca3af',
+  },
+  stepDotTextActive: {
+    color: '#fff',
+  },
+  stepLine: {
+    width: 36,
+    height: 2,
+    backgroundColor: '#e5e7eb',
+  },
+  stepLineActive: {
+    backgroundColor: colors.primary,
+  },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: colors.dark,
-    marginBottom: 10,
+    marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: colors.text,
-    marginBottom: 25,
+    marginBottom: 20,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 21,
   },
-  input: {
+  inputGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    marginBottom: 15,
-    fontSize: 16,
-    color: colors.dark,
     backgroundColor: colors.white,
+    marginBottom: 14,
+  },
+  inputGroupTop: {
+    alignItems: 'flex-start',
+  },
+  inputIcon: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  inputIconTop: {
+    paddingTop: 12,
+  },
+  input: {
+    flex: 1,
+    paddingRight: 12,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: colors.dark,
+  },
+  eyeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   submitButton: {
     backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 15,
+    marginTop: 4,
+    marginBottom: 10,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -363,8 +485,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 8,
   },
+  linkActions: {
+    marginTop: 2,
+  },
   linkInput: {
-    minHeight: 90,
+    minHeight: 84,
     textAlignVertical: 'top',
+  },
+  helperText: {
+    textAlign: 'center',
+    color: colors.textLight,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 2,
   },
 });

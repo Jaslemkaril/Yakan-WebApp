@@ -101,18 +101,17 @@ export default function PaymentScreen({ navigation, route }) {
     fetchPaymentInfo();
   }, []);
 
+  useEffect(() => {
+    if (!selectedPaymentMethod) {
+      setSelectedPaymentMethod('paymongo');
+    }
+  }, [selectedPaymentMethod]);
+
   const paymentMethods = [
     {
       id: 'paymongo',
       name: 'PayMongo',
       description: 'GCash, Maya, Credit/Debit Card, GrabPay',
-      logo: null,
-      fee: 0,
-    },
-    {
-      id: 'bank_transfer',
-      name: 'Bank Transfer',
-      description: 'Direct transfer to our bank account',
       logo: null,
       fee: 0,
     },

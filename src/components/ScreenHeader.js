@@ -18,6 +18,7 @@ const ScreenHeader = ({
   const [menuVisible, setMenuVisible] = useState(false);
   const { theme, isDarkMode } = useTheme();
   const headerBg = backgroundColor || theme.headerBg;
+  const shouldShowBack = showBack && !showHamburger;
 
   const handleHamburgerPress = () => {
     setMenuVisible(true);
@@ -81,7 +82,7 @@ const ScreenHeader = ({
 
           {/* Center Section: Back Button and Title */}
           <View style={styles.centerContent}>
-            {showBack && (
+            {shouldShowBack && (
               <TouchableOpacity 
                 style={styles.backButton}
                 onPress={handleBackPress}
@@ -90,7 +91,7 @@ const ScreenHeader = ({
                 <Ionicons name="arrow-back" size={24} color="#fff" />
               </TouchableOpacity>
             )}
-            <Text style={[styles.title, !showBack && { marginLeft: 0 }]}>
+            <Text style={[styles.title, !shouldShowBack && { marginLeft: 0 }]}> 
               {title}
             </Text>
           </View>
