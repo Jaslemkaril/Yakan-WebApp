@@ -227,13 +227,65 @@ class ApiService {
       // The response has nested data structure: response.data.data contains token and user
       const innerData = response.data?.data || response.data;
       const token = innerData?.token;
+      const otpRequired = !!(innerData?.otp_required || innerData?.requires_otp_verification);
       
+      if (token && !otpRequired) {
+        await this.saveToken(token);
+      }
+    }
+
+    return response;
+  }
+
+  /**
+   * Verify OTP for registration
+   */
+  async verifyOtp(email, otp) {
+    const response = await this.request('POST', API_CONFIG.ENDPOINTS.AUTH.VERIFY_OTP, {
+      email,
+      otp,
+    });
+
+    if (response.success) {
+      const innerData = response.data?.data || response.data;
+      const token = innerData?.token;
+
       if (token) {
         await this.saveToken(token);
       }
     }
 
     return response;
+  }
+
+  /**
+   * Resend OTP email for registration
+   */
+  async resendOtp(email) {
+    return this.request('POST', API_CONFIG.ENDPOINTS.AUTH.RESEND_OTP, {
+      email,
+    });
+  }
+
+  /**
+   * Request password reset link
+   */
+  async forgotPassword(email) {
+    return this.request('POST', API_CONFIG.ENDPOINTS.AUTH.FORGOT_PASSWORD, {
+      email,
+    });
+  }
+
+  /**
+   * Reset password using email + reset token
+   */
+  async resetPassword(email, token, password, passwordConfirmation) {
+    return this.request('POST', API_CONFIG.ENDPOINTS.AUTH.RESET_PASSWORD, {
+      email,
+      token,
+      password,
+      password_confirmation: passwordConfirmation,
+    });
   }
 
   /**

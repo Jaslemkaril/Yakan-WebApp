@@ -341,9 +341,26 @@ export const CartProvider = ({ children }) => {
     console.log('[CartContext] Register response:', response);
     
     if (response.success) {
-      console.log('[CartContext] Registration successful, setting user info');
       // Handle nested response structures
-      let userData = response.data?.data || response.data?.user || response.data;
+      const payload = response.data?.data || response.data;
+      const otpRequired = !!(payload?.otp_required || payload?.requires_otp_verification);
+
+      if (otpRequired) {
+        // Ensure user is not treated as authenticated until OTP is verified.
+        await ApiService.clearToken();
+        setUserInfo(null);
+        setIsLoggedIn(false);
+
+        return {
+          success: true,
+          requiresOtp: true,
+          email: payload?.user?.email || email,
+          message: 'Verification code sent to your email. Please verify your account.',
+        };
+      }
+
+      console.log('[CartContext] Registration successful, setting user info');
+      let userData = payload?.user || payload;
       console.log('[CartContext] User data:', userData);
       
       // Ensure we have the name field

@@ -14,47 +14,94 @@ import {
   ImageBackground,
 } from 'react-native';
 import colors from '../constants/colors';
+import ApiService from '../services/api';
 
 export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState('');
-  const [step, setStep] = useState('email'); // 'email', 'code', 'newPassword'
-  const [resetCode, setResetCode] = useState('');
+  const [step, setStep] = useState('email'); // 'email', 'link', 'newPassword'
+  const [resetLink, setResetLink] = useState('');
+  const [token, setToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSendResetCode = async () => {
-    if (!email) {
+  const parseResetLink = (value) => {
+    const input = (value || '').trim();
+    if (!input) return { token: '', email: '' };
+
+    // Accept full reset URL from email, or a raw token.
+    const tokenFromPathMatch = input.match(/\/reset-password\/([^/?#]+)/i);
+    const emailFromQueryMatch = input.match(/[?&]email=([^&#]+)/i);
+
+    if (tokenFromPathMatch?.[1]) {
+      return {
+        token: decodeURIComponent(tokenFromPathMatch[1]),
+        email: emailFromQueryMatch?.[1]
+          ? decodeURIComponent(emailFromQueryMatch[1]).trim().toLowerCase()
+          : '',
+      };
+    }
+
+    return { token: input, email: '' };
+  };
+
+  const handleSendResetLink = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
       Alert.alert('Error', 'Please enter your email address');
       return;
     }
 
     setIsLoading(true);
-    
-    // Simulate sending reset code
-    setTimeout(() => {
-      Alert.alert('Success', 'Reset code sent to your email');
-      setStep('code');
+
+    try {
+      const response = await ApiService.forgotPassword(normalizedEmail);
+
+      if (!response.success) {
+        Alert.alert('Request Failed', response.error || 'Unable to send reset link.');
+        return;
+      }
+
+      Alert.alert('Reset Link Sent', 'Check your email and copy the reset link from the message.');
+      setEmail(normalizedEmail);
+      setStep('link');
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Unable to send reset link right now.');
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
-  const handleVerifyCode = () => {
-    if (!resetCode) {
-      Alert.alert('Error', 'Please enter the reset code');
+  const handleVerifyLink = () => {
+    const parsed = parseResetLink(resetLink);
+
+    if (!parsed.token) {
+      Alert.alert('Error', 'Please paste the full reset link from your email, or paste the token.');
       return;
     }
 
-    // Simulate code verification
-    if (resetCode.length < 4) {
-      Alert.alert('Error', 'Invalid reset code');
-      return;
+    if (parsed.email && parsed.email !== email.trim().toLowerCase()) {
+      setEmail(parsed.email);
     }
 
+    setToken(parsed.token);
     setStep('newPassword');
   };
 
   const handleResetPassword = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      Alert.alert('Error', 'Missing account email. Please go back and enter your email.');
+      return;
+    }
+
+    if (!token.trim()) {
+      Alert.alert('Error', 'Missing reset token. Please paste the reset link again.');
+      return;
+    }
+
     if (!newPassword || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
@@ -72,12 +119,26 @@ export default function ForgotPasswordScreen({ navigation }) {
 
     setIsLoading(true);
 
-    // Simulate password reset
-    setTimeout(() => {
-      Alert.alert('Success', 'Password reset successfully');
+    try {
+      const response = await ApiService.resetPassword(
+        normalizedEmail,
+        token.trim(),
+        newPassword,
+        confirmPassword
+      );
+
+      if (!response.success) {
+        Alert.alert('Reset Failed', response.error || 'Unable to reset password.');
+        return;
+      }
+
+      Alert.alert('Success', 'Password reset successfully. Please sign in with your new password.');
       setIsLoading(false);
       navigation.navigate('Login');
-    }, 2000);
+    } catch (error) {
+      setIsLoading(false);
+      Alert.alert('Error', error.message || 'Unable to reset password right now.');
+    }
   };
 
   return (
@@ -105,7 +166,7 @@ export default function ForgotPasswordScreen({ navigation }) {
                 <>
                   <Text style={styles.title}>Forgot Password</Text>
                   <Text style={styles.subtitle}>
-                    Enter your email address and we'll send you a code to reset your password
+                    Enter your email and we will send you the same reset link flow used on the website
                   </Text>
 
                   <TextInput
@@ -121,46 +182,50 @@ export default function ForgotPasswordScreen({ navigation }) {
 
                   <TouchableOpacity
                     style={[styles.submitButton, isLoading && styles.buttonDisabled]}
-                    onPress={handleSendResetCode}
+                    onPress={handleSendResetLink}
                     disabled={isLoading}
                   >
                     {isLoading ? (
                       <ActivityIndicator color={colors.white} />
                     ) : (
-                      <Text style={styles.submitButtonText}>Send Reset Code</Text>
+                      <Text style={styles.submitButtonText}>Send Reset Link</Text>
                     )}
                   </TouchableOpacity>
                 </>
               )}
 
-              {step === 'code' && (
+              {step === 'link' && (
                 <>
-                  <Text style={styles.title}>Enter Reset Code</Text>
+                  <Text style={styles.title}>Paste Reset Link</Text>
                   <Text style={styles.subtitle}>
-                    We've sent a code to {email}
+                    Copy the reset link from your email and paste it below
                   </Text>
 
                   <TextInput
-                    style={styles.input}
-                    placeholder="Enter Code (4 digits)"
+                    style={[styles.input, styles.linkInput]}
+                    placeholder="https://.../reset-password/{token}?email=..."
                     placeholderTextColor={colors.placeholder}
-                    value={resetCode}
-                    onChangeText={setResetCode}
-                    keyboardType="numeric"
-                    maxLength={6}
+                    value={resetLink}
+                    onChangeText={setResetLink}
+                    autoCapitalize="none"
+                    multiline
                     editable={!isLoading}
                   />
 
                   <TouchableOpacity
                     style={[styles.submitButton, isLoading && styles.buttonDisabled]}
-                    onPress={handleVerifyCode}
+                    onPress={handleVerifyLink}
                     disabled={isLoading}
                   >
-                    <Text style={styles.submitButtonText}>Verify Code</Text>
+                    <Text style={styles.submitButtonText}>Continue</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity onPress={handleSendResetLink} disabled={isLoading}>
+                    <Text style={styles.changeEmailText}>Send New Reset Link</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity onPress={() => setStep('email')}>
-                    <Text style={styles.changeEmailText}>Use Different Email</Text>
+                    <Text style={styles.changeEmailText}>Change Email</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -169,7 +234,7 @@ export default function ForgotPasswordScreen({ navigation }) {
                 <>
                   <Text style={styles.title}>Create New Password</Text>
                   <Text style={styles.subtitle}>
-                    Enter your new password below
+                    Enter your new password for {email}
                   </Text>
 
                   <TextInput
@@ -296,5 +361,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
     fontWeight: '600',
+    marginTop: 8,
+  },
+  linkInput: {
+    minHeight: 90,
+    textAlignVertical: 'top',
   },
 });

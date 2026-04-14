@@ -130,6 +130,13 @@ export default function RegisterScreen({ navigation }) {
     setIsLoading(true);
     try {
       const result = await registerWithBackend(firstName, lastName, middleName, email, password, confirmPassword);
+      if (result.success && result.requiresOtp) {
+        navigation.navigate('OtpVerification', {
+          email: (result.email || email).trim(),
+        });
+        return;
+      }
+
       if (!result.success) {
         Alert.alert('Registration Failed', result.message || 'An error occurred during registration');
       }

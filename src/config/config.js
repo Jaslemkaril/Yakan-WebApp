@@ -46,6 +46,10 @@ export const API_CONFIG = {
     // Auth endpoints
     AUTH: {
       REGISTER: '/register',
+      VERIFY_OTP: '/verify-otp',
+      RESEND_OTP: '/resend-otp',
+      FORGOT_PASSWORD: '/forgot-password',
+      RESET_PASSWORD: '/reset-password',
       LOGIN: '/login',
       LOGOUT: '/logout',
       REFRESH_TOKEN: '/refresh-token',
