@@ -105,7 +105,7 @@ class OrderObserver
     {
         try {
             $order->loadMissing('user', 'orderItems.product');
-            $email = trim((string) optional($order->user)->email);
+            $email = trim((string) (optional($order->user)->email ?: $order->customer_email));
 
             if ($email === '') {
                 return;

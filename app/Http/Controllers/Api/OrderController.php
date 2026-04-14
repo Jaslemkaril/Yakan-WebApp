@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
+use App\Services\TransactionalMailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -125,6 +126,27 @@ class OrderController extends Controller
                 'subtotal'     => $serverSubtotal,
                 'total_amount' => max(0, $serverSubtotal + $shippingFee - $discount),
             ]);
+
+            // Keep mobile behavior aligned with website checkout by sending
+            // an order confirmation email immediately after successful creation.
+            try {
+                $order->loadMissing('user', 'items.product');
+                $orderEmail = trim((string) (optional($order->user)->email ?: $order->customer_email));
+
+                if ($orderEmail !== '') {
+                    TransactionalMailService::sendView(
+                        $orderEmail,
+                        'Order Confirmation - ' . ($order->order_ref ?? ('ORD-' . str_pad((string) $order->id, 5, '0', STR_PAD_LEFT))),
+                        'emails.order-confirmation',
+                        ['order' => $order]
+                    );
+                }
+            } catch (\Throwable $mailException) {
+                \Log::warning('Mobile API order confirmation email failed', [
+                    'order_id' => $order->id,
+                    'error' => $mailException->getMessage(),
+                ]);
+            }
 
             return response()->json([
                 'success' => true,

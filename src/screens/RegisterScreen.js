@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   StatusBar,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as Google from 'expo-auth-session/providers/google';
@@ -23,6 +24,9 @@ import ApiService from '../services/api';
 WebBrowser.maybeCompleteAuthSession();
 
 export default function RegisterScreen({ navigation }) {
+  const { width } = useWindowDimensions();
+  const isCompactScreen = width < 380;
+
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [middleName, setMiddleName] = useState('');
@@ -159,8 +163,8 @@ export default function RegisterScreen({ navigation }) {
               </View>
 
               {/* Name Row */}
-              <View style={styles.nameRow}>
-                <View style={[styles.inputGroup, styles.halfInput, firstFocused && styles.inputGroupFocused]}>
+              <View style={[styles.nameRow, isCompactScreen && styles.nameRowStacked]}>
+                <View style={[styles.inputGroup, styles.halfInput, isCompactScreen && styles.fullInput, firstFocused && styles.inputGroupFocused]}>
                   <MaterialIcons name="person" size={18} color={firstFocused ? '#dc2626' : '#9ca3af'} style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
@@ -173,7 +177,7 @@ export default function RegisterScreen({ navigation }) {
                     onBlur={() => setFirstFocused(false)}
                   />
                 </View>
-                <View style={[styles.inputGroup, styles.halfInput, lastFocused && styles.inputGroupFocused]}>
+                <View style={[styles.inputGroup, styles.halfInput, isCompactScreen && styles.fullInput, lastFocused && styles.inputGroupFocused]}>
                   <MaterialIcons name="person" size={18} color={lastFocused ? '#dc2626' : '#9ca3af'} style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
@@ -426,8 +430,16 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 0,
   },
+  nameRowStacked: {
+    flexDirection: 'column',
+    gap: 0,
+  },
   halfInput: {
     flex: 1,
+  },
+  fullInput: {
+    flex: 0,
+    width: '100%',
   },
   inputGroup: {
     flexDirection: 'row',
