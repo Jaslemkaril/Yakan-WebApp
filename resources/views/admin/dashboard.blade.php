@@ -1528,6 +1528,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 <input type="hidden" name="period" value="{{ $period }}">
                 
                 <div class="p-6 space-y-4">
+                    <!-- Date Range Filter -->
+                    <div class="p-4 border border-gray-200 rounded-xl bg-gray-50">
+                        <div class="flex items-center space-x-2 mb-3">
+                            <i class="fas fa-calendar-alt text-[#800000]"></i>
+                            <span class="text-sm font-semibold text-gray-700">Date-to-Date Filter (Optional)</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label for="printDateFrom" class="block text-xs font-medium text-gray-600 mb-1">Date From</label>
+                                <input
+                                    type="date"
+                                    id="printDateFrom"
+                                    name="date_from"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-[#800000] focus:border-[#800000]"
+                                >
+                            </div>
+                            <div>
+                                <label for="printDateTo" class="block text-xs font-medium text-gray-600 mb-1">Date To</label>
+                                <input
+                                    type="date"
+                                    id="printDateTo"
+                                    name="date_to"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-[#800000] focus:border-[#800000]"
+                                >
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">If you set one date, set both. This will override the selected period.</p>
+                    </div>
+
                     <!-- Select All -->
                     <div class="flex items-center justify-between pb-3 border-b border-gray-200">
                         <span class="text-sm font-semibold text-gray-700">Select Report Sections</span>
@@ -1594,6 +1623,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p id="printValidation" class="hidden text-sm text-red-600 font-medium">
                         <i class="fas fa-exclamation-circle mr-1"></i>Please select at least one section.
                     </p>
+                    <p id="printDateValidation" class="hidden text-sm text-red-600 font-medium">
+                        <i class="fas fa-exclamation-circle mr-1"></i>Please provide a valid Date-to-Date range.
+                    </p>
                 </div>
 
                 <!-- Footer -->
@@ -1646,11 +1678,25 @@ document.querySelectorAll('.section-checkbox').forEach(cb => {
 // Form submission validation
 document.getElementById('printReportForm').addEventListener('submit', function(e) {
     const checked = document.querySelectorAll('.section-checkbox:checked');
+    const dateFrom = document.getElementById('printDateFrom').value;
+    const dateTo = document.getElementById('printDateTo').value;
+
+    document.getElementById('printDateValidation').classList.add('hidden');
+
     if (checked.length === 0) {
         e.preventDefault();
         document.getElementById('printValidation').classList.remove('hidden');
         return false;
     }
+
+    const oneDateMissing = (dateFrom && !dateTo) || (!dateFrom && dateTo);
+    const invalidOrder = dateFrom && dateTo && dateFrom > dateTo;
+    if (oneDateMissing || invalidOrder) {
+        e.preventDefault();
+        document.getElementById('printDateValidation').classList.remove('hidden');
+        return false;
+    }
+
     // Close modal after short delay
     setTimeout(() => document.getElementById('printReportModal').classList.add('hidden'), 300);
 });

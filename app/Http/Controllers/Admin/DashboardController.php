@@ -429,27 +429,81 @@ class DashboardController extends Controller
         try {
             $period = $request->get('period', 'all');
             $sections = $request->get('sections', []);
+            $dateFromInput = $request->get('date_from');
+            $dateToInput = $request->get('date_to');
+            $dateFrom = null;
+            $dateTo = null;
 
             // If no sections selected, show all
             if (empty($sections)) {
                 $sections = ['revenue', 'product_sales', 'transactions', 'users'];
             }
 
-            // Date filtering
-            $dateQuery = Order::query();
-            switch ($period) {
-                case 'daily':
-                    $dateQuery->whereDate('created_at', today());
-                    break;
-                case 'weekly':
-                    $dateQuery->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
-                    break;
-                case 'yearly':
-                    $dateQuery->whereYear('created_at', now()->year);
-                    break;
+            // Optional Date-to-Date filter (takes priority over period)
+            if (($dateFromInput && !$dateToInput) || (!$dateFromInput && $dateToInput)) {
+                return redirect()->route('admin.dashboard')
+                    ->with('error', 'Please provide both Date From and Date To for Date-to-Date filtering.');
             }
 
-            $data = ['period' => $period, 'sections' => $sections];
+            if ($dateFromInput && $dateToInput) {
+                try {
+                    $dateFrom = \Carbon\Carbon::parse($dateFromInput)->startOfDay();
+                    $dateTo = \Carbon\Carbon::parse($dateToInput)->endOfDay();
+                } catch (\Exception $e) {
+                    return redirect()->route('admin.dashboard')
+                        ->with('error', 'Invalid Date-to-Date filter. Please choose valid dates.');
+                }
+
+                if ($dateFrom->gt($dateTo)) {
+                    return redirect()->route('admin.dashboard')
+                        ->with('error', 'Date From must not be later than Date To.');
+                }
+            }
+
+            $hasCustomDateRange = $dateFrom && $dateTo;
+            $hasOrderDateFilter = $hasCustomDateRange || $period !== 'all';
+
+            $applyOrderDateFilter = function ($query) use ($period, $hasCustomDateRange, $dateFrom, $dateTo) {
+                if ($hasCustomDateRange) {
+                    $query->whereBetween('created_at', [$dateFrom, $dateTo]);
+                    return;
+                }
+
+                switch ($period) {
+                    case 'daily':
+                        $query->whereDate('created_at', today());
+                        break;
+                    case 'weekly':
+                        $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                        break;
+                    case 'yearly':
+                        $query->whereYear('created_at', now()->year);
+                        break;
+                }
+            };
+
+            $periodLabel = match ($period) {
+                'daily' => 'Daily (' . today()->format('M d, Y') . ')',
+                'weekly' => 'Weekly (' . now()->startOfWeek()->format('M d') . ' to ' . now()->endOfWeek()->format('M d, Y') . ')',
+                'yearly' => 'Yearly (' . now()->year . ')',
+                default => 'All Time',
+            };
+
+            if ($hasCustomDateRange) {
+                $periodLabel = 'Date-to-Date (' . $dateFrom->format('M d, Y') . ' to ' . $dateTo->format('M d, Y') . ')';
+            }
+
+            // Date filtering
+            $dateQuery = Order::query();
+            $applyOrderDateFilter($dateQuery);
+
+            $data = [
+                'period' => $period,
+                'periodLabel' => $periodLabel,
+                'sections' => $sections,
+                'dateFrom' => $dateFrom,
+                'dateTo' => $dateTo,
+            ];
 
             // --- Total Revenue ---
             if (in_array('revenue', $sections)) {
@@ -469,15 +523,15 @@ class DashboardController extends Controller
                     ->orderBy('month')
                     ->get();
 
-                // Daily revenue for the selected period
-                $daysRange = match($period) {
-                    'daily' => 1,
-                    'weekly' => 7,
-                    'yearly' => 365,
-                    default => 30,
-                };
-                $data['dailyRevenue'] = Order::whereIn('status', $completedStatuses)
-                    ->where('created_at', '>=', now()->subDays($daysRange))
+                // Daily revenue for the selected filter/range
+                $dailyRevenueQuery = Order::whereIn('status', $completedStatuses);
+                if ($hasOrderDateFilter) {
+                    $applyOrderDateFilter($dailyRevenueQuery);
+                } else {
+                    // Keep all-time chart readable.
+                    $dailyRevenueQuery->where('created_at', '>=', now()->subDays(30));
+                }
+                $data['dailyRevenue'] = $dailyRevenueQuery
                     ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue, COUNT(*) as orders')
                     ->groupBy('date')
                     ->orderBy('date')
@@ -497,9 +551,9 @@ class DashboardController extends Controller
                     ->orderByDesc('sold')
                     ->with('product');
 
-                if ($period !== 'all') {
-                    $topProductsQuery->whereHas('order', function($q) use ($dateQuery) {
-                        $q->whereIn('id', (clone $dateQuery)->pluck('id'));
+                if ($hasOrderDateFilter) {
+                    $topProductsQuery->whereHas('order', function($q) use ($applyOrderDateFilter) {
+                        $applyOrderDateFilter($q);
                     });
                 }
 

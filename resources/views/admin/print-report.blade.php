@@ -44,7 +44,7 @@
                 <div>
                     <h1 class="text-lg font-bold">Print Report Preview</h1>
                     <p class="text-sm text-red-200">
-                        {{ ucfirst($period) }} Report &bull; 
+                        {{ $periodLabel ?? ucfirst($period) }} Report &bull; 
                         {{ count($sections) }} section(s) selected
                     </p>
                 </div>
@@ -89,7 +89,7 @@
                 @endif
             </h2>
             <div class="flex items-center justify-center space-x-6 mt-3 text-sm text-gray-500">
-                <span><i class="fas fa-calendar mr-1"></i> Period: <strong>{{ ucfirst($period) }}</strong></span>
+                <span><i class="fas fa-calendar mr-1"></i> Period: <strong>{{ $periodLabel ?? ucfirst($period) }}</strong></span>
                 <span><i class="fas fa-clock mr-1"></i> Generated: <strong>{{ now()->format('M d, Y h:i A') }}</strong></span>
             </div>
         </div>
