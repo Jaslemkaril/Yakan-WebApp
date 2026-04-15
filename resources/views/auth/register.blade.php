@@ -334,10 +334,10 @@
     </style>
     
     <div class="relative z-10 min-h-screen flex items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
-        <div class="w-full max-w-5xl">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-center">
+        <div class="w-full max-w-7xl">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
                 <!-- Register Form -->
-                <div class="auth-card animate-fade-in-up">
+                <div class="auth-card animate-fade-in-up lg:col-span-7">
                     <div class="auth-form">
                         <!-- Logo -->
                         <div class="text-center mb-6 lg:mb-8">
@@ -409,7 +409,7 @@
                         <form method="POST" action="{{ route('register.store') }}" id="registerForm">
                             @csrf
                             
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
                                 <div class="input-group">
                                     <input 
                                         id="first_name" 
@@ -429,13 +429,12 @@
                                 </div>
 
                                 <div class="input-group">
-                                    <div class="text-xs text-gray-500 mb-1 ml-1">Optional</div>
                                     <input 
                                         id="middle_initial" 
                                         type="text" 
                                         name="middle_initial" 
                                         class="auth-input auth-input-name" 
-                                        placeholder="Middle name"
+                                        placeholder="Middle (optional)"
                                         value="{{ old('middle_initial') }}"
                                     >
                                     <label for="middle_initial" class="input-icon">
@@ -664,7 +663,7 @@
                 </div>
 
                 <!-- Illustration Side -->
-                <div class="hidden lg:block">
+                <div class="hidden lg:block lg:col-span-5">
                     <div class="auth-illustration">
                         <div class="w-16 h-16 lg:w-24 lg:h-24 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6 lg:mb-8">
                             <svg class="w-8 h-8 lg:w-12 lg:h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
