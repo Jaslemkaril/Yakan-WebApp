@@ -489,62 +489,58 @@
                                 </div>
                             @enderror
 
-                            <div class="input-group">
-                                <input
-                                    id="birth_date"
-                                    type="date"
-                                    name="birth_date"
-                                    class="auth-input"
-                                    value="{{ old('birth_date') }}"
-                                    max="{{ $maxBirthDate }}"
-                                    required
-                                >
-                                <label for="birth_date" class="input-icon">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z"/>
-                                    </svg>
-                                </label>
-                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
+                                <div>
+                                    <div class="input-group">
+                                        <input
+                                            id="birth_date"
+                                            type="date"
+                                            name="birth_date"
+                                            class="auth-input"
+                                            value="{{ old('birth_date') }}"
+                                            max="{{ $maxBirthDate }}"
+                                            required
+                                        >
+                                        <label for="birth_date" class="input-icon">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z"/>
+                                            </svg>
+                                        </label>
+                                    </div>
 
-                            <p id="birth-date-warning" class="text-red-600 text-sm font-semibold -mt-3 mb-3 hidden">
-                                You must be at least 18 years old to create an account.
-                            </p>
+                                    <p id="birth-date-warning" class="text-red-600 text-sm font-semibold -mt-3 mb-3 hidden">
+                                        You must be at least 18 years old to create an account.
+                                    </p>
 
-                            @error('birth_date')
-                                <div class="error-message">
-                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                                    </svg>
-                                    {{ $message }}
+                                    @error('birth_date')
+                                        <p class="text-red-600 text-sm font-semibold -mt-3 mb-3">{{ $message }}</p>
+                                    @enderror
                                 </div>
-                            @enderror
 
-                            <div class="input-group">
-                                <input 
-                                    id="email" 
-                                    type="email" 
-                                    name="email" 
-                                    class="auth-input" 
-                                    placeholder="Email address"
-                                    value="{{ old('email') }}"
-                                    required
-                                    autocomplete="email"
-                                >
-                                <label for="email" class="input-icon">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                                    </svg>
-                                </label>
-                            </div>
+                                <div>
+                                    <div class="input-group">
+                                        <input
+                                            id="email"
+                                            type="email"
+                                            name="email"
+                                            class="auth-input"
+                                            placeholder="Email address"
+                                            value="{{ old('email') }}"
+                                            required
+                                            autocomplete="email"
+                                        >
+                                        <label for="email" class="input-icon">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                            </svg>
+                                        </label>
+                                    </div>
 
-                            @error('email')
-                                <div class="error-message">
-                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                                    </svg>
-                                    {{ $message }}
+                                    @error('email')
+                                        <p class="text-red-600 text-sm font-semibold -mt-3 mb-3">{{ $message }}</p>
+                                    @enderror
                                 </div>
-                            @enderror
+                            </div>
 
                             <div class="input-group">
                                 <div class="input-wrapper">
