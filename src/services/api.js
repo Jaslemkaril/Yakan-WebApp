@@ -237,17 +237,6 @@ class ApiService {
       password_confirmation: confirmPassword,
     });
 
-    if (response.success) {
-      // The response has nested data structure: response.data.data contains token and user
-      const innerData = response.data?.data || response.data;
-      const token = innerData?.token;
-      const otpRequired = !!(innerData?.otp_required || innerData?.requires_otp_verification);
-      
-      if (token && !otpRequired) {
-        await this.saveToken(token);
-      }
-    }
-
     return response;
   }
 

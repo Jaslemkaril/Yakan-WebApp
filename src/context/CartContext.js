@@ -361,36 +361,21 @@ export const CartProvider = ({ children }) => {
     if (response.success) {
       // Handle nested response structures
       const payload = response.data?.data || response.data;
-      const otpRequired = !!(payload?.otp_required || payload?.requires_otp_verification);
+      const otpRequired = !!(payload?.otp_required || payload?.requires_otp_verification || payload?.otp_sent);
+      const registeredEmail = payload?.user?.email || payload?.email || email;
 
-      if (otpRequired) {
-        // Ensure user is not treated as authenticated until OTP is verified.
-        await ApiService.clearToken();
-        setUserInfo(null);
-        setIsLoggedIn(false);
+      // Registration must always end in OTP verification.
+      await ApiService.clearToken();
+      setUserInfo(null);
+      setIsLoggedIn(false);
 
-        return {
-          success: true,
-          requiresOtp: true,
-          email: payload?.user?.email || email,
-          message: 'Verification code sent to your email. Please verify your account.',
-        };
-      }
-
-      console.log('[CartContext] Registration successful, setting user info');
-      let userData = payload?.user || payload;
-      console.log('[CartContext] User data:', userData);
-      
-      // Ensure we have the name field
-      if (!userData.name && userData.first_name && userData.last_name) {
-        const mid = userData.middle_initial ? ` ${userData.middle_initial}` : '';
-        userData.name = `${userData.first_name}${mid} ${userData.last_name}`;
-      }
-      
-      setUserInfo(userData);
-      setIsLoggedIn(true);
-      // Token is already saved by ApiService.register()
-      return { success: true, message: 'Registration successful' };
+      return {
+        success: true,
+        requiresOtp: true,
+        email: registeredEmail,
+        otpSent: otpRequired,
+        message: payload?.message || 'Verification code sent to your email. Please verify your account.',
+      };
     } else {
       console.log('[CartContext] Registration failed:', response.error);
       const normalizedEmail = (email || '').trim().toLowerCase();
