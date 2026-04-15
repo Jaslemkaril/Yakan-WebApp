@@ -67,8 +67,8 @@ return [
     |
     */
 
-    'mobile_apk_url' => env('MOBILE_APK_URL', 'https://expo.dev/artifacts/eas/qTC7Gwxk9xRQTvn7GchTQV.apk'),
-    'mobile_app_version' => env('MOBILE_APP_VERSION', 'v1.0.2'),
+    'mobile_apk_url' => env('MOBILE_APK_URL', 'https://expo.dev/artifacts/eas/xyjHqaSAkxu68o3Tg5eAjH.apk'),
+    'mobile_app_version' => env('MOBILE_APP_VERSION', 'v1.0.3'),
 
     /*
     |--------------------------------------------------------------------------
