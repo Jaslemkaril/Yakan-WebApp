@@ -123,21 +123,48 @@ export default function RegisterScreen({ navigation }) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
+
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
+
+    if (password.length < 8) {
+      Alert.alert('Weak Password', 'Password must be at least 8 characters.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const result = await registerWithBackend(firstName, lastName, middleName, email, password, confirmPassword);
+      const result = await registerWithBackend(
+        firstName.trim(),
+        lastName.trim(),
+        middleName.trim(),
+        normalizedEmail,
+        password,
+        confirmPassword
+      );
+
       if (result.success && result.requiresOtp) {
+        Alert.alert('Verify Your Email', result.message || 'We sent an OTP code to your email.');
         navigation.navigate('OtpVerification', {
-          email: (result.email || email).trim(),
+          email: (result.email || normalizedEmail).trim(),
         });
         return;
       }
 
       if (!result.success) {
+        if (result?.emailTaken) {
+          Alert.alert('Email Already Registered', result.message || 'This email is already in use. Please sign in.');
+          return;
+        }
+
         Alert.alert('Registration Failed', result.message || 'An error occurred during registration');
       }
     } catch (error) {

@@ -375,7 +375,46 @@ export const CartProvider = ({ children }) => {
       return { success: true, message: 'Registration successful' };
     } else {
       console.log('[CartContext] Registration failed:', response.error);
-      return { success: false, message: response.error };
+      const normalizedEmail = (email || '').trim().toLowerCase();
+      const emailErrors = response?.errors?.email || [];
+      const emailTaken = emailErrors.some((msg) =>
+        String(msg).toLowerCase().includes('already been taken')
+      );
+
+      if (emailTaken && normalizedEmail) {
+        // If the account exists but is not verified yet, resend OTP and continue OTP flow.
+        const resend = await ApiService.resendOtp(normalizedEmail);
+
+        if (resend.success) {
+          return {
+            success: true,
+            requiresOtp: true,
+            email: normalizedEmail,
+            message: 'Email already exists but is not verified. We sent a new OTP code.',
+          };
+        }
+
+        const resendMessage = resend?.error || '';
+        if (resendMessage.toLowerCase().includes('already verified')) {
+          return {
+            success: false,
+            message: 'This email is already registered. Please sign in instead.',
+            emailTaken: true,
+          };
+        }
+
+        return {
+          success: false,
+          message: resendMessage || 'This email is already taken. Please use another email.',
+          emailTaken: true,
+        };
+      }
+
+      return {
+        success: false,
+        message: response.error || 'Registration failed. Please try again.',
+        errors: response.errors || null,
+      };
     }
   };
 

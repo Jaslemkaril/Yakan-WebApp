@@ -183,7 +183,20 @@ class ApiService {
       }
 
       if (!response.ok) {
-        throw new Error(responseData.message || `HTTP Error: ${response.status}`);
+        // Preserve backend validation payloads so screens can render field-specific errors.
+        const validationErrors = responseData?.errors || null;
+        const firstValidationError = validationErrors
+          ? Object.values(validationErrors)?.[0]?.[0]
+          : null;
+        const errorMessage = firstValidationError || responseData?.message || `HTTP Error: ${response.status}`;
+
+        return {
+          success: false,
+          error: errorMessage,
+          errors: validationErrors,
+          data: responseData,
+          status: response.status,
+        };
       }
 
       console.log(`[API] Response data:`, JSON.stringify(responseData).substring(0, 500));
@@ -203,6 +216,7 @@ class ApiService {
       return {
         success: false,
         error: error.message,
+        errors: null,
         data: null,
       };
     }
