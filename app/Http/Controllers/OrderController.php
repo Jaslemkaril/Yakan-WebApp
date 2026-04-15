@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 class OrderController extends Controller
 {
@@ -237,6 +238,9 @@ class OrderController extends Controller
             $refundRequest = null;
             $canRequestRefund = $order->canRequestRefund()
                 && (int) $order->user_id === (int) auth()->id();
+            $refundWarrantyDays = $order->getRefundWarrantyDays();
+            $refundWarrantyDeadline = $order->getRefundWarrantyDeadline();
+            $isRefundWarrantyExpired = $order->status === 'completed' && !$order->isRefundWithinWarranty();
 
             if (Schema::hasTable('order_refund_requests')) {
                 $refundRequest = OrderRefundRequest::where('order_id', $order->id)
@@ -245,7 +249,7 @@ class OrderController extends Controller
                     ->first();
             }
 
-            return view('orders.show', compact('order', 'refundRequest', 'canRequestRefund'));
+            return view('orders.show', compact('order', 'refundRequest', 'canRequestRefund', 'refundWarrantyDays', 'refundWarrantyDeadline', 'isRefundWarrantyExpired'));
         } catch (\Exception $e) {
             Log::error('Error fetching order', ['error' => $e->getMessage()]);
             if ($request->wantsJson() || $request->is('api/*')) {
@@ -554,6 +558,10 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'You can request a refund only after confirming order received.');
         }
 
+        if (!$order->isRefundWithinWarranty()) {
+            return redirect()->back()->with('error', 'Refund window expired. Refund requests are only allowed within ' . $order->getRefundWarrantyDays() . ' days after order completion.');
+        }
+
         $activeStatuses = ['requested', 'under_review', 'approved', 'processed'];
         $existing = OrderRefundRequest::where('order_id', $order->id)
             ->where('user_id', auth()->id())
@@ -590,6 +598,32 @@ class OrderController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Refund request submitted. Our team will review it shortly.');
+    }
+
+    /**
+     * Serve refund evidence files for the requesting customer.
+     */
+    public function viewRefundEvidence(OrderRefundRequest $refundRequest, int $index)
+    {
+        if ((int) $refundRequest->user_id !== (int) auth()->id()) {
+            abort(403);
+        }
+
+        $evidence = is_array($refundRequest->evidence_paths ?? null) ? $refundRequest->evidence_paths : [];
+        if (!array_key_exists($index, $evidence)) {
+            abort(404);
+        }
+
+        $path = (string) $evidence[$index];
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return redirect()->away($path);
+        }
+
+        if (Storage::disk('public')->exists($path)) {
+            return Storage::disk('public')->response($path);
+        }
+
+        abort(404);
     }
 
     /**

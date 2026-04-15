@@ -143,6 +143,12 @@
                 <div>
                     <h3 class="text-lg font-bold text-gray-900">Refund Request</h3>
                     <p class="text-sm text-gray-600">Need help with your order? You can request a refund after order received.</p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Refund policy: within {{ $refundWarrantyDays ?? 7 }} days after order completion
+                        @if(!empty($refundWarrantyDeadline))
+                            (until {{ $refundWarrantyDeadline->format('M d, Y h:i A') }})
+                        @endif
+                    </p>
                 </div>
             </div>
 
@@ -176,16 +182,14 @@
                             <div class="flex flex-wrap gap-2">
                                 @foreach($refundEvidence as $evidencePath)
                                     @php
-                                        $evidenceUrl = (str_starts_with($evidencePath, 'http://') || str_starts_with($evidencePath, 'https://'))
-                                            ? $evidencePath
-                                            : \Illuminate\Support\Facades\Storage::url($evidencePath);
+                                        $evidenceUrl = route('orders.refund-evidence.view', ['refundRequest' => $refundRequest->id, 'index' => $loop->index]);
                                         $ext = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
                                         $isImageEvidence = in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true);
                                     @endphp
 
                                     @if($isImageEvidence)
-                                        <a href="{{ $evidenceUrl }}" target="_blank" class="block">
-                                            <img src="{{ $evidenceUrl }}" alt="Refund evidence" class="w-20 h-20 object-cover rounded-lg border border-gray-200 hover:opacity-90 transition-opacity">
+                                        <a href="{{ $evidenceUrl }}" target="_blank" class="block rounded-lg overflow-hidden border border-gray-200 bg-white" title="Open full image">
+                                            <img src="{{ $evidenceUrl }}" alt="Refund evidence" class="w-24 h-24 object-cover hover:opacity-90 transition-opacity">
                                         </a>
                                     @else
                                         <a href="{{ $evidenceUrl }}" target="_blank" class="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 bg-white hover:bg-gray-100 transition-colors">
@@ -238,6 +242,11 @@
                         Submit Refund Request
                     </button>
                 </form>
+            @elseif(($order->status ?? '') === 'completed' && !empty($isRefundWarrantyExpired) && !isset($refundRequest))
+                <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+                    <p class="text-sm font-semibold text-red-700">Refund window expired</p>
+                    <p class="text-sm text-red-700 mt-1">Refund requests are only allowed within {{ $refundWarrantyDays ?? 7 }} days after order completion.</p>
+                </div>
             @endif
         </div>
         @endif

@@ -11,6 +11,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 
 class Order extends Model
@@ -135,6 +136,10 @@ class Order extends Model
             return false;
         }
 
+        if (!$this->isRefundWithinWarranty()) {
+            return false;
+        }
+
         if (!Schema::hasTable('order_refund_requests')) {
             return true;
         }
@@ -142,6 +147,52 @@ class Order extends Model
         $activeStatuses = ['requested', 'under_review', 'approved', 'processed'];
 
         return !$this->refundRequests()->whereIn('status', $activeStatuses)->exists();
+    }
+
+    /**
+     * Warranty window for refund requests in days.
+     */
+    public function getRefundWarrantyDays(): int
+    {
+        return max(1, (int) config('orders.refund_warranty_days', 7));
+    }
+
+    /**
+     * Start timestamp used for refund warranty counting.
+     */
+    public function getRefundWarrantyStartAt(): ?Carbon
+    {
+        return $this->confirmed_at ?? $this->delivered_at ?? $this->updated_at;
+    }
+
+    /**
+     * Deadline until when refunds are allowed.
+     */
+    public function getRefundWarrantyDeadline(): ?Carbon
+    {
+        $startAt = $this->getRefundWarrantyStartAt();
+        if (!$startAt) {
+            return null;
+        }
+
+        return $startAt->copy()->addDays($this->getRefundWarrantyDays());
+    }
+
+    /**
+     * Whether order is still inside refund warranty window.
+     */
+    public function isRefundWithinWarranty(): bool
+    {
+        if (strtolower((string) $this->status) !== 'completed') {
+            return false;
+        }
+
+        $deadline = $this->getRefundWarrantyDeadline();
+        if (!$deadline) {
+            return false;
+        }
+
+        return now()->lte($deadline);
     }
 
     /**

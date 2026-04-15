@@ -10,6 +10,7 @@ use App\Services\Payment\PayMongoCheckoutService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 class OrderController extends Controller
 {
@@ -410,6 +411,28 @@ class OrderController extends Controller
         $refundRequest->save();
 
         return redirect()->back()->with('success', 'Refund request has been rejected.');
+    }
+
+    /**
+     * Serve refund evidence files for admin preview.
+     */
+    public function viewRefundEvidence(OrderRefundRequest $refundRequest, int $index)
+    {
+        $evidence = is_array($refundRequest->evidence_paths ?? null) ? $refundRequest->evidence_paths : [];
+        if (!array_key_exists($index, $evidence)) {
+            abort(404);
+        }
+
+        $path = (string) $evidence[$index];
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return redirect()->away($path);
+        }
+
+        if (Storage::disk('public')->exists($path)) {
+            return Storage::disk('public')->response($path);
+        }
+
+        abort(404);
     }
 
     // Cancel order

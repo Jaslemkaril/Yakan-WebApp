@@ -866,6 +866,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
         Route::post('/{order}/confirm-received', [OrderController::class, 'confirmReceived'])->name('orders.confirm-received');
         Route::post('/{order}/refund-request', [OrderController::class, 'requestRefund'])->name('orders.refund-request');
+        Route::get('/refund-evidence/{refundRequest}/{index}', [OrderController::class, 'viewRefundEvidence'])->whereNumber('index')->name('orders.refund-evidence.view');
         Route::get('/{order}/invoice', [OrderController::class, 'downloadInvoice'])->name('orders.invoice');
     });
 
@@ -1195,6 +1196,7 @@ Route::middleware(['admin:admin,order_staff'])->prefix('admin')->name('admin.')-
         Route::post('/{order}/refund', [AdminOrderController::class, 'refund'])->name('orders.refund');
         Route::post('/refund-requests/{refundRequest}/approve', [AdminOrderController::class, 'approveRefundRequest'])->name('orders.refund_requests.approve');
         Route::post('/refund-requests/{refundRequest}/reject', [AdminOrderController::class, 'rejectRefundRequest'])->name('orders.refund_requests.reject');
+        Route::get('/refund-requests/{refundRequest}/evidence/{index}', [AdminOrderController::class, 'viewRefundEvidence'])->whereNumber('index')->name('orders.refund_evidence.view');
         Route::patch('/{order}/update-notes', [AdminOrderController::class, 'updateNotes'])->name('orders.update-notes');
         Route::get('/{order}/invoice', [AdminOrderController::class, 'generateInvoice'])->name('orders.invoice');
 

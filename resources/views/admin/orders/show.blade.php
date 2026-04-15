@@ -733,21 +733,19 @@
                         $adminRefundEvidence = is_array($latestRefundRequest->evidence_paths ?? null) ? $latestRefundRequest->evidence_paths : [];
                     @endphp
                     @if(!empty($adminRefundEvidence))
-                        <div class="mt-2">
+                        <div class="mt-3">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Evidence</p>
-                            <div class="flex flex-wrap gap-2">
+                            <div class="flex flex-wrap gap-3">
                                 @foreach($adminRefundEvidence as $evidencePath)
                                     @php
-                                        $adminEvidenceUrl = (str_starts_with($evidencePath, 'http://') || str_starts_with($evidencePath, 'https://'))
-                                            ? $evidencePath
-                                            : \Illuminate\Support\Facades\Storage::url($evidencePath);
+                                        $adminEvidenceUrl = route('admin.orders.refund_evidence.view', ['refundRequest' => $latestRefundRequest->id, 'index' => $loop->index]);
                                         $adminExt = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
                                         $adminIsImageEvidence = in_array($adminExt, ['jpg', 'jpeg', 'png', 'webp'], true);
                                     @endphp
 
                                     @if($adminIsImageEvidence)
-                                        <a href="{{ $adminEvidenceUrl }}" target="_blank" class="block">
-                                            <img src="{{ $adminEvidenceUrl }}" alt="Refund evidence" class="w-16 h-16 object-cover rounded border border-gray-200 hover:opacity-90 transition-opacity">
+                                        <a href="{{ $adminEvidenceUrl }}" target="_blank" class="block rounded-lg overflow-hidden border border-gray-200 bg-white" title="Open full image">
+                                            <img src="{{ $adminEvidenceUrl }}" alt="Refund evidence" class="w-24 h-24 object-cover hover:opacity-90 transition-opacity">
                                         </a>
                                     @else
                                         <a href="{{ $adminEvidenceUrl }}" target="_blank" class="inline-flex items-center px-2 py-1 rounded border border-gray-300 text-xs text-gray-700 bg-white hover:bg-gray-100 transition-colors">
