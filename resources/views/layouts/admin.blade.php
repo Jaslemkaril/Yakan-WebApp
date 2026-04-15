@@ -1274,7 +1274,7 @@
             }
         }, true);
         
-        // Append auth token to all admin links if present
+        // Append auth token to all admin/staff links if present
         document.addEventListener('DOMContentLoaded', function() {
             const urlParams = new URLSearchParams(window.location.search);
             const authToken = urlParams.get('auth_token');
@@ -1288,8 +1288,8 @@
             const token = authToken || sessionStorage.getItem('auth_token');
             
             if (token) {
-                // Add token to all internal links
-                document.querySelectorAll('a[href^="/admin"], a[href*="/admin"]').forEach(link => {
+                // Add token to all internal admin/staff links
+                document.querySelectorAll('a[href^="/admin"], a[href*="/admin"], a[href^="/staff"], a[href*="/staff"]').forEach(link => {
                     try {
                         const url = new URL(link.href, window.location.origin);
                         if (!url.searchParams.has('auth_token')) {
