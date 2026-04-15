@@ -70,7 +70,7 @@ class CartController extends Controller
             // Check stock availability
             if ($availableStock < $qty) {
                 \Log::warning('Insufficient stock', ['product_id' => $product->id, 'requested' => $qty, 'available' => $availableStock]);
-                $msg = "Insufficient stock. Only {$availableStock} item(s) available.";
+                $msg = "Quantity cannot exceed available amount. Only {$availableStock} item(s) available.";
                 if ($isAjax) {
                     return response()->json(['success' => false, 'message' => $msg]);
                 }
@@ -109,7 +109,7 @@ class CartController extends Controller
             if ($cartItem) {
                 $newTotal = $cartItem->quantity + $qty;
                 if ($newTotal > $availableStock) {
-                    $msg = "Cannot add more. Only {$availableStock} item(s) available in total.";
+                    $msg = "Quantity cannot exceed available amount. Only {$availableStock} item(s) available in total.";
                     if ($isAjax) {
                         return response()->json(['success' => false, 'message' => $msg]);
                     }

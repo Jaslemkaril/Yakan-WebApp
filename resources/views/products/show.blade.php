@@ -192,6 +192,7 @@
                 </div>
                 <span class="text-sm text-gray-500">({{ $availableStock ?? 0 }} available)</span>
             </div>
+            <p id="qtyError" class="hidden text-sm font-medium text-red-600">Quantity cannot exceed available stock.</p>
 
             <!-- Purchase Options -->
             <div class="space-y-3">
@@ -578,6 +579,25 @@ function previewProductImages(input) {
 
 <script>
 // Quantity controls
+function showQtyError(show) {
+    const qtyError = document.getElementById('qtyError');
+    if (!qtyError) return;
+    qtyError.classList.toggle('hidden', !show);
+}
+
+function isQtyValid() {
+    const input = document.getElementById('qty');
+    if (!input) return true;
+
+    const maxValue = parseInt(input.max) || 999;
+    const minValue = parseInt(input.min) || 1;
+    const currentValue = parseInt(input.value) || minValue;
+    const valid = currentValue >= minValue && currentValue <= maxValue;
+
+    showQtyError(!valid);
+    return valid;
+}
+
 function incrementQty() {
     const input = document.getElementById('qty');
     const maxValue = parseInt(input.max) || 999;
@@ -585,6 +605,9 @@ function incrementQty() {
     if (currentValue < maxValue) {
         input.value = currentValue + 1;
         updateHiddenInputs();
+        showQtyError(false);
+    } else {
+        showQtyError(true);
     }
 }
 
@@ -594,6 +617,7 @@ function decrementQty() {
     if (currentValue > 1) {
         input.value = currentValue - 1;
         updateHiddenInputs();
+        showQtyError(false);
     }
 }
 
@@ -606,6 +630,7 @@ function updateHiddenInputs() {
 function validateQty(input) {
     input.value = input.value.replace(/[^0-9]/g, '');
     updateHiddenInputs();
+    isQtyValid();
 }
 
 function clampQty(input) {
@@ -616,6 +641,29 @@ function clampQty(input) {
     if (val > max) val = max;
     input.value = val;
     updateHiddenInputs();
+    showQtyError(false);
+}
+
+const addToCartForm = document.getElementById('addToCartForm');
+if (addToCartForm) {
+    addToCartForm.addEventListener('submit', function(e) {
+        if (!isQtyValid()) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+    });
+}
+
+const buyNowForm = document.getElementById('buyNowForm');
+if (buyNowForm) {
+    buyNowForm.addEventListener('submit', function(e) {
+        if (!isQtyValid()) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+    });
 }
 
 // Wishlist functionality

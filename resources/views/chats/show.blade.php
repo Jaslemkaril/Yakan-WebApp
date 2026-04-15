@@ -323,7 +323,6 @@
                                                     @elseif($field['type'] === 'number')
                                                         @php
                                                             $resolvedFieldName = $field['name'] === 'quantity_meters' ? 'meters' : $field['name'];
-                                                            $fieldMax = $field['max'] ?? null;
                                                         @endphp
                                                         <input 
                                                             type="number" 
@@ -331,13 +330,8 @@
                                                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-500 text-sm"
                                                             placeholder="{{ $field['placeholder'] ?? '' }}"
                                                             min="{{ $field['min'] ?? 0 }}"
-                                                            @if($fieldMax !== null) max="{{ $fieldMax }}" @endif
                                                             step="{{ $field['step'] ?? 1 }}"
-                                                            oninput="if (this.validity.rangeOverflow) { this.setCustomValidity('Meters cannot exceed available stock.'); } else { this.setCustomValidity(''); }"
                                                             {{ $field['required'] ? 'required' : '' }}>
-                                                        @if($fieldMax !== null)
-                                                            <p class="text-xs text-amber-700 mt-1">Available stock: {{ number_format((float) $fieldMax, 2) }} m. Meters cannot exceed available stock.</p>
-                                                        @endif
                                                     @else
                                                         <input 
                                                             type="text" 
