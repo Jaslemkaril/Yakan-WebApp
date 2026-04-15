@@ -335,6 +335,8 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Only completed or delivered orders can be refunded.');
         }
 
+        $this->ensureRefundedPaymentStatusSupported();
+
         $order->status = 'refunded';
         $order->payment_status = 'refunded';
         $order->save();
@@ -374,6 +376,8 @@ class OrderController extends Controller
         $refundRequest->reviewed_at = now();
         $refundRequest->processed_at = now();
         $refundRequest->save();
+
+        $this->ensureRefundedPaymentStatusSupported();
 
         $order->status = 'refunded';
         $order->payment_status = 'refunded';
@@ -433,6 +437,24 @@ class OrderController extends Controller
         }
 
         abort(404);
+    }
+
+    /**
+     * Make sure orders.payment_status ENUM includes `refunded` on older deployments.
+     */
+    private function ensureRefundedPaymentStatusSupported(): void
+    {
+        if (!Schema::hasTable('orders') || !Schema::hasColumn('orders', 'payment_status')) {
+            return;
+        }
+
+        try {
+            \DB::statement("ALTER TABLE orders MODIFY COLUMN payment_status ENUM('pending','paid','verified','failed','refunded') NOT NULL DEFAULT 'pending'");
+        } catch (\Throwable $e) {
+            Log::warning('Unable to ensure payment_status supports refunded', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     // Cancel order
