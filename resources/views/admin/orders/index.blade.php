@@ -130,7 +130,7 @@
         </div>
 
         <!-- Stats Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-8">
             <!-- Total Orders -->
             <div class="stat-card">
                 <div class="flex items-center justify-between">
@@ -183,6 +183,48 @@
                     </div>
                     <div class="stat-card-icon">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cancelled Orders -->
+            <div class="stat-card">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <p class="text-gray-600 text-xs font-bold uppercase tracking-wider mb-1">Cancelled</p>
+                        <p class="text-3xl font-bold text-gray-900">{{ $stats['cancelled_orders'] }}</p>
+                        <p class="text-xs text-gray-500 mt-1">Order cancellations</p>
+                    </div>
+                    <div class="stat-card-icon">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Refunded Orders -->
+            <div class="stat-card">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <p class="text-gray-600 text-xs font-bold uppercase tracking-wider mb-1">Refunded</p>
+                        <p class="text-3xl font-bold text-gray-900">{{ $stats['refunded_orders'] }}</p>
+                        <p class="text-xs text-gray-500 mt-1">Refunded orders</p>
+                    </div>
+                    <div class="stat-card-icon">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h11M9 21V3m12 10h-6"/></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Ordered -->
+            <div class="stat-card">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <p class="text-gray-600 text-xs font-bold uppercase tracking-wider mb-1">Products</p>
+                        <p class="text-3xl font-bold text-gray-900">{{ number_format($stats['products_ordered']) }}</p>
+                        <p class="text-xs text-gray-500 mt-1">Total items ordered</p>
+                    </div>
+                    <div class="stat-card-icon">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m0 0v10l8 4"/></svg>
                     </div>
                 </div>
             </div>
@@ -263,6 +305,7 @@
                             <option value="shipped" {{ request('status') == 'shipped' ? 'selected' : '' }}>Shipped</option>
                             <option value="delivered" {{ request('status') == 'delivered' ? 'selected' : '' }}>Delivered</option>
                             <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                            <option value="refunded" {{ request('status') == 'refunded' ? 'selected' : '' }}>Refunded</option>
                         </select>
                     </div>
                     
