@@ -5023,8 +5023,16 @@ class CustomOrderController extends Controller
             'reason' => 'required|string|max:150',
             'details' => 'required|string|max:2000',
             'evidence' => 'required|array|min:1|max:5',
-            'evidence.*' => 'required|file|mimes:jpg,jpeg,png,webp,pdf|max:5120',
+            'evidence.*' => 'required|file|mimes:jpg,jpeg,png,webp,pdf,mp4,mov,webm|max:20480',
         ]);
+
+        if (strtolower((string) $validated['reason']) === 'damaged item' && !$this->hasVideoEvidence($request->file('evidence', []))) {
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                ->withInput()
+                ->withErrors([
+                    'evidence' => 'For damaged items, please upload at least one opening/unboxing video as proof.',
+                ]);
+        }
 
         $evidencePaths = [];
         if ($request->hasFile('evidence')) {
@@ -5108,6 +5116,27 @@ class CustomOrderController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Check if at least one uploaded file is a video.
+     */
+    private function hasVideoEvidence(array $files): bool
+    {
+        foreach ($files as $file) {
+            if (!$file) {
+                continue;
+            }
+
+            $mime = strtolower((string) $file->getMimeType());
+            $ext = strtolower((string) $file->getClientOriginalExtension());
+
+            if (str_starts_with($mime, 'video/') || in_array($ext, ['mp4', 'mov', 'webm'], true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
     
     /**

@@ -2127,10 +2127,15 @@
                                             $customEvidenceUrl = route('custom_orders.refund-evidence.view', ['refundRequest' => $customRefundRequest->id, 'index' => $loop->index]);
                                             $customExt = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
                                             $customIsImage = in_array($customExt, ['jpg', 'jpeg', 'png', 'webp'], true);
+                                            $customIsVideo = in_array($customExt, ['mp4', 'mov', 'webm'], true);
                                         @endphp
                                         @if($customIsImage)
                                             <a href="{{ $customEvidenceUrl }}" target="_blank" class="block rounded-lg overflow-hidden border border-gray-200 bg-white">
                                                 <img src="{{ $customEvidenceUrl }}" alt="Refund evidence" class="w-24 h-24 object-cover">
+                                            </a>
+                                        @elseif($customIsVideo)
+                                            <a href="{{ $customEvidenceUrl }}" target="_blank" class="inline-flex items-center px-3 py-2 rounded-lg border border-blue-300 text-sm text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">
+                                                View Video Evidence
                                             </a>
                                         @else
                                             <a href="{{ $customEvidenceUrl }}" target="_blank" class="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 bg-white hover:bg-gray-100 transition-colors">
@@ -2163,7 +2168,7 @@
                     </button>
 
                     <div id="custom-refund-form-wrap" class="hidden mt-4">
-                        <form method="POST" action="{{ route('custom_orders.refund-request', ['order' => $order->id, 'auth_token' => $authToken]) }}" enctype="multipart/form-data" class="space-y-4">
+                        <form id="custom-refund-request-form" method="POST" action="{{ route('custom_orders.refund-request', ['order' => $order->id, 'auth_token' => $authToken]) }}" enctype="multipart/form-data" class="space-y-4">
                             @csrf
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Request Type <span class="text-red-600">*</span></label>
@@ -2175,7 +2180,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Reason <span class="text-red-600">*</span></label>
-                                <select name="reason" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent" style="--tw-ring-color:#800000;">
+                                <select id="custom-refund-reason-select" name="reason" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent" style="--tw-ring-color:#800000;">
                                     <option value="">-- Select reason --</option>
                                     <option value="Item not as described">Item not as described</option>
                                     <option value="Damaged item">Damaged item</option>
@@ -2184,14 +2189,21 @@
                                     <option value="Other">Other</option>
                                 </select>
                             </div>
+
+                            <div id="custom-refund-reason-guidance" class="hidden rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                <p id="custom-refund-guidance-title" class="text-sm font-semibold text-amber-800"></p>
+                                <p id="custom-refund-guidance-details" class="text-sm text-amber-700 mt-1"></p>
+                                <p id="custom-refund-guidance-evidence" class="text-xs text-amber-700 mt-2"></p>
+                            </div>
+
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Details <span class="text-red-600">*</span></label>
-                                <textarea name="details" rows="4" maxlength="2000" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent" style="--tw-ring-color:#800000;" placeholder="Please explain what happened and what support you need."></textarea>
+                                <textarea id="custom-refund-details-input" name="details" rows="4" maxlength="2000" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent" style="--tw-ring-color:#800000;" placeholder="Please explain what happened and what support you need."></textarea>
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Evidence <span class="text-red-600">*</span> (up to 5 files)</label>
-                                <input id="custom-refund-evidence-input" type="file" name="evidence[]" accept="image/*,.pdf" multiple required class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:text-white cursor-pointer" style="--tw-file-bg:#800000;">
-                                <p class="text-xs text-gray-500 mt-1">Required. Accepted: JPG, PNG, WEBP, PDF (max 5MB each)</p>
+                                <input id="custom-refund-evidence-input" type="file" name="evidence[]" accept="image/*,video/mp4,video/quicktime,video/webm,.pdf,.mp4,.mov,.webm" multiple required class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:text-white cursor-pointer" style="--tw-file-bg:#800000;">
+                                <p id="custom-refund-evidence-help" class="text-xs text-gray-500 mt-1">Required. Accepted: JPG, PNG, WEBP, PDF, MP4, MOV, WEBM (max 20MB each)</p>
                                 <div id="custom-refund-evidence-preview" class="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2"></div>
                             </div>
                             <button type="submit" class="inline-flex items-center gap-2 px-5 py-3 rounded-lg text-white font-semibold transition-colors" style="background:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
@@ -2283,6 +2295,7 @@ document.addEventListener('DOMContentLoaded', function () {
             files.forEach(function (file) {
                 const ext = (file.name.split('.').pop() || '').toLowerCase();
                 const isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext) || file.type.startsWith('image/');
+                const isVideo = ['mp4', 'mov', 'webm'].includes(ext) || file.type.startsWith('video/');
 
                 if (isImage) {
                     const reader = new FileReader();
@@ -2299,6 +2312,11 @@ document.addEventListener('DOMContentLoaded', function () {
                         customRefundEvidencePreview.appendChild(wrapper);
                     };
                     reader.readAsDataURL(file);
+                } else if (isVideo) {
+                    const badge = document.createElement('div');
+                    badge.className = 'inline-flex items-center justify-center text-center px-2 py-3 rounded-lg border border-blue-300 text-xs text-blue-700 bg-blue-50';
+                    badge.textContent = 'VIDEO: ' + file.name;
+                    customRefundEvidencePreview.appendChild(badge);
                 } else {
                     const badge = document.createElement('div');
                     badge.className = 'inline-flex items-center justify-center text-center px-2 py-3 rounded-lg border border-gray-300 text-xs text-gray-700 bg-white';
@@ -2306,6 +2324,97 @@ document.addEventListener('DOMContentLoaded', function () {
                     customRefundEvidencePreview.appendChild(badge);
                 }
             });
+        });
+    }
+
+    function applyCustomRefundReasonGuidance(reason) {
+        const guidanceBox = document.getElementById('custom-refund-reason-guidance');
+        const title = document.getElementById('custom-refund-guidance-title');
+        const details = document.getElementById('custom-refund-guidance-details');
+        const evidence = document.getElementById('custom-refund-guidance-evidence');
+        const detailsInput = document.getElementById('custom-refund-details-input');
+        const evidenceHelp = document.getElementById('custom-refund-evidence-help');
+
+        const map = {
+            'Item not as described': {
+                title: 'Describe mismatch clearly',
+                details: 'Explain what you expected from the custom order and what actually arrived.',
+                evidence: 'Upload clear photos of the delivered item showing differences from your approved design/spec.',
+                placeholder: 'Describe expected custom output vs actual delivered output.',
+                help: 'Required: photos of actual delivered item. Accepted: JPG, PNG, WEBP, PDF, MP4, MOV, WEBM (max 20MB each).'
+            },
+            'Damaged item': {
+                title: 'Damage proof required',
+                details: 'Describe where the item is damaged and how severe it is.',
+                evidence: 'Upload damage photos plus at least one opening/unboxing video.',
+                placeholder: 'Describe exact damage location and condition on arrival.',
+                help: 'Required: damage photos and at least one video (MP4/MOV/WEBM). Max 20MB each.'
+            },
+            'Wrong item received': {
+                title: 'Show expected vs actual item',
+                details: 'State which custom order output you approved and what item you received.',
+                evidence: 'Upload screenshot of approved/ordered design and photo of actual received item.',
+                placeholder: 'Write approved custom order details and actual delivered item details.',
+                help: 'Required: approved design screenshot and actual-item proof. Max 20MB each.'
+            },
+            'Incomplete order': {
+                title: 'Show missing parts/items',
+                details: 'Specify which item/quantity/parts are missing from your order.',
+                evidence: 'Upload screenshot of order items/receipt and photo/video of all received contents.',
+                placeholder: 'List missing items or quantities and compare against your order details.',
+                help: 'Required: order screenshot + proof of received package contents. Max 20MB each.'
+            },
+            'Other': {
+                title: 'Provide complete explanation',
+                details: 'Explain the issue in detail so the team can evaluate your request quickly.',
+                evidence: 'Upload supporting photos/videos/documents relevant to your concern.',
+                placeholder: 'Explain your issue clearly and include key details.',
+                help: 'Required: supporting proof files. Accepted: JPG, PNG, WEBP, PDF, MP4, MOV, WEBM (max 20MB each).'
+            }
+        };
+
+        if (!reason || !map[reason]) {
+            guidanceBox.classList.add('hidden');
+            detailsInput.placeholder = 'Please explain what happened and what support you need.';
+            evidenceHelp.textContent = 'Required. Accepted: JPG, PNG, WEBP, PDF, MP4, MOV, WEBM (max 20MB each)';
+            return;
+        }
+
+        const cfg = map[reason];
+        guidanceBox.classList.remove('hidden');
+        title.textContent = cfg.title;
+        details.textContent = cfg.details;
+        evidence.textContent = cfg.evidence;
+        detailsInput.placeholder = cfg.placeholder;
+        evidenceHelp.textContent = cfg.help;
+    }
+
+    function hasCustomRefundVideoEvidence(files) {
+        return Array.from(files || []).some(function(file) {
+            const ext = (file.name.split('.').pop() || '').toLowerCase();
+            return ['mp4', 'mov', 'webm'].includes(ext) || (file.type || '').startsWith('video/');
+        });
+    }
+
+    const customRefundReasonSelect = document.getElementById('custom-refund-reason-select');
+    if (customRefundReasonSelect) {
+        customRefundReasonSelect.addEventListener('change', function () {
+            applyCustomRefundReasonGuidance(customRefundReasonSelect.value);
+        });
+        applyCustomRefundReasonGuidance(customRefundReasonSelect.value || '');
+    }
+
+    const customRefundRequestForm = document.getElementById('custom-refund-request-form');
+    if (customRefundRequestForm) {
+        customRefundRequestForm.addEventListener('submit', function (e) {
+            if (!customRefundReasonSelect || !customRefundEvidenceInput) {
+                return;
+            }
+
+            if (customRefundReasonSelect.value === 'Damaged item' && !hasCustomRefundVideoEvidence(customRefundEvidenceInput.files)) {
+                e.preventDefault();
+                alert('For damaged items, please upload at least one opening/unboxing video together with photos.');
+            }
         });
     }
 });
