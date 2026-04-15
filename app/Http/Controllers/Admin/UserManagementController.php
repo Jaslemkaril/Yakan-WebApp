@@ -99,7 +99,7 @@ class UserManagementController extends Controller
             $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email,' . $user->id,
-                'role' => 'required|in:admin,user',
+                'role' => 'required|in:admin,order_staff,user',
             ]);
 
             $user->update([
@@ -150,7 +150,7 @@ class UserManagementController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users',
-                'role' => 'required|in:user,admin',
+                'role' => 'required|in:user,admin,order_staff',
                 'password' => 'required|string|min:8|confirmed',
             ]);
 

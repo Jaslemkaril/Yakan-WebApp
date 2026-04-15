@@ -106,6 +106,7 @@
                             <option value="">All Roles</option>
                             <option value="user" {{ request('role') == 'user' ? 'selected' : '' }}>User</option>
                             <option value="admin" {{ request('role') == 'admin' ? 'selected' : '' }}>Admin</option>
+                            <option value="order_staff" {{ request('role') == 'order_staff' ? 'selected' : '' }}>Order Staff</option>
                         </select>
                     </div>
                     
@@ -176,9 +177,9 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $user->role == 'admin' ? 'bg-maroon-100 text-maroon-800' : 'bg-gray-100 text-gray-800' }}">
-                                        <i class="fas {{ $user->role == 'admin' ? 'fa-user-shield' : 'fa-user' }} mr-1"></i>
-                                        {{ ucfirst($user->role) }}
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $user->role == 'admin' ? 'bg-maroon-100 text-maroon-800' : ($user->role == 'order_staff' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-800') }}">
+                                        <i class="fas {{ $user->role == 'admin' ? 'fa-user-shield' : ($user->role == 'order_staff' ? 'fa-receipt' : 'fa-user') }} mr-1"></i>
+                                        {{ $user->role === 'order_staff' ? 'Order Staff' : ucfirst($user->role) }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">

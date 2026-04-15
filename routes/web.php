@@ -569,8 +569,8 @@ Route::get('/setup/reset-user-password', function () {
 Route::get('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'showLoginForm'])->name('admin.login.form');
 Route::post('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'login'])->name('admin.login.submit');
 
-// Admin dashboard route
-Route::get('/admin/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->middleware('admin')->name('admin.dashboard');
+// Admin/staff dashboard route
+Route::get('/admin/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->middleware('admin:admin,order_staff')->name('admin.dashboard');
 
 // Regular user login routes
 Route::get('/login', function() {
@@ -1162,11 +1162,58 @@ Route::get('/direct-test', [App\Http\Controllers\Admin\DashboardController::clas
 
 /*
 |--------------------------------------------------------------------------
+| Admin Order Staff Routes
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['admin:admin,order_staff'])->prefix('admin')->name('admin.')->group(function () {
+
+    // Orders (Main Orders Page - Enhanced Custom Orders)
+    Route::get('/custom-orders-dashboard', [AdminCustomOrderController::class, 'indexEnhanced'])->name('orders.index');
+
+    // Orders (Regular Orders)
+    Route::prefix('orders')->group(function () {
+        Route::get('/', [AdminOrderController::class, 'index'])->name('regular.index');
+        Route::get('/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+        Route::get('/{order}/paymongo-receipt', [AdminOrderController::class, 'paymongoReceipt'])->name('orders.paymongo_receipt');
+        Route::post('/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.update_status');
+        Route::post('/{order}/tracking', [AdminOrderController::class, 'updateTracking'])->name('orders.update_tracking');
+        Route::post('/{order}/cancel', [AdminOrderController::class, 'cancel'])->name('orders.cancel');
+        Route::post('/{order}/refund', [AdminOrderController::class, 'refund'])->name('orders.refund');
+        Route::patch('/{order}/update-notes', [AdminOrderController::class, 'updateNotes'])->name('orders.update-notes');
+        Route::get('/{order}/invoice', [AdminOrderController::class, 'generateInvoice'])->name('orders.invoice');
+
+        // Quick update status route (accept POST and PUT)
+        Route::match(['post', 'put'], '/{order}/quick-update-status', [AdminOrderController::class, 'quickUpdateStatus'])->name('orders.quickUpdateStatus');
+    });
+
+    // Custom Orders - processing routes
+    Route::prefix('custom-orders')->name('custom-orders.')->group(function () {
+        Route::get('/', [AdminCustomOrderController::class, 'index'])->name('index');
+        Route::get('/production-dashboard', [AdminCustomOrderController::class, 'productionDashboard'])->name('production-dashboard');
+        Route::get('/export', [AdminCustomOrderController::class, 'exportOrders'])->name('export');
+        Route::get('/view/{order}', [AdminCustomOrderController::class, 'show'])->name('show');
+        Route::get('/{order}/paymongo-receipt', [AdminCustomOrderController::class, 'paymongoReceipt'])->name('paymongo_receipt');
+
+        Route::post('/{order}/update-status', [AdminCustomOrderController::class, 'updateStatus'])->name('update_status');
+        Route::post('/{order}/quote-price', [AdminCustomOrderController::class, 'quotePrice'])->name('quote_price');
+        Route::post('/{order}/batch-shipping', [AdminCustomOrderController::class, 'updateBatchShipping'])->name('batch_shipping');
+        Route::post('/{order}/verify-payment', [AdminCustomOrderController::class, 'verifyPayment'])->name('verify_payment');
+        Route::post('/{order}/confirm-payment', [AdminCustomOrderController::class, 'confirmPayment'])->name('confirmPayment');
+        Route::post('/{order}/reject-payment', [AdminCustomOrderController::class, 'rejectPayment'])->name('rejectPayment');
+        Route::post('/{order}/reject', [AdminCustomOrderController::class, 'rejectOrder'])->name('reject');
+        Route::post('/{order}/approve', [AdminCustomOrderController::class, 'approveOrder'])->name('approve');
+        Route::post('/{order}/notify-delay', [AdminCustomOrderController::class, 'notifyDelay'])->name('notifyDelay');
+        Route::post('/{order}/clear-delay', [AdminCustomOrderController::class, 'clearDelay'])->name('clearDelay');
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
 | Admin Routes
 |--------------------------------------------------------------------------
 */
 // Admin Routes - Protected by admin authentication and role check
-Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['admin:admin'])->prefix('admin')->name('admin.')->group(function () {
 
     // Test route for debugging
     Route::get('/test', function() {
@@ -1225,30 +1272,14 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::resource('cultural-heritage', \App\Http\Controllers\Admin\CulturalHeritageController::class);
     Route::post('/cultural-heritage/{id}/toggle-status', [\App\Http\Controllers\Admin\CulturalHeritageController::class, 'toggleStatus'])->name('cultural-heritage.toggleStatus');
 
-    // Orders (Main Orders Page - Enhanced Custom Orders)
-    Route::get('/custom-orders-dashboard', [AdminCustomOrderController::class, 'indexEnhanced'])->name('orders.index');
-
     // Orders (Regular Orders)
     Route::prefix('orders')->group(function () {
-        Route::get('/', [AdminOrderController::class, 'index'])->name('regular.index');
         Route::get('/create', [AdminOrderController::class, 'create'])->name('orders.create');
         Route::post('/', [AdminOrderController::class, 'store'])->name('orders.store');
         Route::get('/{order}/edit', [AdminOrderController::class, 'edit'])->name('orders.edit');
         Route::put('/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
-        Route::get('/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
-        Route::get('/{order}/paymongo-receipt', [AdminOrderController::class, 'paymongoReceipt'])->name('orders.paymongo_receipt');
-        Route::post('/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.update_status');
-        Route::post('/{order}/tracking', [AdminOrderController::class, 'updateTracking'])->name('orders.update_tracking');
-        Route::post('/{order}/cancel', [AdminOrderController::class, 'cancel'])->name('orders.cancel');
-        Route::post('/{order}/refund', [AdminOrderController::class, 'refund'])->name('orders.refund');
-        Route::patch('/{order}/update-notes', [AdminOrderController::class, 'updateNotes'])->name('orders.update-notes');
-        Route::get('/{order}/invoice', [AdminOrderController::class, 'generateInvoice'])->name('orders.invoice');
         Route::post('/bulk-update', [AdminOrderController::class, 'bulkUpdate'])->name('orders.bulkUpdate');
-
-        // Quick update status route (accept POST and PUT)
-        Route::match(['post', 'put'], '/{order}/quick-update-status', [AdminOrderController::class, 'quickUpdateStatus'])->name('orders.quickUpdateStatus');
-
-        });
+    });
 
     // Inventory Management
     Route::prefix('inventory')->name('inventory.')->group(function () {
@@ -1266,18 +1297,9 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         Route::delete('/{inventory}', [InventoryController::class, 'destroy'])->name('destroy');
     });
 
-    // Custom Orders - Clean Implementation
+    // Custom Orders - Admin-only create/edit/delete routes
     Route::prefix('custom-orders')->name('custom-orders.')->group(function () {
-        // Main index page
-        Route::get('/', [AdminCustomOrderController::class, 'index'])->name('index');
-        
-        // Production Dashboard - MUST be before /{order} catch-all
-        Route::get('/production-dashboard', [AdminCustomOrderController::class, 'productionDashboard'])->name('production-dashboard');
-        
-        // Export - MUST be before /{order} catch-all
-        Route::get('/export', [AdminCustomOrderController::class, 'exportOrders'])->name('export');
-        
-        // Create wizard routes - MUST be before /{order} catch-all
+        // Create wizard routes
         Route::get('/create', [AdminCustomOrderController::class, 'create'])->name('create');
         Route::get('/create/choice', [AdminCustomOrderController::class, 'createChoice'])->name('create.choice');
         Route::get('/create/product', [AdminCustomOrderController::class, 'createProductSelection'])->name('create.product');
@@ -1290,25 +1312,10 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         Route::post('/create/pattern', [AdminCustomOrderController::class, 'storePatternSelection'])->name('store.pattern');
         Route::get('/create/review', [AdminCustomOrderController::class, 'createReview'])->name('create.review');
         Route::post('/store', [AdminCustomOrderController::class, 'store'])->name('store');
-        
-        // View order - MUST use /view/ prefix to avoid conflict with other routes
-        Route::get('/view/{order}', [AdminCustomOrderController::class, 'show'])->name('show');
-        Route::get('/{order}/paymongo-receipt', [AdminCustomOrderController::class, 'paymongoReceipt'])->name('paymongo_receipt');
-        
-        // Order management actions
-        Route::post('/{order}/update-status', [AdminCustomOrderController::class, 'updateStatus'])->name('update_status');
-        Route::post('/{order}/quote-price', [AdminCustomOrderController::class, 'quotePrice'])->name('quote_price');
-        Route::post('/{order}/batch-shipping', [AdminCustomOrderController::class, 'updateBatchShipping'])->name('batch_shipping');
-        Route::post('/{order}/verify-payment', [AdminCustomOrderController::class, 'verifyPayment'])->name('verify_payment');
-        Route::post('/{order}/confirm-payment', [AdminCustomOrderController::class, 'confirmPayment'])->name('confirmPayment');
-        Route::post('/{order}/reject-payment', [AdminCustomOrderController::class, 'rejectPayment'])->name('rejectPayment');
-        Route::post('/{order}/reject', [AdminCustomOrderController::class, 'rejectOrder'])->name('reject');
-        Route::post('/{order}/approve', [AdminCustomOrderController::class, 'approveOrder'])->name('approve');
-        Route::post('/{order}/notify-delay', [AdminCustomOrderController::class, 'notifyDelay'])->name('notifyDelay');
-        Route::post('/{order}/clear-delay', [AdminCustomOrderController::class, 'clearDelay'])->name('clearDelay');
+
         Route::delete('/{order}', [AdminCustomOrderController::class, 'destroy'])->name('delete');
-        
-        // Edit (at the end to avoid conflicts)
+
+        // Edit
         Route::get('/{order}/edit', [AdminCustomOrderController::class, 'edit'])->name('edit');
         Route::put('/{order}', [AdminCustomOrderController::class, 'update'])->name('update');
     });

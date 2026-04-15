@@ -204,7 +204,7 @@ HTML)
         if (Auth::guard('admin')->attempt($credentials)) {
             $user = Auth::guard('admin')->user();
             
-            if ($user && $user->role === 'admin') {
+            if ($user && in_array((string) $user->role, ['admin', 'order_staff'], true)) {
                 $request->session()->regenerate();
                 
                 return redirect('/admin/dashboard')->with('success', 'Admin login successful!');
@@ -213,7 +213,7 @@ HTML)
             // Logout if not admin
             Auth::guard('admin')->logout();
             return back()->withErrors([
-                'email' => 'Access denied. Admin privileges required.'
+                'email' => 'Access denied. Staff privileges required.'
             ]);
         }
 

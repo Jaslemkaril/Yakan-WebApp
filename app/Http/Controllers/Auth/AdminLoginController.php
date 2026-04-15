@@ -11,8 +11,8 @@ class AdminLoginController extends Controller
     // Show the admin login form
     public function showLoginForm()
     {
-        // If already logged in as admin, redirect to dashboard
-        if (Auth::check() && Auth::user()->role === 'admin') {
+        // If already logged in as admin/staff, redirect to dashboard
+        if (Auth::check() && in_array((string) Auth::user()->role, ['admin', 'order_staff'], true)) {
             return redirect('/admin/dashboard');
         }
         
@@ -37,16 +37,16 @@ class AdminLoginController extends Controller
 
         \Log::info('Admin login attempt', ['email' => $credentials['email']]);
 
-        // Check if user exists and has admin role
+        // Check if user exists and has admin/staff role
         $user = \App\Models\User::where('email', $credentials['email'])->first();
         
         if (!$user) {
             return back()->withErrors(['email' => 'Invalid credentials.'])->onlyInput('email');
         }
         
-        if ($user->role !== 'admin') {
+        if (!in_array((string) $user->role, ['admin', 'order_staff'], true)) {
             \Log::warning('Login attempt by non-admin user', ['email' => $user->email, 'role' => $user->role]);
-            return back()->withErrors(['email' => 'Access denied. Admin privileges required.'])->onlyInput('email');
+            return back()->withErrors(['email' => 'Access denied. Staff privileges required.'])->onlyInput('email');
         }
         
         // Verify password

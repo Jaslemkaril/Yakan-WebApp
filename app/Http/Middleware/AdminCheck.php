@@ -8,8 +8,10 @@ use Illuminate\Support\Facades\DB;
 
 class AdminCheck
 {
-    public function handle($request, Closure $next)
+    public function handle($request, Closure $next, ...$allowedRoles)
     {
+        $allowedRoles = !empty($allowedRoles) ? $allowedRoles : ['admin'];
+
         // First, try token authentication if not already authenticated
         if (!Auth::check()) {
             $token = $request->post('auth_token')
@@ -25,7 +27,7 @@ class AdminCheck
                 
                 if ($authToken) {
                     $user = \App\Models\User::find($authToken->user_id);
-                    if ($user && $user->role === 'admin') {
+                    if ($user && in_array($user->role, ['admin', 'order_staff'], true)) {
                         // Login with remember flag to persist session
                         Auth::login($user, true);
                         
@@ -59,10 +61,12 @@ class AdminCheck
             'session_id' => $request->session()->getId(),
         ]);
 
-        // Check if user is authenticated and is an admin
-        if (Auth::check() && Auth::user()->role === 'admin') {
+        // Check if user is authenticated and has one of the allowed roles.
+        if (Auth::check() && in_array((string) Auth::user()->role, $allowedRoles, true)) {
             \Log::info('AdminCheck: Access GRANTED for admin user', [
                 'user_id' => Auth::user()->id,
+                'user_role' => Auth::user()->role,
+                'allowed_roles' => $allowedRoles,
                 'session_id' => $request->session()->getId(),
                 'has_session_flag' => $request->session()->has('admin_authenticated')
             ]);
@@ -82,9 +86,10 @@ class AdminCheck
             'method' => $request->method(),
             'authenticated' => Auth::check(),
             'user_role' => Auth::check() ? Auth::user()->role : 'not_authenticated',
+            'allowed_roles' => $allowedRoles,
             'user_email' => Auth::check() ? Auth::user()->email : null,
         ]);
         
-        return redirect()->route('admin.login.form')->with('error', 'Please login as admin to continue');
+        return redirect()->route('admin.login.form')->with('error', 'Please login with authorized staff account to continue');
     }
 }

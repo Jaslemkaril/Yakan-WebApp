@@ -92,6 +92,7 @@
                                 <select name="role" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon-500 focus:border-transparent">
                                     <option value="user" {{ $user->role == 'user' ? 'selected' : '' }}>👤 User</option>
                                     <option value="admin" {{ $user->role == 'admin' ? 'selected' : '' }}>👑 Admin</option>
+                                    <option value="order_staff" {{ $user->role == 'order_staff' ? 'selected' : '' }}>🧾 Order Staff</option>
                                 </select>
                             </div>
                             <div>

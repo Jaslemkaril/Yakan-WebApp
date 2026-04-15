@@ -170,6 +170,9 @@
                                 <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>
                                     👑 Admin - Full system access
                                 </option>
+                                <option value="order_staff" {{ old('role') == 'order_staff' ? 'selected' : '' }}>
+                                    🧾 Order Staff - Process orders and confirm refunds
+                                </option>
                             </select>
                             @error('role')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -334,7 +337,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const roleText = roleSelect.options[roleSelect.selectedIndex]?.text.split(' - ')[0] || 'User';
         previewRole.textContent = roleText;
         previewRole.className = `inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-            roleSelect.value === 'admin' ? 'bg-maroon-100 text-maroon-800' : 'bg-gray-100 text-gray-800'
+            roleSelect.value === 'admin'
+                ? 'bg-maroon-100 text-maroon-800'
+                : roleSelect.value === 'order_staff'
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-gray-100 text-gray-800'
         }`;
         
         // Update status badge
