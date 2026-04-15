@@ -568,8 +568,8 @@ class OrderController extends Controller
         $validated = $request->validate([
             'reason' => 'required|string|max:150',
             'details' => 'required|string|max:2000',
-            'evidence' => 'nullable|array|max:5',
-            'evidence.*' => 'file|mimes:jpg,jpeg,png,webp,pdf|max:5120',
+            'evidence' => 'required|array|min:1|max:5',
+            'evidence.*' => 'required|file|mimes:jpg,jpeg,png,webp,pdf|max:5120',
         ]);
 
         $evidencePaths = [];

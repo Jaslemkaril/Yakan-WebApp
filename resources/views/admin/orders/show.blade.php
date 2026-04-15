@@ -729,6 +729,35 @@
                     @if(!empty($latestRefundRequest->details))
                         <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Details:</span> {{ $latestRefundRequest->details }}</p>
                     @endif
+                    @php
+                        $adminRefundEvidence = is_array($latestRefundRequest->evidence_paths ?? null) ? $latestRefundRequest->evidence_paths : [];
+                    @endphp
+                    @if(!empty($adminRefundEvidence))
+                        <div class="mt-2">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Evidence</p>
+                            <div class="flex flex-wrap gap-2">
+                                @foreach($adminRefundEvidence as $evidencePath)
+                                    @php
+                                        $adminEvidenceUrl = (str_starts_with($evidencePath, 'http://') || str_starts_with($evidencePath, 'https://'))
+                                            ? $evidencePath
+                                            : \Illuminate\Support\Facades\Storage::url($evidencePath);
+                                        $adminExt = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
+                                        $adminIsImageEvidence = in_array($adminExt, ['jpg', 'jpeg', 'png', 'webp'], true);
+                                    @endphp
+
+                                    @if($adminIsImageEvidence)
+                                        <a href="{{ $adminEvidenceUrl }}" target="_blank" class="block">
+                                            <img src="{{ $adminEvidenceUrl }}" alt="Refund evidence" class="w-16 h-16 object-cover rounded border border-gray-200 hover:opacity-90 transition-opacity">
+                                        </a>
+                                    @else
+                                        <a href="{{ $adminEvidenceUrl }}" target="_blank" class="inline-flex items-center px-2 py-1 rounded border border-gray-300 text-xs text-gray-700 bg-white hover:bg-gray-100 transition-colors">
+                                            View PDF
+                                        </a>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
                     @if(!empty($latestRefundRequest->admin_note))
                         <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Admin Note:</span> {{ $latestRefundRequest->admin_note }}</p>
                     @endif

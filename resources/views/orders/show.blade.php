@@ -167,6 +167,36 @@
                     <p class="text-sm text-gray-700"><span class="font-semibold">Reason:</span> {{ $refundRequest->reason }}</p>
                     <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Details:</span> {{ $refundRequest->details }}</p>
 
+                    @php
+                        $refundEvidence = is_array($refundRequest->evidence_paths ?? null) ? $refundRequest->evidence_paths : [];
+                    @endphp
+                    @if(!empty($refundEvidence))
+                        <div class="mt-3">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Uploaded Evidence</p>
+                            <div class="flex flex-wrap gap-2">
+                                @foreach($refundEvidence as $evidencePath)
+                                    @php
+                                        $evidenceUrl = (str_starts_with($evidencePath, 'http://') || str_starts_with($evidencePath, 'https://'))
+                                            ? $evidencePath
+                                            : \Illuminate\Support\Facades\Storage::url($evidencePath);
+                                        $ext = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
+                                        $isImageEvidence = in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true);
+                                    @endphp
+
+                                    @if($isImageEvidence)
+                                        <a href="{{ $evidenceUrl }}" target="_blank" class="block">
+                                            <img src="{{ $evidenceUrl }}" alt="Refund evidence" class="w-20 h-20 object-cover rounded-lg border border-gray-200 hover:opacity-90 transition-opacity">
+                                        </a>
+                                    @else
+                                        <a href="{{ $evidenceUrl }}" target="_blank" class="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 bg-white hover:bg-gray-100 transition-colors">
+                                            View PDF Evidence
+                                        </a>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
                     @if(!empty($refundRequest->admin_note))
                         <div class="mt-3 rounded-md border border-gray-200 bg-white p-3">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Admin Note</p>
@@ -195,9 +225,10 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Evidence (optional, up to 5 files)</label>
-                        <input type="file" name="evidence[]" accept="image/*,.pdf" multiple class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#800000] file:text-white hover:file:bg-[#600000]">
-                        <p class="text-xs text-gray-500 mt-1">Accepted: JPG, PNG, WEBP, PDF (max 5MB each)</p>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Evidence <span class="text-red-600">*</span> (up to 5 files)</label>
+                        <input id="refund-evidence-input" type="file" name="evidence[]" accept="image/*,.pdf" multiple required class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#800000] file:text-white hover:file:bg-[#600000]">
+                        <p class="text-xs text-gray-500 mt-1">Required. Accepted: JPG, PNG, WEBP, PDF (max 5MB each)</p>
+                        <div id="refund-evidence-preview" class="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2"></div>
                     </div>
 
                     <button type="submit" class="inline-flex items-center gap-2 px-5 py-3 rounded-lg text-white font-semibold transition-colors" style="background:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
@@ -592,6 +623,58 @@ function previewImages(input, previewId) {
         reader.readAsDataURL(file);
     });
 }
+
+function previewRefundEvidence(inputId, previewId) {
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+
+    if (!input || !preview) {
+        return;
+    }
+
+    preview.innerHTML = '';
+
+    const files = Array.from(input.files).slice(0, 5);
+    files.forEach(function(file) {
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        const isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext) || file.type.startsWith('image/');
+
+        if (isImage) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'relative rounded-lg overflow-hidden border border-gray-200 bg-white';
+
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.className = 'w-full h-24 object-cover';
+                img.alt = file.name;
+
+                wrapper.appendChild(img);
+                preview.appendChild(wrapper);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            const badge = document.createElement('a');
+            badge.href = '#';
+            badge.className = 'inline-flex items-center justify-center text-center px-2 py-3 rounded-lg border border-gray-300 text-xs text-gray-700 bg-white';
+            badge.textContent = 'PDF: ' + file.name;
+            badge.addEventListener('click', function(e) {
+                e.preventDefault();
+            });
+            preview.appendChild(badge);
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const refundEvidenceInput = document.getElementById('refund-evidence-input');
+    if (refundEvidenceInput) {
+        refundEvidenceInput.addEventListener('change', function() {
+            previewRefundEvidence('refund-evidence-input', 'refund-evidence-preview');
+        });
+    }
+});
 </script>
 @endsection
 
