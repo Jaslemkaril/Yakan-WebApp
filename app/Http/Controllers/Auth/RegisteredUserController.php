@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\TransactionalMailService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
@@ -55,6 +56,23 @@ class RegisteredUserController extends Controller
             'password.min' => 'Password must be at least 8 characters long.',
             'password.confirmed' => 'Password confirmation does not match.',
         ]);
+
+        $validator->after(function ($validator) use ($request) {
+            $rawBirthDate = (string) $request->input('birth_date', '');
+            if ($rawBirthDate === '') {
+                return;
+            }
+
+            try {
+                $birthDate = Carbon::parse($rawBirthDate);
+            } catch (\Throwable $e) {
+                return;
+            }
+
+            if ($birthDate->gt(now()->subYears(18)->startOfDay())) {
+                $validator->errors()->add('birth_date', 'You must be at least 18 years old to create an account.');
+            }
+        });
 
         if ($validator->fails()) {
             \Log::info('Validation failed', ['errors' => $validator->errors()->all()]);

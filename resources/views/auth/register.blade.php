@@ -751,6 +751,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const validAge = isAtLeast18(birthDateInput.value);
         birthDateWarning.classList.toggle('hidden', validAge || !birthDateInput.value);
+
+        if (submitBtn) {
+            submitBtn.disabled = !validAge;
+            submitBtn.classList.toggle('opacity-60', !validAge);
+            submitBtn.classList.toggle('cursor-not-allowed', !validAge);
+        }
+
         return validAge;
     }
 
