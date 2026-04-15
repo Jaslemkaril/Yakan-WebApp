@@ -235,16 +235,14 @@ class OrderController extends Controller
             }
 
             $refundRequest = null;
-            $canRequestRefund = false;
+            $canRequestRefund = $order->canRequestRefund()
+                && (int) $order->user_id === (int) auth()->id();
 
             if (Schema::hasTable('order_refund_requests')) {
                 $refundRequest = OrderRefundRequest::where('order_id', $order->id)
                     ->where('user_id', auth()->id())
                     ->latest()
                     ->first();
-
-                $canRequestRefund = $order->canRequestRefund()
-                    && (int) $order->user_id === (int) auth()->id();
             }
 
             return view('orders.show', compact('order', 'refundRequest', 'canRequestRefund'));
