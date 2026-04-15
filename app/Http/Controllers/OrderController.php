@@ -542,6 +542,8 @@ class OrderController extends Controller
      */
     public function requestRefund(Request $request, Order $order)
     {
+        $this->ensureRefundRequestsTableExists();
+
         if (!Schema::hasTable('order_refund_requests')) {
             return redirect()->back()->with('error', 'Refund feature is not ready yet. Please try again shortly.');
         }
@@ -590,6 +592,43 @@ class OrderController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Refund request submitted. Our team will review it shortly.');
+    }
+
+    /**
+     * Ensure refund requests table exists in environments where migrations may lag behind deployments.
+     */
+    private function ensureRefundRequestsTableExists(): void
+    {
+        if (Schema::hasTable('order_refund_requests')) {
+            return;
+        }
+
+        try {
+            Schema::create('order_refund_requests', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $table->id();
+                $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
+                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+                $table->string('reason', 150);
+                $table->text('details')->nullable();
+                $table->json('evidence_paths')->nullable();
+                $table->enum('status', ['requested', 'under_review', 'approved', 'rejected', 'processed'])
+                    ->default('requested');
+                $table->text('admin_note')->nullable();
+                $table->decimal('approved_amount', 12, 2)->nullable();
+                $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->timestamp('requested_at')->nullable();
+                $table->timestamp('reviewed_at')->nullable();
+                $table->timestamp('processed_at')->nullable();
+                $table->timestamps();
+
+                $table->index(['order_id', 'status']);
+                $table->index(['user_id', 'status']);
+            });
+        } catch (\Throwable $e) {
+            Log::warning('Unable to auto-create order_refund_requests table', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

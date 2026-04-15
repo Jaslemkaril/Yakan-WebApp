@@ -136,7 +136,7 @@ class Order extends Model
         }
 
         if (!Schema::hasTable('order_refund_requests')) {
-            return false;
+            return true;
         }
 
         $activeStatuses = ['requested', 'under_review', 'approved', 'processed'];
