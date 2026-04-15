@@ -93,6 +93,15 @@
                         <input type="number" min="1" name="usage_limit_per_user" value="{{ old('usage_limit_per_user') }}" placeholder="e.g., 1" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent" />
                         @error('usage_limit_per_user')<span class="text-red-600 text-sm mt-1">{{ $message }}</span>@enderror
                     </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Coupon Applies To *</label>
+                        <select name="applies_to" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent" required>
+                            <option value="shipping" @selected(old('applies_to', 'shipping')==='shipping')>Shipping Fee</option>
+                            <option value="items" @selected(old('applies_to')==='items')>Product Items</option>
+                        </select>
+                        @error('applies_to')<span class="text-red-600 text-sm mt-1">{{ $message }}</span>@enderror
+                    </div>
                 </div>
             </div>
 

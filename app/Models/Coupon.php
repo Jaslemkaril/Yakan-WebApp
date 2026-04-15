@@ -14,6 +14,7 @@ class Coupon extends Model
     protected $fillable = [
         'code',
         'type',
+        'applies_to',
         'value',
         'max_discount',
         'min_spend',
@@ -72,6 +73,16 @@ class Coupon extends Model
     }
 
     /**
+     * Get normalized coupon target.
+     */
+    public function getAppliesTo(): string
+    {
+        return in_array((string) $this->applies_to, ['shipping', 'items'], true)
+            ? (string) $this->applies_to
+            : 'shipping';
+    }
+
+    /**
      * Calculate discount applied only to the shipping fee.
      * min_spend is checked separately against the order subtotal.
      */
@@ -84,5 +95,29 @@ class Coupon extends Model
         // Cannot discount more than the actual shipping fee
         $discount = max(0.0, min($discount, $shippingFee));
         return round($discount, 2);
+    }
+
+    /**
+     * Calculate discount by coupon target.
+     */
+    public function calculateTargetDiscount(float $subtotal, float $shippingFee): float
+    {
+        if ($this->getAppliesTo() === 'items') {
+            return $this->calculateDiscount($subtotal);
+        }
+
+        return $this->calculateShippingDiscount($shippingFee);
+    }
+
+    /**
+     * Human readable discount description.
+     */
+    public function getDiscountDescription(): string
+    {
+        $targetLabel = $this->getAppliesTo() === 'items' ? 'items' : 'shipping';
+
+        return $this->type === 'percent'
+            ? (int) $this->value . "% off {$targetLabel}"
+            : 'PHP ' . number_format((float) $this->value, 2) . " off {$targetLabel}";
     }
 }

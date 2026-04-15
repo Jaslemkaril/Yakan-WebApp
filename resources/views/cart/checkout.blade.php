@@ -77,6 +77,7 @@
     <input type="hidden" name="confirm" value="1" />
     <input type="hidden" name="coupon_code" id="coupon-code-input" value="{{ $appliedCoupon->code ?? '' }}" />
     <input type="hidden" name="discount_amount" id="discount-amount-input" value="{{ $discount ?? 0 }}" />
+    <input type="hidden" name="coupon_applies_to" id="coupon-applies-to-input" value="{{ !empty($appliedCoupon) ? $appliedCoupon->getAppliesTo() : '' }}" />
     
     {{-- Pass selected cart items through form to survive session loss on Railway --}}
     @if(session()->has('selected_cart_items'))
@@ -465,7 +466,7 @@
                                             data-code="{{ $ac->code }}"
                                             onclick="applyAvailableCoupon('{{ $ac->code }}')"
                                             class="coupon-chip text-xs px-3 py-1.5 rounded-full border-2 border-amber-500 bg-white text-amber-900 font-semibold hover:bg-amber-100 transition-all shadow-sm {{ ($appliedCoupon->code ?? '') === $ac->code ? 'bg-amber-500 text-white border-amber-600' : '' }}">
-                                            🏷️ {{ $ac->code }}: {{ $ac->type === 'percent' ? (int)$ac->value.'% off shipping' : '₱'.number_format($ac->value,2).' off shipping' }}
+                                            🏷️ {{ $ac->code }}: {{ $ac->getDiscountDescription() }}
                                         </button>
                                         @endforeach
                                     </div>
@@ -1014,10 +1015,11 @@ function selectAddress(addressId, fullName, phoneNumber, formattedAddress, city,
     }
     shippingFeeInput.value = shippingFee;
     
-    // Update total amount (cap coupon discount to the new shipping fee)
+    // Update total amount
     const subtotal = parseFloat('{{ $total }}');
     const rawDiscount = parseFloat('{{ $discount ?? 0 }}');
-    const discount = Math.min(rawDiscount, shippingFee);
+    const couponAppliesTo = document.getElementById('coupon-applies-to-input')?.value || '';
+    const discount = couponAppliesTo === 'shipping' ? Math.min(rawDiscount, shippingFee) : rawDiscount;
     const finalTotal = subtotal + shippingFee - discount;
     
     const finalTotalDisplay = document.getElementById('finalTotalDisplay');
@@ -2142,6 +2144,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const finalDisplay = document.getElementById('finalTotalDisplay');
     const hiddenCode   = document.getElementById('coupon-code-input');
     const hiddenDisc   = document.getElementById('discount-amount-input');
+    const hiddenApply  = document.getElementById('coupon-applies-to-input');
 
     // Current page query params (for buy-now subtotal)
     const urlParams = new URLSearchParams(window.location.search);
@@ -2178,6 +2181,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (discountRow) discountRow.classList.add('hidden');
         if (hiddenCode)  hiddenCode.value = '';
         if (hiddenDisc)  hiddenDisc.value = 0;
+        if (hiddenApply) hiddenApply.value = '';
         recalcTotal(0);
         const rb2 = document.getElementById('remove-coupon-btn');
         if (rb2) rb2.remove();
@@ -2223,6 +2227,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showMsg('✓ ' + data.message, 'success');
                 if (hiddenCode) hiddenCode.value = code;
                 if (hiddenDisc) hiddenDisc.value = data.discount || 0;
+                if (hiddenApply) hiddenApply.value = data.applies_to || 'shipping';
                 if (couponInput) couponInput.value = code;
                 if (appliedCode) appliedCode.textContent = code;
                 if (appliedInfo) appliedInfo.classList.remove('hidden');

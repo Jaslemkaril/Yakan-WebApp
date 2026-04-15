@@ -209,21 +209,21 @@ class CartController extends Controller
             return $fail('Coupon does not apply to your current subtotal (minimum: ₱' . number_format($coupon->min_spend, 2) . ').');
 
         $shippingFee    = max(0, (float) $request->input('shipping_fee', 0));
-        $discountAmount = $coupon->calculateShippingDiscount($shippingFee);
+        $discountAmount = $coupon->calculateTargetDiscount((float) $subtotal, $shippingFee);
 
         session(['coupon_code' => $code]);
 
-        $description = $coupon->type === 'percent'
-            ? (int)$coupon->value . '% off shipping'
-            : '₱' . number_format($coupon->value, 2) . ' off shipping';
+        $description = $coupon->getDiscountDescription();
+        $targetLabel = $coupon->getAppliesTo() === 'items' ? 'items' : 'shipping fee';
 
         if ($request->expectsJson()) {
             return response()->json([
                 'success'     => true,
-                'message'     => 'Coupon applied! Shipping fee discounted.',
+                'message'     => 'Coupon applied! ' . ucfirst($targetLabel) . ' discounted.',
                 'discount'    => $discountAmount,
                 'code'        => $code,
                 'description' => $description,
+                'applies_to'  => $coupon->getAppliesTo(),
             ]);
         }
 
@@ -263,18 +263,17 @@ class CartController extends Controller
             return $fail('Minimum spend of ₱' . number_format($coupon->min_spend, 2) . ' required.');
         }
 
-        $discountAmount = $coupon->calculateShippingDiscount($shippingFee);
-
-        $description = $coupon->type === 'percent'
-            ? (int)$coupon->value . '% off shipping'
-            : '₱' . number_format($coupon->value, 2) . ' off shipping';
+        $discountAmount = $coupon->calculateTargetDiscount($subtotal, $shippingFee);
+        $description = $coupon->getDiscountDescription();
+        $targetLabel = $coupon->getAppliesTo() === 'items' ? 'items' : 'shipping fee';
 
         return response()->json([
             'success'     => true,
-            'message'     => 'Coupon applied! Shipping fee discounted.',
+            'message'     => 'Coupon applied! ' . ucfirst($targetLabel) . ' discounted.',
             'discount'    => $discountAmount,
             'code'        => $code,
             'description' => $description,
+            'applies_to'  => $coupon->getAppliesTo(),
         ]);
     }
 
@@ -305,11 +304,10 @@ class CartController extends Controller
             ->map(fn($c) => [
                 'code'        => $c->code,
                 'type'        => $c->type,
+                'applies_to'  => $c->getAppliesTo(),
                 'value'       => (float) $c->value,
                 'min_spend'   => (float) ($c->min_spend ?? 0),
-                'description' => $c->type === 'percent'
-                    ? (int)$c->value . '% off shipping'
-                    : '₱' . number_format($c->value, 2) . ' off shipping',
+                'description' => $c->getDiscountDescription(),
             ])
             ->values();
 
@@ -489,7 +487,9 @@ class CartController extends Controller
                 if (session()->has('coupon_code')) {
                     $coupon = \App\Models\Coupon::where('code', session('coupon_code'))->first();
                     if ($coupon && $coupon->canBeUsedBy(Auth::user())) {
-                        $discount = $coupon->calculateDiscount((float) $cartTotal);
+                        $discount = $coupon->getAppliesTo() === 'items'
+                            ? $coupon->calculateDiscount((float) $cartTotal)
+                            : 0;
                     } else {
                         session()->forget('coupon_code');
                     }
@@ -552,7 +552,9 @@ class CartController extends Controller
             if (session()->has('coupon_code')) {
                 $coupon = \App\Models\Coupon::where('code', session('coupon_code'))->first();
                 if ($coupon && $coupon->canBeUsedBy(Auth::user())) {
-                    $discount = $coupon->calculateDiscount((float) $cartTotal);
+                    $discount = $coupon->getAppliesTo() === 'items'
+                        ? $coupon->calculateDiscount((float) $cartTotal)
+                        : 0;
                 } else {
                     session()->forget('coupon_code');
                 }
@@ -687,7 +689,7 @@ class CartController extends Controller
             $appliedCoupon = Coupon::where('code', $code)->first();
             if ($appliedCoupon && $appliedCoupon->canBeUsedBy(Auth::user())) {
                 if ($subtotal >= (float)($appliedCoupon->min_spend ?? 0)) {
-                    $discount = $appliedCoupon->calculateShippingDiscount($estimatedShippingFee);
+                    $discount = $appliedCoupon->calculateTargetDiscount($subtotal, $estimatedShippingFee);
                 }
             } else {
                 session()->forget(['coupon_code']);
@@ -791,7 +793,7 @@ class CartController extends Controller
         $subtotal = $cartItems->sum(fn($item) => $item->product->price * $item->quantity);
         $discount = 0;
         $coupon = null;
-        // Find coupon; discount calculated after shippingFee is known (applies to shipping only)
+        // Find coupon; discount calculated after shippingFee is known.
         $couponCode = session('coupon_code') ?: $request->input('coupon_code');
         $pendingCoupon = null;
         if ($couponCode) {
@@ -801,8 +803,6 @@ class CartController extends Controller
                 session()->forget('coupon_code');
             }
         }
-
-        $totalBeforeShipping = $subtotal; // no product-level discount
 
         // Build delivery address string (only for delivery type)
         $deliveryAddress = null;
@@ -836,10 +836,10 @@ class CartController extends Controller
             $shippingFee = 0;
         }
 
-        // Apply coupon to shipping fee now that shippingFee is known
+        // Apply coupon using the selected discount target.
         if ($pendingCoupon && $subtotal >= (float)($pendingCoupon->min_spend ?? 0)) {
             $coupon   = $pendingCoupon;
-            $discount = $coupon->calculateShippingDiscount($shippingFee);
+            $discount = $coupon->calculateTargetDiscount($subtotal, $shippingFee);
         } elseif ($pendingCoupon) {
             session()->forget('coupon_code');
         }
