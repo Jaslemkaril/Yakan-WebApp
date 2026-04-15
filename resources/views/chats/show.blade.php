@@ -345,6 +345,11 @@
                             
                             @if($message->sender_type === 'admin' && str_contains($message->message, 'PRICE QUOTE'))
                                 @php
+                    $quoteMeta = is_array($message->form_data ?? null) ? $message->form_data : [];
+                    $quoteStatus = strtolower((string) ($quoteMeta['quote_status'] ?? 'active'));
+                    $isVoidedQuote = in_array($quoteStatus, ['void', 'closed'], true);
+                    $isResolvedQuote = in_array($quoteStatus, ['accepted', 'declined'], true);
+
                     // Check if THIS specific quote has been responded to
                     $hasResponse = \App\Models\ChatMessage::where('chat_id', $chat->id)
                         ->where('sender_type', 'user')
@@ -431,8 +436,19 @@
                                     $totalWithShipping = $quotedPrice + $shippingFee;
                                     $defaultQuoteDeliveryType = $userDefaultAddress ? 'delivery' : 'pickup';
                                 @endphp
+
+                                @if($isVoidedQuote)
+                                    <div class="bg-gray-100 border border-gray-300 rounded-lg p-3 mt-3 mx-2 text-sm text-gray-700">
+                                        <p class="font-semibold">This quote is closed/void.</p>
+                                        <p class="text-xs mt-1">A newer quote was sent by support. Please review the latest quote message.</p>
+                                    </div>
+                                @elseif($isResolvedQuote)
+                                    <div class="bg-emerald-50 border border-emerald-300 rounded-lg p-3 mt-3 mx-2 text-sm text-emerald-800">
+                                        <p class="font-semibold">This quote is already {{ $quoteStatus }}.</p>
+                                    </div>
+                                @endif
                                 
-                                @if(!$hasResponse)
+                                @if(!$hasResponse && !$isVoidedQuote && !$isResolvedQuote)
                                     {{-- Shipping Fee & Total Breakdown --}}
                                     <div id="quoteBreakdown-{{ $message->id }}" data-quoted="{{ $quotedPrice }}" data-delivery-fee="{{ $shippingFee }}" data-shipping-label="{{ $shippingLabel }}" data-has-default-address="{{ $userDefaultAddress ? '1' : '0' }}" class="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-4 mt-3 mx-2">
                                         <div class="flex items-start gap-3">

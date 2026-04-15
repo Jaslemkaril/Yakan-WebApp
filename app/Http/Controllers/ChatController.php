@@ -501,6 +501,40 @@ class ChatController extends Controller
             'delivery_type' => 'nullable|in:delivery,pickup',
         ]);
 
+        $quoteMessage = ChatMessage::where('id', $validated['quote_message_id'])
+            ->where('chat_id', $chat->id)
+            ->where('sender_type', 'admin')
+            ->first();
+
+        if (!$quoteMessage || !str_contains(strtoupper((string) $quoteMessage->message), 'PRICE QUOTE')) {
+            return $this->redirectWithToken('chats.show', $chat)
+                ->with('error', 'The selected quote is invalid.');
+        }
+
+        $selectedQuoteData = is_array($quoteMessage->form_data) ? $quoteMessage->form_data : [];
+        $selectedQuoteStatus = strtolower((string) ($selectedQuoteData['quote_status'] ?? 'active'));
+
+        if (in_array($selectedQuoteStatus, ['void', 'closed'], true)) {
+            return $this->redirectWithToken('chats.show', $chat)
+                ->with('error', 'This quote is already closed/void. Please review the latest quote from support.');
+        }
+
+        $latestActiveQuote = ChatMessage::where('chat_id', $chat->id)
+            ->where('sender_type', 'admin')
+            ->where('message', 'like', '%PRICE QUOTE%')
+            ->orderByDesc('created_at')
+            ->get()
+            ->first(function ($msg) {
+                $meta = is_array($msg->form_data) ? $msg->form_data : [];
+                $status = strtolower((string) ($meta['quote_status'] ?? 'active'));
+                return !in_array($status, ['void', 'closed', 'accepted', 'declined'], true);
+            });
+
+        if ($latestActiveQuote && (int) $latestActiveQuote->id !== (int) $quoteMessage->id) {
+            return $this->redirectWithToken('chats.show', $chat)
+                ->with('error', 'This quote has been replaced. Please respond to the latest quote.');
+        }
+
         $response = $validated['response'];
         $emoji = $response === 'accepted' ? '✅' : '❌';
         $action = $response === 'accepted' ? 'accepted' : 'declined';
@@ -516,9 +550,17 @@ class ChatController extends Controller
             'message' => $message,
         ]);
 
+        // Persist status on the quote itself for auditability and UI state.
+        $quoteMeta = is_array($quoteMessage->form_data) ? $quoteMessage->form_data : [];
+        $quoteMeta['quote_status'] = $response;
+        $quoteMeta['responded_at'] = now()->toISOString();
+        $quoteMeta['response_message_id'] = $responseMessage->id;
+        $quoteMeta['responded_by_user_id'] = auth()->id();
+        $quoteMessage->form_data = $quoteMeta;
+        $quoteMessage->save();
+
         // If accepted, create order (Pending Payment status)
         if ($response === 'accepted') {
-            $quoteMessage = ChatMessage::find($validated['quote_message_id']);
             $selectedDeliveryType = strtolower((string) ($validated['delivery_type'] ?? 'delivery'));
             if (!in_array($selectedDeliveryType, ['delivery', 'pickup'], true)) {
                 $selectedDeliveryType = 'delivery';

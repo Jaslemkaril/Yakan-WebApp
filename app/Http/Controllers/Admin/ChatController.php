@@ -117,7 +117,43 @@ class ChatController extends Controller
             $messageData['image_path'] = $storedPath;
         }
 
-        ChatMessage::create($messageData);
+        $newMessage = ChatMessage::create($messageData);
+
+        // If this reply is a price quote, close/void older active quotes in this chat.
+        $isPriceQuote = str_contains(strtoupper((string) $validated['message']), 'PRICE QUOTE');
+        if ($isPriceQuote) {
+            $nowIso = now()->toISOString();
+
+            $newQuoteData = is_array($newMessage->form_data) ? $newMessage->form_data : [];
+            $newQuoteData['quote_status'] = 'active';
+            $newQuoteData['quoted_at'] = $nowIso;
+            $newMessage->form_data = $newQuoteData;
+            $newMessage->save();
+
+            $previousQuotes = ChatMessage::where('chat_id', $chat->id)
+                ->where('sender_type', 'admin')
+                ->where('id', '!=', $newMessage->id)
+                ->where('message', 'like', '%PRICE QUOTE%')
+                ->get();
+
+            foreach ($previousQuotes as $previousQuote) {
+                $quoteData = is_array($previousQuote->form_data) ? $previousQuote->form_data : [];
+                $currentStatus = strtolower((string) ($quoteData['quote_status'] ?? 'active'));
+
+                // Keep historical outcomes intact.
+                if (in_array($currentStatus, ['accepted', 'declined', 'void', 'closed'], true)) {
+                    continue;
+                }
+
+                $quoteData['quote_status'] = 'void';
+                $quoteData['voided_at'] = $nowIso;
+                $quoteData['void_reason'] = 'Replaced by a newer quote';
+                $quoteData['replaced_by_quote_message_id'] = $newMessage->id;
+                $previousQuote->form_data = $quoteData;
+                $previousQuote->save();
+            }
+        }
+
         $chat->update(['updated_at' => now(), 'status' => 'open']); // Set status to open when admin replies
 
         if ($request->expectsJson()) {

@@ -401,6 +401,46 @@ class ChatController extends Controller
                 ], 404);
             }
 
+            $quoteMessage = ChatMessage::where('id', $request->quote_message_id)
+                ->where('chat_id', $chat->id)
+                ->where('sender_type', 'admin')
+                ->first();
+
+            if (!$quoteMessage || !str_contains(strtoupper((string) $quoteMessage->message), 'PRICE QUOTE')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The selected quote is invalid',
+                ], 422);
+            }
+
+            $selectedQuoteData = is_array($quoteMessage->form_data) ? $quoteMessage->form_data : [];
+            $selectedQuoteStatus = strtolower((string) ($selectedQuoteData['quote_status'] ?? 'active'));
+
+            if (in_array($selectedQuoteStatus, ['void', 'closed'], true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This quote is already closed/void. Please review the latest quote.',
+                ], 422);
+            }
+
+            $latestActiveQuote = ChatMessage::where('chat_id', $chat->id)
+                ->where('sender_type', 'admin')
+                ->where('message', 'like', '%PRICE QUOTE%')
+                ->orderByDesc('created_at')
+                ->get()
+                ->first(function ($msg) {
+                    $meta = is_array($msg->form_data) ? $msg->form_data : [];
+                    $status = strtolower((string) ($meta['quote_status'] ?? 'active'));
+                    return !in_array($status, ['void', 'closed', 'accepted', 'declined'], true);
+                });
+
+            if ($latestActiveQuote && (int) $latestActiveQuote->id !== (int) $quoteMessage->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This quote has been replaced. Please respond to the latest quote.',
+                ], 422);
+            }
+
             $response = $request->response;
             $emoji = $response === 'accepted' ? '✅' : '❌';
             $action = $response === 'accepted' ? 'accepted' : 'declined';
@@ -415,6 +455,14 @@ class ChatController extends Controller
                 'sender_type' => 'user',
                 'message' => $message,
             ]);
+
+            $quoteMeta = is_array($quoteMessage->form_data) ? $quoteMessage->form_data : [];
+            $quoteMeta['quote_status'] = $response;
+            $quoteMeta['responded_at'] = now()->toISOString();
+            $quoteMeta['response_message_id'] = $chatMessage->id;
+            $quoteMeta['responded_by_user_id'] = $user->id;
+            $quoteMessage->form_data = $quoteMeta;
+            $quoteMessage->save();
 
             $chat->update(['updated_at' => now()]);
 
