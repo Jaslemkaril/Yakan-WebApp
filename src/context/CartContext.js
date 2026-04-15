@@ -21,6 +21,24 @@ export const CartProvider = ({ children }) => {
   const [userInfo, setUserInfo] = useState(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
+  const normalizeUserData = (rawResponseData) => {
+    // Supports shapes like:
+    // { id, ... }, { user: { ... }, token }, { data: { ... } }, { data: { user: { ... } } }
+    const container = rawResponseData?.data || rawResponseData;
+    const candidate = container?.user || rawResponseData?.user || container;
+
+    if (!candidate || typeof candidate !== 'object') {
+      return null;
+    }
+
+    const normalized = { ...candidate };
+    if (!normalized.name && normalized.first_name && normalized.last_name) {
+      normalized.name = `${normalized.first_name} ${normalized.last_name}`.trim();
+    }
+
+    return normalized;
+  };
+
   // Initialize auth on app startup
   useEffect(() => {
     initializeAuth();
@@ -44,19 +62,19 @@ export const CartProvider = ({ children }) => {
           const response = await ApiService.getCurrentUser();
           console.log('[Auth] getCurrentUser response:', JSON.stringify(response, null, 2));
           if (response.success) {
-            // Extract user data - check if it's nested in response.data.data or response.data
-            let userData = response.data?.data || response.data?.user || response.data;
+            const userData = normalizeUserData(response.data);
             console.log('[Auth] Extracted user data:', JSON.stringify(userData, null, 2));
-            
-            // Ensure we have the name field
-            if (!userData.name && userData.first_name && userData.last_name) {
-              userData.name = `${userData.first_name} ${userData.last_name}`;
-              console.log('[Auth] Created name from first_name + last_name:', userData.name);
+
+            if (userData && (userData.id || userData.email || userData.name || userData.first_name)) {
+              console.log('[Auth] Final user data to set:', JSON.stringify(userData, null, 2));
+              setUserInfo(userData);
+              setIsLoggedIn(true);
+            } else {
+              console.warn('[Auth] Invalid user payload shape, clearing token');
+              await AsyncStorage.removeItem('authToken');
+              setUserInfo(null);
+              setIsLoggedIn(false);
             }
-            
-            console.log('[Auth] Final user data to set:', JSON.stringify(userData, null, 2));
-            setUserInfo(userData);
-            setIsLoggedIn(true);
           } else {
             // Token invalid, clear it
             console.log('[Auth] Token invalid, clearing');
@@ -276,15 +294,13 @@ export const CartProvider = ({ children }) => {
       
       if (response.success) {
         console.log('[CartContext] Login successful, setting user info');
-        // Handle nested response structures: response.data.data or response.data.user or response.data
-        let userData = response.data?.data || response.data?.user || response.data;
+        const userData = normalizeUserData(response.data);
         console.log('[CartContext] Extracted user data:', JSON.stringify(userData, null, 2));
-        
-        // Ensure we have the name field
-        if (!userData.name && userData.first_name && userData.last_name) {
-          userData.name = `${userData.first_name} ${userData.last_name}`;
+
+        if (!userData || (!userData.id && !userData.email)) {
+          return { success: false, message: 'Login succeeded but user data is invalid. Please try again.' };
         }
-        
+
         console.log('[CartContext] Final user data to set:', JSON.stringify(userData, null, 2));
         setUserInfo(userData);
         setIsLoggedIn(true);
@@ -294,9 +310,11 @@ export const CartProvider = ({ children }) => {
           const userResponse = await ApiService.getCurrentUser();
           console.log('[CartContext] Fresh user data response:', JSON.stringify(userResponse, null, 2));
           if (userResponse.success) {
-            const freshUserData = userResponse.data?.data || userResponse.data?.user || userResponse.data;
+            const freshUserData = normalizeUserData(userResponse.data);
             console.log('[CartContext] Fresh user data:', JSON.stringify(freshUserData, null, 2));
-            setUserInfo(freshUserData);
+            if (freshUserData) {
+              setUserInfo(freshUserData);
+            }
           }
         } catch (error) {
           console.error('[CartContext] Error fetching fresh user data:', error);
@@ -386,6 +404,10 @@ export const CartProvider = ({ children }) => {
         const resend = await ApiService.resendOtp(normalizedEmail);
 
         if (resend.success) {
+            await ApiService.clearToken();
+            setUserInfo(null);
+            setIsLoggedIn(false);
+
           return {
             success: true,
             requiresOtp: true,

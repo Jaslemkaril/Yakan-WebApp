@@ -162,7 +162,7 @@ const AccountScreen = ({ navigation }) => {
                ? `${userInfo?.data?.first_name || userInfo?.first_name} ${userInfo?.data?.last_name || userInfo?.last_name}` 
                : (userInfo?.data?.first_name || userInfo?.first_name) || (userInfo?.data?.last_name || userInfo?.last_name) || 'User')}
           </Text>
-          <Text style={styles.userEmail}>{userInfo?.data?.email || userInfo?.email || 'email@example.com'}</Text>
+          <Text style={styles.userEmail}>{userInfo?.data?.email || userInfo?.email || 'No email found'}</Text>
           
           {isLoading && <Text style={styles.loadingText}>Loading...</Text>}
           
