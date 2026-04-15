@@ -9,6 +9,8 @@ use App\Models\Category;
 use App\Services\CloudinaryService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
+use App\Models\ProductBundleItem;
 
 class ProductController extends Controller
 {
@@ -17,7 +19,7 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::with('category');
+        $query = Product::with('category')->withCount('bundleItems');
 
         if ($request->filled('search')) {
             $term = '%' . $request->search . '%';
@@ -82,7 +84,9 @@ class ProductController extends Controller
     public function create()
     {
         $categories = \App\Models\Category::orderBy('name')->get();
-        return view('admin.products.create', compact('categories'));
+        $bundleComponents = Product::orderBy('name')->get(['id', 'name', 'price', 'stock']);
+
+        return view('admin.products.create', compact('categories', 'bundleComponents'));
     }
 
     /**
@@ -104,7 +108,15 @@ class ProductController extends Controller
             'category_id' => 'nullable|exists:categories,id',
             'available_sizes' => 'nullable|json',
             'available_colors' => 'nullable|json',
+            'is_bundle' => 'nullable|boolean',
+            'bundle_items' => 'nullable|array',
+            'bundle_items.*.product_id' => 'nullable|integer|exists:products,id',
+            'bundle_items.*.quantity' => 'nullable|integer|min:1',
         ]);
+
+        $isBundle = $request->boolean('is_bundle');
+        $bundleItems = $this->sanitizeBundleItems($request->input('bundle_items', []));
+        $this->validateBundleItems($bundleItems, $isBundle);
 
         // Handle multiple image uploads with color associations
         $imagePath = null;
@@ -176,6 +188,8 @@ class ProductController extends Controller
             $product->update(['all_images' => json_encode($allImages)]);
         }
 
+        $this->syncBundleItems($product, $bundleItems, $isBundle);
+
         // Ensure session is saved before redirect
         $request->session()->save();
         
@@ -195,7 +209,11 @@ class ProductController extends Controller
         // Clear product API cache so mobile app sees the new product immediately
         Cache::flush();
 
-        return redirect($redirectUrl)->with('success', 'Product created successfully with ' . count($allImages) . ' image(s).');
+        $successMessage = $isBundle
+            ? 'Bundle created successfully with ' . count($bundleItems) . ' item(s).'
+            : 'Product created successfully with ' . count($allImages) . ' image(s).';
+
+        return redirect($redirectUrl)->with('success', $successMessage);
     }
 
     /**
@@ -212,8 +230,11 @@ class ProductController extends Controller
      */
     public function edit(string $id)
     {
-        $product = Product::with('category')->findOrFail($id);
+        $product = Product::with(['category', 'bundleItems.componentProduct'])->findOrFail($id);
         $categories = \App\Models\Category::orderBy('name')->get();
+        $bundleComponents = Product::where('id', '!=', $product->id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'price', 'stock']);
 
         // Stock logs grouped for display (guard against missing table during migration)
         $stockLogs   = collect();
@@ -237,7 +258,7 @@ class ProductController extends Controller
             $recentLogs = $stockLogs->take(15);
         }
 
-        return view('admin.products.edit', compact('product', 'categories', 'stockLogs', 'today', 'thisWeek', 'thisYear', 'overall', 'recentLogs'));
+        return view('admin.products.edit', compact('product', 'categories', 'bundleComponents', 'stockLogs', 'today', 'thisWeek', 'thisYear', 'overall', 'recentLogs'));
     }
 
 
@@ -262,7 +283,15 @@ class ProductController extends Controller
             'available_sizes' => 'nullable|json',
             'available_colors' => 'nullable|json',
             'delete_images' => 'nullable|json',
+            'is_bundle' => 'nullable|boolean',
+            'bundle_items' => 'nullable|array',
+            'bundle_items.*.product_id' => 'nullable|integer|exists:products,id',
+            'bundle_items.*.quantity' => 'nullable|integer|min:1',
         ]);
+
+        $isBundle = $request->boolean('is_bundle');
+        $bundleItems = $this->sanitizeBundleItems($request->input('bundle_items', []));
+        $this->validateBundleItems($bundleItems, $isBundle, $product->id);
 
         // Handle image deletions
         $allImages = $product->all_images ?? [];
@@ -372,6 +401,8 @@ class ProductController extends Controller
             'all_images' => !empty($allImages) ? json_encode($allImages) : null,
         ]);
 
+        $this->syncBundleItems($product, $bundleItems, $isBundle);
+
         $imageCount = count($allImages);
         $deletedCount = count($imagesToDelete);
         $message = "Product updated successfully";
@@ -402,6 +433,72 @@ class ProductController extends Controller
         Cache::flush();
 
         return redirect($redirectUrl)->with('success', $message . '.');
+    }
+
+    private function sanitizeBundleItems(array $rawItems): array
+    {
+        return collect($rawItems)
+            ->filter(function ($item) {
+                return is_array($item)
+                    && !empty($item['product_id'])
+                    && !empty($item['quantity']);
+            })
+            ->map(function ($item) {
+                return [
+                    'product_id' => (int) $item['product_id'],
+                    'quantity' => (int) $item['quantity'],
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function validateBundleItems(array $bundleItems, bool $isBundle, ?int $currentProductId = null): void
+    {
+        if (!$isBundle) {
+            return;
+        }
+
+        if (empty($bundleItems)) {
+            throw ValidationException::withMessages([
+                'bundle_items' => 'Add at least one product to create a bundle.',
+            ]);
+        }
+
+        $productIds = collect($bundleItems)->pluck('product_id');
+        if ($productIds->count() !== $productIds->unique()->count()) {
+            throw ValidationException::withMessages([
+                'bundle_items' => 'Bundle items must be unique. Remove duplicate products.',
+            ]);
+        }
+
+        if ($currentProductId !== null && $productIds->contains($currentProductId)) {
+            throw ValidationException::withMessages([
+                'bundle_items' => 'A bundle cannot include itself as one of its items.',
+            ]);
+        }
+    }
+
+    private function syncBundleItems(Product $product, array $bundleItems, bool $isBundle): void
+    {
+        ProductBundleItem::where('bundle_product_id', $product->id)->delete();
+
+        if (!$isBundle || empty($bundleItems)) {
+            return;
+        }
+
+        $now = now();
+        $rows = collect($bundleItems)->map(function ($item) use ($product, $now) {
+            return [
+                'bundle_product_id' => $product->id,
+                'product_id' => $item['product_id'],
+                'quantity' => $item['quantity'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        })->all();
+
+        ProductBundleItem::insert($rows);
     }
 
     /**

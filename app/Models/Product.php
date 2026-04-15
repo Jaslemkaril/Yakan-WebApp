@@ -67,6 +67,16 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function bundleItems(): HasMany
+    {
+        return $this->hasMany(ProductBundleItem::class, 'bundle_product_id');
+    }
+
+    public function bundledInItems(): HasMany
+    {
+        return $this->hasMany(ProductBundleItem::class, 'product_id');
+    }
+
     public function inventory(): HasOne
     {
         return $this->hasOne(Inventory::class);
@@ -146,6 +156,19 @@ class Product extends Model
             ];
         }
         return $breakdown;
+    }
+
+    public function getIsBundleAttribute(): bool
+    {
+        if (array_key_exists('bundle_items_count', $this->attributes)) {
+            return (int) $this->attributes['bundle_items_count'] > 0;
+        }
+
+        if ($this->relationLoaded('bundleItems')) {
+            return $this->bundleItems->isNotEmpty();
+        }
+
+        return $this->bundleItems()->exists();
     }
 
     public function canBeReviewedBy(User $user): bool

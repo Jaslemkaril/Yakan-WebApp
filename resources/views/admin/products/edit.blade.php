@@ -22,6 +22,16 @@ use Illuminate\Support\Facades\Storage;
 
 <div class="max-w-3xl mx-auto p-6 bg-white shadow rounded-lg">
 
+    @php
+        $isBundleForm = (bool) old('is_bundle', $product->bundleItems->isNotEmpty());
+        $initialBundleItems = old('bundle_items', $product->bundleItems->map(function ($item) {
+            return [
+                'product_id' => $item->product_id,
+                'quantity' => $item->quantity,
+            ];
+        })->toArray());
+    @endphp
+
     @if ($errors->any())
         <div class="mb-4 p-4 border border-red-200 bg-red-50 rounded-lg">
             <ul class="list-disc list-inside text-sm text-red-700">
@@ -363,6 +373,50 @@ use Illuminate\Support\Facades\Storage;
                 class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#800000]">{{ old('description', $product->description) }}</textarea>
         </div>
 
+        <!-- Bundle Builder -->
+        <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+            <label class="inline-flex items-center gap-2 font-medium text-gray-800">
+                <input type="checkbox" id="isBundleCheckbox" name="is_bundle" value="1" {{ $isBundleForm ? 'checked' : '' }} class="rounded border-gray-300 text-[#800000] focus:ring-[#800000]">
+                This product is a bundle
+            </label>
+            <p class="text-sm text-amber-900">Bundle products combine existing products with specific quantities.</p>
+
+            <div id="bundleBuilder" class="space-y-3 {{ $isBundleForm ? '' : 'hidden' }}">
+                <div id="bundleItemsContainer" class="space-y-2">
+                    @foreach($initialBundleItems as $index => $bundleItem)
+                        <div class="bundle-item-row grid grid-cols-12 gap-2 items-center rounded-lg bg-white border border-amber-100 p-2">
+                            <div class="col-span-7">
+                                <select name="bundle_items[{{ $index }}][product_id]" class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                                    <option value="">Select product</option>
+                                    @foreach($bundleComponents as $component)
+                                        <option value="{{ $component->id }}" {{ (string) ($bundleItem['product_id'] ?? '') === (string) $component->id ? 'selected' : '' }}>
+                                            {{ $component->name }} (P{{ number_format($component->price, 2) }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-span-3">
+                                <input type="number" name="bundle_items[{{ $index }}][quantity]" min="1" value="{{ $bundleItem['quantity'] ?? 1 }}" class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]" placeholder="Qty">
+                            </div>
+                            <div class="col-span-2 text-right">
+                                <button type="button" class="remove-bundle-item px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                <button type="button" id="addBundleItemBtn" class="inline-flex items-center px-3 py-2 bg-amber-100 text-amber-900 rounded-lg hover:bg-amber-200 text-sm font-medium">
+                    <i class="fas fa-plus mr-2"></i>Add Bundle Item
+                </button>
+
+                @error('bundle_items')
+                    <p class="text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+        </div>
+
         <!-- Professional Image Upload Section -->
         <div class="border-2 border-dashed rounded-lg p-6" style="border-color: #800000;">
             <label class="block font-bold text-gray-900 mb-4 text-lg">
@@ -585,6 +639,85 @@ use Illuminate\Support\Facades\Storage;
             input.value = '';
             uploadedImages[index] = null;
         }
+
+        (function () {
+            const isBundleCheckbox = document.getElementById('isBundleCheckbox');
+            const bundleBuilder = document.getElementById('bundleBuilder');
+            const bundleItemsContainer = document.getElementById('bundleItemsContainer');
+            const addBundleItemBtn = document.getElementById('addBundleItemBtn');
+
+            let bundleIndex = {{ is_array($initialBundleItems) ? count($initialBundleItems) : 0 }};
+
+            const bundleOptionsHtml = `
+                <option value="">Select product</option>
+                @foreach($bundleComponents as $component)
+                    <option value="{{ $component->id }}">{{ addslashes($component->name) }} (P{{ number_format($component->price, 2) }})</option>
+                @endforeach
+            `;
+
+            function toggleBundleBuilder() {
+                if (!isBundleCheckbox || !bundleBuilder) {
+                    return;
+                }
+
+                if (isBundleCheckbox.checked) {
+                    bundleBuilder.classList.remove('hidden');
+                    if (!bundleItemsContainer.querySelector('.bundle-item-row')) {
+                        addBundleItemRow();
+                    }
+                } else {
+                    bundleBuilder.classList.add('hidden');
+                }
+            }
+
+            function addBundleItemRow() {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'bundle-item-row grid grid-cols-12 gap-2 items-center rounded-lg bg-white border border-amber-100 p-2';
+                wrapper.innerHTML = `
+                    <div class="col-span-7">
+                        <select name="bundle_items[${bundleIndex}][product_id]" class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                            ${bundleOptionsHtml}
+                        </select>
+                    </div>
+                    <div class="col-span-3">
+                        <input type="number" name="bundle_items[${bundleIndex}][quantity]" min="1" value="1" class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]" placeholder="Qty">
+                    </div>
+                    <div class="col-span-2 text-right">
+                        <button type="button" class="remove-bundle-item px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+
+                bundleItemsContainer.appendChild(wrapper);
+                bundleIndex += 1;
+            }
+
+            if (addBundleItemBtn) {
+                addBundleItemBtn.addEventListener('click', addBundleItemRow);
+            }
+
+            if (bundleItemsContainer) {
+                bundleItemsContainer.addEventListener('click', function (event) {
+                    const removeBtn = event.target.closest('.remove-bundle-item');
+                    if (!removeBtn) {
+                        return;
+                    }
+
+                    const rows = bundleItemsContainer.querySelectorAll('.bundle-item-row');
+                    if (rows.length === 1 && isBundleCheckbox?.checked) {
+                        return;
+                    }
+
+                    removeBtn.closest('.bundle-item-row')?.remove();
+                });
+            }
+
+            if (isBundleCheckbox) {
+                isBundleCheckbox.addEventListener('change', toggleBundleBuilder);
+                toggleBundleBuilder();
+            }
+        })();
         </script>
 
         <!-- Status -->
