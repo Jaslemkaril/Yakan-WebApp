@@ -5,6 +5,7 @@
     <div class="max-w-6xl mx-auto">
         @php
             $canCancelOrder = in_array(strtolower((string) $order->status), ['pending', 'pending_confirmation', 'confirmed', 'processing'], true);
+            $showCancelForm = $errors->has('cancel_reason') || !empty(old('cancel_reason'));
         @endphp
         <!-- Header -->
         <div class="mb-8">
@@ -16,12 +17,12 @@
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
                     @if($canCancelOrder)
-                        <a href="#cancel-order-card" class="inline-flex items-center justify-center px-5 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all duration-300 shadow-md">
+                        <button id="cancel-order-toggle" type="button" class="inline-flex items-center justify-center px-5 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all duration-300 shadow-md">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                             </svg>
                             Cancel Order
-                        </a>
+                        </button>
                     @endif
 
                     <a href="{{ route('orders.index') }}" class="inline-flex items-center justify-center px-6 py-3 bg-[#800000] text-white font-semibold rounded-lg hover:bg-[#600000] transition-all duration-300 shadow-md">
@@ -83,7 +84,7 @@
 
         <!-- Customer Action Buttons -->
         @if($canCancelOrder)
-        <div id="cancel-order-card" class="mb-8 bg-white rounded-xl shadow-md p-6 border border-gray-200">
+        <div id="cancel-order-card" class="mb-8 bg-white rounded-xl shadow-md p-6 border border-gray-200 {{ $showCancelForm ? '' : 'hidden' }}">
             <h3 class="text-lg font-bold text-gray-900 mb-4">Cancel Order</h3>
             <form method="POST" action="{{ route('orders.cancel', $order) }}" onsubmit="return confirm('Are you sure you want to cancel this order?')">
                 @csrf
@@ -91,14 +92,14 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Reason for Cancellation <span class="text-red-600">*</span></label>
                     <select name="cancel_reason" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent">
                         <option value="">-- Select a reason --</option>
-                        <option value="Changed my mind">Changed my mind</option>
-                        <option value="Found a better price elsewhere">Found a better price elsewhere</option>
-                        <option value="Ordered by mistake">Ordered by mistake</option>
-                        <option value="Delivery takes too long">Delivery takes too long</option>
-                        <option value="Duplicate order">Duplicate order</option>
-                        <option value="Want to change items">Want to change items</option>
-                        <option value="Financial reasons">Financial reasons</option>
-                        <option value="Other">Other</option>
+                        <option value="Changed my mind" {{ old('cancel_reason') === 'Changed my mind' ? 'selected' : '' }}>Changed my mind</option>
+                        <option value="Found a better price elsewhere" {{ old('cancel_reason') === 'Found a better price elsewhere' ? 'selected' : '' }}>Found a better price elsewhere</option>
+                        <option value="Ordered by mistake" {{ old('cancel_reason') === 'Ordered by mistake' ? 'selected' : '' }}>Ordered by mistake</option>
+                        <option value="Delivery takes too long" {{ old('cancel_reason') === 'Delivery takes too long' ? 'selected' : '' }}>Delivery takes too long</option>
+                        <option value="Duplicate order" {{ old('cancel_reason') === 'Duplicate order' ? 'selected' : '' }}>Duplicate order</option>
+                        <option value="Want to change items" {{ old('cancel_reason') === 'Want to change items' ? 'selected' : '' }}>Want to change items</option>
+                        <option value="Financial reasons" {{ old('cancel_reason') === 'Financial reasons' ? 'selected' : '' }}>Financial reasons</option>
+                        <option value="Other" {{ old('cancel_reason') === 'Other' ? 'selected' : '' }}>Other</option>
                     </select>
                 </div>
                 <button type="submit" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all flex items-center gap-2">
@@ -791,6 +792,17 @@ function hasRefundVideoEvidence(files) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    const cancelOrderToggle = document.getElementById('cancel-order-toggle');
+    const cancelOrderCard = document.getElementById('cancel-order-card');
+    if (cancelOrderToggle && cancelOrderCard) {
+        cancelOrderToggle.addEventListener('click', function() {
+            cancelOrderCard.classList.toggle('hidden');
+            if (!cancelOrderCard.classList.contains('hidden')) {
+                cancelOrderCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    }
+
     const refundToggle = document.getElementById('refund-toggle');
     const refundFormWrap = document.getElementById('refund-form-wrap');
     if (refundToggle && refundFormWrap) {
