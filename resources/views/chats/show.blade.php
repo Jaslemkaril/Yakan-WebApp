@@ -817,6 +817,45 @@
                                             </div>
                                         </div>
                                     @endif
+
+                                    @if($chatOrder && $chatOrder->status === 'completed')
+                                        @php
+                                            $chatCustomRefundRequest = null;
+                                            if (\Illuminate\Support\Facades\Schema::hasTable('custom_order_refund_requests')) {
+                                                $chatCustomRefundRequest = \App\Models\CustomOrderRefundRequest::where('custom_order_id', $chatOrder->id)
+                                                    ->where('user_id', auth()->id())
+                                                    ->latest()
+                                                    ->first();
+                                            }
+                                            $chatCustomRefundLink = route('custom_orders.show', array_filter([
+                                                'order' => $chatOrder->id,
+                                                'auth_token' => request('auth_token'),
+                                            ])) . '#custom-refund-section';
+                                        @endphp
+
+                                        <div class="mt-4 bg-gradient-to-br from-red-50 to-rose-50 rounded-2xl p-5 shadow-md border-2 border-red-200">
+                                            <div class="flex items-center justify-between gap-3 mb-2">
+                                                <p class="text-sm font-bold text-gray-900">Need a refund or return for this custom order?</p>
+                                                @if($chatCustomRefundRequest)
+                                                    @php
+                                                        $chatReqClass = match($chatCustomRefundRequest->status) {
+                                                            'requested' => 'bg-yellow-100 text-yellow-800',
+                                                            'under_review' => 'bg-blue-100 text-blue-800',
+                                                            'approved' => 'bg-indigo-100 text-indigo-800',
+                                                            'processed' => 'bg-green-100 text-green-800',
+                                                            'rejected' => 'bg-red-100 text-red-800',
+                                                            default => 'bg-gray-100 text-gray-800',
+                                                        };
+                                                    @endphp
+                                                    <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $chatReqClass }}">{{ ucfirst(str_replace('_', ' ', $chatCustomRefundRequest->status)) }}</span>
+                                                @endif
+                                            </div>
+                                            <p class="text-xs text-gray-600 mb-3">Open the order page to submit or check your request details.</p>
+                                            <a href="{{ $chatCustomRefundLink }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-semibold bg-[#8B0000] hover:bg-[#6B0000] transition-colors">
+                                                Open Refund / Return Section
+                                            </a>
+                                        </div>
+                                    @endif
                                 @else
                                     {{-- Debug: Order not found --}}
                                     <div class="mt-4 bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4">

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Mail\CustomOrder\PaymentReceipt as CustomOrderPaymentReceipt;
 use App\Models\CustomOrder;
+use App\Models\CustomOrderRefundRequest;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\YakanPattern;
@@ -2910,7 +2911,33 @@ class CustomOrderController extends Controller
             );
             $displayOrderTotal = $this->calculateOrderDisplayTotalWithShipping($order);
 
-            return view('custom_orders.show', compact('order', 'batchOrders', 'isBatchOrder', 'batchPaymentTotal', 'displayOrderTotal'));
+            $customRefundRequest = null;
+            $canRequestCustomRefund = false;
+            $customRefundWarrantyDays = $order->getRefundWarrantyDays();
+            $customRefundWarrantyDeadline = $order->getRefundWarrantyDeadline();
+            $isCustomRefundWarrantyExpired = $order->status === 'completed' && !$order->isRefundWithinWarranty();
+
+            if (\Schema::hasTable('custom_order_refund_requests')) {
+                $customRefundRequest = CustomOrderRefundRequest::where('custom_order_id', $order->id)
+                    ->where('user_id', auth()->id())
+                    ->latest()
+                    ->first();
+            }
+
+            $canRequestCustomRefund = $order->canRequestRefund() && (int) $order->user_id === (int) auth()->id();
+
+            return view('custom_orders.show', compact(
+                'order',
+                'batchOrders',
+                'isBatchOrder',
+                'batchPaymentTotal',
+                'displayOrderTotal',
+                'customRefundRequest',
+                'canRequestCustomRefund',
+                'customRefundWarrantyDays',
+                'customRefundWarrantyDeadline',
+                'isCustomRefundWarrantyExpired'
+            ));
             
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             \Log::error('CustomOrder not found', [
@@ -4951,6 +4978,135 @@ class CustomOrderController extends Controller
             
             return $this->redirectToRouteWithToken('custom_orders.show', $order)
                 ->with('error', 'An error occurred. Please try again.');
+        }
+    }
+
+    /**
+     * Submit a refund/return request for a completed custom order.
+     */
+    public function requestRefund(Request $request, CustomOrder $order)
+    {
+        if ((int) $order->user_id !== (int) auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $this->ensureCustomRefundRequestsTableExists();
+        if (!\Schema::hasTable('custom_order_refund_requests')) {
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                ->with('error', 'Refund/return feature is not ready yet. Please try again shortly.');
+        }
+
+        if (strtolower((string) $order->status) !== 'completed') {
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                ->with('error', 'You can request refund/return only after confirming order received.');
+        }
+
+        if (!$order->isRefundWithinWarranty()) {
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                ->with('error', 'Refund/return window expired. Requests are only allowed within ' . $order->getRefundWarrantyDays() . ' days after completion.');
+        }
+
+        $activeStatuses = ['requested', 'under_review', 'approved', 'processed'];
+        $existing = CustomOrderRefundRequest::where('custom_order_id', $order->id)
+            ->where('user_id', auth()->id())
+            ->whereIn('status', $activeStatuses)
+            ->latest()
+            ->first();
+
+        if ($existing) {
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                ->with('error', 'A refund/return request for this custom order is already in progress.');
+        }
+
+        $validated = $request->validate([
+            'request_type' => 'required|in:refund,return',
+            'reason' => 'required|string|max:150',
+            'details' => 'required|string|max:2000',
+            'evidence' => 'required|array|min:1|max:5',
+            'evidence.*' => 'required|file|mimes:jpg,jpeg,png,webp,pdf|max:5120',
+        ]);
+
+        $evidencePaths = [];
+        if ($request->hasFile('evidence')) {
+            foreach ($request->file('evidence', []) as $file) {
+                $evidencePaths[] = $file->store('custom-refunds/order-' . $order->id, 'public');
+            }
+        }
+
+        CustomOrderRefundRequest::create([
+            'custom_order_id' => $order->id,
+            'user_id' => auth()->id(),
+            'request_type' => $validated['request_type'],
+            'reason' => $validated['reason'],
+            'details' => $validated['details'],
+            'evidence_paths' => $evidencePaths,
+            'status' => 'requested',
+            'requested_at' => now(),
+        ]);
+
+        return $this->redirectToRouteWithToken('custom_orders.show', $order)
+            ->with('success', ucfirst($validated['request_type']) . ' request submitted. Our team will review it shortly.');
+    }
+
+    /**
+     * Serve custom-order refund evidence for the requesting customer.
+     */
+    public function viewRefundEvidence(CustomOrderRefundRequest $refundRequest, int $index)
+    {
+        if ((int) $refundRequest->user_id !== (int) auth()->id()) {
+            abort(403);
+        }
+
+        $evidence = is_array($refundRequest->evidence_paths ?? null) ? $refundRequest->evidence_paths : [];
+        if (!array_key_exists($index, $evidence)) {
+            abort(404);
+        }
+
+        $path = (string) $evidence[$index];
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return redirect()->away($path);
+        }
+
+        if (Storage::disk('public')->exists($path)) {
+            return Storage::disk('public')->response($path);
+        }
+
+        abort(404);
+    }
+
+    /**
+     * Ensure custom-order refund requests table exists for lagging deployments.
+     */
+    private function ensureCustomRefundRequestsTableExists(): void
+    {
+        if (\Schema::hasTable('custom_order_refund_requests')) {
+            return;
+        }
+
+        try {
+            \Schema::create('custom_order_refund_requests', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $table->id();
+                $table->foreignId('custom_order_id')->constrained('custom_orders')->cascadeOnDelete();
+                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+                $table->enum('request_type', ['refund', 'return'])->default('refund');
+                $table->string('reason', 150);
+                $table->text('details')->nullable();
+                $table->json('evidence_paths')->nullable();
+                $table->enum('status', ['requested', 'under_review', 'approved', 'rejected', 'processed'])->default('requested');
+                $table->text('admin_note')->nullable();
+                $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->timestamp('requested_at')->nullable();
+                $table->timestamp('reviewed_at')->nullable();
+                $table->timestamp('processed_at')->nullable();
+                $table->timestamps();
+
+                $table->index(['custom_order_id', 'status']);
+                $table->index(['user_id', 'status']);
+            });
+        } catch (\Throwable $e) {
+            \Log::warning('Unable to auto-create custom_order_refund_requests table', [
+                'error' => $e->getMessage(),
+            ]);
         }
     }
     

@@ -4,11 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CustomOrder;
+use App\Models\CustomOrderRefundRequest;
 use App\Services\Payment\PayMongoCheckoutService;
 use App\Services\TransactionalMailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 class AdminCustomOrderController extends Controller
 {
@@ -417,6 +421,14 @@ class AdminCustomOrderController extends Controller
     {
         $order->load(['user', 'product']);
 
+        $latestCustomRefundRequest = null;
+        if (Schema::hasTable('custom_order_refund_requests')) {
+            $latestCustomRefundRequest = CustomOrderRefundRequest::with(['user', 'reviewer'])
+                ->where('custom_order_id', $order->id)
+                ->latest()
+                ->first();
+        }
+
         // Load all sibling orders in the same batch so the details view can show them
         $batchOrders = collect();
         $isImplicitBatchGroup = false;
@@ -448,7 +460,75 @@ class AdminCustomOrderController extends Controller
             }
         }
 
-        return view('admin.custom_orders.details', compact('order', 'batchOrders', 'isImplicitBatchGroup'));
+        return view('admin.custom_orders.details', compact('order', 'batchOrders', 'isImplicitBatchGroup', 'latestCustomRefundRequest'));
+    }
+
+    /**
+     * Approve and process a custom-order refund/return request.
+     */
+    public function approveRefundRequest(Request $request, CustomOrderRefundRequest $refundRequest)
+    {
+        $validated = $request->validate([
+            'admin_note' => 'nullable|string|max:2000',
+        ]);
+
+        if (!in_array($refundRequest->status, ['requested', 'under_review'], true)) {
+            return redirect()->back()->with('error', 'This refund/return request can no longer be approved.');
+        }
+
+        $refundRequest->status = 'processed';
+        $refundRequest->admin_note = $validated['admin_note'] ?? $refundRequest->admin_note;
+        $refundRequest->reviewed_by = auth()->id();
+        $refundRequest->reviewed_at = now();
+        $refundRequest->processed_at = now();
+        $refundRequest->save();
+
+        return redirect()->back()->with('success', ucfirst($refundRequest->request_type) . ' request approved and processed.');
+    }
+
+    /**
+     * Reject a custom-order refund/return request.
+     */
+    public function rejectRefundRequest(Request $request, CustomOrderRefundRequest $refundRequest)
+    {
+        $validated = $request->validate([
+            'admin_note' => 'required|string|max:2000',
+        ]);
+
+        if (!in_array($refundRequest->status, ['requested', 'under_review'], true)) {
+            return redirect()->back()->with('error', 'This refund/return request can no longer be rejected.');
+        }
+
+        $refundRequest->status = 'rejected';
+        $refundRequest->admin_note = $validated['admin_note'];
+        $refundRequest->reviewed_by = auth()->id();
+        $refundRequest->reviewed_at = now();
+        $refundRequest->save();
+
+        return redirect()->back()->with('success', ucfirst($refundRequest->request_type) . ' request has been rejected.');
+    }
+
+    /**
+     * Serve custom-order refund evidence for admin preview.
+     */
+    public function viewRefundEvidence(CustomOrderRefundRequest $refundRequest, int $index)
+    {
+        $evidence = is_array($refundRequest->evidence_paths ?? null) ? $refundRequest->evidence_paths : [];
+        if (!array_key_exists($index, $evidence)) {
+            abort(404);
+        }
+
+        $path = (string) $evidence[$index];
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return redirect()->away($path);
+        }
+
+        if (Storage::disk('public')->exists($path)) {
+            return Storage::disk('public')->response($path);
+        }
+
+        Log::warning('Custom-order refund evidence not found', ['path' => $path, 'refund_request_id' => $refundRequest->id]);
+        abort(404);
     }
 
     /**

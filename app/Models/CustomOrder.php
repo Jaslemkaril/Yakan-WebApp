@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 
 class CustomOrder extends Model
 {
@@ -180,6 +182,14 @@ class CustomOrder extends Model
     }
 
     /**
+     * Refund/return requests submitted by the customer for this custom order.
+     */
+    public function refundRequests()
+    {
+        return $this->hasMany(CustomOrderRefundRequest::class);
+    }
+
+    /**
      * Get fabric type relationship
      */
     public function fabricType()
@@ -274,6 +284,74 @@ class CustomOrder extends Model
     public function scopeRecent($query, int $days = 30)
     {
         return $query->where('created_at', '>=', now()->subDays($days));
+    }
+
+    /**
+     * Warranty window for custom-order refund/return requests in days.
+     */
+    public function getRefundWarrantyDays(): int
+    {
+        return max(1, (int) config('orders.refund_warranty_days', 7));
+    }
+
+    /**
+     * Start timestamp used for custom-order refund warranty counting.
+     */
+    public function getRefundWarrantyStartAt(): ?Carbon
+    {
+        return $this->delivered_at ?? $this->updated_at;
+    }
+
+    /**
+     * Deadline until when custom-order refund requests are allowed.
+     */
+    public function getRefundWarrantyDeadline(): ?Carbon
+    {
+        $startAt = $this->getRefundWarrantyStartAt();
+        if (!$startAt) {
+            return null;
+        }
+
+        return $startAt->copy()->addDays($this->getRefundWarrantyDays());
+    }
+
+    /**
+     * Whether this custom order is still inside the warranty window.
+     */
+    public function isRefundWithinWarranty(): bool
+    {
+        if (strtolower((string) $this->status) !== 'completed') {
+            return false;
+        }
+
+        $deadline = $this->getRefundWarrantyDeadline();
+        if (!$deadline) {
+            return false;
+        }
+
+        return now()->lte($deadline);
+    }
+
+    /**
+     * Determine if this custom order can accept a new refund/return request.
+     */
+    public function canRequestRefund(): bool
+    {
+        if (strtolower((string) $this->status) !== 'completed') {
+            return false;
+        }
+
+        if (!$this->isRefundWithinWarranty()) {
+            return false;
+        }
+
+        if (!Schema::hasTable('custom_order_refund_requests')) {
+            return true;
+        }
+
+        $activeStatuses = ['requested', 'under_review', 'approved', 'processed'];
+
+        return !$this->refundRequests()->whereIn('status', $activeStatuses)->exists();
     }
 
     /**

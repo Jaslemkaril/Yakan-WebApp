@@ -2078,6 +2078,136 @@
                 </div>
             @endif
 
+            @if($order->status === 'completed')
+            <div id="custom-refund-section" class="mt-8 bg-white rounded-xl shadow-md border border-gray-200 p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color:#800000;">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h11a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">Refund / Return Request</h3>
+                        <p class="text-sm text-gray-600">Policy: within {{ $customRefundWarrantyDays ?? 7 }} days after completion
+                            @if(!empty($customRefundWarrantyDeadline))
+                                (until {{ $customRefundWarrantyDeadline->format('M d, Y h:i A') }})
+                            @endif
+                        </p>
+                    </div>
+                </div>
+
+                @if(isset($customRefundRequest) && $customRefundRequest)
+                    @php
+                        $customRefundStatusMap = [
+                            'requested' => ['label' => 'Requested', 'class' => 'bg-yellow-100 text-yellow-800'],
+                            'under_review' => ['label' => 'Under Review', 'class' => 'bg-blue-100 text-blue-800'],
+                            'approved' => ['label' => 'Approved', 'class' => 'bg-indigo-100 text-indigo-800'],
+                            'processed' => ['label' => 'Processed', 'class' => 'bg-green-100 text-green-800'],
+                            'rejected' => ['label' => 'Rejected', 'class' => 'bg-red-100 text-red-800'],
+                        ];
+                        $customRefundChip = $customRefundStatusMap[$customRefundRequest->status] ?? ['label' => ucfirst($customRefundRequest->status), 'class' => 'bg-gray-100 text-gray-800'];
+                        $customRefundEvidence = is_array($customRefundRequest->evidence_paths ?? null) ? $customRefundRequest->evidence_paths : [];
+                    @endphp
+
+                    <div class="rounded-lg border border-gray-200 p-4 bg-gray-50">
+                        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold {{ $customRefundChip['class'] }}">{{ $customRefundChip['label'] }}</span>
+                            <span class="text-xs text-gray-500">Requested {{ optional($customRefundRequest->requested_at)->format('M d, Y h:i A') ?? $customRefundRequest->created_at->format('M d, Y h:i A') }}</span>
+                        </div>
+                        <p class="text-sm text-gray-700"><span class="font-semibold">Type:</span> {{ ucfirst($customRefundRequest->request_type) }}</p>
+                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Reason:</span> {{ $customRefundRequest->reason }}</p>
+                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Details:</span> {{ $customRefundRequest->details }}</p>
+
+                        @if(!empty($customRefundEvidence))
+                            <div class="mt-3">
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Uploaded Evidence</p>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach($customRefundEvidence as $evidencePath)
+                                        @php
+                                            $customEvidenceUrl = route('custom_orders.refund-evidence.view', ['refundRequest' => $customRefundRequest->id, 'index' => $loop->index]);
+                                            $customExt = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
+                                            $customIsImage = in_array($customExt, ['jpg', 'jpeg', 'png', 'webp'], true);
+                                        @endphp
+                                        @if($customIsImage)
+                                            <a href="{{ $customEvidenceUrl }}" target="_blank" class="block rounded-lg overflow-hidden border border-gray-200 bg-white">
+                                                <img src="{{ $customEvidenceUrl }}" alt="Refund evidence" class="w-24 h-24 object-cover">
+                                            </a>
+                                        @else
+                                            <a href="{{ $customEvidenceUrl }}" target="_blank" class="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 bg-white hover:bg-gray-100 transition-colors">
+                                                View PDF Evidence
+                                            </a>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        @if(!empty($customRefundRequest->admin_note))
+                            <div class="mt-3 rounded-md border border-gray-200 bg-white p-3">
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Admin Note</p>
+                                <p class="text-sm text-gray-700">{{ $customRefundRequest->admin_note }}</p>
+                            </div>
+                        @endif
+                    </div>
+                @elseif(!empty($canRequestCustomRefund))
+                    <button type="button" id="custom-refund-toggle" class="w-full md:w-auto inline-flex items-center gap-3 px-4 py-3 rounded-xl border border-[#e0b0b0] bg-[#fff5f5] hover:bg-[#feeaea] transition-colors">
+                        <div class="w-12 h-12 rounded-lg overflow-hidden border border-[#e0b0b0] bg-white flex items-center justify-center">
+                            <svg class="w-7 h-7" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h11a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                            </svg>
+                        </div>
+                        <div class="text-left">
+                            <p class="text-sm font-bold text-gray-900">Request Refund / Return</p>
+                            <p class="text-xs text-gray-600">Click to open request form</p>
+                        </div>
+                    </button>
+
+                    <div id="custom-refund-form-wrap" class="hidden mt-4">
+                        <form method="POST" action="{{ route('custom_orders.refund-request', ['order' => $order->id, 'auth_token' => $authToken]) }}" enctype="multipart/form-data" class="space-y-4">
+                            @csrf
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Request Type <span class="text-red-600">*</span></label>
+                                <select name="request_type" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent" style="--tw-ring-color:#800000;">
+                                    <option value="">-- Select type --</option>
+                                    <option value="refund">Refund</option>
+                                    <option value="return">Return</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Reason <span class="text-red-600">*</span></label>
+                                <select name="reason" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent" style="--tw-ring-color:#800000;">
+                                    <option value="">-- Select reason --</option>
+                                    <option value="Item not as described">Item not as described</option>
+                                    <option value="Damaged item">Damaged item</option>
+                                    <option value="Wrong item received">Wrong item received</option>
+                                    <option value="Incomplete order">Incomplete order</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Details <span class="text-red-600">*</span></label>
+                                <textarea name="details" rows="4" maxlength="2000" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent" style="--tw-ring-color:#800000;" placeholder="Please explain what happened and what support you need."></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Evidence <span class="text-red-600">*</span> (up to 5 files)</label>
+                                <input id="custom-refund-evidence-input" type="file" name="evidence[]" accept="image/*,.pdf" multiple required class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:text-white cursor-pointer" style="--tw-file-bg:#800000;">
+                                <p class="text-xs text-gray-500 mt-1">Required. Accepted: JPG, PNG, WEBP, PDF (max 5MB each)</p>
+                                <div id="custom-refund-evidence-preview" class="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2"></div>
+                            </div>
+                            <button type="submit" class="inline-flex items-center gap-2 px-5 py-3 rounded-lg text-white font-semibold transition-colors" style="background:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
+                                Submit Request
+                            </button>
+                        </form>
+                    </div>
+                @elseif(($order->status ?? '') === 'completed' && !empty($isCustomRefundWarrantyExpired))
+                    <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+                        <p class="text-sm font-semibold text-red-700">Refund/return window expired</p>
+                        <p class="text-sm text-red-700 mt-1">Requests are only allowed within {{ $customRefundWarrantyDays ?? 7 }} days after completion.</p>
+                    </div>
+                @endif
+            </div>
+            @endif
+
             <!-- Navigation Buttons -->
             <div class="mt-8 flex flex-col sm:flex-row gap-4">
                      <a href="{{ route('custom_orders.index', ['auth_token' => $authToken]) }}" 
@@ -2134,6 +2264,49 @@ document.addEventListener('DOMContentLoaded', function () {
         actionBlock.classList.remove('lg:w-2/3', 'lg:pr-6');
         actionBlock.classList.add('w-full', 'mt-6');
         anchor.appendChild(actionBlock);
+    }
+
+    const customRefundToggle = document.getElementById('custom-refund-toggle');
+    const customRefundFormWrap = document.getElementById('custom-refund-form-wrap');
+    if (customRefundToggle && customRefundFormWrap) {
+        customRefundToggle.addEventListener('click', function () {
+            customRefundFormWrap.classList.toggle('hidden');
+        });
+    }
+
+    const customRefundEvidenceInput = document.getElementById('custom-refund-evidence-input');
+    const customRefundEvidencePreview = document.getElementById('custom-refund-evidence-preview');
+    if (customRefundEvidenceInput && customRefundEvidencePreview) {
+        customRefundEvidenceInput.addEventListener('change', function () {
+            customRefundEvidencePreview.innerHTML = '';
+            const files = Array.from(customRefundEvidenceInput.files).slice(0, 5);
+            files.forEach(function (file) {
+                const ext = (file.name.split('.').pop() || '').toLowerCase();
+                const isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext) || file.type.startsWith('image/');
+
+                if (isImage) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'rounded-lg overflow-hidden border border-gray-200 bg-white';
+
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = 'w-full h-24 object-cover';
+                        img.alt = file.name;
+
+                        wrapper.appendChild(img);
+                        customRefundEvidencePreview.appendChild(wrapper);
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    const badge = document.createElement('div');
+                    badge.className = 'inline-flex items-center justify-center text-center px-2 py-3 rounded-lg border border-gray-300 text-xs text-gray-700 bg-white';
+                    badge.textContent = 'PDF: ' + file.name;
+                    customRefundEvidencePreview.appendChild(badge);
+                }
+            });
+        });
     }
 });
 </script>

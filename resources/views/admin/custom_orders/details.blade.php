@@ -1187,6 +1187,69 @@
                 </h2>
                 
                 <div class="space-y-4" id="adminActions">
+                    @if(isset($latestCustomRefundRequest) && $latestCustomRefundRequest)
+                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-sm font-semibold text-gray-900">Customer {{ ucfirst($latestCustomRefundRequest->request_type) }} Request</p>
+                            @php
+                                $customAdminRefundStatusMap = [
+                                    'requested' => 'bg-yellow-100 text-yellow-800',
+                                    'under_review' => 'bg-blue-100 text-blue-800',
+                                    'approved' => 'bg-indigo-100 text-indigo-800',
+                                    'processed' => 'bg-green-100 text-green-800',
+                                    'rejected' => 'bg-red-100 text-red-800',
+                                ];
+                                $customAdminRefundClass = $customAdminRefundStatusMap[$latestCustomRefundRequest->status] ?? 'bg-gray-100 text-gray-800';
+                                $customAdminRefundEvidence = is_array($latestCustomRefundRequest->evidence_paths ?? null) ? $latestCustomRefundRequest->evidence_paths : [];
+                            @endphp
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $customAdminRefundClass }}">{{ ucfirst(str_replace('_', ' ', $latestCustomRefundRequest->status)) }}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mb-2">Requested by {{ $latestCustomRefundRequest->user->name ?? 'Customer' }} on {{ optional($latestCustomRefundRequest->requested_at)->format('M d, Y h:i A') ?? $latestCustomRefundRequest->created_at->format('M d, Y h:i A') }}</p>
+                        <p class="text-sm text-gray-700"><span class="font-semibold">Reason:</span> {{ $latestCustomRefundRequest->reason }}</p>
+                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Details:</span> {{ $latestCustomRefundRequest->details }}</p>
+
+                        @if(!empty($customAdminRefundEvidence))
+                            <div class="mt-3">
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Evidence</p>
+                                <div class="flex flex-wrap gap-3">
+                                    @foreach($customAdminRefundEvidence as $evidencePath)
+                                        @php
+                                            $customAdminEvidenceUrl = route('admin.custom-orders.refund_evidence.view', ['refundRequest' => $latestCustomRefundRequest->id, 'index' => $loop->index]);
+                                            $customAdminExt = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
+                                            $customAdminIsImage = in_array($customAdminExt, ['jpg', 'jpeg', 'png', 'webp'], true);
+                                        @endphp
+                                        @if($customAdminIsImage)
+                                            <a href="{{ $customAdminEvidenceUrl }}" target="_blank" class="block rounded-lg overflow-hidden border border-gray-200 bg-white" title="Open full image">
+                                                <img src="{{ $customAdminEvidenceUrl }}" alt="Refund evidence" class="w-24 h-24 object-cover">
+                                            </a>
+                                        @else
+                                            <a href="{{ $customAdminEvidenceUrl }}" target="_blank" class="inline-flex items-center px-2 py-1 rounded border border-gray-300 text-xs text-gray-700 bg-white hover:bg-gray-100 transition-colors">View PDF</a>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        @if(!empty($latestCustomRefundRequest->admin_note))
+                            <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Admin Note:</span> {{ $latestCustomRefundRequest->admin_note }}</p>
+                        @endif
+                    </div>
+
+                    @if(in_array($latestCustomRefundRequest->status, ['requested', 'under_review']))
+                    <form action="{{ route('admin.custom-orders.refund_requests.approve', $latestCustomRefundRequest->id) }}" method="POST" class="space-y-2">
+                        @csrf
+                        <textarea name="admin_note" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Optional note for customer"></textarea>
+                        <button type="submit" onclick="return confirm('Approve and process this request?');" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium flex items-center justify-center">Approve & Process {{ ucfirst($latestCustomRefundRequest->request_type) }}</button>
+                    </form>
+
+                    <form action="{{ route('admin.custom-orders.refund_requests.reject', $latestCustomRefundRequest->id) }}" method="POST" class="space-y-2">
+                        @csrf
+                        <textarea name="admin_note" rows="2" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Reason for rejection (required)"></textarea>
+                        <button type="submit" onclick="return confirm('Reject this request?');" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium flex items-center justify-center">Reject {{ ucfirst($latestCustomRefundRequest->request_type) }} Request</button>
+                    </form>
+                    @endif
+                    @endif
+
                     {{-- 1. Quote Final Price (Show for pending, or allow editing for price_quoted status) --}}
                     @if(in_array($order->status, ['pending', 'price_quoted']) && !$mainOrderSkipsReview)
                     @php

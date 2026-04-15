@@ -209,6 +209,19 @@
                     @endif
                 </div>
             @elseif(!empty($canRequestRefund))
+                <button type="button" id="refund-toggle" class="w-full md:w-auto inline-flex items-center gap-3 px-4 py-3 rounded-xl border border-[#e0b0b0] bg-[#fff5f5] hover:bg-[#feeaea] transition-colors">
+                    <div class="w-12 h-12 rounded-lg overflow-hidden border border-[#e0b0b0] bg-white flex items-center justify-center">
+                        <svg class="w-7 h-7" style="color:#800000;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h11a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                        </svg>
+                    </div>
+                    <div class="text-left">
+                        <p class="text-sm font-bold text-gray-900">Request Refund</p>
+                        <p class="text-xs text-gray-600">Click to open request form</p>
+                    </div>
+                </button>
+
+                <div id="refund-form-wrap" class="hidden mt-4">
                 <form method="POST" action="{{ route('orders.refund-request', $order) }}" enctype="multipart/form-data" class="space-y-4">
                     @csrf
                     <div>
@@ -242,6 +255,7 @@
                         Submit Refund Request
                     </button>
                 </form>
+                </div>
             @elseif(($order->status ?? '') === 'completed' && !empty($isRefundWarrantyExpired) && !isset($refundRequest))
                 <div class="rounded-lg border border-red-200 bg-red-50 p-4">
                     <p class="text-sm font-semibold text-red-700">Refund window expired</p>
@@ -677,6 +691,14 @@ function previewRefundEvidence(inputId, previewId) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    const refundToggle = document.getElementById('refund-toggle');
+    const refundFormWrap = document.getElementById('refund-form-wrap');
+    if (refundToggle && refundFormWrap) {
+        refundToggle.addEventListener('click', function() {
+            refundFormWrap.classList.toggle('hidden');
+        });
+    }
+
     const refundEvidenceInput = document.getElementById('refund-evidence-input');
     if (refundEvidenceInput) {
         refundEvidenceInput.addEventListener('change', function() {

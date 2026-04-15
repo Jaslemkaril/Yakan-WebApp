@@ -1024,6 +1024,8 @@ Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->gr
     
     // Confirm order received
     Route::post('/{order}/confirm-received', [\App\Http\Controllers\CustomOrderController::class, 'confirmReceived'])->name('confirm_received');
+    Route::post('/{order}/refund-request', [\App\Http\Controllers\CustomOrderController::class, 'requestRefund'])->name('refund-request');
+    Route::get('/refund-evidence/{refundRequest}/{index}', [\App\Http\Controllers\CustomOrderController::class, 'viewRefundEvidence'])->whereNumber('index')->name('refund-evidence.view');
     
     // Legacy routes
     Route::patch('/{order}/respond', [\App\Http\Controllers\CustomOrderController::class, 'respondToQuote'])->name('respond');
@@ -1222,6 +1224,9 @@ Route::middleware(['admin:admin,order_staff'])->prefix('admin')->name('admin.')-
         Route::post('/{order}/approve', [AdminCustomOrderController::class, 'approveOrder'])->name('approve');
         Route::post('/{order}/notify-delay', [AdminCustomOrderController::class, 'notifyDelay'])->name('notifyDelay');
         Route::post('/{order}/clear-delay', [AdminCustomOrderController::class, 'clearDelay'])->name('clearDelay');
+        Route::post('/refund-requests/{refundRequest}/approve', [AdminCustomOrderController::class, 'approveRefundRequest'])->name('refund_requests.approve');
+        Route::post('/refund-requests/{refundRequest}/reject', [AdminCustomOrderController::class, 'rejectRefundRequest'])->name('refund_requests.reject');
+        Route::get('/refund-requests/{refundRequest}/evidence/{index}', [AdminCustomOrderController::class, 'viewRefundEvidence'])->whereNumber('index')->name('refund_evidence.view');
     });
 });
 
