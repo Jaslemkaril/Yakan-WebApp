@@ -12,10 +12,10 @@
                 <p class="text-maroon-100 text-lg">View and manage user information and activity</p>
             </div>
             <div class="mt-4 md:mt-0 flex space-x-3">
-                <a href="{{ route('admin.users.edit', $user->id) }}" class="bg-white text-maroon-700 rounded-lg px-4 py-2 hover:bg-maroon-50 transition-colors font-semibold">
+                <a href="{{ route('admin.users.edit', $user->id) }}{{ request()->has('auth_token') ? '?auth_token=' . request()->get('auth_token') : '' }}" class="bg-white text-maroon-700 rounded-lg px-4 py-2 hover:bg-maroon-50 transition-colors font-semibold">
                     <i class="fas fa-edit mr-2"></i>Edit User
                 </a>
-                <a href="{{ route('admin.users.index') }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
+                <a href="{{ route('admin.users.index') }}{{ request()->has('auth_token') ? '?auth_token=' . request()->get('auth_token') : '' }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
                     <i class="fas fa-arrow-left mr-2"></i>Back to Users
                 </a>
             </div>
@@ -45,6 +45,7 @@
                             </span>
                             <form action="{{ route('admin.users.toggle', $user->id) }}" method="POST">
                                 @csrf
+                                <input type="hidden" name="auth_token" value="{{ request()->get('auth_token', '') }}">
                                 <button type="submit" 
                                         class="px-3 py-1 rounded-full text-xs font-semibold transition-colors
                                         {{ $user->last_login_at ? 'bg-red-100 text-red-800 hover:bg-red-200' : 'bg-green-100 text-green-800 hover:bg-green-200' }}">
@@ -57,6 +58,7 @@
                     <form action="{{ route('admin.users.update', $user->id) }}" method="POST" class="space-y-6">
                         @csrf
                         @method('PATCH')
+                        <input type="hidden" name="auth_token" value="{{ request()->get('auth_token', '') }}">
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
@@ -186,7 +188,7 @@
                     </h3>
                 </div>
                 <div class="p-6 space-y-3">
-                    <a href="{{ route('admin.users.edit', $user->id) }}" 
+                    <a href="{{ route('admin.users.edit', $user->id) }}{{ request()->has('auth_token') ? '?auth_token=' . request()->get('auth_token') : '' }}" 
                        class="w-full flex items-center justify-center px-4 py-3 bg-maroon-700 text-white rounded-lg hover:bg-maroon-800 transition-colors font-medium">
                         <i class="fas fa-edit mr-2"></i>Edit User
                     </a>
@@ -198,6 +200,7 @@
                         <form method="POST" action="{{ route('admin.users.destroy', $user->id) }}" onsubmit="return confirm('Are you sure you want to delete this user? This action cannot be undone.')">
                             @csrf
                             @method('DELETE')
+                            <input type="hidden" name="auth_token" value="{{ request()->get('auth_token', '') }}">
                             <button type="submit" 
                                     class="w-full flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">
                                 <i class="fas fa-trash mr-2"></i>Delete User

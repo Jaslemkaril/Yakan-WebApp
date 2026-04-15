@@ -12,7 +12,7 @@
                 <p class="text-maroon-100 text-lg">Add a new user to the system with appropriate permissions</p>
             </div>
             <div class="mt-4 md:mt-0">
-                <a href="{{ route('admin.users.index') }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
+                <a href="{{ route('admin.users.index') }}{{ request()->has('auth_token') ? '?auth_token=' . request()->get('auth_token') : '' }}" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
                     <i class="fas fa-arrow-left mr-2"></i>Back to Users
                 </a>
             </div>
@@ -24,6 +24,7 @@
         <div class="p-6">
             <form action="{{ route('admin.users.store') }}" method="POST" class="space-y-8">
                 @csrf
+                <input type="hidden" name="auth_token" value="{{ request()->get('auth_token', '') }}">
                 
                 <!-- User Information -->
                 <div class="space-y-6">
@@ -259,7 +260,7 @@
                         All fields marked with * are required
                     </div>
                     <div class="flex space-x-3">
-                        <a href="{{ route('admin.users.index') }}" 
+                        <a href="{{ route('admin.users.index') }}{{ request()->has('auth_token') ? '?auth_token=' . request()->get('auth_token') : '' }}" 
                            class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                             <i class="fas fa-times mr-2"></i>Cancel
                         </a>

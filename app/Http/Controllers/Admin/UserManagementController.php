@@ -96,6 +96,8 @@ class UserManagementController extends Controller
     public function update(Request $request, User $user)
     {
         try {
+            $authToken = $request->input('auth_token') ?? $request->attributes->get('admin_auth_token');
+
             $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email,' . $user->id,
@@ -108,7 +110,12 @@ class UserManagementController extends Controller
                 'role' => $request->role,
             ]);
 
-            return redirect()->back()->with('success', 'User information updated successfully!');
+            $redirectUrl = route('admin.users.show', $user->id);
+            if ($authToken) {
+                $redirectUrl .= '?auth_token=' . $authToken;
+            }
+
+            return redirect($redirectUrl)->with('success', 'User information updated successfully!');
         } catch (\Exception $e) {
             \Log::error('UserManagementController update error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to update user information.');
@@ -147,6 +154,8 @@ class UserManagementController extends Controller
     public function store(Request $request)
     {
         try {
+            $authToken = $request->input('auth_token') ?? $request->attributes->get('admin_auth_token');
+
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users',
@@ -159,8 +168,12 @@ class UserManagementController extends Controller
 
             User::create($validated);
 
-            return redirect()->route('admin.users.index')
-                ->with('success', 'User created successfully!');
+            $redirectUrl = route('admin.users.index');
+            if ($authToken) {
+                $redirectUrl .= '?auth_token=' . $authToken;
+            }
+
+            return redirect($redirectUrl)->with('success', 'User created successfully!');
         } catch (\Exception $e) {
             \Log::error('UserManagementController store error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to create user.');
@@ -173,6 +186,8 @@ class UserManagementController extends Controller
     public function toggleStatus(User $user)
     {
         try {
+            $authToken = request()->input('auth_token') ?? request()->attributes->get('admin_auth_token');
+
             if ($user->last_login_at) {
                 $user->last_login_at = null;
                 $message = 'User deactivated successfully!';
@@ -182,7 +197,12 @@ class UserManagementController extends Controller
             }
             $user->save();
 
-            return redirect()->back()->with('success', $message);
+            $redirectUrl = route('admin.users.show', $user->id);
+            if ($authToken) {
+                $redirectUrl .= '?auth_token=' . $authToken;
+            }
+
+            return redirect($redirectUrl)->with('success', $message);
         } catch (\Exception $e) {
             \Log::error('UserManagementController toggleStatus error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to toggle user status.');

@@ -18,7 +18,7 @@
                 <p class="text-maroon-100 text-lg">Manage system users and their permissions</p>
             </div>
             <div class="mt-4 md:mt-0 flex space-x-3">
-                <a href="{{ route('admin.users.create') }}" class="bg-white text-[#800000] rounded-lg px-4 py-2 hover:bg-gray-100 transition-colors font-semibold">
+                <a href="{{ route('admin.users.create') }}{{ request()->has('auth_token') ? '?auth_token=' . request()->get('auth_token') : '' }}" class="bg-white text-[#800000] rounded-lg px-4 py-2 hover:bg-gray-100 transition-colors font-semibold">
                     <i class="fas fa-user-plus mr-2"></i>Add New User
                 </a>
                 <button onclick="exportUsers()" class="bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg px-4 py-2 hover:bg-white/30 transition-colors">
@@ -253,7 +253,7 @@
             <i class="fas fa-users text-gray-300 text-6xl mb-4"></i>
             <h3 class="text-lg font-medium text-gray-900 mb-2">No Users Found</h3>
             <p class="text-gray-500 mb-6">Get started by adding your first user.</p>
-            <a href="{{ route('admin.users.create') }}" class="px-6 py-3 bg-maroon-700 text-white rounded-lg hover:bg-maroon-800 transition-colors font-medium">
+            <a href="{{ route('admin.users.create') }}{{ request()->has('auth_token') ? '?auth_token=' . request()->get('auth_token') : '' }}" class="px-6 py-3 bg-maroon-700 text-white rounded-lg hover:bg-maroon-800 transition-colors font-medium">
                 <i class="fas fa-user-plus mr-2"></i>Add First User
             </a>
         </div>
