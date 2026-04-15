@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Services\CloudinaryService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use App\Models\ProductBundleItem;
 
@@ -19,7 +20,12 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::with('category')->withCount('bundleItems');
+        $bundleFeatureEnabled = $this->bundleFeatureEnabled();
+
+        $query = Product::with('category');
+        if ($bundleFeatureEnabled) {
+            $query->withCount('bundleItems');
+        }
 
         if ($request->filled('search')) {
             $term = '%' . $request->search . '%';
@@ -75,7 +81,7 @@ class ProductController extends Controller
             ->whereRaw('COALESCE(inventory.quantity, products.stock) <= 0')
             ->count('products.id');
 
-        return view('admin.products.index', compact('products', 'categories', 'allProductsCount', 'activeCount', 'lowStockCount', 'outOfStockCount'));
+        return view('admin.products.index', compact('products', 'categories', 'allProductsCount', 'activeCount', 'lowStockCount', 'outOfStockCount', 'bundleFeatureEnabled'));
     }
 
     /**
@@ -83,10 +89,13 @@ class ProductController extends Controller
      */
     public function create()
     {
+        $bundleFeatureEnabled = $this->bundleFeatureEnabled();
         $categories = \App\Models\Category::orderBy('name')->get();
-        $bundleComponents = Product::orderBy('name')->get(['id', 'name', 'price', 'stock']);
+        $bundleComponents = $bundleFeatureEnabled
+            ? Product::orderBy('name')->get(['id', 'name', 'price', 'stock'])
+            : collect();
 
-        return view('admin.products.create', compact('categories', 'bundleComponents'));
+        return view('admin.products.create', compact('categories', 'bundleComponents', 'bundleFeatureEnabled'));
     }
 
     /**
@@ -114,8 +123,11 @@ class ProductController extends Controller
             'bundle_items.*.quantity' => 'nullable|integer|min:1',
         ]);
 
-        $isBundle = $request->boolean('is_bundle');
-        $bundleItems = $this->sanitizeBundleItems($request->input('bundle_items', []));
+        $bundleFeatureEnabled = $this->bundleFeatureEnabled();
+        $isBundle = $bundleFeatureEnabled && $request->boolean('is_bundle');
+        $bundleItems = $bundleFeatureEnabled
+            ? $this->sanitizeBundleItems($request->input('bundle_items', []))
+            : [];
         $this->validateBundleItems($bundleItems, $isBundle);
 
         // Handle multiple image uploads with color associations
@@ -230,11 +242,23 @@ class ProductController extends Controller
      */
     public function edit(string $id)
     {
-        $product = Product::with(['category', 'bundleItems.componentProduct'])->findOrFail($id);
+        $bundleFeatureEnabled = $this->bundleFeatureEnabled();
+
+        $productQuery = Product::with('category');
+        if ($bundleFeatureEnabled) {
+            $productQuery->with(['bundleItems.componentProduct']);
+        }
+
+        $product = $productQuery->findOrFail($id);
         $categories = \App\Models\Category::orderBy('name')->get();
-        $bundleComponents = Product::where('id', '!=', $product->id)
-            ->orderBy('name')
-            ->get(['id', 'name', 'price', 'stock']);
+        $bundleComponents = $bundleFeatureEnabled
+            ? Product::where('id', '!=', $product->id)
+                ->orderBy('name')
+                ->get(['id', 'name', 'price', 'stock'])
+            : collect();
+        $existingBundleItems = $bundleFeatureEnabled
+            ? $product->bundleItems
+            : collect();
 
         // Stock logs grouped for display (guard against missing table during migration)
         $stockLogs   = collect();
@@ -258,7 +282,7 @@ class ProductController extends Controller
             $recentLogs = $stockLogs->take(15);
         }
 
-        return view('admin.products.edit', compact('product', 'categories', 'bundleComponents', 'stockLogs', 'today', 'thisWeek', 'thisYear', 'overall', 'recentLogs'));
+        return view('admin.products.edit', compact('product', 'categories', 'bundleComponents', 'existingBundleItems', 'bundleFeatureEnabled', 'stockLogs', 'today', 'thisWeek', 'thisYear', 'overall', 'recentLogs'));
     }
 
 
@@ -289,8 +313,11 @@ class ProductController extends Controller
             'bundle_items.*.quantity' => 'nullable|integer|min:1',
         ]);
 
-        $isBundle = $request->boolean('is_bundle');
-        $bundleItems = $this->sanitizeBundleItems($request->input('bundle_items', []));
+        $bundleFeatureEnabled = $this->bundleFeatureEnabled();
+        $isBundle = $bundleFeatureEnabled && $request->boolean('is_bundle');
+        $bundleItems = $bundleFeatureEnabled
+            ? $this->sanitizeBundleItems($request->input('bundle_items', []))
+            : [];
         $this->validateBundleItems($bundleItems, $isBundle, $product->id);
 
         // Handle image deletions
@@ -455,6 +482,10 @@ class ProductController extends Controller
 
     private function validateBundleItems(array $bundleItems, bool $isBundle, ?int $currentProductId = null): void
     {
+        if (!$this->bundleFeatureEnabled()) {
+            return;
+        }
+
         if (!$isBundle) {
             return;
         }
@@ -481,6 +512,10 @@ class ProductController extends Controller
 
     private function syncBundleItems(Product $product, array $bundleItems, bool $isBundle): void
     {
+        if (!$this->bundleFeatureEnabled()) {
+            return;
+        }
+
         ProductBundleItem::where('bundle_product_id', $product->id)->delete();
 
         if (!$isBundle || empty($bundleItems)) {
@@ -499,6 +534,11 @@ class ProductController extends Controller
         })->all();
 
         ProductBundleItem::insert($rows);
+    }
+
+    private function bundleFeatureEnabled(): bool
+    {
+        return Schema::hasTable('product_bundle_items');
     }
 
     /**

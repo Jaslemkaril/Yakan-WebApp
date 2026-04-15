@@ -20,7 +20,7 @@
 <div class="max-w-3xl mx-auto p-6 bg-white shadow rounded-lg">
 
     @php
-        $isBundleForm = (bool) old('is_bundle', request('as_bundle') ? 1 : 0);
+        $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && request('as_bundle') ? 1 : 0);
         $initialBundleItems = old('bundle_items', $isBundleForm ? [['product_id' => '', 'quantity' => 1]] : []);
     @endphp
 
@@ -365,6 +365,7 @@
         </div>
 
         <!-- Bundle Builder -->
+        @if($bundleFeatureEnabled ?? false)
         <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
             <label class="inline-flex items-center gap-2 font-medium text-gray-800">
                 <input type="checkbox" id="isBundleCheckbox" name="is_bundle" value="1" {{ $isBundleForm ? 'checked' : '' }} class="rounded border-gray-300 text-[#800000] focus:ring-[#800000]">
@@ -407,6 +408,13 @@
                 @enderror
             </div>
         </div>
+        @else
+        <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <p class="text-sm text-gray-700">
+                Bundle feature is temporarily unavailable until database migration is applied.
+            </p>
+        </div>
+        @endif
 
         <!-- Professional Image Upload Section -->
         <div class="border-2 border-dashed rounded-lg p-6" style="border-color: #800000;">

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 
 class Product extends Model
 {
@@ -160,6 +161,10 @@ class Product extends Model
 
     public function getIsBundleAttribute(): bool
     {
+        if (!Schema::hasTable('product_bundle_items')) {
+            return false;
+        }
+
         if (array_key_exists('bundle_items_count', $this->attributes)) {
             return (int) $this->attributes['bundle_items_count'] > 0;
         }

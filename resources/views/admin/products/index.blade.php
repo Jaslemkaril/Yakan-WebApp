@@ -19,9 +19,11 @@ use Illuminate\Support\Facades\Storage;
                 <button id="bulkDeleteBtn" onclick="confirmBulkDelete()" class="hidden bg-red-500/90 backdrop-blur-sm text-white border border-red-400/30 rounded-lg px-4 py-2 hover:bg-red-600 transition-colors">
                     <i class="fas fa-trash mr-2"></i>Delete Selected (<span id="selectedCount">0</span>)
                 </button>
+                @if($bundleFeatureEnabled ?? false)
                 <a href="{{ route('admin.products.create', ['as_bundle' => 1] + (request('auth_token') ? ['auth_token' => request('auth_token')] : [])) }}" class="bg-amber-100 text-amber-900 px-4 py-2 rounded-lg hover:bg-amber-200 font-medium transition-colors">
                     <i class="fas fa-boxes mr-2"></i>Add Bundle
                 </a>
+                @endif
                 <a href="{{ route('admin.products.create') }}" class="bg-white text-[#800000] px-4 py-2 rounded-lg hover:bg-gray-100 font-medium transition-colors">
                     <i class="fas fa-plus mr-2"></i>Add Product
                 </a>
@@ -162,7 +164,7 @@ use Illuminate\Support\Facades\Storage;
                             {{ ucfirst($product->status) }}
                         </span>
 
-                        @if(($product->bundle_items_count ?? 0) > 0)
+                        @if(($bundleFeatureEnabled ?? false) && ($product->bundle_items_count ?? 0) > 0)
                             <span class="mt-2 block px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 text-center">
                                 Bundle
                             </span>
@@ -193,7 +195,7 @@ use Illuminate\Support\Facades\Storage;
                     <h3 class="font-semibold text-gray-900 mb-1 truncate">{{ $product->name }}</h3>
                     <p class="text-sm text-gray-500 mb-2 truncate">{{ $product->category?->name ?? 'Uncategorized' }}</p>
 
-                    @if(($product->bundle_items_count ?? 0) > 0)
+                    @if(($bundleFeatureEnabled ?? false) && ($product->bundle_items_count ?? 0) > 0)
                         <p class="text-xs text-amber-700 mb-2">
                             <i class="fas fa-layer-group mr-1"></i>{{ $product->bundle_items_count }} component item(s)
                         </p>
@@ -236,9 +238,11 @@ use Illuminate\Support\Facades\Storage;
                     <a href="{{ route('admin.products.create') }}" class="inline-flex items-center px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors">
                         <i class="fas fa-plus mr-2"></i>Add Your First Product
                     </a>
+                    @if($bundleFeatureEnabled ?? false)
                     <a href="{{ route('admin.products.create', ['as_bundle' => 1] + (request('auth_token') ? ['auth_token' => request('auth_token')] : [])) }}" class="inline-flex items-center px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors">
                         <i class="fas fa-boxes mr-2"></i>Add First Bundle
                     </a>
+                    @endif
                 </div>
             </div>
             @endforelse
