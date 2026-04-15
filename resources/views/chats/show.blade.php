@@ -320,6 +320,25 @@
                                                             placeholder="{{ $field['placeholder'] ?? '' }}"
                                                             rows="3"
                                                             {{ $field['required'] ? 'required' : '' }}></textarea>
+                                                    @elseif($field['type'] === 'select' && !empty($field['options']) && is_array($field['options']))
+                                                        @php
+                                                            $selectedValue = old($field['name'], $field['value'] ?? '');
+                                                        @endphp
+                                                        <select
+                                                            name="{{ $field['name'] }}"
+                                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-500 text-sm"
+                                                            {{ $field['required'] ? 'required' : '' }}>
+                                                            <option value="">{{ $field['placeholder'] ?? 'Select an option' }}</option>
+                                                            @foreach($field['options'] as $option)
+                                                                @php
+                                                                    $optionValue = is_array($option) ? ($option['value'] ?? '') : (string) $option;
+                                                                    $optionLabel = is_array($option) ? ($option['label'] ?? $optionValue) : (string) $option;
+                                                                @endphp
+                                                                <option value="{{ $optionValue }}" {{ (string) $selectedValue === (string) $optionValue ? 'selected' : '' }}>
+                                                                    {{ $optionLabel }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
                                                     @elseif($field['type'] === 'number')
                                                         @php
                                                             $resolvedFieldName = $field['name'] === 'quantity_meters' ? 'meters' : $field['name'];
@@ -333,11 +352,16 @@
                                                             step="{{ $field['step'] ?? 1 }}"
                                                             {{ $field['required'] ? 'required' : '' }}>
                                                     @else
+                                                        @php
+                                                            $fieldValue = old($field['name'], $field['value'] ?? '');
+                                                        @endphp
                                                         <input 
                                                             type="text" 
                                                             name="{{ $field['name'] }}" 
                                                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-500 text-sm"
                                                             placeholder="{{ $field['placeholder'] ?? '' }}"
+                                                            value="{{ $fieldValue }}"
+                                                            {{ !empty($field['readonly']) ? 'readonly' : '' }}
                                                             {{ $field['required'] ? 'required' : '' }}>
                                                     @endif
                                                 </div>

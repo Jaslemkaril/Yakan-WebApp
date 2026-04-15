@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Chat;
 use App\Models\ChatMessage;
+use App\Models\FabricType;
 use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
 
@@ -201,22 +202,64 @@ class ChatController extends Controller
         try {
             \Log::info('Request details started', [
                 'chat_id' => $chat->id,
-                'message_id' => $messageId
+                'message_id' => $messageId,
             ]);
-            
+
             // Verify the message exists and belongs to this chat
             $originalMessage = ChatMessage::where('id', $messageId)
                 ->where('chat_id', $chat->id)
                 ->first();
-            
+
             if (!$originalMessage) {
                 \Log::warning('Original message not found', [
                     'chat_id' => $chat->id,
-                    'message_id' => $messageId
+                    'message_id' => $messageId,
                 ]);
                 return response()->json(['success' => false, 'message' => 'Message not found'], 404);
             }
-            
+
+            $cottonFabricTypes = FabricType::query()
+                ->active()
+                ->sorted()
+                ->where(function ($query) {
+                    $query->where('name', 'like', '%cotton%')
+                        ->orWhere('material_composition', 'like', '%cotton%');
+                })
+                ->get(['name', 'material_composition']);
+
+            $fabricTypeField = [
+                'name' => 'fabric_type',
+                'label' => 'Fabric Type (optional)',
+                'type' => 'text',
+                'placeholder' => 'e.g., Cotton, Polyester',
+                'required' => false,
+            ];
+
+            if ($cottonFabricTypes->count() > 1) {
+                $fabricTypeField['type'] = 'select';
+                $fabricTypeField['placeholder'] = 'Select available cotton';
+                $fabricTypeField['options'] = $cottonFabricTypes
+                    ->map(function (FabricType $fabricType) {
+                        $label = $fabricType->name;
+
+                        if (!empty($fabricType->material_composition) && strcasecmp($fabricType->material_composition, $fabricType->name) !== 0) {
+                            $label .= ' (' . $fabricType->material_composition . ')';
+                        }
+
+                        return [
+                            'value' => $fabricType->name,
+                            'label' => $label,
+                        ];
+                    })
+                    ->values()
+                    ->all();
+            } elseif ($cottonFabricTypes->count() === 1) {
+                $singleOption = $cottonFabricTypes->first();
+                $fabricTypeField['value'] = $singleOption->name;
+                $fabricTypeField['placeholder'] = $singleOption->name;
+                $fabricTypeField['readonly'] = true;
+            }
+
             // Create form request message
             $formData = [
                 'original_message_id' => $messageId,
@@ -226,7 +269,7 @@ class ChatController extends Controller
                         'label' => 'Order Name',
                         'type' => 'text',
                         'placeholder' => 'e.g., Custom Yakan Bag',
-                        'required' => true
+                        'required' => true,
                     ],
                     [
                         'name' => 'meters',
@@ -235,27 +278,21 @@ class ChatController extends Controller
                         'placeholder' => 'e.g., 5',
                         'required' => true,
                         'min' => 0.1,
-                        'step' => 0.1
+                        'step' => 0.1,
                     ],
-                    [
-                        'name' => 'fabric_type',
-                        'label' => 'Fabric Type (optional)',
-                        'type' => 'text',
-                        'placeholder' => 'e.g., Cotton, Polyester',
-                        'required' => false
-                    ],
+                    $fabricTypeField,
                     [
                         'name' => 'additional_notes',
                         'label' => 'Additional Details (optional)',
                         'type' => 'textarea',
                         'placeholder' => 'Any specific requirements or preferences',
-                        'required' => false
-                    ]
-                ]
+                        'required' => false,
+                    ],
+                ],
             ];
-            
+
             \Log::info('Creating form request message', ['form_data' => $formData]);
-            
+
             $message = ChatMessage::create([
                 'chat_id' => $chat->id,
                 'sender_type' => 'admin',
@@ -264,26 +301,25 @@ class ChatController extends Controller
                 'form_data' => $formData,
                 'is_read' => false,
             ]);
-            
+
             \Log::info('Form request message created', ['message_id' => $message->id]);
-            
+
             $chat->update(['updated_at' => now()]);
-            
+
             \Log::info('Request details completed successfully');
-            
+
             return response()->json(['success' => true, 'message' => 'Details request sent to customer']);
-            
         } catch (\Exception $e) {
             \Log::error('Error in requestDetails', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'chat_id' => $chat->id ?? 'unknown',
-                'message_id' => $messageId ?? 'unknown'
+                'message_id' => $messageId ?? 'unknown',
             ]);
-            
+
             return response()->json([
-                'success' => false, 
-                'message' => 'Server error: ' . $e->getMessage()
+                'success' => false,
+                'message' => 'Server error: ' . $e->getMessage(),
             ], 500);
         }
     }
