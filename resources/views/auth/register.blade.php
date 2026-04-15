@@ -137,6 +137,13 @@
         background: white;
     }
 
+    /* Name fields need more usable text space so long names are fully visible. */
+    .auth-input-name {
+        padding: 14px 14px 14px 44px;
+        min-height: 52px;
+        line-height: 1.4;
+    }
+
     .auth-input:focus {
         outline: none;
         border-color: #dc2626;
@@ -402,13 +409,13 @@
                         <form method="POST" action="{{ route('register.store') }}" id="registerForm">
                             @csrf
                             
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div class="input-group">
                                     <input 
                                         id="first_name" 
                                         type="text" 
                                         name="first_name" 
-                                        class="auth-input" 
+                                        class="auth-input auth-input-name" 
                                         placeholder="First name"
                                         value="{{ old('first_name') }}"
                                         required
@@ -427,7 +434,7 @@
                                         id="middle_initial" 
                                         type="text" 
                                         name="middle_initial" 
-                                        class="auth-input" 
+                                        class="auth-input auth-input-name" 
                                         placeholder="Middle name"
                                         value="{{ old('middle_initial') }}"
                                     >
@@ -443,7 +450,7 @@
                                         id="last_name" 
                                         type="text" 
                                         name="last_name" 
-                                        class="auth-input" 
+                                        class="auth-input auth-input-name" 
                                         placeholder="Last name"
                                         value="{{ old('last_name') }}"
                                         required
