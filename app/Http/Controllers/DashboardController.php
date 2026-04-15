@@ -13,9 +13,9 @@ class DashboardController extends Controller
         
         \Log::info('DashboardController - User: ' . ($user ? $user->email : 'null') . ', Role: ' . ($user ? $user->role : 'null'));
         
-        // Check if user is admin and redirect to admin dashboard
-        if ($user && $user->role === 'admin') {
-            \Log::info('DashboardController - Admin detected, redirecting to /admin/dashboard');
+        // Check if user is admin/order_staff and redirect to admin dashboard
+        if ($user && in_array((string) $user->role, ['admin', 'order_staff'], true)) {
+            \Log::info('DashboardController - Admin/staff detected, redirecting to /admin/dashboard');
             return redirect('/admin/dashboard');
         }
         
