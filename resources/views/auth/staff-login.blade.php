@@ -40,7 +40,7 @@
                         <input type="email"
                                id="email"
                                name="email"
-                               value="{{ old('email') }}"
+                               value="{{ old('email', request('email', '')) }}"
                                required
                                autofocus
                                class="input-focus w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none transition-all"

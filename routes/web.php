@@ -572,6 +572,10 @@ Route::post('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::cla
 // Order staff login routes
 Route::get('/staff/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'showStaffLoginForm'])->name('staff.login.form');
 Route::post('/staff/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'staffLogin'])->name('staff.login.submit');
+Route::redirect('/orderstaff/login', '/staff/login')->name('orderstaff.login.alias');
+Route::get('/ordersteffie/login', function () {
+    return redirect('/staff/login?email=ordersteffie@gmail.com');
+})->name('ordersteffie.login');
 
 // Admin dashboard route
 Route::get('/admin/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->middleware('admin:admin')->name('admin.dashboard');
