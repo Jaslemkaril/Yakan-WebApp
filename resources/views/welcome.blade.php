@@ -310,7 +310,7 @@
 
             <!-- Mobile App Download -->
             <div class="mt-6 animate-fade-in-up" style="animation-delay:0.55s">
-                <a href="https://expo.dev/artifacts/eas/eGrcnKnshjoDXTDFpvCMLN.apk?v=20260414-2" download
+                <a href="{{ config('app.mobile_apk_url') }}" download
                    class="group inline-flex items-center justify-center gap-3 px-7 py-3.5 rounded-2xl text-sm font-semibold text-white transition-all duration-300 hover:scale-105 hover:brightness-110 shadow-xl"
                    style="background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 100%); border: 1.5px solid rgba(255,255,255,0.3); backdrop-filter: blur(14px);">
                     <!-- Android robot icon -->
@@ -324,7 +324,7 @@
                     </svg>
                     <span class="ml-1 px-2 py-0.5 rounded-full text-xs font-bold" style="background:rgba(255,255,255,0.2); letter-spacing:0.04em">APK</span>
                 </a>
-                <p class="mt-2 text-xs text-red-200 opacity-70">Free &middot; Android &middot; v1.0.1</p>
+                <p class="mt-2 text-xs text-red-200 opacity-70">Free &middot; Android &middot; {{ config('app.mobile_app_version') }}</p>
             </div>
 
             <!-- Trust pills -->
