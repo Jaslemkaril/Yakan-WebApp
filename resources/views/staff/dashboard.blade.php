@@ -9,7 +9,7 @@
         <p class="text-red-100 text-lg">Process orders, update status, and confirm refunds.</p>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-6">
         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
             <p class="text-sm text-gray-600 font-medium">Pending Confirmation</p>
             <p class="text-3xl font-bold text-[#8b1d1d] mt-2">{{ $pendingConfirmationCount }}</p>
@@ -23,6 +23,16 @@
         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
             <p class="text-sm text-gray-600 font-medium">Refund-Eligible Orders</p>
             <p class="text-3xl font-bold text-[#8b1d1d] mt-2">{{ $readyForRefundCount }}</p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+            <p class="text-sm text-gray-600 font-medium">Cancelled Orders</p>
+            <p class="text-3xl font-bold text-[#8b1d1d] mt-2">{{ $cancelledOrdersCount }}</p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+            <p class="text-sm text-gray-600 font-medium">Refunded Orders</p>
+            <p class="text-3xl font-bold text-[#8b1d1d] mt-2">{{ $refundedOrdersCount }}</p>
         </div>
 
         <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
