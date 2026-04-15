@@ -32,4 +32,53 @@ class DashboardController extends Controller
             'recentOrders'
         ));
     }
+
+    public function cancelledOrders(Request $request)
+    {
+        $query = Order::with(['user', 'orderItems.product'])
+            ->where('status', 'cancelled')
+            ->orderByDesc('cancelled_at')
+            ->orderByDesc('updated_at');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('order_ref', 'like', "%{$search}%")
+                    ->orWhere('customer_name', 'like', "%{$search}%")
+                    ->orWhere('customer_email', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $orders = $query->paginate(20)->withQueryString();
+
+        return view('staff.orders.cancelled', compact('orders'));
+    }
+
+    public function refundedOrders(Request $request)
+    {
+        $query = Order::with(['user', 'orderItems.product', 'refundRequests'])
+            ->where('status', 'refunded')
+            ->orderByDesc('updated_at');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('order_ref', 'like', "%{$search}%")
+                    ->orWhere('customer_name', 'like', "%{$search}%")
+                    ->orWhere('customer_email', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $orders = $query->paginate(20)->withQueryString();
+
+        return view('staff.orders.refunded', compact('orders'));
+    }
 }
