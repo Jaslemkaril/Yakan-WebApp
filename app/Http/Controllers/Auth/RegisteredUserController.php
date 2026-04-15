@@ -35,6 +35,7 @@ class RegisteredUserController extends Controller
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'middle_initial' => 'nullable|string|max:255',
+            'birth_date' => 'required|date|before_or_equal:' . now()->subYears(18)->toDateString(),
             'email' => 'required|string|email|max:255|unique:users',
             'password' => [
                 'required',
@@ -47,6 +48,9 @@ class RegisteredUserController extends Controller
                 'regex:/[@$!%*#?&]/',
             ],
         ], [
+            'birth_date.required' => 'Birth date is required.',
+            'birth_date.date' => 'Please enter a valid birth date.',
+            'birth_date.before_or_equal' => 'You must be at least 18 years old to create an account.',
             'password.regex' => 'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character (@$!%*#?&).',
             'password.min' => 'Password must be at least 8 characters long.',
             'password.confirmed' => 'Password confirmation does not match.',
@@ -69,6 +73,7 @@ class RegisteredUserController extends Controller
                 'first_name' => $validated['first_name'],
                 'last_name' => $validated['last_name'],
                 'middle_initial' => $middleName !== '' ? $middleName : null,
+                'birth_date' => $validated['birth_date'],
                 'name' => trim($validated['first_name'] . ' ' . ($middleName !== '' ? $middleName . ' ' : '') . $validated['last_name']),
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),

@@ -312,6 +312,9 @@
 @endpush
 
 @section('content')
+@php
+    $maxBirthDate = \Illuminate\Support\Carbon::now()->subYears(18)->format('Y-m-d');
+@endphp
 <div class="auth-container relative" style="background-image: url('{{ asset('images/jus.jpg') }}'); background-size: cover; background-position: center center;">
     <!-- Hide main header for auth page -->
     <style>
@@ -472,6 +475,36 @@
                             @enderror
 
                             @error('last_name')
+                                <div class="error-message">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                    </svg>
+                                    {{ $message }}
+                                </div>
+                            @enderror
+
+                            <div class="input-group">
+                                <input
+                                    id="birth_date"
+                                    type="date"
+                                    name="birth_date"
+                                    class="auth-input"
+                                    value="{{ old('birth_date') }}"
+                                    max="{{ $maxBirthDate }}"
+                                    required
+                                >
+                                <label for="birth_date" class="input-icon">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z"/>
+                                    </svg>
+                                </label>
+                            </div>
+
+                            <p id="birth-date-warning" class="text-red-600 text-sm font-semibold -mt-3 mb-3 hidden">
+                                You must be at least 18 years old to create an account.
+                            </p>
+
+                            @error('birth_date')
                                 <div class="error-message">
                                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
@@ -692,9 +725,49 @@ document.addEventListener('DOMContentLoaded', function() {
     const submitBtn = document.getElementById('submitBtn');
     const btnText = document.getElementById('btnText');
     const btnLoading = document.getElementById('btnLoading');
+    const birthDateInput = document.getElementById('birth_date');
+    const birthDateWarning = document.getElementById('birth-date-warning');
+
+    const eighteenYearsAgo = new Date();
+    eighteenYearsAgo.setFullYear(eighteenYearsAgo.getFullYear() - 18);
+
+    function isAtLeast18(dateStr) {
+        if (!dateStr) {
+            return false;
+        }
+
+        const birthDate = new Date(dateStr + 'T00:00:00');
+        if (Number.isNaN(birthDate.getTime())) {
+            return false;
+        }
+
+        return birthDate <= eighteenYearsAgo;
+    }
+
+    function updateBirthDateWarning() {
+        if (!birthDateInput || !birthDateWarning) {
+            return true;
+        }
+
+        const validAge = isAtLeast18(birthDateInput.value);
+        birthDateWarning.classList.toggle('hidden', validAge || !birthDateInput.value);
+        return validAge;
+    }
+
+    if (birthDateInput) {
+        birthDateInput.addEventListener('change', updateBirthDateWarning);
+        birthDateInput.addEventListener('input', updateBirthDateWarning);
+        updateBirthDateWarning();
+    }
     
     if (form) {
         form.addEventListener('submit', function(e) {
+            const validAge = updateBirthDateWarning();
+            if (!validAge) {
+                e.preventDefault();
+                return;
+            }
+
             // Show loading state
             submitBtn.disabled = true;
             btnText.classList.add('hidden');
