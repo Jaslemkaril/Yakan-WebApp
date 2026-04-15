@@ -919,10 +919,14 @@
 
            @php
                $isOrderStaff = auth()->check() && (string) auth()->user()->role === 'order_staff';
+               $currentOrderStatusFilter = strtolower((string) request('status', ''));
                $isDashboardActive = request()->routeIs('admin.dashboard', 'staff.dashboard')
                    || request()->is('admin/dashboard*')
                    || request()->is('staff/dashboard*');
-               $isOrdersActive = request()->routeIs('admin.regular.*') || request()->is('admin/orders*');
+               $isOrdersRoute = request()->routeIs('admin.regular.*') || request()->is('admin/orders*');
+               $isCancelledOrdersActive = $isOrdersRoute && $currentOrderStatusFilter === 'cancelled';
+               $isRefundedOrdersActive = $isOrdersRoute && $currentOrderStatusFilter === 'refunded';
+               $isOrdersActive = $isOrdersRoute && !$isCancelledOrdersActive && !$isRefundedOrdersActive;
                $isCustomOrdersActive = request()->routeIs('admin.custom-orders.*') || request()->is('admin/custom-orders*');
            @endphp
 
@@ -942,6 +946,18 @@
             </span>
         @endif
     </a>
+
+    @if($isOrderStaff)
+    <a href="{{ route('admin.regular.index', ['status' => 'cancelled']) }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ $isCancelledOrdersActive ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+        <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Cancelled Orders</span>
+    </a>
+
+    <a href="{{ route('admin.regular.index', ['status' => 'refunded']) }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ $isRefundedOrdersActive ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+        <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h11M9 21V3m12 10h-6"/></svg>
+        <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Refunded Orders</span>
+    </a>
+    @endif
 
     @if(!$isOrderStaff)
     <!-- Patterns Menu with Submenu -->
