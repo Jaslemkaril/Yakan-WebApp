@@ -483,6 +483,8 @@ class AdminCustomOrderController extends Controller
         $refundRequest->processed_at = now();
         $refundRequest->save();
 
+        $this->notifyCustomRefundDecision($refundRequest, 'approved');
+
         return redirect()->back()->with('success', ucfirst($refundRequest->request_type) . ' request approved and processed.');
     }
 
@@ -505,7 +507,62 @@ class AdminCustomOrderController extends Controller
         $refundRequest->reviewed_at = now();
         $refundRequest->save();
 
+        $this->notifyCustomRefundDecision($refundRequest, 'rejected');
+
         return redirect()->back()->with('success', ucfirst($refundRequest->request_type) . ' request has been rejected.');
+    }
+
+    /**
+     * Notify customer about custom-order refund/return decision.
+     */
+    private function notifyCustomRefundDecision(CustomOrderRefundRequest $refundRequest, string $decision): void
+    {
+        $order = $refundRequest->customOrder;
+        if (!$order) {
+            return;
+        }
+
+        $recipient = $refundRequest->user?->email ?: $order->user?->email;
+        if (!$recipient) {
+            return;
+        }
+
+        $decisionLabel = strtolower($decision) === 'approved' ? 'Approved' : 'Rejected';
+        $requestType = ucfirst((string) ($refundRequest->request_type ?: 'refund')) . ' Request';
+        $orderRef = method_exists($order, 'getDisplayRefAttribute')
+            ? ($order->display_ref ?? ('#' . $order->id))
+            : ('#' . $order->id);
+        $subject = $requestType . ' ' . $decisionLabel . ' - ' . $orderRef;
+        $intro = strtolower($decision) === 'approved'
+            ? 'Your ' . strtolower($requestType) . ' has been approved and processed.'
+            : 'Your ' . strtolower($requestType) . ' has been rejected.';
+
+        try {
+            TransactionalMailService::sendViewDetailed(
+                $recipient,
+                $subject,
+                'emails.orders.request-status',
+                [
+                    'subject' => $subject,
+                    'customerName' => $refundRequest->user?->name ?: ($order->customer_name ?? 'Customer'),
+                    'introText' => $intro,
+                    'orderRef' => $orderRef,
+                    'orderId' => $order->id,
+                    'requestType' => $requestType,
+                    'decision' => $decisionLabel,
+                    'reason' => $refundRequest->reason,
+                    'adminNote' => $refundRequest->admin_note,
+                    'approvedAmount' => null,
+                    'extraMessage' => null,
+                ]
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send custom refund/return decision email', [
+                'refund_request_id' => $refundRequest->id,
+                'recipient' => $recipient,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

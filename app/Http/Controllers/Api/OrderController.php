@@ -309,17 +309,31 @@ class OrderController extends Controller
                 ], 404);
             }
 
-            if (!in_array($order->status, ['pending', 'pending_confirmation'])) {
+            $currentStatus = strtolower((string) $order->status);
+            $cancellableStatuses = ['pending', 'pending_confirmation', 'confirmed', 'processing'];
+            if (!in_array($currentStatus, $cancellableStatuses, true)) {
+                $this->notifyCancelDecision(
+                    $order,
+                    'rejected',
+                    $validated['reason'],
+                    'This order can no longer be cancelled because it is already in ' . strtoupper((string) $order->status) . ' status.'
+                );
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Only pending orders can be cancelled.',
+                    'message' => 'This order can no longer be cancelled.',
                 ], 422);
             }
 
             \DB::beginTransaction();
 
+            $currentPaymentStatus = strtolower((string) $order->payment_status);
+            $wasPaid = in_array($currentPaymentStatus, ['paid', 'verified'], true);
+            $newPaymentStatus = $wasPaid ? 'refunded' : $order->payment_status;
+
             $order->update([
                 'status' => 'cancelled',
+                'payment_status' => $newPaymentStatus,
                 'cancelled_at' => now(),
                 'admin_notes' => 'Customer cancelled: ' . $validated['reason'],
             ]);
@@ -337,6 +351,15 @@ class OrderController extends Controller
             }
 
             \DB::commit();
+
+            $this->notifyCancelDecision(
+                $order,
+                'approved',
+                $validated['reason'],
+                $wasPaid
+                    ? 'Payment was already received and is now tagged as refunded.'
+                    : 'No completed payment was recorded, so no refund action is needed.'
+            );
 
             return response()->json([
                 'success' => true,
@@ -357,6 +380,46 @@ class OrderController extends Controller
                 'success' => false,
                 'message' => 'Failed to cancel order. Please try again.',
             ], 500);
+        }
+    }
+
+    private function notifyCancelDecision(Order $order, string $decision, string $reason, string $message): void
+    {
+        $recipient = $order->user?->email ?: $order->customer_email;
+        if (!$recipient) {
+            return;
+        }
+
+        $decisionLabel = strtolower($decision) === 'approved' ? 'Approved' : 'Rejected';
+        $subject = 'Order Cancel Request ' . $decisionLabel . ' - ' . ($order->order_ref ?? ('#' . $order->id));
+
+        try {
+            TransactionalMailService::sendViewDetailed(
+                $recipient,
+                $subject,
+                'emails.orders.request-status',
+                [
+                    'subject' => $subject,
+                    'customerName' => $order->user?->name ?: ($order->customer_name ?: 'Customer'),
+                    'introText' => strtolower($decision) === 'approved'
+                        ? 'Your order cancellation request has been approved.'
+                        : 'Your order cancellation request has been rejected.',
+                    'orderRef' => $order->order_ref,
+                    'orderId' => $order->id,
+                    'requestType' => 'Order Cancellation',
+                    'decision' => $decisionLabel,
+                    'reason' => $reason,
+                    'adminNote' => null,
+                    'approvedAmount' => null,
+                    'extraMessage' => $message,
+                ]
+            );
+        } catch (\Throwable $exception) {
+            \Log::warning('Failed to send API cancellation decision email', [
+                'order_id' => $order->id,
+                'recipient' => $recipient,
+                'error' => $exception->getMessage(),
+            ]);
         }
     }
 

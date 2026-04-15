@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\OrderRefundRequest;
 use App\Services\Payment\PayMongoCheckoutService;
+use App\Services\TransactionalMailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -392,6 +393,8 @@ class OrderController extends Controller
             }
         }
 
+        $this->notifyRefundDecision($refundRequest, 'approved');
+
         return redirect()->back()->with('success', 'Refund request approved and order marked as refunded.');
     }
 
@@ -413,6 +416,8 @@ class OrderController extends Controller
         $refundRequest->reviewed_by = auth()->id();
         $refundRequest->reviewed_at = now();
         $refundRequest->save();
+
+        $this->notifyRefundDecision($refundRequest, 'rejected');
 
         return redirect()->back()->with('success', 'Refund request has been rejected.');
     }
@@ -485,7 +490,98 @@ class OrderController extends Controller
             }
         }
 
+        $this->notifyOrderCancellationByAdmin($order);
+
         return redirect()->back()->with('success', 'Order cancelled successfully.');
+    }
+
+    /**
+     * Notify customer about refund request decision (approved/rejected).
+     */
+    private function notifyRefundDecision(OrderRefundRequest $refundRequest, string $decision): void
+    {
+        $order = $refundRequest->order;
+        if (!$order) {
+            return;
+        }
+
+        $recipient = $refundRequest->user?->email ?: $order->user?->email ?: $order->customer_email;
+        if (!$recipient) {
+            return;
+        }
+
+        $decisionLabel = strtolower($decision) === 'approved' ? 'Approved' : 'Rejected';
+        $subject = 'Refund Request ' . $decisionLabel . ' - ' . ($order->order_ref ?? ('#' . $order->id));
+        $intro = strtolower($decision) === 'approved'
+            ? 'Your refund request has been approved and processed.'
+            : 'Your refund request has been rejected.';
+
+        try {
+            TransactionalMailService::sendViewDetailed(
+                $recipient,
+                $subject,
+                'emails.orders.request-status',
+                [
+                    'subject' => $subject,
+                    'customerName' => $refundRequest->user?->name ?: ($order->customer_name ?: 'Customer'),
+                    'introText' => $intro,
+                    'orderRef' => $order->order_ref,
+                    'orderId' => $order->id,
+                    'requestType' => 'Refund Request',
+                    'decision' => $decisionLabel,
+                    'reason' => $refundRequest->reason,
+                    'adminNote' => $refundRequest->admin_note,
+                    'approvedAmount' => strtolower($decision) === 'approved' ? $refundRequest->approved_amount : null,
+                    'extraMessage' => null,
+                ]
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send refund decision email', [
+                'refund_request_id' => $refundRequest->id,
+                'recipient' => $recipient,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Notify customer when admin cancels an order.
+     */
+    private function notifyOrderCancellationByAdmin(Order $order): void
+    {
+        $recipient = $order->user?->email ?: $order->customer_email;
+        if (!$recipient) {
+            return;
+        }
+
+        $subject = 'Order Cancel Request Approved - ' . ($order->order_ref ?? ('#' . $order->id));
+
+        try {
+            TransactionalMailService::sendViewDetailed(
+                $recipient,
+                $subject,
+                'emails.orders.request-status',
+                [
+                    'subject' => $subject,
+                    'customerName' => $order->user?->name ?: ($order->customer_name ?: 'Customer'),
+                    'introText' => 'Your order cancellation request has been approved by our team.',
+                    'orderRef' => $order->order_ref,
+                    'orderId' => $order->id,
+                    'requestType' => 'Order Cancellation',
+                    'decision' => 'Approved',
+                    'reason' => null,
+                    'adminNote' => $order->admin_notes,
+                    'approvedAmount' => null,
+                    'extraMessage' => 'Payment status: ' . strtoupper((string) $order->payment_status),
+                ]
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send admin cancellation email', [
+                'order_id' => $order->id,
+                'recipient' => $recipient,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
