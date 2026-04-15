@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\OrderRefundRequest;
-use App\Models\OrderItem;
 use App\Services\Payment\PayMongoCheckoutService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -72,9 +71,6 @@ class OrderController extends Controller
             'processing_orders' => Order::whereRaw('LOWER(status) = ?', ['processing'])->count(),
             'shipped_orders' => Order::whereRaw('LOWER(status) = ?', ['shipped'])->count(),
             'delivered_orders' => Order::whereRaw('LOWER(status) = ?', ['delivered'])->count(),
-            'cancelled_orders' => Order::whereRaw('LOWER(status) = ?', ['cancelled'])->count(),
-            'refunded_orders' => Order::whereRaw('LOWER(status) = ?', ['refunded'])->count(),
-            'products_ordered' => (int) OrderItem::sum('quantity'),
             'total_revenue' => Order::whereIn('payment_status', ['paid', 'completed'])->sum('total_amount'),
             'pending_revenue' => Order::where('payment_status', 'pending')->sum('total_amount'),
             'today_orders' => Order::whereDate('created_at', today())->count(),

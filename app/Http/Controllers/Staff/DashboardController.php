@@ -13,8 +13,6 @@ class DashboardController extends Controller
         $pendingConfirmationCount = Order::whereIn('status', ['pending_confirmation', 'pending'])->count();
         $processingCount = Order::whereIn('status', ['confirmed', 'processing', 'shipped'])->count();
         $readyForRefundCount = Order::whereIn('status', ['delivered', 'completed'])->count();
-        $cancelledOrdersCount = Order::where('status', 'cancelled')->count();
-        $refundedOrdersCount = Order::where('status', 'refunded')->count();
         $refundedTodayCount = Order::where('status', 'refunded')->whereDate('updated_at', today())->count();
 
         $recentOrders = Order::with('user')
@@ -26,8 +24,6 @@ class DashboardController extends Controller
             'pendingConfirmationCount',
             'processingCount',
             'readyForRefundCount',
-            'cancelledOrdersCount',
-            'refundedOrdersCount',
             'refundedTodayCount',
             'recentOrders'
         ));
