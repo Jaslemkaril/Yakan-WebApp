@@ -863,6 +863,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::post('/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
         Route::post('/{order}/confirm-received', [OrderController::class, 'confirmReceived'])->name('orders.confirm-received');
+        Route::post('/{order}/refund-request', [OrderController::class, 'requestRefund'])->name('orders.refund-request');
         Route::get('/{order}/invoice', [OrderController::class, 'downloadInvoice'])->name('orders.invoice');
     });
 
@@ -1190,6 +1191,8 @@ Route::middleware(['admin:admin,order_staff'])->prefix('admin')->name('admin.')-
         Route::post('/{order}/tracking', [AdminOrderController::class, 'updateTracking'])->name('orders.update_tracking');
         Route::post('/{order}/cancel', [AdminOrderController::class, 'cancel'])->name('orders.cancel');
         Route::post('/{order}/refund', [AdminOrderController::class, 'refund'])->name('orders.refund');
+        Route::post('/refund-requests/{refundRequest}/approve', [AdminOrderController::class, 'approveRefundRequest'])->name('orders.refund_requests.approve');
+        Route::post('/refund-requests/{refundRequest}/reject', [AdminOrderController::class, 'rejectRefundRequest'])->name('orders.refund_requests.reject');
         Route::patch('/{order}/update-notes', [AdminOrderController::class, 'updateNotes'])->name('orders.update-notes');
         Route::get('/{order}/invoice', [AdminOrderController::class, 'generateInvoice'])->name('orders.invoice');
 

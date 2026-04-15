@@ -132,6 +132,83 @@
                 </div>
             </div>
         </div>
+
+        <div class="mb-8 bg-white rounded-xl shadow-md border border-gray-200 p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 bg-[#800000] rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h11a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">Refund Request</h3>
+                    <p class="text-sm text-gray-600">Need help with your order? You can request a refund after order received.</p>
+                </div>
+            </div>
+
+            @if(isset($refundRequest) && $refundRequest)
+                @php
+                    $refundStatusMap = [
+                        'requested' => ['label' => 'Requested', 'class' => 'bg-yellow-100 text-yellow-800'],
+                        'under_review' => ['label' => 'Under Review', 'class' => 'bg-blue-100 text-blue-800'],
+                        'approved' => ['label' => 'Approved', 'class' => 'bg-indigo-100 text-indigo-800'],
+                        'processed' => ['label' => 'Processed', 'class' => 'bg-green-100 text-green-800'],
+                        'rejected' => ['label' => 'Rejected', 'class' => 'bg-red-100 text-red-800'],
+                    ];
+                    $refundChip = $refundStatusMap[$refundRequest->status] ?? ['label' => ucfirst($refundRequest->status), 'class' => 'bg-gray-100 text-gray-800'];
+                @endphp
+
+                <div class="rounded-lg border border-gray-200 p-4 bg-gray-50">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold {{ $refundChip['class'] }}">{{ $refundChip['label'] }}</span>
+                        <span class="text-xs text-gray-500">Requested {{ optional($refundRequest->requested_at)->format('M d, Y h:i A') ?? $refundRequest->created_at->format('M d, Y h:i A') }}</span>
+                    </div>
+
+                    <p class="text-sm text-gray-700"><span class="font-semibold">Reason:</span> {{ $refundRequest->reason }}</p>
+                    <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Details:</span> {{ $refundRequest->details }}</p>
+
+                    @if(!empty($refundRequest->admin_note))
+                        <div class="mt-3 rounded-md border border-gray-200 bg-white p-3">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Admin Note</p>
+                            <p class="text-sm text-gray-700">{{ $refundRequest->admin_note }}</p>
+                        </div>
+                    @endif
+                </div>
+            @elseif(!empty($canRequestRefund))
+                <form method="POST" action="{{ route('orders.refund-request', $order) }}" enctype="multipart/form-data" class="space-y-4">
+                    @csrf
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Reason <span class="text-red-600">*</span></label>
+                        <select name="reason" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent">
+                            <option value="">-- Select reason --</option>
+                            <option value="Item not as described">Item not as described</option>
+                            <option value="Damaged item">Damaged item</option>
+                            <option value="Wrong item received">Wrong item received</option>
+                            <option value="Incomplete order">Incomplete order</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Details <span class="text-red-600">*</span></label>
+                        <textarea name="details" rows="4" maxlength="2000" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent" placeholder="Please explain what happened and what refund support you need."></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Evidence (optional, up to 5 files)</label>
+                        <input type="file" name="evidence[]" accept="image/*,.pdf" multiple class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#800000] file:text-white hover:file:bg-[#600000]">
+                        <p class="text-xs text-gray-500 mt-1">Accepted: JPG, PNG, WEBP, PDF (max 5MB each)</p>
+                    </div>
+
+                    <button type="submit" class="inline-flex items-center gap-2 px-5 py-3 rounded-lg text-white font-semibold transition-colors" style="background:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Submit Refund Request
+                    </button>
+                </form>
+            @endif
+        </div>
         @endif
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">

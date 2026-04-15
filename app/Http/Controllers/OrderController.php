@@ -17,12 +17,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderRefundRequest;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class OrderController extends Controller
 {
@@ -232,7 +234,20 @@ class OrderController extends Controller
                 ]);
             }
 
-            return view('orders.show', compact('order'));
+            $refundRequest = null;
+            $canRequestRefund = false;
+
+            if (Schema::hasTable('order_refund_requests')) {
+                $refundRequest = OrderRefundRequest::where('order_id', $order->id)
+                    ->where('user_id', auth()->id())
+                    ->latest()
+                    ->first();
+
+                $canRequestRefund = $order->canRequestRefund()
+                    && (int) $order->user_id === (int) auth()->id();
+            }
+
+            return view('orders.show', compact('order', 'refundRequest', 'canRequestRefund'));
         } catch (\Exception $e) {
             Log::error('Error fetching order', ['error' => $e->getMessage()]);
             if ($request->wantsJson() || $request->is('api/*')) {
@@ -520,6 +535,61 @@ class OrderController extends Controller
             if (request()->expectsJson()) return response()->json(['success' => false, 'message' => $msg], 500);
             return redirect()->back()->with('error', $msg);
         }
+    }
+
+    /**
+     * Submit a refund request for a completed order.
+     */
+    public function requestRefund(Request $request, Order $order)
+    {
+        if (!Schema::hasTable('order_refund_requests')) {
+            return redirect()->back()->with('error', 'Refund feature is not ready yet. Please try again shortly.');
+        }
+
+        if ((int) $order->user_id !== (int) auth()->id()) {
+            return redirect()->back()->with('error', 'Unauthorized action.');
+        }
+
+        if (strtolower((string) $order->status) !== 'completed') {
+            return redirect()->back()->with('error', 'You can request a refund only after confirming order received.');
+        }
+
+        $activeStatuses = ['requested', 'under_review', 'approved', 'processed'];
+        $existing = OrderRefundRequest::where('order_id', $order->id)
+            ->where('user_id', auth()->id())
+            ->whereIn('status', $activeStatuses)
+            ->latest()
+            ->first();
+
+        if ($existing) {
+            return redirect()->back()->with('error', 'A refund request for this order is already in progress.');
+        }
+
+        $validated = $request->validate([
+            'reason' => 'required|string|max:150',
+            'details' => 'required|string|max:2000',
+            'evidence' => 'nullable|array|max:5',
+            'evidence.*' => 'file|mimes:jpg,jpeg,png,webp,pdf|max:5120',
+        ]);
+
+        $evidencePaths = [];
+        if ($request->hasFile('evidence')) {
+            foreach ($request->file('evidence', []) as $file) {
+                $evidencePaths[] = $file->store('refunds/order-' . $order->id, 'public');
+            }
+        }
+
+        OrderRefundRequest::create([
+            'order_id' => $order->id,
+            'user_id' => auth()->id(),
+            'reason' => $validated['reason'],
+            'details' => $validated['details'],
+            'evidence_paths' => $evidencePaths,
+            'status' => 'requested',
+            'requested_at' => now(),
+        ]);
+
+        return redirect()->back()->with('success', 'Refund request submitted. Our team will review it shortly.');
     }
 
     /**

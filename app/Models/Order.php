@@ -11,6 +11,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 
 class Order extends Model
 {
@@ -115,6 +116,32 @@ class Order extends Model
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * Refund requests submitted by the customer for this order.
+     */
+    public function refundRequests(): HasMany
+    {
+        return $this->hasMany(OrderRefundRequest::class);
+    }
+
+    /**
+     * Determine if this order can accept a new refund request.
+     */
+    public function canRequestRefund(): bool
+    {
+        if (strtolower((string) $this->status) !== 'completed') {
+            return false;
+        }
+
+        if (!Schema::hasTable('order_refund_requests')) {
+            return false;
+        }
+
+        $activeStatuses = ['requested', 'under_review', 'approved', 'processed'];
+
+        return !$this->refundRequests()->whereIn('status', $activeStatuses)->exists();
     }
 
     /**

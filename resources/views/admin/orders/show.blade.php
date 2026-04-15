@@ -708,8 +708,59 @@
                     $canCancelOrder = !in_array(strtolower((string) $order->status), ['delivered', 'completed', 'refunded', 'cancelled'], true);
                 @endphp
 
+                @if(isset($latestRefundRequest) && $latestRefundRequest)
+                <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-sm font-semibold text-gray-900">Customer Refund Request</p>
+                        @php
+                            $adminRefundStatusMap = [
+                                'requested' => 'bg-yellow-100 text-yellow-800',
+                                'under_review' => 'bg-blue-100 text-blue-800',
+                                'approved' => 'bg-indigo-100 text-indigo-800',
+                                'processed' => 'bg-green-100 text-green-800',
+                                'rejected' => 'bg-red-100 text-red-800',
+                            ];
+                            $adminRefundClass = $adminRefundStatusMap[$latestRefundRequest->status] ?? 'bg-gray-100 text-gray-800';
+                        @endphp
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $adminRefundClass }}">{{ ucfirst(str_replace('_', ' ', $latestRefundRequest->status)) }}</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-2">Requested by {{ $latestRefundRequest->user->name ?? 'Customer' }} on {{ optional($latestRefundRequest->requested_at)->format('M d, Y h:i A') ?? $latestRefundRequest->created_at->format('M d, Y h:i A') }}</p>
+                    <p class="text-sm text-gray-700"><span class="font-semibold">Reason:</span> {{ $latestRefundRequest->reason }}</p>
+                    @if(!empty($latestRefundRequest->details))
+                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Details:</span> {{ $latestRefundRequest->details }}</p>
+                    @endif
+                    @if(!empty($latestRefundRequest->admin_note))
+                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Admin Note:</span> {{ $latestRefundRequest->admin_note }}</p>
+                    @endif
+                </div>
+
+                @if(in_array($latestRefundRequest->status, ['requested', 'under_review']))
+                <form action="{{ route('admin.orders.refund_requests.approve', $latestRefundRequest->id) }}" method="POST" class="space-y-2">
+                    @csrf
+                    <textarea name="admin_note" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Optional note for customer"></textarea>
+                    <button type="submit" onclick="return confirm('Approve and process this refund request?');" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium flex items-center justify-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Approve & Process Refund
+                    </button>
+                </form>
+
+                <form action="{{ route('admin.orders.refund_requests.reject', $latestRefundRequest->id) }}" method="POST" class="space-y-2">
+                    @csrf
+                    <textarea name="admin_note" rows="2" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Reason for rejection (required)"></textarea>
+                    <button type="submit" onclick="return confirm('Reject this refund request?');" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium flex items-center justify-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        Reject Refund Request
+                    </button>
+                </form>
+                @endif
+                @endif
+
                 <!-- Refund Button -->
-                @if($order->payment_status === 'paid' && in_array($order->status, ['completed', 'delivered']))
+                @if((!isset($latestRefundRequest) || !$latestRefundRequest) && $order->payment_status === 'paid' && in_array($order->status, ['completed', 'delivered']))
                 <form action="{{ route('admin.orders.refund', $order->id) }}" method="POST">
                     @csrf
                     <button type="submit" onclick="return confirm('Are you sure you want to refund this order? This action cannot be undone.');" class="w-full text-white px-4 py-2 rounded-lg transition-colors duration-200 font-medium flex items-center justify-center" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#A05050'" onmouseout="this.style.backgroundColor='#800000'">

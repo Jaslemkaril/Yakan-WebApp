@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Order;
+use App\Models\OrderRefundRequest;
 use App\Models\OrderItem;
 use App\Services\Payment\PayMongoCheckoutService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class OrderController extends Controller
 {
@@ -90,7 +92,16 @@ class OrderController extends Controller
     public function show(Order $order)
     {
         $order->load('user', 'userAddress', 'orderItems.product.category');
-        return view('admin.orders.show', compact('order'));
+
+        $latestRefundRequest = null;
+        if (Schema::hasTable('order_refund_requests')) {
+            $latestRefundRequest = OrderRefundRequest::with(['user', 'reviewer'])
+                ->where('order_id', $order->id)
+                ->latest()
+                ->first();
+        }
+
+        return view('admin.orders.show', compact('order', 'latestRefundRequest'));
     }
 
     /**
@@ -338,6 +349,71 @@ class OrderController extends Controller
         }
 
         return redirect()->back()->with('success', 'Order refunded successfully.');
+    }
+
+    /**
+     * Approve and process a user refund request.
+     */
+    public function approveRefundRequest(Request $request, OrderRefundRequest $refundRequest)
+    {
+        $validated = $request->validate([
+            'admin_note' => 'nullable|string|max:2000',
+            'approved_amount' => 'nullable|numeric|min:0',
+        ]);
+
+        if (!in_array($refundRequest->status, ['requested', 'under_review'], true)) {
+            return redirect()->back()->with('error', 'This refund request can no longer be approved.');
+        }
+
+        $order = $refundRequest->order;
+        if (!$order) {
+            return redirect()->back()->with('error', 'Associated order was not found.');
+        }
+
+        $refundRequest->status = 'processed';
+        $refundRequest->admin_note = $validated['admin_note'] ?? $refundRequest->admin_note;
+        $refundRequest->approved_amount = $validated['approved_amount'] ?? ($order->total_amount ?? $order->total);
+        $refundRequest->reviewed_by = auth()->id();
+        $refundRequest->reviewed_at = now();
+        $refundRequest->processed_at = now();
+        $refundRequest->save();
+
+        $order->status = 'refunded';
+        $order->payment_status = 'refunded';
+        $order->appendTrackingEvent('Refunded');
+        $order->save();
+
+        foreach ($order->orderItems as $item) {
+            $product = $item->product;
+            if ($product) {
+                $product->stock += $item->quantity;
+                $product->save();
+            }
+        }
+
+        return redirect()->back()->with('success', 'Refund request approved and order marked as refunded.');
+    }
+
+    /**
+     * Reject a user refund request.
+     */
+    public function rejectRefundRequest(Request $request, OrderRefundRequest $refundRequest)
+    {
+        $validated = $request->validate([
+            'admin_note' => 'required|string|max:2000',
+        ]);
+
+        if (!in_array($refundRequest->status, ['requested', 'under_review'], true)) {
+            return redirect()->back()->with('error', 'This refund request can no longer be rejected.');
+        }
+
+        $refundRequest->status = 'rejected';
+        $refundRequest->admin_note = $validated['admin_note'];
+        $refundRequest->reviewed_by = auth()->id();
+        $refundRequest->reviewed_at = now();
+        $refundRequest->save();
+
+        return redirect()->back()->with('success', 'Refund request has been rejected.');
     }
 
     // Cancel order
