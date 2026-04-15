@@ -199,9 +199,12 @@ class ChatController extends Controller
     public function requestDetails(Chat $chat, $messageId)
     {
         try {
+            $availableMeters = max(0, (int) \App\Models\Inventory::sum('quantity'));
+
             \Log::info('Request details started', [
                 'chat_id' => $chat->id,
-                'message_id' => $messageId
+                'message_id' => $messageId,
+                'available_meters' => $availableMeters,
             ]);
             
             // Verify the message exists and belongs to this chat
@@ -229,12 +232,13 @@ class ChatController extends Controller
                         'required' => true
                     ],
                     [
-                        'name' => 'quantity_meters',
-                        'label' => 'Quantity (meters)',
+                        'name' => 'meters',
+                        'label' => 'Meters',
                         'type' => 'number',
                         'placeholder' => 'e.g., 5',
                         'required' => true,
                         'min' => 0.1,
+                        'max' => $availableMeters,
                         'step' => 0.1
                     ],
                     [
@@ -251,7 +255,8 @@ class ChatController extends Controller
                         'placeholder' => 'Any specific requirements or preferences',
                         'required' => false
                     ]
-                ]
+                ],
+                'available_meters' => $availableMeters,
             ];
             
             \Log::info('Creating form request message', ['form_data' => $formData]);

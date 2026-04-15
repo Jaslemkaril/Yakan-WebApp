@@ -619,7 +619,7 @@ class ChatController extends Controller
             if ($formResponseMessage && !empty($formResponseMessage->form_data['responses'])) {
                 $formData = $formResponseMessage->form_data['responses'];
                 $orderName = $formData['order_name'] ?? null;
-                $quantityMeters = $formData['quantity_meters'] ?? 1;
+                $quantityMeters = $formData['meters'] ?? ($formData['quantity_meters'] ?? 1);
                 $fabricType = $formData['fabric_type'] ?? null;
                 $customerNotes = $formData['additional_notes'] ?? null;
             }
@@ -819,6 +819,21 @@ class ChatController extends Controller
         
         // Get the original form request message
         $originalMessage = ChatMessage::find($validated['original_message_id']);
+        
+        // Enforce stock-aware meter limit for chat support details form.
+        $availableMeters = null;
+        if ($originalMessage) {
+            $availableMeters = (int) ((is_array($originalMessage->form_data) ? ($originalMessage->form_data['available_meters'] ?? 0) : 0));
+        }
+        
+        $requestedMetersRaw = $formResponses['meters'] ?? ($formResponses['quantity_meters'] ?? null);
+        if ($requestedMetersRaw !== null && is_numeric($requestedMetersRaw)) {
+            $requestedMeters = (float) $requestedMetersRaw;
+            if ($availableMeters !== null && $availableMeters >= 0 && $requestedMeters > $availableMeters) {
+                return $this->redirectWithToken('chats.show', $chat)
+                    ->with('error', 'The requested meters cannot exceed the available stock (' . number_format($availableMeters, 2) . ' m).');
+            }
+        }
         
         // Create formatted message showing the details
         $messageText = "✅ Custom Order Details Submitted:\n\n";

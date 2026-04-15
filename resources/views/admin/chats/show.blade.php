@@ -330,7 +330,7 @@
                                              onmouseout="this.style.transform='scale(1)'"
                                              onerror="this.style.display='none'">
                                     </a>
-                                    @if(!$isAdmin)
+                                    @if(!$isAdmin && !$hasAcceptedQuote)
                                     <button type="button" class="cs-req-btn" onclick="requestCustomOrderDetails({{ $message->id }})">
                                         <i class="fas fa-clipboard-list"></i> Request Details
                                     </button>

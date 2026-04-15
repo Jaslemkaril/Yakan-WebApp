@@ -279,6 +279,11 @@
                                 {{-- Display custom order details form if this is a form_request --}}
                                 @if(isset($message->message_type) && $message->message_type === 'form_request' && !empty($message->form_data))
                                     @php
+                                        $quoteAlreadyAccepted = \App\Models\ChatMessage::where('chat_id', $chat->id)
+                                            ->where('sender_type', 'user')
+                                            ->where('message', 'like', '%accepted the price quote%')
+                                            ->exists();
+
                                         // Check if customer has already responded to this form
                                         $hasResponded = \App\Models\ChatMessage::where('chat_id', $chat->id)
                                             ->where('sender_type', 'user')
@@ -287,15 +292,22 @@
                                             ->exists();
                                     @endphp
                                     
-                                    @if(!$hasResponded)
+                                    @if($quoteAlreadyAccepted)
+                                        <div class="mt-3 bg-gray-100 border border-gray-300 rounded-lg p-3 text-sm text-gray-700">
+                                            This request details form is now closed because the quote has already been accepted.
+                                        </div>
+                                    @elseif(!$hasResponded)
                                         <form action="{{ route('chats.submit-form-response', $chat) }}" method="POST" class="mt-4 space-y-3" id="detailsForm{{ $message->id }}">
                                             @csrf
                                             <input type="hidden" name="original_message_id" value="{{ $message->id }}">
                                             
                                             @foreach($message->form_data['fields'] as $field)
+                                                @php
+                                                    $displayFieldLabel = $field['name'] === 'quantity_meters' ? 'Meters' : $field['label'];
+                                                @endphp
                                                 <div class="form-group">
                                                     <label class="block text-xs font-semibold text-gray-700 mb-1">
-                                                        {{ $field['label'] }}
+                                                        {{ $displayFieldLabel }}
                                                         @if($field['required'])
                                                             <span class="text-red-500">*</span>
                                                         @endif
@@ -309,14 +321,23 @@
                                                             rows="3"
                                                             {{ $field['required'] ? 'required' : '' }}></textarea>
                                                     @elseif($field['type'] === 'number')
+                                                        @php
+                                                            $resolvedFieldName = $field['name'] === 'quantity_meters' ? 'meters' : $field['name'];
+                                                            $fieldMax = $field['max'] ?? null;
+                                                        @endphp
                                                         <input 
                                                             type="number" 
-                                                            name="{{ $field['name'] }}" 
+                                                            name="{{ $resolvedFieldName }}" 
                                                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-green-500 text-sm"
                                                             placeholder="{{ $field['placeholder'] ?? '' }}"
                                                             min="{{ $field['min'] ?? 0 }}"
+                                                            @if($fieldMax !== null) max="{{ $fieldMax }}" @endif
                                                             step="{{ $field['step'] ?? 1 }}"
+                                                            oninput="if (this.validity.rangeOverflow) { this.setCustomValidity('Meters cannot exceed available stock.'); } else { this.setCustomValidity(''); }"
                                                             {{ $field['required'] ? 'required' : '' }}>
+                                                        @if($fieldMax !== null)
+                                                            <p class="text-xs text-amber-700 mt-1">Available stock: {{ number_format((float) $fieldMax, 2) }} m. Meters cannot exceed available stock.</p>
+                                                        @endif
                                                     @else
                                                         <input 
                                                             type="text" 
