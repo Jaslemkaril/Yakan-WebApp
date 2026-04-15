@@ -34,7 +34,7 @@ class RegisteredUserController extends Controller
         $validator = Validator::make($request->all(), [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'middle_initial' => 'nullable|string|max:1',
+            'middle_initial' => 'nullable|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => [
                 'required',
@@ -63,12 +63,13 @@ class RegisteredUserController extends Controller
         try {
             $validated = $validator->validated();
             \Log::info('Validation passed', ['email' => $validated['email']]);
+            $middleName = trim((string) ($validated['middle_initial'] ?? ''));
 
             $user = User::create([
                 'first_name' => $validated['first_name'],
                 'last_name' => $validated['last_name'],
-                'middle_initial' => $validated['middle_initial'] ?? null,
-                'name' => trim($validated['first_name'] . ' ' . $validated['last_name']),
+                'middle_initial' => $middleName !== '' ? $middleName : null,
+                'name' => trim($validated['first_name'] . ' ' . ($middleName !== '' ? $middleName . ' ' : '') . $validated['last_name']),
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
                 'role' => 'user',
