@@ -35,11 +35,18 @@ class AuthenticatedSessionController extends Controller
 
         \Log::info('User found', ['email' => $user->email, 'role' => $user->role]);
 
-        // Allow user/staff/admin accounts and route them to the proper dashboard.
-        if (!in_array((string) $user->role, ['user', 'admin', 'order_staff'], true)) {
-            \Log::warning('Login denied: Unsupported role', ['email' => $user->email, 'role' => $user->role]);
+        // User login page is only for regular users.
+        if ((string) $user->role !== 'user') {
+            \Log::warning('Login denied: Non-user attempted user login', ['email' => $user->email, 'role' => $user->role]);
+
+            $message = (string) $user->role === 'admin'
+                ? 'This account is admin. Please use the admin login page.'
+                : ((string) $user->role === 'order_staff'
+                    ? 'This account is order staff. Please use the staff login page.'
+                    : 'This account role is not allowed to login here.');
+
             return back()->withErrors([
-                'email' => 'This account role is not allowed to login.'
+                'email' => $message
             ])->withInput($request->only('email'));
         }
 
@@ -77,9 +84,7 @@ class AuthenticatedSessionController extends Controller
 
         // Honor intended URL (e.g., the page that triggered auth failure)
         $intended = $request->input('redirect_to');
-        $defaultRedirect = in_array((string) $user->role, ['admin', 'order_staff'], true)
-            ? '/admin/dashboard'
-            : '/dashboard';
+        $defaultRedirect = '/dashboard';
 
         $baseRedirect = ($intended && str_starts_with($intended, '/') && !str_contains($intended, '//') && !in_array($intended, ['/login', '/logout', '/register', '/login-user']))
             ? $intended

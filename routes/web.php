@@ -569,8 +569,15 @@ Route::get('/setup/reset-user-password', function () {
 Route::get('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'showLoginForm'])->name('admin.login.form');
 Route::post('/admin/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'login'])->name('admin.login.submit');
 
-// Admin/staff dashboard route
-Route::get('/admin/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->middleware('admin:admin,order_staff')->name('admin.dashboard');
+// Order staff login routes
+Route::get('/staff/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'showStaffLoginForm'])->name('staff.login.form');
+Route::post('/staff/login', [App\Http\Controllers\Auth\AdminLoginController::class, 'staffLogin'])->name('staff.login.submit');
+
+// Admin dashboard route
+Route::get('/admin/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->middleware('admin:admin')->name('admin.dashboard');
+
+// Order staff dashboard route
+Route::get('/staff/dashboard', [App\Http\Controllers\Staff\DashboardController::class, 'index'])->middleware('admin:order_staff')->name('staff.dashboard');
 
 // Regular user login routes
 Route::get('/login', function() {

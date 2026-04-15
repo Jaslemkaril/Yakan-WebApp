@@ -11,9 +11,14 @@ class AdminLoginController extends Controller
     // Show the admin login form
     public function showLoginForm()
     {
-        // If already logged in as admin/staff, redirect to dashboard
-        if (Auth::check() && in_array((string) Auth::user()->role, ['admin', 'order_staff'], true)) {
+        // If already logged in as admin, redirect to admin dashboard
+        if (Auth::check() && (string) Auth::user()->role === 'admin') {
             return redirect('/admin/dashboard');
+        }
+
+        // If logged in as order staff, redirect to staff dashboard
+        if (Auth::check() && (string) Auth::user()->role === 'order_staff') {
+            return redirect('/staff/dashboard');
         }
         
         // Logout any non-admin user
@@ -37,16 +42,16 @@ class AdminLoginController extends Controller
 
         \Log::info('Admin login attempt', ['email' => $credentials['email']]);
 
-        // Check if user exists and has admin/staff role
+        // Check if user exists and has admin role
         $user = \App\Models\User::where('email', $credentials['email'])->first();
         
         if (!$user) {
             return back()->withErrors(['email' => 'Invalid credentials.'])->onlyInput('email');
         }
         
-        if (!in_array((string) $user->role, ['admin', 'order_staff'], true)) {
+        if ((string) $user->role !== 'admin') {
             \Log::warning('Login attempt by non-admin user', ['email' => $user->email, 'role' => $user->role]);
-            return back()->withErrors(['email' => 'Access denied. Staff privileges required.'])->onlyInput('email');
+            return back()->withErrors(['email' => 'Access denied. Admin privileges required.'])->onlyInput('email');
         }
         
         // Verify password
@@ -181,6 +186,68 @@ class AdminLoginController extends Controller
 </body>
 </html>
 HTML);
+    }
+
+    // Show the order staff login form
+    public function showStaffLoginForm()
+    {
+        if (Auth::check() && (string) Auth::user()->role === 'order_staff') {
+            return redirect('/staff/dashboard');
+        }
+
+        if (Auth::check() && (string) Auth::user()->role === 'admin') {
+            return redirect('/admin/dashboard');
+        }
+
+        if (Auth::check()) {
+            Auth::logout();
+        }
+
+        return view('auth.staff-login');
+    }
+
+    // Handle order staff login
+    public function staffLogin(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
+
+        $credentials = $request->only('email', 'password');
+
+        \Log::info('Order staff login attempt', ['email' => $credentials['email']]);
+
+        $user = \App\Models\User::where('email', $credentials['email'])->first();
+
+        if (!$user) {
+            return back()->withErrors(['email' => 'Invalid credentials.'])->onlyInput('email');
+        }
+
+        if ((string) $user->role !== 'order_staff') {
+            \Log::warning('Login attempt by non-order-staff user', ['email' => $user->email, 'role' => $user->role]);
+            return back()->withErrors(['email' => 'Access denied. Order staff account required.'])->onlyInput('email');
+        }
+
+        if (!\Hash::check($request->password, $user->password)) {
+            return back()->withErrors(['email' => 'Invalid credentials.'])->onlyInput('email');
+        }
+
+        $token = bin2hex(random_bytes(32));
+        \DB::table('auth_tokens')->insert([
+            'user_id' => $user->id,
+            'token' => $token,
+            'expires_at' => now()->addHours(24),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        \Log::info('Order staff login successful', ['user_id' => $user->id]);
+
+        return redirect('/staff/dashboard?auth_token=' . $token);
     }
 
     // Logout admin

@@ -90,6 +90,10 @@ class AdminCheck
             'user_email' => Auth::check() ? Auth::user()->email : null,
         ]);
         
-        return redirect()->route('admin.login.form')->with('error', 'Please login with authorized staff account to continue');
+        $loginRoute = in_array('order_staff', $allowedRoles, true) && !in_array('admin', $allowedRoles, true)
+            ? 'staff.login.form'
+            : 'admin.login.form';
+
+        return redirect()->route($loginRoute)->with('error', 'Please login with authorized staff account to continue');
     }
 }

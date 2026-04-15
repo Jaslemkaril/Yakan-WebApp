@@ -211,6 +211,10 @@
                     <a href="{{ route('password.request') }}" class="text-sm font-semibold hover:opacity-80 transition" style="color: #800000;">
                         Forgot your password?
                     </a>
+                    <div class="mt-2 text-xs text-gray-500">
+                        Order staff?
+                        <a href="{{ route('staff.login.form') }}" class="font-semibold" style="color: #800000;">Use staff login</a>
+                    </div>
                 </div>
             </div>
 

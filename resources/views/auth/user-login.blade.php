@@ -543,6 +543,12 @@
                             <a href="{{ route('password.request') }}" class="text-red-600 hover:text-red-700 font-medium text-sm link-hover inline-block">
                                 Forgot your password?
                             </a>
+                            <div class="mt-2 text-xs text-gray-500">
+                                Order staff?
+                                <a href="{{ route('staff.login.form') }}" class="text-red-600 hover:text-red-700 font-semibold">
+                                    Use staff login
+                                </a>
+                            </div>
                         </div>
 
                         <!-- Sign Up Link -->
