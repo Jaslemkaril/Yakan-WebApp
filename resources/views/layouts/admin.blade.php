@@ -64,10 +64,15 @@
         
         /* Active state indicator */
         .nav-link-active {
-            background: rgba(255, 255, 255, 0.2);
-            border-left: 4px solid #fff;
-            color: #fff;
+            background: rgba(255, 255, 255, 0.2) !important;
+            border-left: 4px solid #fff !important;
+            color: #fff !important;
             font-weight: 600;
+        }
+
+        .nav-link-active:hover {
+            background: rgba(255, 255, 255, 0.2) !important;
+            transform: translateX(4px);
         }
 
         .nav-link-active::before {
