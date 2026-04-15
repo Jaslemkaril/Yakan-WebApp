@@ -3,6 +3,9 @@
 @section('content')
 <div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-6xl mx-auto">
+        @php
+            $canCancelOrder = in_array(strtolower((string) $order->status), ['pending', 'pending_confirmation', 'confirmed', 'processing'], true);
+        @endphp
         <!-- Header -->
         <div class="mb-8">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -11,12 +14,23 @@
                     <p class="text-gray-600">Order #<span class="font-bold text-[#800000]">{{ $order->order_ref }}</span></p>
                     <p class="text-sm text-gray-500 mt-2">{{ $order->created_at->format('M d, Y h:i A') }}</p>
                 </div>
-                <a href="{{ route('orders.index') }}" class="inline-flex items-center justify-center px-6 py-3 bg-[#800000] text-white font-semibold rounded-lg hover:bg-[#600000] transition-all duration-300 shadow-md">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                    </svg>
-                    Back to Orders
-                </a>
+                <div class="flex flex-wrap items-center gap-3">
+                    @if($canCancelOrder)
+                        <a href="#cancel-order-card" class="inline-flex items-center justify-center px-5 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all duration-300 shadow-md">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            Cancel Order
+                        </a>
+                    @endif
+
+                    <a href="{{ route('orders.index') }}" class="inline-flex items-center justify-center px-6 py-3 bg-[#800000] text-white font-semibold rounded-lg hover:bg-[#600000] transition-all duration-300 shadow-md">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                        Back to Orders
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -68,8 +82,8 @@
         </div>
 
         <!-- Customer Action Buttons -->
-        @if(in_array($order->status, ['pending', 'pending_confirmation']))
-        <div class="mb-8 bg-white rounded-xl shadow-md p-6 border border-gray-200">
+        @if($canCancelOrder)
+        <div id="cancel-order-card" class="mb-8 bg-white rounded-xl shadow-md p-6 border border-gray-200">
             <h3 class="text-lg font-bold text-gray-900 mb-4">Cancel Order</h3>
             <form method="POST" action="{{ route('orders.cancel', $order) }}" onsubmit="return confirm('Are you sure you want to cancel this order?')">
                 @csrf
