@@ -419,6 +419,7 @@
                                 </div>
 
                                 <div class="input-group">
+                                    <div class="text-xs text-gray-500 mb-1 ml-1">Optional</div>
                                     <input 
                                         id="middle_initial" 
                                         type="text" 
