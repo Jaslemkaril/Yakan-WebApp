@@ -3,6 +3,17 @@
 @section('title', 'Edit Order')
 
 @section('content')
+@php
+    $normalizedDeliveryType = strtolower((string) ($order->delivery_type ?? 'delivery'));
+    if ($normalizedDeliveryType === 'deliver') {
+        $normalizedDeliveryType = 'delivery';
+    }
+    $isPickup = $normalizedDeliveryType === 'pickup';
+    $isPaymentLocked = in_array(strtolower((string) ($order->payment_status ?? 'pending')), ['paid', 'verified'], true);
+    $canFullyEdit = strtolower((string) $order->status) === 'pending';
+    $canQuantityEditOnly = !$canFullyEdit && $isPickup && !$isPaymentLocked;
+    $canEditItems = $canFullyEdit || $canQuantityEditOnly;
+@endphp
 <div class="space-y-6">
     <!-- Edit Order Header -->
     <div class="bg-[#800000] rounded-2xl p-8 text-white shadow-xl">
@@ -10,10 +21,15 @@
             <div>
                 <h1 class="text-3xl font-bold mb-2">Edit Order {{ $order->order_ref ?? '#'.$order->id }}</h1>
                 <p class="text-red-100 text-lg">Modify order details and items</p>
-                @if($order->status !== 'pending')
+                @if(!$canEditItems)
                     <div class="mt-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                         <i class="fas fa-exclamation-triangle mr-1"></i>
-                        Only pending orders can be edited
+                        This order is locked for editing
+                    </div>
+                @elseif($canQuantityEditOnly)
+                    <div class="mt-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <i class="fas fa-sliders-h mr-1"></i>
+                        Pickup unpaid: quantity-only editing enabled
                     </div>
                 @endif
             </div>
@@ -28,13 +44,23 @@
         </div>
     </div>
 
-    @if($order->status !== 'pending')
+    @if(!$canEditItems)
     <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
         <div class="flex items-start">
             <i class="fas fa-exclamation-triangle text-yellow-600 mt-0.5 mr-3"></i>
             <div>
                 <p class="text-sm text-yellow-800 font-medium">Order Cannot Be Edited</p>
-                <p class="text-xs text-yellow-700 mt-1">This order has already been processed and cannot be modified. Only pending orders can be edited.</p>
+                <p class="text-xs text-yellow-700 mt-1">Only pending orders or pickup unpaid quantity updates are allowed.</p>
+            </div>
+        </div>
+    </div>
+    @elseif($canQuantityEditOnly)
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex items-start">
+            <i class="fas fa-info-circle text-blue-600 mt-0.5 mr-3"></i>
+            <div>
+                <p class="text-sm text-blue-800 font-medium">Quantity-Only Edit Mode</p>
+                <p class="text-xs text-blue-700 mt-1">You can adjust item quantities for pickup settlement. Product, customer, and notes are locked.</p>
             </div>
         </div>
     </div>
@@ -58,9 +84,9 @@
                         <select id="user_id" 
                                 name="user_id" 
                                 required
-                                @if($order->status !== 'pending') disabled
+                                @if(!$canFullyEdit) disabled
                                 @endif
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent @if($order->status !== 'pending') bg-gray-100 @endif">
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent @if(!$canFullyEdit) bg-gray-100 @endif">
                             <option value="">Choose a customer...</option>
                             @foreach($users as $user)
                             <option value="{{ $user->id }}" {{ old('user_id', $order->user_id) == $user->id ? 'selected' : '' }}>
@@ -80,9 +106,9 @@
                         <h3 class="text-lg font-semibold text-gray-900">Order Items</h3>
                         <button type="button" 
                                 id="addItemBtn"
-                                @if($order->status !== 'pending') disabled
+                                @if(!$canFullyEdit) disabled
                                 @endif
-                                class="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors text-sm @if($order->status !== 'pending') opacity-50 cursor-not-allowed @endif">
+                                class="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors text-sm @if(!$canFullyEdit) opacity-50 cursor-not-allowed @endif">
                             <i class="fas fa-plus mr-2"></i>Add Item
                         </button>
                     </div>
@@ -98,9 +124,9 @@
                                     </label>
                                     <select name="items[{{ $index }}][product_id]" 
                                             required
-                                            @if($order->status !== 'pending') disabled
+                                            @if(!$canFullyEdit) disabled
                                             @endif
-                                            class="product-select w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent @if($order->status !== 'pending') bg-gray-100 @endif">
+                                            class="product-select w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent @if(!$canFullyEdit) bg-gray-100 @endif">
                                         <option value="">Select a product...</option>
                                         @foreach($products as $product)
                                         <option value="{{ $product->id }}" 
@@ -111,6 +137,9 @@
                                         </option>
                                         @endforeach
                                     </select>
+                                    @if(!$canFullyEdit)
+                                        <input type="hidden" name="items[{{ $index }}][product_id]" value="{{ old("items.{$index}.product_id", $orderItem->product_id) }}">
+                                    @endif
                                 </div>
                                 
                                 <div>
@@ -122,9 +151,12 @@
                                            min="1" 
                                            value="{{ old("items.{$index}.quantity", $orderItem->quantity) }}"
                                            required
-                                           @if($order->status !== 'pending') disabled
+                                           @if(!$canEditItems) disabled
                                            @endif
-                                           class="quantity-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent @if($order->status !== 'pending') bg-gray-100 @endif">
+                                           class="quantity-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent @if(!$canEditItems) bg-gray-100 @endif">
+                                    @if($canQuantityEditOnly)
+                                        <input type="hidden" name="items[{{ $index }}][order_item_id]" value="{{ $orderItem->id }}">
+                                    @endif
                                 </div>
                             </div>
                             
@@ -133,9 +165,9 @@
                                     Subtotal: <span class="item-subtotal font-semibold">₱{{ number_format($orderItem->price * $orderItem->quantity, 2) }}</span>
                                 </div>
                                 <button type="button" 
-                                        @if($order->status !== 'pending') disabled
+                                        @if(!$canFullyEdit) disabled
                                         @endif
-                                        class="remove-item-btn text-red-600 hover:text-red-800 text-sm @if($order->status !== 'pending') opacity-50 cursor-not-allowed @endif">
+                                        class="remove-item-btn text-red-600 hover:text-red-800 text-sm @if(!$canFullyEdit) opacity-50 cursor-not-allowed @endif">
                                     <i class="fas fa-trash mr-1"></i>Remove
                                 </button>
                             </div>
@@ -177,9 +209,9 @@
                         <textarea id="notes" 
                                   name="notes" 
                                   rows="3"
-                                  @if($order->status !== 'pending') disabled
+                                  @if(!$canFullyEdit) disabled
                                   @endif
-                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent @if($order->status !== 'pending') bg-gray-100 @endif"
+                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent @if(!$canFullyEdit) bg-gray-100 @endif"
                                   placeholder="Add any special instructions or notes for this order...">{{ old('notes', $order->notes) }}</textarea>
                         @error('notes')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -198,10 +230,10 @@
                            class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                             <i class="fas fa-times mr-2"></i>Cancel
                         </a>
-                        @if($order->status === 'pending')
+                        @if($canEditItems)
                         <button type="submit" 
                                 class="px-6 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-colors">
-                            <i class="fas fa-save mr-2"></i>Update Order
+                            <i class="fas fa-save mr-2"></i>{{ $canQuantityEditOnly ? 'Update Quantities' : 'Update Order' }}
                         </button>
                         @else
                         <button type="button" 
@@ -221,11 +253,12 @@
 document.addEventListener('DOMContentLoaded', function() {
     let itemIndex = {{ $order->orderItems->count() }};
     const products = @json($products);
-    const isEditable = {{ $order->status === 'pending' ? 'true' : 'false' }};
+    const canFullyEdit = {{ $canFullyEdit ? 'true' : 'false' }};
+    const canEditItems = {{ $canEditItems ? 'true' : 'false' }};
     
     // Add new item
     document.getElementById('addItemBtn').addEventListener('click', function() {
-        if (!isEditable) return;
+        if (!canFullyEdit) return;
         
         const container = document.getElementById('orderItems');
         const newItemRow = createItemRow(itemIndex);
@@ -236,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Remove item
     document.addEventListener('click', function(e) {
-        if (!isEditable) return;
+        if (!canFullyEdit) return;
         
         if (e.target.closest('.remove-item-btn')) {
             const itemRow = e.target.closest('.item-row');
@@ -251,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Product selection change
     document.addEventListener('change', function(e) {
-        if (!isEditable) return;
+        if (!canFullyEdit) return;
         
         if (e.target.classList.contains('product-select')) {
             const selectedOption = e.target.options[e.target.selectedIndex];
@@ -274,7 +307,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Quantity change
     document.addEventListener('input', function(e) {
-        if (!isEditable) return;
+        if (!canEditItems) return;
         
         if (e.target.classList.contains('quantity-input')) {
             updateItemSubtotal(e.target.closest('.item-row'));
