@@ -9,7 +9,6 @@ use App\Models\OrderRefundRequest;
 use App\Services\Payment\PayMongoCheckoutService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
@@ -576,151 +575,68 @@ class OrderController extends Controller
      */
     public function update(Request $request, Order $order)
     {
-        $normalizedDeliveryType = strtolower((string) ($order->delivery_type ?? 'delivery'));
-        if ($normalizedDeliveryType === 'deliver') {
-            $normalizedDeliveryType = 'delivery';
-        }
-
-        $isPickup = $normalizedDeliveryType === 'pickup';
-        $isPaid = in_array(strtolower((string) ($order->payment_status ?? 'pending')), ['paid', 'verified'], true);
-        $canFullyEdit = strtolower((string) $order->status) === 'pending';
-        $canQuantityEditOnly = !$canFullyEdit && $isPickup && !$isPaid;
-
-        if (!$canFullyEdit && !$canQuantityEditOnly) {
-            return redirect()->back()
-                ->with('error', 'This order cannot be edited. Only pending orders or pickup unpaid quantity updates are allowed.');
-        }
-
-        if ($canFullyEdit) {
-            $validated = $request->validate([
-                'user_id' => 'required|exists:users,id',
-                'items' => 'required|array|min:1',
-                'items.*.product_id' => 'required|exists:products,id',
-                'items.*.quantity' => 'required|integer|min:1',
-                'notes' => 'nullable|string',
-            ]);
-
-            DB::transaction(function () use ($order, $validated) {
-                // Restore original stock
-                foreach ($order->orderItems as $item) {
-                    $product = $item->product;
-                    $product->stock += $item->quantity;
-                    $product->save();
-                }
-
-                // Delete existing order items
-                $order->orderItems()->delete();
-
-                $totalAmount = 0;
-
-                // Add new order items
-                foreach ($validated['items'] as $item) {
-                    $product = \App\Models\Product::lockForUpdate()->find($item['product_id']);
-
-                    // Check stock availability
-                    if ($product->stock < $item['quantity']) {
-                        throw new \RuntimeException("Insufficient stock for {$product->name}. Available: {$product->stock}, Requested: {$item['quantity']}");
-                    }
-
-                    $subtotal = $product->price * $item['quantity'];
-                    $totalAmount += $subtotal;
-
-                    // Create order item
-                    \App\Models\OrderItem::create([
-                        'order_id' => $order->id,
-                        'product_id' => $item['product_id'],
-                        'quantity' => $item['quantity'],
-                        'price' => $product->price,
-                    ]);
-
-                    // Update product stock
-                    $product->stock -= $item['quantity'];
-                    $product->save();
-                }
-
-                // Update order
-                $order->update([
-                    'user_id' => $validated['user_id'],
-                    'total_amount' => $totalAmount,
-                    'notes' => $validated['notes'] ?? null,
-                ]);
-            });
-
-            return redirect()->route('admin.orders.show', $order->id)
-                ->with('success', 'Order updated successfully!');
-        }
-
         $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
             'items' => 'required|array|min:1',
-            'items.*.order_item_id' => 'required|integer',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
+            'notes' => 'nullable|string',
         ]);
 
-        try {
-            DB::transaction(function () use ($order, $validated) {
-                $existingItems = $order->orderItems()->with('product')->get()->keyBy('id');
-                $submittedIds = collect($validated['items'])
-                    ->pluck('order_item_id')
-                    ->map(fn ($id) => (int) $id)
-                    ->sort()
-                    ->values()
-                    ->all();
-                $existingIds = $existingItems->keys()->map(fn ($id) => (int) $id)->sort()->values()->all();
-
-                if ($submittedIds !== $existingIds) {
-                    throw new \RuntimeException('Order items mismatch. Please refresh and try again.');
-                }
-
-                $totalAmount = 0;
-
-                foreach ($validated['items'] as $itemData) {
-                    $orderItemId = (int) $itemData['order_item_id'];
-                    $newQuantity = (int) $itemData['quantity'];
-                    $existingItem = $existingItems->get($orderItemId);
-
-                    if (!$existingItem) {
-                        throw new \RuntimeException('Invalid order item submitted.');
-                    }
-
-                    if ((int) $existingItem->product_id !== (int) $itemData['product_id']) {
-                        throw new \RuntimeException('Product changes are not allowed in quantity-only updates.');
-                    }
-
-                    $product = \App\Models\Product::lockForUpdate()->find($existingItem->product_id);
-                    $oldQuantity = (int) $existingItem->quantity;
-                    $delta = $newQuantity - $oldQuantity;
-
-                    if ($delta > 0 && $product->stock < $delta) {
-                        throw new \RuntimeException("Insufficient stock for {$product->name}. Available: {$product->stock}, Additional needed: {$delta}");
-                    }
-
-                    if ($delta > 0) {
-                        $product->stock -= $delta;
-                    } elseif ($delta < 0) {
-                        $product->stock += abs($delta);
-                    }
-                    $product->save();
-
-                    $existingItem->quantity = $newQuantity;
-                    $existingItem->price = $product->price;
-                    $existingItem->save();
-
-                    $totalAmount += ($product->price * $newQuantity);
-                }
-
-                $order->update([
-                    'total_amount' => $totalAmount,
-                ]);
-            });
-        } catch (\RuntimeException $exception) {
+        // Only allow editing if order is still pending
+        if ($order->status !== 'pending') {
             return redirect()->back()
-                ->with('error', $exception->getMessage())
-                ->withInput();
+                ->with('error', 'Only pending orders can be edited.');
         }
 
+        // Restore original stock
+        foreach ($order->orderItems as $item) {
+            $product = $item->product;
+            $product->stock += $item->quantity;
+            $product->save();
+        }
+
+        // Delete existing order items
+        $order->orderItems()->delete();
+
+        $totalAmount = 0;
+
+        // Add new order items
+        foreach ($validated['items'] as $item) {
+            $product = \App\Models\Product::find($item['product_id']);
+            
+            // Check stock availability
+            if ($product->stock < $item['quantity']) {
+                return redirect()->back()
+                    ->with('error', "Insufficient stock for {$product->name}. Available: {$product->stock}, Requested: {$item['quantity']}")
+                    ->withInput();
+            }
+
+            $subtotal = $product->price * $item['quantity'];
+            $totalAmount += $subtotal;
+
+            // Create order item
+            \App\Models\OrderItem::create([
+                'order_id' => $order->id,
+                'product_id' => $item['product_id'],
+                'quantity' => $item['quantity'],
+                'price' => $product->price,
+            ]);
+
+            // Update product stock
+            $product->stock -= $item['quantity'];
+            $product->save();
+        }
+
+        // Update order
+        $order->update([
+            'user_id' => $validated['user_id'],
+            'total_amount' => $totalAmount,
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
         return redirect()->route('admin.orders.show', $order->id)
-            ->with('success', 'Order quantities updated successfully for pickup settlement.');
+            ->with('success', 'Order updated successfully!');
     }
 
     // Optional: Place order (depends on your cart logic)
