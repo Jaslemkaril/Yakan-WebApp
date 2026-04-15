@@ -1217,11 +1217,19 @@
                                             $customAdminEvidenceUrl = route('admin.custom-orders.refund_evidence.view', ['refundRequest' => $latestCustomRefundRequest->id, 'index' => $loop->index]);
                                             $customAdminExt = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
                                             $customAdminIsImage = in_array($customAdminExt, ['jpg', 'jpeg', 'png', 'webp'], true);
+                                            $customAdminIsVideo = in_array($customAdminExt, ['mp4', 'mov', 'webm'], true);
                                         @endphp
                                         @if($customAdminIsImage)
                                             <a href="{{ $customAdminEvidenceUrl }}" target="_blank" class="block rounded-lg overflow-hidden border border-gray-200 bg-white" title="Open full image">
                                                 <img src="{{ $customAdminEvidenceUrl }}" alt="Refund evidence" class="w-24 h-24 object-cover">
                                             </a>
+                                        @elseif($customAdminIsVideo)
+                                            <div class="rounded-lg overflow-hidden border border-blue-200 bg-black">
+                                                <video controls preload="metadata" class="w-40 h-24 object-cover">
+                                                    <source src="{{ $customAdminEvidenceUrl }}">
+                                                    Your browser does not support video playback.
+                                                </video>
+                                            </div>
                                         @else
                                             <a href="{{ $customAdminEvidenceUrl }}" target="_blank" class="inline-flex items-center px-2 py-1 rounded border border-gray-300 text-xs text-gray-700 bg-white hover:bg-gray-100 transition-colors">View PDF</a>
                                         @endif
