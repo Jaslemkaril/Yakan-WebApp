@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice - Order {{ $order->order_ref ?? ('#' . $order->id) }}</title>
+    <title>Custom Order Invoice - {{ $order->display_ref }}</title>
     <style>
         :root {
             --brand: #800000;
@@ -214,17 +214,6 @@
             font-weight: 800;
         }
 
-        .payment-note {
-            margin-top: 14px;
-            background: var(--brand-soft);
-            border: 1px solid #f6d1d1;
-            border-radius: 10px;
-            color: #6e1111;
-            font-size: 12px;
-            padding: 10px;
-            line-height: 1.5;
-        }
-
         .footer {
             margin-top: 22px;
             border-top: 1px dashed #d1d5db;
@@ -245,10 +234,15 @@
 </head>
 <body>
 @php
+    $invoiceItems = ($invoiceOrders ?? collect([$order]))->sortBy('id')->values();
+    if ($invoiceItems->isEmpty()) {
+        $invoiceItems = collect([$order]);
+    }
+
     $resolveStatusClass = function ($status) {
         return match (strtolower((string) $status)) {
-            'paid', 'verified', 'completed', 'delivered' => 'pill-ok',
-            'pending', 'pending_confirmation', 'confirmed', 'processing', 'shipped' => 'pill-warn',
+            'paid', 'completed', 'delivered' => 'pill-ok',
+            'pending', 'price_quoted', 'approved', 'processing', 'in_production', 'out_for_delivery', 'production_complete' => 'pill-warn',
             'failed', 'cancelled', 'rejected', 'refunded' => 'pill-danger',
             default => 'pill-muted',
         };
@@ -268,69 +262,81 @@
             'online', 'online_banking' => 'Online Banking',
             'bank_transfer' => 'Bank Transfer',
             'gcash' => 'GCash',
-            'cash' => 'Cash',
             default => $value ? ucwords(str_replace('_', ' ', $value)) : 'N/A',
         };
     };
 
-    $itemsSubtotal = (float) ($order->subtotal ?? 0);
-    if ($itemsSubtotal <= 0) {
-        $itemsSubtotal = (float) $order->orderItems->sum(function ($item) {
-            $lineTotal = (float) ($item->total ?? 0);
-            if ($lineTotal > 0) {
-                return $lineTotal;
-            }
-            return ((float) ($item->price ?? 0)) * ((int) ($item->quantity ?? 0));
-        });
-    }
+    $resolvePriceParts = function ($item) {
+        $quoted = (float) ($item->final_price ?? $item->estimated_price ?? 0);
+        $deliveryType = strtolower((string) ($item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup')));
+        if ($deliveryType === 'pickup') {
+            return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
+        }
 
-    $shippingFee = max((float) ($order->shipping_fee ?? 0), 0);
-    $discountAmount = max((float) ($order->discount_amount ?? $order->discount ?? 0), 0);
+        $breakdown = method_exists($item, 'getPriceBreakdown') ? ($item->getPriceBreakdown() ?? []) : [];
+        $bd = $breakdown['breakdown'] ?? [];
 
-    $calculatedTotal = max($itemsSubtotal + $shippingFee - $discountAmount, 0);
-    $storedTotal = (float) ($order->total_amount ?? $order->total ?? 0);
-    $grandTotal = $storedTotal > 0 ? $storedTotal : $calculatedTotal;
+        $material = (float) ($bd['material_cost'] ?? 0);
+        $pattern = (float) ($bd['pattern_fee'] ?? 0);
+        $labor = (float) ($bd['labor_cost'] ?? 0);
+        $discount = (float) ($bd['discount'] ?? 0);
+        $deliveryFeeInBreakdown = (float) ($bd['delivery_fee'] ?? 0);
+        $itemsSubtotalFromBreakdown = max(($material + $pattern + $labor - $discount), 0);
 
-    $paymentOption = strtolower((string) ($order->payment_option ?? ''));
-    $downpaymentRate = (float) ($order->downpayment_rate ?? 0);
-    $downpaymentAmount = max((float) ($order->downpayment_amount ?? 0), 0);
+        if ($deliveryFeeInBreakdown > 0) {
+            return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
+        }
 
-    $isPaidStatus = in_array(strtolower((string) ($order->payment_status ?? '')), ['paid', 'verified'], true);
-    $amountPaid = $downpaymentAmount > 0
-        ? $downpaymentAmount
-        : ($isPaidStatus ? $grandTotal : 0.0);
+        $shipping = max((float) ($item->shipping_fee ?? 0), 0.0);
+        if ($itemsSubtotalFromBreakdown > 0 && abs($quoted - ($itemsSubtotalFromBreakdown + $shipping)) < 0.01) {
+            return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
+        }
 
-    $remainingBalance = (float) ($order->remaining_balance ?? 0);
-    if ($remainingBalance <= 0) {
-        $remainingBalance = max($grandTotal - $amountPaid, 0);
-    }
+        if ($itemsSubtotalFromBreakdown > 0 && abs($quoted - $itemsSubtotalFromBreakdown) < 0.01) {
+            return ['quoted' => $quoted, 'shipping' => $shipping, 'total' => $quoted + $shipping];
+        }
 
-    $paymentPlanLabel = 'Full Payment';
-    if ($paymentOption === 'downpayment' || $downpaymentAmount > 0 || $downpaymentRate > 0) {
-        $paymentPlanLabel = ($downpaymentRate > 0 ? rtrim(rtrim(number_format($downpaymentRate, 2), '0'), '.') : '50') . '% Downpayment';
-    }
+        return ['quoted' => $quoted, 'shipping' => 0.0, 'total' => $quoted];
+    };
 
-    $invoiceDeliveryType = strtolower((string) ($order->delivery_type ?? 'delivery'));
-    if ($invoiceDeliveryType === 'deliver') {
-        $invoiceDeliveryType = 'delivery';
-    }
-    $shippingLabel = $invoiceDeliveryType === 'pickup' ? 'Store Pickup' : 'Home Delivery';
+    $partsById = $invoiceItems->mapWithKeys(function ($item) use ($resolvePriceParts) {
+        return [$item->id => $resolvePriceParts($item)];
+    });
 
-    $shippingAddress = trim((string) ($order->delivery_address ?: $order->shipping_address ?: ''));
-    if ($invoiceDeliveryType === 'pickup' && $shippingAddress === '') {
-        $shippingAddress = 'Yakan Village, Brgy. Upper Calarian, Zamboanga City, Philippines 7000';
-    }
+    $quotedSubtotal = (float) $invoiceItems->sum(fn($item) => (float) ($partsById[$item->id]['quoted'] ?? 0));
 
-    $city = trim((string) ($order->shipping_city ?: $order->delivery_city ?: ''));
-    $province = trim((string) ($order->shipping_province ?: $order->delivery_province ?: ''));
+    $candidateShipping = $invoiceItems
+        ->map(fn($item) => (float) ($partsById[$item->id]['shipping'] ?? 0))
+        ->filter(fn($amount) => $amount > 0)
+        ->values();
+
+    $shippingFee = $invoiceItems->count() > 1
+        ? (float) ($candidateShipping->max() ?? 0)
+        : (float) ($candidateShipping->first() ?? 0);
+
+    $grandTotal = max($quotedSubtotal + $shippingFee, 0);
+
+    $allPaid = $invoiceItems->every(fn($item) => in_array(strtolower((string) ($item->payment_status ?? '')), ['paid', 'verified'], true));
+    $amountPaid = $allPaid ? $grandTotal : 0.0;
+    $remainingBalance = max($grandTotal - $amountPaid, 0);
+
+    $primaryPaymentMethod = $resolvePaymentMethod($order->payment_method ?? null);
+    $orderStatusLabel = $resolveStatusLabel($order->status ?? null);
+    $paymentStatusLabel = $resolveStatusLabel($order->payment_status ?? null);
+
+    $deliveryTypeRaw = strtolower((string) ($order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup')));
+    $deliveryLabel = $deliveryTypeRaw === 'pickup' ? 'Store Pickup' : 'Home Delivery';
+
+    $city = (string) ($order->delivery_city ?? '');
+    $province = (string) ($order->delivery_province ?? '');
     $cityProvince = trim($city . ($city !== '' && $province !== '' ? ', ' : '') . $province);
 
-    $invoiceNumber = 'INV-' . str_pad((string) $order->id, 6, '0', STR_PAD_LEFT);
+    $invoiceNumber = 'CINV-' . str_pad((string) $order->id, 6, '0', STR_PAD_LEFT);
 @endphp
 
 <div class="sheet">
     <div class="toolbar">
-        <div style="font-size:13px;color:#6b7280;">Printable sales invoice</div>
+        <div style="font-size:13px;color:#6b7280;">Printable custom order invoice</div>
         <button type="button" class="print-btn" onclick="window.print()">Print Invoice</button>
     </div>
 
@@ -343,13 +349,13 @@
                 <p>Support: support@yakan-ecommerce.com</p>
             </div>
             <div class="meta">
-                <h2>INVOICE</h2>
+                <h2>CUSTOM INVOICE</h2>
                 <p><strong>Invoice #:</strong> {{ $invoiceNumber }}</p>
-                <p><strong>Order Ref:</strong> {{ $order->order_ref ?: ('ORD-' . $order->id) }}</p>
-                <p><strong>Date:</strong> {{ optional($order->created_at)->format('F d, Y') }}</p>
+                <p><strong>Order Ref:</strong> {{ $order->display_ref }}</p>
+                <p><strong>Created:</strong> {{ optional($order->created_at)->format('F d, Y') }}</p>
                 <p>
-                    <strong>Order Status:</strong>
-                    <span class="pill {{ $resolveStatusClass($order->status ?? null) }}">{{ $resolveStatusLabel($order->status ?? null) }}</span>
+                    <strong>Status:</strong>
+                    <span class="pill {{ $resolveStatusClass($order->status ?? null) }}">{{ $orderStatusLabel }}</span>
                 </p>
             </div>
         </div>
@@ -357,35 +363,29 @@
         <div class="cards">
             <div class="card">
                 <h3>Bill To</h3>
-                <p class="kv"><strong>{{ $order->customer_name ?: ($order->user->name ?? 'Guest Customer') }}</strong></p>
-                <p class="kv">{{ $order->customer_email ?: ($order->user->email ?? 'No email provided') }}</p>
-                @if(!empty($order->customer_phone))
-                    <p class="kv">{{ $order->customer_phone }}</p>
-                @elseif(!empty($order->user?->phone))
-                    <p class="kv">{{ $order->user->phone }}</p>
+                <p class="kv"><strong>{{ $order->user->name ?? 'Guest Customer' }}</strong></p>
+                <p class="kv">{{ $order->user->email ?? ($order->email ?? 'No email provided') }}</p>
+                @if(!empty($order->phone))
+                    <p class="kv">{{ $order->phone }}</p>
                 @endif
-                @if($shippingAddress !== '')
-                    <p class="kv"><strong>Address:</strong> {{ $shippingAddress }}</p>
+                @if(!empty($order->delivery_address))
+                    <p class="kv"><strong>Address:</strong> {{ $order->delivery_address }}</p>
                 @endif
             </div>
 
             <div class="card">
                 <h3>Payment and Delivery</h3>
-                <p class="kv"><strong>Payment Method:</strong> {{ $resolvePaymentMethod($order->payment_method ?? null) }}</p>
-                <p class="kv"><strong>Payment Plan:</strong> {{ $paymentPlanLabel }}</p>
+                <p class="kv"><strong>Payment Method:</strong> {{ $primaryPaymentMethod }}</p>
                 <p class="kv">
                     <strong>Payment Status:</strong>
-                    <span class="pill {{ $resolveStatusClass($order->payment_status ?? null) }}">{{ $resolveStatusLabel($order->payment_status ?? null) }}</span>
+                    <span class="pill {{ $resolveStatusClass($order->payment_status ?? null) }}">{{ $paymentStatusLabel }}</span>
                 </p>
-                <p class="kv"><strong>Delivery:</strong> {{ $shippingLabel }}</p>
+                <p class="kv"><strong>Delivery:</strong> {{ $deliveryLabel }}</p>
                 @if($cityProvince !== '')
                     <p class="kv"><strong>City / Province:</strong> {{ $cityProvince }}</p>
                 @endif
-                @if(!empty($order->tracking_number))
-                    <p class="kv"><strong>Tracking #:</strong> {{ $order->tracking_number }}</p>
-                @endif
-                @if(!empty($order->payment_reference))
-                    <p class="kv"><strong>Payment Ref:</strong> {{ $order->payment_reference }}</p>
+                @if(!empty($order->transaction_id))
+                    <p class="kv"><strong>Transaction ID:</strong> {{ $order->transaction_id }}</p>
                 @endif
             </div>
         </div>
@@ -393,62 +393,46 @@
         <table>
             <thead>
                 <tr>
-                    <th style="width:40%;">Item</th>
-                    <th>SKU / Variant</th>
-                    <th style="width:14%;" class="num">Price</th>
+                    <th style="width:24%;">Order Ref</th>
+                    <th>Description</th>
                     <th style="width:10%;" class="num">Qty</th>
-                    <th style="width:16%;" class="num">Line Total</th>
+                    <th style="width:16%;" class="num">Quoted</th>
+                    <th style="width:14%;" class="num">Status</th>
                 </tr>
             </thead>
             <tbody>
-                @forelse($order->orderItems as $item)
+                @foreach($invoiceItems as $item)
                     @php
-                        $lineTotal = (float) ($item->total ?? 0);
-                        if ($lineTotal <= 0) {
-                            $lineTotal = ((float) ($item->price ?? 0)) * ((int) ($item->quantity ?? 0));
-                        }
-
-                        $variantParts = array_filter([
-                            !empty($item->variant_size) ? 'Size: ' . $item->variant_size : null,
-                            !empty($item->variant_color) ? 'Color: ' . $item->variant_color : null,
-                        ]);
-                        $variantLabel = !empty($variantParts)
-                            ? implode(' | ', $variantParts)
-                            : (!empty($item->variant_id) ? ('Variant #' . $item->variant_id) : 'N/A');
+                        $parts = $partsById[$item->id] ?? ['quoted' => 0, 'shipping' => 0, 'total' => 0];
+                        $itemName = $item->product->name ?? ($item->specifications['order_name'] ?? ('Custom Order #' . $item->id));
+                        $itemStatus = $resolveStatusLabel($item->status ?? null);
+                        $itemMethod = $resolvePaymentMethod($item->payment_method ?? null);
+                        $itemDelivery = strtolower((string) ($item->delivery_type ?? ($item->delivery_address ? 'delivery' : 'pickup')));
+                        $itemDeliveryLabel = $itemDelivery === 'pickup' ? 'Pickup' : 'Delivery';
                     @endphp
                     <tr>
+                        <td><strong>{{ $item->display_ref }}</strong></td>
                         <td class="desc">
-                            <div class="title">{{ $item->product_name ?: ($item->product->name ?? 'Product') }}</div>
-                            <div class="sub">Product ID: {{ $item->product_id ?? 'N/A' }}</div>
+                            <div class="title">{{ $itemName }}</div>
+                            <div class="sub">{{ $itemDeliveryLabel }} • {{ $itemMethod }}</div>
                         </td>
-                        <td>{{ $item->product->sku ?? 'N/A' }}<br><span style="color:#6b7280;font-size:12px;">{{ $variantLabel }}</span></td>
-                        <td class="num">PHP {{ number_format((float) ($item->price ?? 0), 2) }}</td>
-                        <td class="num">{{ (int) ($item->quantity ?? 0) }}</td>
-                        <td class="num">PHP {{ number_format($lineTotal, 2) }}</td>
+                        <td class="num">{{ (int) ($item->quantity ?? 1) }}</td>
+                        <td class="num">PHP {{ number_format((float) ($parts['quoted'] ?? 0), 2) }}</td>
+                        <td class="num">{{ $itemStatus }}</td>
                     </tr>
-                @empty
-                    <tr>
-                        <td colspan="5" style="text-align:center;color:#6b7280;">No line items found.</td>
-                    </tr>
-                @endforelse
+                @endforeach
             </tbody>
         </table>
 
         <div class="totals">
             <div class="row">
-                <span>Items Subtotal</span>
-                <strong>PHP {{ number_format($itemsSubtotal, 2) }}</strong>
+                <span>Quoted Subtotal</span>
+                <strong>PHP {{ number_format($quotedSubtotal, 2) }}</strong>
             </div>
             <div class="row">
                 <span>Shipping Fee</span>
                 <strong>PHP {{ number_format($shippingFee, 2) }}</strong>
             </div>
-            @if($discountAmount > 0)
-                <div class="row" style="color:#065f46;">
-                    <span>Discount @if(!empty($order->coupon_code))({{ $order->coupon_code }})@endif</span>
-                    <strong>- PHP {{ number_format($discountAmount, 2) }}</strong>
-                </div>
-            @endif
             <div class="row total">
                 <span>Grand Total</span>
                 <span>PHP {{ number_format($grandTotal, 2) }}</span>
@@ -463,15 +447,9 @@
             </div>
         </div>
 
-        @if($paymentPlanLabel !== 'Full Payment' || $remainingBalance > 0)
-            <div class="payment-note">
-                This invoice reflects a partial-payment workflow. Processing continues according to your selected payment plan, and remaining balance must be settled before final fulfillment.
-            </div>
-        @endif
-
         <div class="footer">
-            <div><strong>Thank you for your purchase.</strong></div>
-            <div>This is a system-generated invoice and does not require a signature.</div>
+            <div><strong>Thank you for supporting Yakan artisans.</strong></div>
+            <div>This is a system-generated invoice for your custom order and does not require a signature.</div>
         </div>
     </div>
 </div>

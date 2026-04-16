@@ -464,6 +464,27 @@ class AdminCustomOrderController extends Controller
     }
 
     /**
+     * Render printable invoice for a custom order (single or batch submission).
+     */
+    public function generateInvoice(CustomOrder $order)
+    {
+        $order->load(['user', 'product', 'fabricType', 'intendedUse']);
+
+        $invoiceOrders = $this->resolveBatchOrders($order)
+            ->load(['user', 'product', 'fabricType', 'intendedUse'])
+            ->values();
+
+        if ($invoiceOrders->isEmpty()) {
+            $invoiceOrders = collect([$order]);
+        }
+
+        return view('admin.custom_orders.invoice', [
+            'order' => $order,
+            'invoiceOrders' => $invoiceOrders,
+        ]);
+    }
+
+    /**
      * Approve and process a custom-order refund/return request.
      */
     public function approveRefundRequest(Request $request, CustomOrderRefundRequest $refundRequest)

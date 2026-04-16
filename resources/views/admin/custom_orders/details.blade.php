@@ -210,6 +210,18 @@
             <span class="px-4 py-2 rounded-full text-sm font-semibold {{ $paymentClass }}">
                 {{ $paymentLabel }}
             </span>
+
+            <a href="{{ route('admin.custom-orders.invoice', $order) }}{{ request('auth_token') ? '?auth_token=' . urlencode(request('auth_token')) : '' }}"
+               target="_blank"
+               class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold text-white"
+               style="background-color:#111827;"
+               onmouseover="this.style.backgroundColor='#1f2937'"
+               onmouseout="this.style.backgroundColor='#111827'">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2h2m2 4h6m-3-4v4m-4-8h8"/>
+                </svg>
+                Print Invoice
+            </a>
         </div>
     </div>
 

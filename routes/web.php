@@ -1236,6 +1236,7 @@ Route::middleware(['admin:admin,order_staff'])->prefix('admin')->name('admin.')-
         Route::get('/export', [AdminCustomOrderController::class, 'exportOrders'])->name('export');
         Route::get('/view/{order}', [AdminCustomOrderController::class, 'show'])->name('show');
         Route::get('/{order}/paymongo-receipt', [AdminCustomOrderController::class, 'paymongoReceipt'])->name('paymongo_receipt');
+        Route::get('/{order}/invoice', [AdminCustomOrderController::class, 'generateInvoice'])->name('invoice');
         Route::get('/{order}/edit', [AdminCustomOrderController::class, 'edit'])->name('edit');
         Route::put('/{order}', [AdminCustomOrderController::class, 'update'])->name('update');
         Route::delete('/{order}', [AdminCustomOrderController::class, 'destroy'])->name('delete');
