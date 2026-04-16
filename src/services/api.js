@@ -247,6 +247,8 @@ class ApiService {
     const response = await this.request('POST', API_CONFIG.ENDPOINTS.AUTH.VERIFY_OTP, {
       email,
       otp,
+      otp_code: otp,
+      code: otp,
     });
 
     if (response.success) {
@@ -766,12 +768,25 @@ class ApiService {
   /**
    * Respond to price quote
    */
-  async respondToQuote(chatId, response, quoteMessageId) {
+  async respondToQuote(chatId, response, quoteMessageId, paymentType = null, paymentMethod = null) {
     console.log('[ChatAPI] Responding to quote:', response);
     const endpoint = `/chats/${chatId}/respond-quote`;
+    const payload = {
+      response,
+      quote_message_id: quoteMessageId,
+    };
+
+    if (paymentType) {
+      payload.payment_type = paymentType;
+      payload.payment_option = paymentType;
+    }
+
+    if (paymentMethod) {
+      payload.payment_method = paymentMethod;
+    }
+
     return await this.request('POST', endpoint, { 
-      response, 
-      quote_message_id: quoteMessageId 
+      ...payload,
     });
   }
 

@@ -1051,20 +1051,27 @@ class CartController extends Controller
 
         $order = Order::create($orderPayload);
 
+        $supportsOrderItemTotal = Schema::hasColumn('order_items', 'total');
+
         // Add order items
         foreach ($cartItems as $item) {
             $variant = $item->variant ?? null;
             $unitPrice = $this->getEffectiveUnitPrice($item->product, $variant);
 
-            $order->orderItems()->create([
+            $orderItemPayload = [
                 'product_id' => $item->product_id,
                 'variant_id' => $variant?->id,
                 'variant_size' => $variant?->size,
                 'variant_color' => $variant?->color,
                 'quantity'   => $item->quantity,
                 'price'      => $unitPrice,
-                'total'      => $unitPrice * $item->quantity,
-            ]);
+            ];
+
+            if ($supportsOrderItemTotal) {
+                $orderItemPayload['total'] = $unitPrice * $item->quantity;
+            }
+
+            $order->orderItems()->create($orderItemPayload);
 
             if ($variant && $variant->stock >= $item->quantity) {
                 $variant->decrement('stock', $item->quantity);

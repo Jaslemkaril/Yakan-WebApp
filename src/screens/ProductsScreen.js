@@ -39,6 +39,26 @@ const ProductsScreen = ({ navigation }) => {
     }, [])
   );
 
+  const extractProductsArray = (apiPayload) => {
+    const candidates = [
+      apiPayload?.data?.data,
+      apiPayload?.data?.items,
+      apiPayload?.data?.products,
+      apiPayload?.data,
+      apiPayload?.products,
+      apiPayload?.items,
+      apiPayload,
+    ];
+
+    for (const candidate of candidates) {
+      if (Array.isArray(candidate)) {
+        return candidate;
+      }
+    }
+
+    return [];
+  };
+
   const fetchProducts = async () => {
     try {
       setLoading(true);
@@ -55,19 +75,8 @@ const ProductsScreen = ({ navigation }) => {
         throw new Error(response.error || 'Failed to fetch products');
       }
       
-      // API returns: { success, data: [...], count }
-      // ApiService wraps this in { success, data: { success, data: [...], count } }
       const apiData = response.data;
-      
-      // Handle both flat array and nested pagination responses
-      let productsData = [];
-      if (Array.isArray(apiData?.data)) {
-        // Nested: { data: { data: [...] } } (pagination format)
-        productsData = apiData.data;
-      } else if (Array.isArray(apiData)) {
-        // Flat: { data: [...] }
-        productsData = apiData;
-      }
+      const productsData = extractProductsArray(apiData);
       
       console.log('🔵 Products count from API:', productsData.length);
       
@@ -79,11 +88,11 @@ const ProductsScreen = ({ navigation }) => {
         return {
           id: product.id,
           name: product.name,
-          description: product.description,
+          description: product.description || '',
           price,
           originalPrice,
           hasProductDiscount: !!product.has_product_discount && originalPrice > price,
-          category: product.category?.name || 'Uncategorized',
+          category: product.category?.name || product.category_name || 'Uncategorized',
           image: product.image || null,
           stock: product.stock || 0,
           has_variants: !!product.has_variants,
@@ -102,6 +111,9 @@ const ProductsScreen = ({ navigation }) => {
       setProducts(transformedProducts);
       const uniqueCategories = ['All', ...new Set(transformedProducts.map(p => p.category))];
       setCategories(uniqueCategories);
+      if (!uniqueCategories.includes(selectedCategory)) {
+        setSelectedCategory('All');
+      }
     } catch (error) {
       console.error('Error fetching products:', error);
       console.log('🔴 Using offline mock data due to API error');
@@ -127,9 +139,12 @@ const ProductsScreen = ({ navigation }) => {
   };
 
   const filteredProducts = products.filter(product => {
+    const normalizedQuery = searchQuery.toLowerCase();
+    const productName = (product.name || '').toLowerCase();
+    const productDescription = (product.description || '').toLowerCase();
     const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = productName.includes(normalizedQuery) ||
+                         productDescription.includes(normalizedQuery);
     return matchesCategory && matchesSearch;
   });
 

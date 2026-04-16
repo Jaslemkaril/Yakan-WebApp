@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Chat;
 use App\Models\ChatMessage;
+use App\Models\CustomOrder;
 use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +13,65 @@ use Illuminate\Support\Facades\Validator;
 
 class ChatController extends Controller
 {
+    private function normalizePaymentTypeLabel(?string $value): ?string
+    {
+        $normalized = strtolower(trim((string) $value));
+        if ($normalized === '') {
+            return null;
+        }
+
+        return match ($normalized) {
+            'full', 'full_payment' => 'Full Payment',
+            'downpayment', 'down_payment' => 'Downpayment',
+            'bank_transfer' => 'Bank Transfer',
+            'online_banking', 'online', 'paymongo', 'maya' => 'Maya',
+            'gcash' => 'GCash',
+            default => ucwords(str_replace('_', ' ', $normalized)),
+        };
+    }
+
+    private function resolveQuotePaymentTypeLabel(ChatMessage $quoteMessage, int $chatId, int $userId, ?string $preferred = null): ?string
+    {
+        $preferredLabel = $this->normalizePaymentTypeLabel($preferred);
+        if ($preferredLabel) {
+            return $preferredLabel;
+        }
+
+        $quoteMeta = is_array($quoteMessage->form_data) ? $quoteMessage->form_data : [];
+        foreach (['payment_type', 'payment_option', 'payment_plan', 'payment_method'] as $key) {
+            $metaLabel = $this->normalizePaymentTypeLabel((string) ($quoteMeta[$key] ?? ''));
+            if ($metaLabel) {
+                return $metaLabel;
+            }
+        }
+
+        if (preg_match('/payment\s*(type|option|method)\s*:\s*([^\n\r]+)/i', (string) $quoteMessage->message, $matches)) {
+            $textLabel = $this->normalizePaymentTypeLabel(trim((string) ($matches[2] ?? '')));
+            if ($textLabel) {
+                return $textLabel;
+            }
+        }
+
+        $order = CustomOrder::where('chat_id', $chatId)
+            ->where('user_id', $userId)
+            ->latest('id')
+            ->first();
+
+        if ($order) {
+            $optionLabel = $this->normalizePaymentTypeLabel((string) ($order->payment_option ?? ''));
+            if ($optionLabel) {
+                return $optionLabel;
+            }
+
+            $methodLabel = $this->normalizePaymentTypeLabel((string) ($order->payment_method ?? ''));
+            if ($methodLabel) {
+                return $methodLabel;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Normalize stored chat image path into a URL consumable by mobile clients.
      */
@@ -378,6 +438,9 @@ class ChatController extends Controller
             $validator = Validator::make($request->all(), [
                 'response' => 'required|in:accepted,declined',
                 'quote_message_id' => 'required|exists:chat_messages,id',
+                'payment_type' => 'nullable|string|max:100',
+                'payment_option' => 'nullable|string|max:100',
+                'payment_method' => 'nullable|string|max:100',
             ]);
 
             if ($validator->fails()) {
@@ -444,9 +507,21 @@ class ChatController extends Controller
             $response = $request->response;
             $emoji = $response === 'accepted' ? '✅' : '❌';
             $action = $response === 'accepted' ? 'accepted' : 'declined';
+
+            $preferredPaymentType = (string) (
+                $request->input('payment_type')
+                ?? $request->input('payment_option')
+                ?? $request->input('payment_method')
+                ?? ''
+            );
+            $paymentTypeLabel = $this->resolveQuotePaymentTypeLabel($quoteMessage, (int) $chat->id, (int) $user->id, $preferredPaymentType);
+            $paymentTypeLine = $response === 'accepted'
+                ? "\nPayment Type: " . ($paymentTypeLabel ?? 'To be selected')
+                : '';
             
             $message = "{$emoji} Customer {$action} the price quote.\n\n" . 
-                       "Customer will " . ($response === 'accepted' ? 'proceed with the custom order.' : 'not proceed with this quote.');
+                       "Customer will " . ($response === 'accepted' ? 'proceed with the custom order.' : 'not proceed with this quote.') .
+                       $paymentTypeLine;
 
             // Create response message
             $chatMessage = ChatMessage::create([

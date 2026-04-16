@@ -32,6 +32,15 @@ class OrderItem extends Model
         'total' => 'decimal:2',
     ];
 
+    public function getTotalAttribute($value): float
+    {
+        if (!is_null($value)) {
+            return (float) $value;
+        }
+
+        return round(((float) ($this->price ?? 0)) * ((int) ($this->quantity ?? 0)), 2);
+    }
+
     /**
      * Get the order this item belongs to
      */

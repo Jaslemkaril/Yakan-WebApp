@@ -75,6 +75,7 @@
     @csrf
     <!-- radios above are bound here via form="checkout-form" -->
     <input type="hidden" name="confirm" value="1" />
+    <input type="hidden" name="payment_option" id="paymentOptionInput" value="{{ old('payment_option', 'full') }}" />
     <input type="hidden" name="coupon_code" id="coupon-code-input" value="{{ $appliedCoupon->code ?? '' }}" />
     <input type="hidden" name="discount_amount" id="discount-amount-input" value="{{ $discount ?? 0 }}" />
     <input type="hidden" name="coupon_applies_to" id="coupon-applies-to-input" value="{{ !empty($appliedCoupon) ? $appliedCoupon->getAppliesTo() : '' }}" />
@@ -390,9 +391,10 @@
 
                         <div class="mt-6 border-t border-gray-200 pt-5">
                             <h3 class="text-sm font-bold text-gray-900 mb-3">Payment Plan</h3>
+                            @php $selectedPaymentOption = old('payment_option', 'full'); @endphp
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <label class="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-all">
-                                    <input type="radio" name="payment_option" value="full" checked form="checkout-form" class="mt-0.5 w-5 h-5" style="accent-color: #800000;" onclick="updatePaymentPlanSummary()">
+                                    <input type="radio" name="payment_option_selector" value="full" {{ $selectedPaymentOption !== 'downpayment' ? 'checked' : '' }} class="mt-0.5 w-5 h-5" style="accent-color: #800000;">
                                     <span>
                                         <span class="block font-semibold text-gray-900">Full Payment</span>
                                         <span class="block text-xs text-gray-600">Pay 100% now at checkout.</span>
@@ -400,7 +402,7 @@
                                 </label>
 
                                 <label class="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-all">
-                                    <input type="radio" name="payment_option" value="downpayment" form="checkout-form" class="mt-0.5 w-5 h-5" style="accent-color: #800000;" onclick="updatePaymentPlanSummary()">
+                                    <input type="radio" name="payment_option_selector" value="downpayment" {{ $selectedPaymentOption === 'downpayment' ? 'checked' : '' }} class="mt-0.5 w-5 h-5" style="accent-color: #800000;">
                                     <span>
                                         <span class="block font-semibold text-gray-900">50% Downpayment</span>
                                         <span class="block text-xs text-gray-600">Pay 50% now and settle the remaining 50% before release/shipping.</span>
@@ -721,8 +723,9 @@ function updatePaymentPlanSummary() {
     const remainingRow = document.getElementById('remainingBalanceRow');
     const remainingDisplay = document.getElementById('remainingBalanceDisplay');
     const paymentPlanHint = document.getElementById('paymentPlanHint');
-    const selectedOption = document.querySelector('input[name="payment_option"]:checked')?.value || 'full';
+    const selectedOption = document.querySelector('input[name="payment_option_selector"]:checked')?.value || 'full';
     const downpaymentRateInput = document.getElementById('downpaymentRateInput');
+    const paymentOptionInput = document.getElementById('paymentOptionInput');
 
     if (!totalEl || !payNowDisplay) {
         return;
@@ -754,6 +757,10 @@ function updatePaymentPlanSummary() {
 
     if (downpaymentRateInput) {
         downpaymentRateInput.value = isDownpayment ? '50' : '';
+    }
+
+    if (paymentOptionInput) {
+        paymentOptionInput.value = isDownpayment ? 'downpayment' : 'full';
     }
 }
 
@@ -989,7 +996,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const paymentSection = document.getElementById('payment-method-section');
     const placeOrderButton = document.getElementById('place-order-button');
 
-    document.querySelectorAll('input[name="payment_option"]').forEach(function(radio) {
+    document.querySelectorAll('input[name="payment_option_selector"]').forEach(function(radio) {
         radio.addEventListener('change', updatePaymentPlanSummary);
     });
 

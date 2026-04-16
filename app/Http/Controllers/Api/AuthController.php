@@ -144,11 +144,30 @@ class AuthController extends Controller
     {
         try {
             $validated = $request->validate([
-                'email' => 'required|email|exists:users,email',
-                'otp' => 'required|string|size:6',
+                'email' => 'required|email',
+                'otp' => 'nullable|string|size:6',
+                'otp_code' => 'nullable|string|size:6',
+                'code' => 'nullable|string|size:6',
             ]);
 
             $email = strtolower(trim($validated['email']));
+            $otpCode = (string) (
+                $validated['otp']
+                ?? $validated['otp_code']
+                ?? $validated['code']
+                ?? ''
+            );
+
+            if (!preg_match('/^\d{6}$/', $otpCode)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => [
+                        'otp' => ['Please provide a valid 6-digit OTP code.'],
+                    ],
+                ], 422);
+            }
+
             $user = User::where('email', $email)->first();
 
             if (!$user) {
@@ -193,7 +212,7 @@ class AuthController extends Controller
                 ], 429);
             }
 
-            if (!$user->verifyOtp($validated['otp'])) {
+            if (!$user->verifyOtp($otpCode)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid OTP code. Please try again.',
@@ -240,7 +259,7 @@ class AuthController extends Controller
     {
         try {
             $validated = $request->validate([
-                'email' => 'required|email|exists:users,email',
+                'email' => 'required|email',
             ]);
 
             $email = strtolower(trim($validated['email']));
