@@ -41,7 +41,10 @@
               "scheme": "yakanapp"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -49,20 +52,21 @@
       "favicon": "./assets/favicon.png"
     },
     "updates": {
-      "url": "https://u.expo.dev/b217594d-ba23-4e62-a63d-0fc749175838",
       "enabled": true,
-      "checkAutomatically": "ON_LOAD"
+      "checkAutomatically": "ON_LOAD",
+      "url": "https://u.expo.dev/1e74062f-85e1-407e-a971-72d11eeabe46"
     },
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "extra": {
-      "eas": {
-        "projectId": "b217594d-ba23-4e62-a63d-0fc749175838"
-      }
-    },
     "plugins": [
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "1e74062f-85e1-407e-a971-72d11eeabe46"
+      }
+    },
+    "owner": "jasslem"
   }
 }

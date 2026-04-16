@@ -169,7 +169,7 @@ export const CartProvider = ({ children }) => {
       : parseFloat(product.price || 0);
     const selectedVariantOriginalPrice = selectedVariant?.original_price != null
       ? parseFloat(selectedVariant.original_price)
-      : parseFloat(product.originalPrice ?? product.original_price ?? product.price || 0);
+      : parseFloat((product.originalPrice ?? product.original_price ?? product.price) || 0);
     const itemKey = `${product.id}:${selectedVariantId || 'base'}`;
 
     setCartItems(prev => {
