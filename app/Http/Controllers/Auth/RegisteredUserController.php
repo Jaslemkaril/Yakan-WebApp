@@ -8,6 +8,7 @@ use App\Services\TransactionalMailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
@@ -87,16 +88,27 @@ class RegisteredUserController extends Controller
             \Log::info('Validation passed', ['email' => $validated['email']]);
             $middleName = trim((string) ($validated['middle_initial'] ?? ''));
 
-            $user = User::create([
+            $supportsBirthDate = Schema::hasTable('users') && Schema::hasColumn('users', 'birth_date');
+
+            if (!$supportsBirthDate) {
+                \Log::warning('users.birth_date column missing during registration; continuing without persisting birth_date.');
+            }
+
+            $userPayload = [
                 'first_name' => $validated['first_name'],
                 'last_name' => $validated['last_name'],
                 'middle_initial' => $middleName !== '' ? $middleName : null,
-                'birth_date' => $validated['birth_date'],
                 'name' => trim($validated['first_name'] . ' ' . ($middleName !== '' ? $middleName . ' ' : '') . $validated['last_name']),
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
                 'role' => 'user',
-            ]);
+            ];
+
+            if ($supportsBirthDate) {
+                $userPayload['birth_date'] = $validated['birth_date'];
+            }
+
+            $user = User::create($userPayload);
 
             \Log::info('User created successfully', ['user_id' => $user->id]);
 
