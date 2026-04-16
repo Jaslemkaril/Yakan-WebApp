@@ -187,27 +187,17 @@
 
                 <div id="cancel-step-1">
                     <p class="text-sm font-semibold text-gray-700 mb-2">Why do you want to cancel?</p>
-                    <div id="cancel-reason-chips" class="flex flex-wrap gap-2 mb-4">
-                        @php
-                            $cancelReasons = [
-                                'Changed my mind',
-                                'Wrong item ordered',
-                                'Found it cheaper',
-                                'Duplicate order',
-                                'Taking too long',
-                                'Want to change items',
-                            ];
-                        @endphp
-                        @foreach($cancelReasons as $reason)
-                            @php $selected = old('cancel_reason') === $reason; @endphp
-                            <button
-                                type="button"
-                                class="cancel-reason-chip px-4 py-2 rounded-full border text-sm font-medium transition-all {{ $selected ? 'bg-[#800000] text-white border-[#800000]' : 'bg-white text-gray-700 border-gray-300 hover:border-[#800000] hover:text-[#800000]' }}"
-                                data-value="{{ $reason }}"
-                            >
-                                {{ $reason }}
-                            </button>
-                        @endforeach
+                    <div class="mb-4">
+                        <select id="cancel_reason_select" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent text-sm text-gray-800">
+                            <option value="">Select a reason</option>
+                            <option value="Changed my mind" {{ old('cancel_reason') === 'Changed my mind' ? 'selected' : '' }}>Changed my mind</option>
+                            <option value="Wrong item ordered" {{ old('cancel_reason') === 'Wrong item ordered' ? 'selected' : '' }}>Wrong item ordered</option>
+                            <option value="Found it cheaper" {{ old('cancel_reason') === 'Found it cheaper' ? 'selected' : '' }}>Found it cheaper</option>
+                            <option value="Duplicate order" {{ old('cancel_reason') === 'Duplicate order' ? 'selected' : '' }}>Duplicate order</option>
+                            <option value="Taking too long" {{ old('cancel_reason') === 'Taking too long' ? 'selected' : '' }}>Taking too long</option>
+                            <option value="Want to change items" {{ old('cancel_reason') === 'Want to change items' ? 'selected' : '' }}>Want to change items</option>
+                            <option value="Other" {{ old('cancel_reason') === 'Other' ? 'selected' : '' }}>Other</option>
+                        </select>
                     </div>
 
                     <div class="mb-4">
@@ -1052,31 +1042,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelNextBtn = document.getElementById('cancel-next-btn');
     const cancelBackBtn = document.getElementById('cancel-back-btn');
     const cancelReasonInput = document.getElementById('cancel_reason_input');
-    const cancelReasonChips = document.querySelectorAll('.cancel-reason-chip');
+    const cancelReasonSelect = document.getElementById('cancel_reason_select');
     const cancelForm = document.getElementById('cancel-order-form');
 
-    function setCancelReason(value) {
-        if (!cancelReasonInput) {
-            return;
+    if (cancelReasonSelect && cancelReasonInput) {
+        cancelReasonSelect.addEventListener('change', function() {
+            cancelReasonInput.value = cancelReasonSelect.value;
+        });
+
+        if ((cancelReasonInput.value || '').trim() !== '' && (cancelReasonSelect.value || '').trim() === '') {
+            cancelReasonSelect.value = cancelReasonInput.value;
+        } else {
+            cancelReasonInput.value = cancelReasonSelect.value;
         }
-
-        cancelReasonInput.value = value;
-        cancelReasonChips.forEach(function(chip) {
-            const isSelected = chip.getAttribute('data-value') === value;
-            chip.classList.toggle('bg-[#800000]', isSelected);
-            chip.classList.toggle('text-white', isSelected);
-            chip.classList.toggle('border-[#800000]', isSelected);
-            chip.classList.toggle('bg-white', !isSelected);
-            chip.classList.toggle('text-gray-700', !isSelected);
-            chip.classList.toggle('border-gray-300', !isSelected);
-        });
     }
-
-    cancelReasonChips.forEach(function(chip) {
-        chip.addEventListener('click', function() {
-            setCancelReason(chip.getAttribute('data-value') || '');
-        });
-    });
 
     if (cancelNextBtn && cancelStep1 && cancelStep2) {
         cancelNextBtn.addEventListener('click', function() {
