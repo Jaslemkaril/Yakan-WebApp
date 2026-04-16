@@ -509,9 +509,13 @@
                                 <!-- Price Section -->
                                 <div class="price-section flex items-center justify-between mb-3 md:mb-4">
                                     <div>
-                                        <div class="text-lg sm:text-xl md:text-2xl font-bold" style="color: #800000;">₱{{ number_format($product->price ?? 0) }}</div>
-                                        @if($product->original_price && $product->original_price > $product->price)
-                                            <div class="text-xs sm:text-sm text-gray-500 line-through">₱{{ number_format($product->original_price) }}</div>
+                                        @php
+                                            $basePrice = (float) ($product->price ?? 0);
+                                            $displayPrice = (float) $product->getDiscountedPrice($basePrice);
+                                        @endphp
+                                        <div class="text-lg sm:text-xl md:text-2xl font-bold" style="color: #800000;">₱{{ number_format($displayPrice, 2) }}</div>
+                                        @if($displayPrice < $basePrice)
+                                            <div class="text-xs sm:text-sm text-gray-500 line-through">₱{{ number_format($basePrice, 2) }}</div>
                                         @endif
                                     </div>
                                     
