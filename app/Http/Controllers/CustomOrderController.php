@@ -5061,6 +5061,8 @@ class CustomOrderController extends Controller
      */
     public function viewRefundEvidence(CustomOrderRefundRequest $refundRequest, int $index)
     {
+        $authorizedUserId = Auth::id();
+
         if (!Auth::check()) {
             $token = request()->input('auth_token')
                 ?? request()->query('auth_token')
@@ -5075,6 +5077,7 @@ class CustomOrderController extends Controller
                 if ($authToken) {
                     $user = User::find($authToken->user_id);
                     if ($user) {
+                        $authorizedUserId = (int) $user->id;
                         Auth::login($user, true);
                         session(['auth_token' => $token]);
 
@@ -5087,11 +5090,44 @@ class CustomOrderController extends Controller
             }
         }
 
-        if ((int) $refundRequest->user_id !== (int) Auth::id()) {
+        // Fallback: if session login is unavailable, still authorize using token ownership.
+        if (!$authorizedUserId) {
+            $token = request()->input('auth_token')
+                ?? request()->query('auth_token')
+                ?? session('auth_token');
+
+            if ($token) {
+                $tokenOwnerId = \DB::table('auth_tokens')
+                    ->where('token', $token)
+                    ->value('user_id');
+
+                if ($tokenOwnerId) {
+                    $authorizedUserId = (int) $tokenOwnerId;
+                }
+            }
+        }
+
+        if ((int) $refundRequest->user_id !== (int) $authorizedUserId) {
             abort(403);
         }
 
-        $evidence = is_array($refundRequest->evidence_paths ?? null) ? $refundRequest->evidence_paths : [];
+        // Support both new JSON-array evidence and legacy single-string formats.
+        $rawEvidence = $refundRequest->evidence_paths;
+        if (is_array($rawEvidence)) {
+            $evidence = $rawEvidence;
+        } elseif (is_string($rawEvidence) && trim($rawEvidence) !== '') {
+            $decoded = json_decode($rawEvidence, true);
+            if (is_array($decoded)) {
+                $evidence = $decoded;
+            } elseif (str_contains($rawEvidence, ',')) {
+                $evidence = array_values(array_filter(array_map('trim', explode(',', $rawEvidence))));
+            } else {
+                $evidence = [trim($rawEvidence)];
+            }
+        } else {
+            $evidence = [];
+        }
+
         if (!array_key_exists($index, $evidence)) {
             abort(404);
         }
