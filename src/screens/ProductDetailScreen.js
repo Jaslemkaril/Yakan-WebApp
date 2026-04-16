@@ -43,6 +43,13 @@ export default function ProductDetailScreen({ route, navigation }) {
   const selectedVariant = variantOptions.find(v => Number(v.id) === Number(selectedVariantId)) || null;
   const fallbackVariant = variantOptions.find(v => Number(v?.stock || 0) > 0) || variantOptions[0] || null;
   const activeVariant = selectedVariant || fallbackVariant;
+  const displayName = currentProduct?.name || currentProduct?.product_name || currentProduct?.title || 'Yakan Product';
+  const displayDescription = (
+    currentProduct?.description
+    || currentProduct?.product_description
+    || currentProduct?.details
+    || 'No description available yet for this product.'
+  );
   const effectivePrice = activeVariant ? parseFloat(activeVariant.price || 0) : parseFloat(currentProduct?.price || 0);
   const effectiveOriginalPrice = activeVariant
     ? parseFloat(activeVariant.original_price ?? activeVariant.price ?? 0)
@@ -322,7 +329,7 @@ export default function ProductDetailScreen({ route, navigation }) {
         onRightIconPress={handleFavoriteToggle}
       />
 
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* Product Image */}
         <View style={styles.imageContainer}>
           <Image 
@@ -339,7 +346,7 @@ export default function ProductDetailScreen({ route, navigation }) {
 
         {/* Product Info */}
         <View style={styles.infoContainer}>
-          <Text style={styles.productName}>{currentProduct.name}</Text>
+          <Text style={styles.productName}>{displayName}</Text>
           <View style={styles.productPriceRow}>
             <Text style={styles.productPrice}>₱{effectivePrice.toFixed(2)}</Text>
             {hasActiveDiscount ? (
@@ -432,7 +439,7 @@ export default function ProductDetailScreen({ route, navigation }) {
           {/* Description */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.description}>{currentProduct.description}</Text>
+            <Text style={styles.description}>{displayDescription}</Text>
             <Text style={styles.descriptionExtra}>
               This traditional Yakan weaving represents centuries of cultural heritage. 
               Each piece is handwoven by skilled artisans using traditional techniques 
@@ -567,6 +574,9 @@ const getStyles = (theme) => StyleSheet.create({
   content: {
     flex: 1,
   },
+  contentContainer: {
+    paddingBottom: 18,
+  },
   imageContainer: {
     width: width,
     height: width,
@@ -577,7 +587,9 @@ const getStyles = (theme) => StyleSheet.create({
     height: '100%',
   },
   infoContainer: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 10,
     backgroundColor: theme.cardBackground,
   },
   productName: {
@@ -632,13 +644,13 @@ const getStyles = (theme) => StyleSheet.create({
     marginLeft: 12,
   },
   section: {
-    marginBottom: 25,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     backgroundColor: theme.cardBackground,
-    marginHorizontal: 12,
+    marginHorizontal: 0,
     borderRadius: 12,
-    marginTop: 8,
+    marginTop: 0,
   },
   sectionTitle: {
     fontSize: 18,
