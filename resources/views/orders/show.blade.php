@@ -196,6 +196,8 @@
                             <option value="Found it cheaper" {{ old('cancel_reason') === 'Found it cheaper' ? 'selected' : '' }}>Found it cheaper</option>
                             <option value="Duplicate order" {{ old('cancel_reason') === 'Duplicate order' ? 'selected' : '' }}>Duplicate order</option>
                             <option value="Taking too long" {{ old('cancel_reason') === 'Taking too long' ? 'selected' : '' }}>Taking too long</option>
+                            <option value="Need to change address" {{ old('cancel_reason') === 'Need to change address' ? 'selected' : '' }}>Need to change address</option>
+                            <option value="Incorrect address provided" {{ old('cancel_reason') === 'Incorrect address provided' ? 'selected' : '' }}>Incorrect address provided</option>
                             <option value="Want to change items" {{ old('cancel_reason') === 'Want to change items' ? 'selected' : '' }}>Want to change items</option>
                             <option value="Other" {{ old('cancel_reason') === 'Other' ? 'selected' : '' }}>Other</option>
                         </select>
