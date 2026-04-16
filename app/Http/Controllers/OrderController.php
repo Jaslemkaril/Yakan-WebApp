@@ -470,8 +470,21 @@ class OrderController extends Controller
 
         $validated = $request->validate([
             'cancel_reason' => 'required|string|max:255',
+            'cancel_reason_other' => 'nullable|string|max:255',
             'cancel_notes' => 'nullable|string|max:500',
         ]);
+
+        $resolvedCancelReason = trim((string) $validated['cancel_reason']);
+        if (strcasecmp($resolvedCancelReason, 'Other') === 0) {
+            $otherReason = trim((string) ($validated['cancel_reason_other'] ?? ''));
+            if ($otherReason === '') {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['cancel_reason_other' => 'Please specify your cancellation reason.']);
+            }
+
+            $resolvedCancelReason = $otherReason;
+        }
 
         $cancelNotes = trim((string) ($validated['cancel_notes'] ?? ''));
 
@@ -484,7 +497,7 @@ class OrderController extends Controller
 
         if (!in_array($currentStatus, $cancellableStatuses, true)) {
             $message = 'This order can no longer be cancelled because it is already in ' . strtoupper($order->status) . ' status.';
-            $this->notifyCancelDecision($order, 'rejected', $validated['cancel_reason'], $message);
+            $this->notifyCancelDecision($order, 'rejected', $resolvedCancelReason, $message);
             return redirect()->back()->with('error', $message);
         }
 
@@ -570,7 +583,7 @@ class OrderController extends Controller
             : 'Cancellation request is pending admin review.';
 
         $existingAdminNotes = trim((string) $order->admin_notes);
-        $requestReasonLine = 'Customer cancellation requested: ' . $validated['cancel_reason'];
+        $requestReasonLine = 'Customer cancellation requested: ' . $resolvedCancelReason;
         if (!str_contains($existingAdminNotes, $requestReasonLine)) {
             $existingAdminNotes = $existingAdminNotes !== ''
                 ? ($existingAdminNotes . "\n" . $requestReasonLine)
@@ -600,7 +613,7 @@ class OrderController extends Controller
         $order->appendTrackingEvent('Cancellation Requested');
         $order->save();
 
-        $this->notifyCancelDecision($order, 'pending', $validated['cancel_reason'], $paymentNote);
+        $this->notifyCancelDecision($order, 'pending', $resolvedCancelReason, $paymentNote);
 
         return redirect()->back()->with('success', $refundProcessStarted
             ? 'Cancellation requested. Refund request is now pending admin review.'

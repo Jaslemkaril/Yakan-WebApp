@@ -184,6 +184,7 @@
             <form id="cancel-order-form" method="POST" action="{{ route('orders.cancel', $order) }}">
                 @csrf
                 <input type="hidden" name="cancel_reason" id="cancel_reason_input" value="{{ old('cancel_reason') }}">
+                <input type="hidden" name="cancel_reason_other" id="cancel_reason_other_input" value="{{ old('cancel_reason_other') }}">
 
                 <div id="cancel-step-1">
                     <p class="text-sm font-semibold text-gray-700 mb-2">Why do you want to cancel?</p>
@@ -198,6 +199,11 @@
                             <option value="Want to change items" {{ old('cancel_reason') === 'Want to change items' ? 'selected' : '' }}>Want to change items</option>
                             <option value="Other" {{ old('cancel_reason') === 'Other' ? 'selected' : '' }}>Other</option>
                         </select>
+                    </div>
+
+                    <div id="cancel-reason-other-wrap" class="mb-4 hidden">
+                        <label for="cancel_reason_other" class="block text-sm font-medium text-gray-700 mb-2">Please specify</label>
+                        <input id="cancel_reason_other" type="text" maxlength="255" value="{{ old('cancel_reason_other') }}" placeholder="Please specify" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent text-sm text-gray-800">
                     </div>
 
                     <div class="mb-4">
@@ -1043,18 +1049,51 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelBackBtn = document.getElementById('cancel-back-btn');
     const cancelReasonInput = document.getElementById('cancel_reason_input');
     const cancelReasonSelect = document.getElementById('cancel_reason_select');
+    const cancelReasonOtherWrap = document.getElementById('cancel-reason-other-wrap');
+    const cancelReasonOtherInput = document.getElementById('cancel_reason_other');
+    const cancelReasonOtherHidden = document.getElementById('cancel_reason_other_input');
     const cancelForm = document.getElementById('cancel-order-form');
+
+    function syncCancelReasonState() {
+        const selectedReason = (cancelReasonSelect?.value || '').trim();
+        const isOther = selectedReason === 'Other';
+
+        if (cancelReasonInput) {
+            cancelReasonInput.value = selectedReason;
+        }
+
+        if (cancelReasonOtherWrap) {
+            cancelReasonOtherWrap.classList.toggle('hidden', !isOther);
+        }
+
+        if (cancelReasonOtherInput) {
+            cancelReasonOtherInput.required = isOther;
+            if (!isOther) {
+                cancelReasonOtherInput.value = '';
+            }
+        }
+
+        if (cancelReasonOtherHidden) {
+            cancelReasonOtherHidden.value = isOther ? (cancelReasonOtherInput?.value || '').trim() : '';
+        }
+    }
 
     if (cancelReasonSelect && cancelReasonInput) {
         cancelReasonSelect.addEventListener('change', function() {
-            cancelReasonInput.value = cancelReasonSelect.value;
+            syncCancelReasonState();
         });
 
         if ((cancelReasonInput.value || '').trim() !== '' && (cancelReasonSelect.value || '').trim() === '') {
             cancelReasonSelect.value = cancelReasonInput.value;
-        } else {
-            cancelReasonInput.value = cancelReasonSelect.value;
         }
+
+        syncCancelReasonState();
+    }
+
+    if (cancelReasonOtherInput && cancelReasonOtherHidden) {
+        cancelReasonOtherInput.addEventListener('input', function() {
+            cancelReasonOtherHidden.value = cancelReasonOtherInput.value.trim();
+        });
     }
 
     if (cancelNextBtn && cancelStep1 && cancelStep2) {
@@ -1063,6 +1102,18 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!reason) {
                 alert('Please select a cancellation reason first.');
                 return;
+            }
+
+            if (reason === 'Other') {
+                const otherReason = (cancelReasonOtherInput?.value || '').trim();
+                if (!otherReason) {
+                    alert('Please specify your cancellation reason.');
+                    cancelReasonOtherInput?.focus();
+                    return;
+                }
+                if (cancelReasonOtherHidden) {
+                    cancelReasonOtherHidden.value = otherReason;
+                }
             }
 
             cancelStep1.classList.add('hidden');
@@ -1088,6 +1139,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     cancelStep1.classList.remove('hidden');
                 }
                 return;
+            }
+
+            if (reason === 'Other') {
+                const otherReason = (cancelReasonOtherInput?.value || '').trim();
+                if (!otherReason) {
+                    e.preventDefault();
+                    alert('Please specify your cancellation reason.');
+                    if (cancelStep2 && cancelStep1) {
+                        cancelStep2.classList.add('hidden');
+                        cancelStep1.classList.remove('hidden');
+                    }
+                    cancelReasonOtherInput?.focus();
+                    return;
+                }
+                if (cancelReasonOtherHidden) {
+                    cancelReasonOtherHidden.value = otherReason;
+                }
             }
 
             const confirmed = confirm('Submit cancellation request for admin review?');
