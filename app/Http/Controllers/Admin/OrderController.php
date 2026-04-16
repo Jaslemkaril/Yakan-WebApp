@@ -10,6 +10,7 @@ use App\Services\Payment\PayMongoCheckoutService;
 use App\Services\TransactionalMailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
@@ -66,6 +67,14 @@ class OrderController extends Controller
         $perPage = $request->get('per_page', 20);
         $orders = $query->paginate($perPage)->appends($request->all());
 
+        $supportsDownpayment = Schema::hasColumn('orders', 'payment_option')
+            && Schema::hasColumn('orders', 'downpayment_amount')
+            && Schema::hasColumn('orders', 'remaining_balance')
+            && Schema::hasColumn('orders', 'total_amount');
+        $paidRevenueExpr = $supportsDownpayment
+            ? "CASE WHEN payment_option = 'downpayment' AND COALESCE(remaining_balance, 0) > 0 THEN downpayment_amount ELSE total_amount END"
+            : 'total_amount';
+
         // Calculate statistics
         $stats = [
             'total_orders' => Order::count(),
@@ -73,10 +82,14 @@ class OrderController extends Controller
             'processing_orders' => Order::whereRaw('LOWER(status) = ?', ['processing'])->count(),
             'shipped_orders' => Order::whereRaw('LOWER(status) = ?', ['shipped'])->count(),
             'delivered_orders' => Order::whereRaw('LOWER(status) = ?', ['delivered'])->count(),
-            'total_revenue' => Order::whereIn('payment_status', ['paid', 'completed'])->sum('total_amount'),
-            'pending_revenue' => Order::where('payment_status', 'pending')->sum('total_amount'),
+            'total_revenue' => Order::whereIn('payment_status', ['paid', 'completed', 'verified'])
+                ->sum(DB::raw($paidRevenueExpr)),
+            'pending_revenue' => Order::where('payment_status', 'pending')
+                ->sum(DB::raw($paidRevenueExpr)),
             'today_orders' => Order::whereDate('created_at', today())->count(),
-            'today_revenue' => Order::whereDate('created_at', today())->whereIn('payment_status', ['paid', 'completed'])->sum('total_amount'),
+            'today_revenue' => Order::whereDate('created_at', today())
+                ->whereIn('payment_status', ['paid', 'completed', 'verified'])
+                ->sum(DB::raw($paidRevenueExpr)),
         ];
 
         if ($request->ajax()) {
@@ -327,6 +340,41 @@ class OrderController extends Controller
         $order->save();
 
         return redirect()->back()->with('success', 'Admin notes updated successfully!');
+    }
+
+    /**
+     * Mark the remaining balance of a downpayment order as settled.
+     */
+    public function settleRemainingBalance(Order $order)
+    {
+        if (!Schema::hasColumn('orders', 'payment_option') || !Schema::hasColumn('orders', 'remaining_balance')) {
+            return redirect()->back()->with('error', 'Downpayment fields are not available in this deployment yet.');
+        }
+
+        $paymentOption = strtolower((string) ($order->payment_option ?? 'full'));
+        if ($paymentOption !== 'downpayment') {
+            return redirect()->back()->with('error', 'Only downpayment orders can settle a remaining balance.');
+        }
+
+        $remainingBalance = (float) ($order->remaining_balance ?? 0);
+        if ($remainingBalance <= 0) {
+            return redirect()->back()->with('info', 'This order is already fully paid.');
+        }
+
+        if (!in_array($order->payment_status, ['paid', 'verified'], true)) {
+            return redirect()->back()->with('error', 'Collect and verify the downpayment before settling the remaining balance.');
+        }
+
+        if (in_array(strtolower((string) $order->status), ['cancelled', 'refunded'], true)) {
+            return redirect()->back()->with('error', 'Cancelled or refunded orders cannot be settled.');
+        }
+
+        $order->remaining_balance = 0;
+        $order->payment_verified_at = now();
+        $order->appendTrackingEvent('Remaining Balance Settled');
+        $order->save();
+
+        return redirect()->back()->with('success', 'Remaining balance marked as settled. This order is now fully paid.');
     }
 
     // Refund order

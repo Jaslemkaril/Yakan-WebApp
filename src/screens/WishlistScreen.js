@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Dimensions,
   Alert,
   ActivityIndicator,
   RefreshControl,
@@ -16,15 +15,12 @@ import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
 import colors from '../constants/colors';
 import BottomNav from '../components/BottomNav';
-import ApiService from '../services/api';
 import API_CONFIG from '../config/config';
-
-const { width } = Dimensions.get('window');
 
 export default function WishlistScreen({ navigation }) {
   const { theme } = useTheme();
   const styles = getStyles(theme);
-  const { addToCart, isLoggedIn, wishlistItems, removeFromWishlist, fetchWishlist } = useCart();
+  const { isLoggedIn, wishlistItems, removeFromWishlist, fetchWishlist } = useCart();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -71,11 +67,7 @@ export default function WishlistScreen({ navigation }) {
       return;
     }
 
-    addToCart(product, 1);
-    Alert.alert('Success', `${product.name} added to cart!`, [
-      { text: 'Continue Shopping', onPress: () => {} },
-      { text: 'View Cart', onPress: () => navigation.navigate('Cart') },
-    ]);
+    navigation.navigate('ProductDetail', { product });
   };
 
   if (loading) {
@@ -171,9 +163,16 @@ export default function WishlistScreen({ navigation }) {
                 <Text style={styles.productDescription} numberOfLines={2}>
                   {product.description || ''}
                 </Text>
-                <Text style={styles.productPrice}>
-                  ₱{(product.price || 0).toFixed(2)}
-                </Text>
+                <View>
+                  <Text style={styles.productPrice}>
+                    ₱{(product.price || 0).toFixed(2)}
+                  </Text>
+                  {(product.has_product_discount && (product.original_price || 0) > (product.price || 0)) ? (
+                    <Text style={styles.productOriginalPrice}>
+                      ₱{(product.original_price || 0).toFixed(2)}
+                    </Text>
+                  ) : null}
+                </View>
 
                 <View style={styles.actionButtons}>
                   <TouchableOpacity
@@ -302,6 +301,13 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: theme.primary,
+    marginBottom: 8,
+  },
+  productOriginalPrice: {
+    fontSize: 12,
+    color: theme.textMuted,
+    textDecorationLine: 'line-through',
+    marginTop: -4,
     marginBottom: 8,
   },
   actionButtons: {

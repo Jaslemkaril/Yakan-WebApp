@@ -7,13 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
   SafeAreaView,
-  StatusBar,
   ScrollView,
   Image,
 } from 'react-native';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { API_CONFIG } from '../config/config';
 import { useCart } from '../context/CartContext';
 import ScreenHeader from '../components/ScreenHeader';
@@ -71,23 +69,6 @@ const OrdersScreen = ({ navigation }) => {
     }
   };
 
-  const getStatusIcon = (status) => {
-    const icons = {
-      pending:              'clock-outline',
-      pending_payment:      'credit-card-clock',
-      payment_verified:     'check-circle-outline',
-      pending_confirmation: 'checkbox-marked-circle-outline',
-      confirmed:            'check-circle',
-      processing:           'cog',
-      shipped:              'truck-fast',
-      out_for_delivery:     'moped-outline',
-      delivered:            'home-check',
-      completed:            'check-all',
-      cancelled:            'close-circle',
-    };
-    return icons[status] || 'package-variant-closed';
-  };
-
   const getStatusColor = (status) => {
     const statusColors = {
       pending:              '#F59E0B',
@@ -103,13 +84,6 @@ const OrdersScreen = ({ navigation }) => {
       cancelled:            '#EF4444',
     };
     return statusColors[status] || '#8B1A1A';
-  };
-
-  const MINI_STAGES = ['pending','confirmed','processing','shipped','delivered'];
-  const getMiniProgress = (status) => {
-    if (['cancelled','refunded'].includes(status)) return -1;
-    const idx = MINI_STAGES.indexOf(status);
-    return idx === -1 ? 0 : idx;
   };
 
   const FILTERS = [
@@ -276,7 +250,18 @@ const OrdersScreen = ({ navigation }) => {
                     : `${baseUrl}/storage/products/${firstImage}`
                 : null;
               const orderRef = item.order_number || item.order_ref || `ORD-${item.id}`;
+              const totalAmount = parseFloat(item.total_amount || item.total) || 0;
               const isPaid = item.payment_status === 'paid' || item.payment_status === 'verified';
+              const paymentOption = ((item.payment_option || item.paymentOption || 'full') + '').toLowerCase();
+              const isDownpayment = paymentOption === 'downpayment';
+              const explicitDownpayment = parseFloat(item.downpayment_amount || item.downpaymentAmount) || 0;
+              const remainingBalance = Math.max(0, parseFloat(item.remaining_balance || item.remainingBalance) || 0);
+              const amountDueNow = isDownpayment
+                ? (explicitDownpayment > 0 ? explicitDownpayment : Math.max(0, totalAmount - remainingBalance))
+                : totalAmount;
+              const paymentLabel = isDownpayment
+                ? (isPaid ? (remainingBalance > 0 ? 'DP Paid' : 'Fully Paid') : 'DP Pending')
+                : (isPaid ? 'Paid' : 'Pending');
 
               return (
                 <TouchableOpacity
@@ -328,15 +313,15 @@ const OrdersScreen = ({ navigation }) => {
                   {/* Footer: total + payment */}
                   <View style={styles.cardFooter}>
                     <View style={styles.footerLeft}>
-                      <Text style={styles.totalLabel}>Total Amount</Text>
+                      <Text style={styles.totalLabel}>{isDownpayment ? 'Amount Due Now' : 'Total Amount'}</Text>
                     </View>
                     <View style={styles.footerRight}>
                       <View style={[styles.paymentPill, { borderColor: isPaid ? '#22C55E' : '#F59E0B', backgroundColor: isPaid ? '#F0FDF4' : '#FFFBEB' }]}>
                         <MaterialCommunityIcons name={isPaid ? 'check-circle' : 'clock-outline'} size={12} color={isPaid ? '#22C55E' : '#F59E0B'} style={{ marginRight: 3 }} />
-                        <Text style={[styles.paymentPillText, { color: isPaid ? '#22C55E' : '#F59E0B' }]}>{isPaid ? 'Paid' : 'Pending'}</Text>
+                        <Text style={[styles.paymentPillText, { color: isPaid ? '#22C55E' : '#F59E0B' }]}>{paymentLabel}</Text>
                       </View>
                       <Text style={styles.totalAmount}>
-                        ₱{(parseFloat(item.total_amount || item.total) || 0).toFixed(2)}
+                        ₱{amountDueNow.toFixed(2)}
                       </Text>
                     </View>
                   </View>

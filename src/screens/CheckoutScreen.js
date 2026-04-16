@@ -15,43 +15,47 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
-import { useNotification } from '../context/NotificationContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useShippingFee } from '../hooks/useShippingFee';
-import API_CONFIG from '../config/config';
 import ApiService from '../services/api';
 import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
 
+const DOWNPAYMENT_RATE = 50;
+const PICKUP_STORE_ADDRESS = {
+  street: 'Yakan Village',
+  barangay: 'Upper Calarian',
+  city: 'Zamboanga City',
+  province: 'Zamboanga del Sur',
+  postalCode: '7000',
+};
+
 const CheckoutScreen = ({ navigation }) => {
-  const { cartItems, checkoutItems, getCartTotal, clearCart, userInfo, updateUserInfo } = useCart();
+  const { cartItems, checkoutItems, setCheckoutItems, updateQuantity, userInfo } = useCart();
   const { theme } = useTheme();
   const styles = getStyles(theme);
-  const { notifyOrderCreated } = useNotification();
-  const { calculateFee, loading: shippingLoading, error: shippingError } = useShippingFee();
   
-  // Use checkoutItems if available, otherwise fall back to all cartItems
-  const itemsToCheckout = checkoutItems && checkoutItems.length > 0 ? checkoutItems : cartItems;
+  // Keep the selected checkout subset when user came from cart selection.
+  const [useCheckoutSelection] = useState(() => Array.isArray(checkoutItems) && checkoutItems.length > 0);
+  const itemsToCheckout = useCheckoutSelection ? checkoutItems : cartItems;
   
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
-  const [editingAddressId, setEditingAddressId] = useState(null);
+  const [editingAddressId] = useState(null);
   
   // Delivery option state: 'pickup' or 'deliver'
   const [deliveryOption, setDeliveryOption] = useState('deliver');
+  const [paymentOption, setPaymentOption] = useState('full');
   
   // Shipping fee state
   const [shippingFee, setShippingFee] = useState(0);
   const [calculatingShipping, setCalculatingShipping] = useState(false);
   
   // Coupon code state
-  const [showCouponInput, setShowCouponInput] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponError, setCouponError] = useState('');
-  const [couponSuccess, setCouponSuccess] = useState('');
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [availableCoupons, setAvailableCoupons] = useState([]);
   
@@ -290,7 +294,12 @@ const CheckoutScreen = ({ navigation }) => {
   const shippingFeeDisplay = deliveryOption === 'pickup' ? 0 : shippingFee;
   const subtotal = itemsToCheckout.reduce((total, item) => total + (item.price * item.quantity), 0);
   const discount = appliedCoupon ? Math.min(parseFloat(appliedCoupon.discount) || 0, shippingFeeDisplay) : 0;
-  const total = subtotal + shippingFeeDisplay - discount;
+  const orderTotal = Math.max(0, subtotal + shippingFeeDisplay - discount);
+  const downpaymentAmount = paymentOption === 'downpayment'
+    ? Number((orderTotal * (DOWNPAYMENT_RATE / 100)).toFixed(2))
+    : orderTotal;
+  const remainingBalance = Math.max(0, Number((orderTotal - downpaymentAmount).toFixed(2)));
+  const payableNow = downpaymentAmount;
 
   const generateOrderRef = () => {
     const now = new Date();
@@ -334,18 +343,6 @@ const CheckoutScreen = ({ navigation }) => {
     setAppliedCoupon(null);
     setCouponCode('');
     setCouponError('');
-    setCouponSuccess('');
-  };
-
-  const saveOrder = async (orderData) => {
-    try {
-      const existingOrders = await AsyncStorage.getItem('pendingOrders');
-      const orders = existingOrders ? JSON.parse(existingOrders) : [];
-      orders.push(orderData);
-      await AsyncStorage.setItem('pendingOrders', JSON.stringify(orders));
-    } catch (error) {
-      console.log('Error saving order:', error);
-    }
   };
 
   const handleAddressSubmit = () => {
@@ -407,13 +404,6 @@ const CheckoutScreen = ({ navigation }) => {
     Alert.alert('Success', isEditingAddress ? 'Address updated!' : 'Address added successfully!');
   };
 
-  const handleEditAddress = (address) => {
-    setAddressForm(address);
-    setIsEditingAddress(true);
-    setEditingAddressId(address.id);
-    setShowAddressForm(true);
-  };
-
   const handleDeleteAddress = (addressId) => {
     Alert.alert(
       'Delete Address',
@@ -441,46 +431,115 @@ const CheckoutScreen = ({ navigation }) => {
     );
   };
 
-  const handleSetDefault = (addressId) => {
-    const updatedAddresses = savedAddresses.map(addr =>
-      addr.id === addressId ? { ...addr, isDefault: true } : { ...addr, isDefault: false }
-    );
-    saveAddresses(updatedAddresses);
-    setSavedAddresses(updatedAddresses);
+  const syncCheckoutSelectionQuantity = (itemId, nextQuantity) => {
+    if (!useCheckoutSelection) {
+      return;
+    }
+
+    setCheckoutItems((prev) => {
+      const baseItems = Array.isArray(prev) ? prev : [];
+
+      if (nextQuantity <= 0) {
+        return baseItems.filter((entry) => entry.id !== itemId);
+      }
+
+      return baseItems.map((entry) =>
+        entry.id === itemId ? { ...entry, quantity: nextQuantity } : entry
+      );
+    });
+  };
+
+  const handleOrderSummaryQuantityChange = (item, delta) => {
+    if (deliveryOption !== 'pickup' || !item?.id) {
+      return;
+    }
+
+    const currentQuantity = Number(item.quantity || 1);
+    const nextQuantity = currentQuantity + delta;
+    const maxStock = Number(item.stock || 0);
+
+    if (delta > 0 && maxStock > 0 && currentQuantity >= maxStock) {
+      Alert.alert('Stock limit reached', `Only ${maxStock} item(s) available for ${item.name}.`);
+      return;
+    }
+
+    if (nextQuantity <= 0) {
+      Alert.alert(
+        'Remove Item',
+        `Remove ${item.name} from this order?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: () => {
+              syncCheckoutSelectionQuantity(item.id, 0);
+              updateQuantity(item.id, 0);
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    syncCheckoutSelectionQuantity(item.id, nextQuantity);
+    updateQuantity(item.id, nextQuantity);
   };
 
   const handlePlaceOrder = async () => {
-    if (!selectedAddressId) {
+    if (!itemsToCheckout || itemsToCheckout.length === 0) {
+      Alert.alert('No Items', 'Your checkout has no items. Please add items before proceeding.');
+      return;
+    }
+
+    if (deliveryOption === 'deliver' && !selectedAddressId) {
       Alert.alert('Error', 'Please select a shipping address');
       return;
     }
 
     const selectedAddr = savedAddresses.find(addr => addr.id === selectedAddressId);
+    const pickupAddress = {
+      fullName: userInfo?.name || userInfo?.first_name || 'Pickup Customer',
+      phoneNumber: userInfo?.phone || '',
+      ...PICKUP_STORE_ADDRESS,
+    };
+
+    const resolvedShippingAddress = deliveryOption === 'pickup'
+      ? pickupAddress
+      : {
+          fullName: selectedAddr?.fullName || '',
+          phoneNumber: selectedAddr?.phoneNumber || '',
+          street: selectedAddr?.street || '',
+          barangay: selectedAddr?.barangay || '',
+          city: selectedAddr?.city || '',
+          province: selectedAddr?.province || '',
+          postalCode: selectedAddr?.postalCode || '',
+        };
 
     const orderRef = generateOrderRef();
     
     const actualShippingFee = deliveryOption === 'pickup' ? 0 : shippingFee;
-    const actualTotal = subtotal + actualShippingFee - discount;
+    const actualTotal = Math.max(0, subtotal + actualShippingFee - discount);
+    const actualDownpaymentAmount = paymentOption === 'downpayment'
+      ? Number((actualTotal * (DOWNPAYMENT_RATE / 100)).toFixed(2))
+      : actualTotal;
+    const actualRemainingBalance = Math.max(0, Number((actualTotal - actualDownpaymentAmount).toFixed(2)));
     
     const orderData = {
       orderRef,
       date: new Date().toISOString(),
       items: itemsToCheckout,
       deliveryOption: deliveryOption,
-      shippingAddress: {
-        fullName: selectedAddr.fullName,
-        phoneNumber: selectedAddr.phoneNumber,
-        street: selectedAddr.street,
-        barangay: selectedAddr.barangay,
-        city: selectedAddr.city,
-        province: selectedAddr.province,
-        postalCode: selectedAddr.postalCode,
-      },
+      shippingAddress: resolvedShippingAddress,
       subtotal,
       shippingFee: actualShippingFee,
       discount: discount,
       couponCode: appliedCoupon?.code || null,
       total: actualTotal,
+      payableNow: actualDownpaymentAmount,
+      remainingBalance: actualRemainingBalance,
+      paymentOption,
+      downpaymentRate: paymentOption === 'downpayment' ? DOWNPAYMENT_RATE : 100,
       status: 'pending_payment',
     };
 
@@ -488,13 +547,7 @@ const CheckoutScreen = ({ navigation }) => {
     navigation.navigate('Payment', { orderData });
   };
 
-  const selectedAddress = savedAddresses.find(addr => addr.id === selectedAddressId);
-
-  const handleAddressSetup = async (newAddress) => {
-    setSavedAddresses([newAddress]);
-    setSelectedAddressId(newAddress.id);
-    setShowQuickAddressSetup(false);
-  };
+  const isCheckoutDisabled = itemsToCheckout.length === 0 || (deliveryOption === 'deliver' && !selectedAddressId);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -624,6 +677,56 @@ const CheckoutScreen = ({ navigation }) => {
           </View>
         )}
 
+        {/* Payment Option Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Payment Option</Text>
+          <View style={styles.deliveryOptionsContainer}>
+            <TouchableOpacity
+              style={[
+                styles.deliveryOptionCard,
+                paymentOption === 'full' && styles.deliveryOptionCardSelected,
+              ]}
+              onPress={() => setPaymentOption('full')}
+            >
+              <View style={[
+                styles.deliveryRadio,
+                paymentOption === 'full' && styles.deliveryRadioSelected,
+              ]}>
+                {paymentOption === 'full' && <View style={styles.deliveryRadioInner} />}
+              </View>
+              <View style={styles.deliveryOptionContent}>
+                <Ionicons name="wallet-outline" size={28} color="#8B1A1A" style={styles.deliveryOptionIcon} />
+                <View>
+                  <Text style={styles.deliveryOptionTitle}>Full Payment</Text>
+                  <Text style={styles.deliveryOptionDesc}>Pay the entire amount now</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.deliveryOptionCard,
+                paymentOption === 'downpayment' && styles.deliveryOptionCardSelected,
+              ]}
+              onPress={() => setPaymentOption('downpayment')}
+            >
+              <View style={[
+                styles.deliveryRadio,
+                paymentOption === 'downpayment' && styles.deliveryRadioSelected,
+              ]}>
+                {paymentOption === 'downpayment' && <View style={styles.deliveryRadioInner} />}
+              </View>
+              <View style={styles.deliveryOptionContent}>
+                <Ionicons name="cash-outline" size={28} color="#8B1A1A" style={styles.deliveryOptionIcon} />
+                <View>
+                  <Text style={styles.deliveryOptionTitle}>Downpayment ({DOWNPAYMENT_RATE}%)</Text>
+                  <Text style={styles.deliveryOptionDesc}>Pay half now, settle the balance on delivery/pickup</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Address Selection Section - Only show when delivery is selected */}
         {deliveryOption === 'deliver' && (
           <View style={styles.section}>
@@ -680,6 +783,12 @@ const CheckoutScreen = ({ navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Order Summary</Text>
           {itemsToCheckout.map((item, index) => {
+            const currentQuantity = Number(item.quantity || 1);
+            const unitPrice = Number(item.price || 0);
+            const itemSubtotal = unitPrice * currentQuantity;
+            const maxStock = Number(item.stock || 0);
+            const isAtMaxStock = maxStock > 0 && currentQuantity >= maxStock;
+
             // Build image URI properly from the item
             const itemImage = item.image;
             let imageSource;
@@ -699,12 +808,51 @@ const CheckoutScreen = ({ navigation }) => {
                   resizeMode="cover"
                 />
                 <View style={styles.orderItemDetails}>
-                  <Text style={styles.orderItemText}>
-                    {item.name} × {item.quantity}
+                  <Text style={styles.orderItemName}>
+                    {item.name}
                   </Text>
-                  <Text style={styles.orderItemPrice}>
-                    ₱{(item.price * item.quantity).toFixed(2)}
-                  </Text>
+                  {(item.variant_size || item.variant_color) ? (
+                    <Text style={styles.orderItemVariantText}>
+                      {[item.variant_size, item.variant_color].filter(Boolean).join(' / ')}
+                    </Text>
+                  ) : null}
+
+                  <View style={styles.orderItemMetaRow}>
+                    <Text style={styles.orderItemUnitPrice}>₱{unitPrice.toFixed(2)} each</Text>
+                    <Text style={styles.orderItemPrice}>₱{itemSubtotal.toFixed(2)}</Text>
+                  </View>
+
+                  {deliveryOption === 'pickup' ? (
+                    <View style={styles.orderItemQuantityStack}>
+                      <Text style={styles.orderItemQuantityLabel}>Adjust quantity for pickup</Text>
+                      <View style={styles.orderItemQuantityControls}>
+                        <TouchableOpacity
+                          style={styles.orderQtyButton}
+                          onPress={() => handleOrderSummaryQuantityChange(item, -1)}
+                        >
+                          <Text style={styles.orderQtyButtonText}>−</Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.orderQtyDisplay}>
+                          <Text style={styles.orderQtyText}>{currentQuantity}</Text>
+                        </View>
+
+                        <TouchableOpacity
+                          style={[styles.orderQtyButton, isAtMaxStock && styles.orderQtyButtonDisabled]}
+                          onPress={() => handleOrderSummaryQuantityChange(item, 1)}
+                          disabled={isAtMaxStock}
+                        >
+                          <Text style={styles.orderQtyButtonText}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {isAtMaxStock ? (
+                        <Text style={styles.orderQtyLimitText}>Maximum stock reached</Text>
+                      ) : null}
+                    </View>
+                  ) : (
+                    <Text style={styles.orderItemText}>Qty: {currentQuantity}</Text>
+                  )}
                 </View>
               </View>
             );
@@ -726,6 +874,13 @@ const CheckoutScreen = ({ navigation }) => {
             <Text style={styles.orderItemText}>Shipping Fee</Text>
             <Text style={styles.orderItemPrice}>
               {deliveryOption === 'pickup' ? 'Free' : `₱${shippingFee.toFixed(2)}`}
+            </Text>
+          </View>
+
+          <View style={styles.orderItem}>
+            <Text style={styles.orderItemText}>Payment Option</Text>
+            <Text style={styles.orderItemPrice}>
+              {paymentOption === 'downpayment' ? `Downpayment (${DOWNPAYMENT_RATE}%)` : 'Full Payment'}
             </Text>
           </View>
 
@@ -786,22 +941,32 @@ const CheckoutScreen = ({ navigation }) => {
 
           <View style={styles.orderItem}>
             <Text style={styles.totalText}>Total</Text>
-            <Text style={styles.totalPrice}>
-              ₱{deliveryOption === 'pickup' ? subtotal.toFixed(2) : total.toFixed(2)}
-            </Text>
+            <Text style={styles.totalPrice}>₱{orderTotal.toFixed(2)}</Text>
           </View>
+
+          <View style={styles.orderItem}>
+            <Text style={styles.orderItemText}>Pay Now</Text>
+            <Text style={styles.orderItemPrice}>₱{payableNow.toFixed(2)}</Text>
+          </View>
+
+          {paymentOption === 'downpayment' && (
+            <View style={styles.orderItem}>
+              <Text style={[styles.orderItemText, { color: '#92400E' }]}>Remaining Balance</Text>
+              <Text style={[styles.orderItemPrice, { color: '#92400E' }]}>₱{remainingBalance.toFixed(2)}</Text>
+            </View>
+          )}
         </View>
 
         <TouchableOpacity 
           style={[
             styles.placeOrderButton,
-            !selectedAddressId && styles.placeOrderButtonDisabled
+            isCheckoutDisabled && styles.placeOrderButtonDisabled
           ]} 
           onPress={handlePlaceOrder}
-          disabled={!selectedAddressId}
+          disabled={isCheckoutDisabled}
         >
           <Text style={styles.placeOrderText}>
-            Proceed to Payment - ₱{deliveryOption === 'pickup' ? subtotal.toFixed(2) : total.toFixed(2)}
+            Proceed to Payment - ₱{payableNow.toFixed(2)}
           </Text>
         </TouchableOpacity>
 
@@ -1266,9 +1431,25 @@ const getStyles = (theme) => StyleSheet.create({
   },
   orderItemDetails: {
     flex: 1,
+    gap: 6,
+  },
+  orderItemName: {
+    fontSize: 14,
+    color: theme.text,
+    fontWeight: '600',
+  },
+  orderItemVariantText: {
+    fontSize: 12,
+    color: theme.textMuted,
+  },
+  orderItemMetaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  orderItemUnitPrice: {
+    fontSize: 12,
+    color: theme.textSecondary,
   },
   orderItemText: {
     fontSize: 14,
@@ -1279,6 +1460,58 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 14,
     color: theme.text,
     fontWeight: '600',
+  },
+  orderItemQuantityStack: {
+    marginTop: 2,
+    gap: 8,
+  },
+  orderItemQuantityLabel: {
+    fontSize: 12,
+    color: theme.textSecondary,
+  },
+  orderItemQuantityControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  orderQtyButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: theme.cardBackground,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orderQtyButtonDisabled: {
+    opacity: 0.45,
+  },
+  orderQtyButtonText: {
+    fontSize: 18,
+    color: theme.text,
+    fontWeight: '700',
+    lineHeight: 20,
+  },
+  orderQtyDisplay: {
+    minWidth: 42,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: theme.surfaceBg,
+    alignItems: 'center',
+  },
+  orderQtyText: {
+    fontSize: 14,
+    color: theme.text,
+    fontWeight: '700',
+  },
+  orderQtyLimitText: {
+    fontSize: 11,
+    color: '#92400E',
+    fontWeight: '500',
   },
   divider: {
     height: 1,

@@ -9,11 +9,9 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Dimensions,
   Image,
   ImageBackground,
   ActivityIndicator,
-  Modal,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Linking } from 'react-native';
@@ -21,11 +19,8 @@ import { useCart } from '../context/CartContext';
 import BottomNav from '../components/BottomNav';
 import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
-import colors from '../constants/colors';
 import ApiService from '../services/api';
 import API_CONFIG from '../config/config';
-
-const { width } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,7 +28,6 @@ export default function HomeScreen({ navigation }) {
   const [products, setProducts] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
   const { getCartCount, isLoggedIn, addToWishlist, removeFromWishlist, isInWishlist } = useCart();
   const { theme } = useTheme();
   const styles = getStyles(theme);
@@ -76,22 +70,39 @@ export default function HomeScreen({ navigation }) {
   };
 
   const transformProducts = (productsData) => {
-    return productsData.map(product => ({
-      id: product.id,
-      name: product.name,
-      description: product.description,
-      price: parseFloat(product.price),
-      category: product.category?.name || 'Uncategorized',
-      image: product.image 
-        ? { uri: product.image.startsWith('http') 
-            ? product.image 
-            : product.image.startsWith('/uploads') || product.image.startsWith('/storage')
-              ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${product.image}`
-              : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/storage/products/${product.image}` 
-          }
-        : require('../assets/images/Saputangan.jpg'),
-      stock: product.stock || 0,
-    }));
+    return productsData.map(product => {
+      const price = parseFloat(product.price || 0);
+      const originalPrice = parseFloat(product.original_price ?? product.price ?? 0);
+      const hasProductDiscount = !!product.has_product_discount && originalPrice > price;
+
+      return {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price,
+        originalPrice,
+        hasProductDiscount,
+        discountAmount: parseFloat(product.discount_amount || 0),
+        category: product.category?.name || 'Uncategorized',
+        image: product.image 
+          ? { uri: product.image.startsWith('http') 
+              ? product.image 
+              : product.image.startsWith('/uploads') || product.image.startsWith('/storage')
+                ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${product.image}`
+                : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/storage/products/${product.image}` 
+            }
+          : require('../assets/images/Saputangan.jpg'),
+        stock: product.stock || 0,
+        has_variants: !!product.has_variants,
+        variants: Array.isArray(product.variants) ? product.variants.map(variant => ({
+          ...variant,
+          price: parseFloat(variant.price || 0),
+          original_price: parseFloat(variant.original_price ?? variant.price ?? 0),
+          stock: Number(variant.stock || 0),
+        })) : [],
+        default_variant: product.default_variant || null,
+      };
+    });
   };
 
   const fetchProducts = async () => {
@@ -164,30 +175,6 @@ export default function HomeScreen({ navigation }) {
     ];
   };
   
-  const handleMenuPress = () => {
-    setMenuOpen(true);
-  };
-
-  const handleMenuClose = () => {
-    setMenuOpen(false);
-  };
-
-  const handleMenuNavigation = (screen) => {
-    setMenuOpen(false);
-    navigation.navigate(screen);
-  };
-
-  const handleLogout = () => {
-    setMenuOpen(false);
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', style: 'destructive', onPress: () => {
-        // Clear user data and navigate to login
-        navigation.navigate('Login');
-      }},
-    ]);
-  };
-  
   // Show loading state while fetching
   if (loading) {
     return (
@@ -258,7 +245,12 @@ export default function HomeScreen({ navigation }) {
       </View>
       <View style={styles.featuredInfo}>
         <Text style={styles.featuredName}>{product.name}</Text>
-        <Text style={styles.featuredPrice}>₱{product.price.toFixed(2)}</Text>
+        <View>
+          <Text style={styles.featuredPrice}>₱{product.price.toFixed(2)}</Text>
+          {product.hasProductDiscount ? (
+            <Text style={styles.featuredOriginalPrice}>₱{product.originalPrice.toFixed(2)}</Text>
+          ) : null}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -293,7 +285,12 @@ export default function HomeScreen({ navigation }) {
           {product.description}
         </Text>
         <View style={styles.productFooter}>
-          <Text style={styles.productPrice}>₱{parseFloat(product.price || 0).toFixed(2)}</Text>
+          <View>
+            <Text style={styles.productPrice}>₱{parseFloat(product.price || 0).toFixed(2)}</Text>
+            {product.hasProductDiscount ? (
+              <Text style={styles.productOriginalPrice}>₱{parseFloat(product.originalPrice || 0).toFixed(2)}</Text>
+            ) : null}
+          </View>
           <TouchableOpacity
             style={styles.cartButton}
             onPress={() => handleAddToCart(product)}
@@ -839,6 +836,12 @@ const getStyles = (theme) => StyleSheet.create({
     fontWeight: 'bold',
     color: theme.primary,
   },
+  featuredOriginalPrice: {
+    fontSize: 12,
+    color: theme.textMuted,
+    textDecorationLine: 'line-through',
+    marginTop: 2,
+  },
   // SHOP ALL PRODUCTS SECTION
   productsSection: {
     marginBottom: 25,
@@ -989,6 +992,12 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: theme.text,
+  },
+  productOriginalPrice: {
+    fontSize: 12,
+    color: theme.textMuted,
+    textDecorationLine: 'line-through',
+    marginTop: 2,
   },
   cartButton: {
     backgroundColor: theme.primary,

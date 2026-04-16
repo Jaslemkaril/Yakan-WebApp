@@ -358,7 +358,11 @@
                                 </td>
                                 <td>
                                     <span class="status-badge status-{{ strtolower($order->payment_status) }}">
-                                        {{ ucfirst($order->payment_status) }}
+                                        @if(in_array($order->payment_status, ['paid', 'verified']) && strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment')
+                                            {{ ((float) ($order->remaining_balance ?? 0)) > 0 ? 'DP Paid' : 'Fully Paid' }}
+                                        @else
+                                            {{ ucfirst($order->payment_status) }}
+                                        @endif
                                     </span>
                                 </td>
                                 <td class="text-sm text-gray-600">{{ $order->created_at->format('M d, Y') }}</td>

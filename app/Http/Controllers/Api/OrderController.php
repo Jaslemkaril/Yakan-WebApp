@@ -4,12 +4,69 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Services\TransactionalMailService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class OrderController extends Controller
 {
+    private function supportsDownpaymentFields(): bool
+    {
+        return Schema::hasColumn('orders', 'payment_option')
+            && Schema::hasColumn('orders', 'downpayment_rate')
+            && Schema::hasColumn('orders', 'downpayment_amount')
+            && Schema::hasColumn('orders', 'remaining_balance');
+    }
+
+    private function resolveDownpaymentPlan(float $orderTotal, string $paymentOption, ?float $requestedRate = null): array
+    {
+        $normalizedOption = strtolower($paymentOption) === 'downpayment' ? 'downpayment' : 'full';
+        $rate = $normalizedOption === 'downpayment'
+            ? min(99, max(1, (float) ($requestedRate ?? 50)))
+            : 100.0;
+
+        $orderTotal = max(0, round($orderTotal, 2));
+        $downpaymentAmount = round($orderTotal * ($rate / 100), 2);
+        $remainingBalance = max(0, round($orderTotal - $downpaymentAmount, 2));
+
+        return [
+            'payment_option' => $normalizedOption,
+            'downpayment_rate' => $rate,
+            'downpayment_amount' => $downpaymentAmount,
+            'remaining_balance' => $remainingBalance,
+        ];
+    }
+
+    private function getActiveVariants(Product $product)
+    {
+        if ($product->relationLoaded('variants')) {
+            return $product->variants->where('is_active', true)->values();
+        }
+
+        return $product->variants()->where('is_active', true)->get();
+    }
+
+    private function getEffectiveStock(Product $product, ?ProductVariant $variant = null): int
+    {
+        if ($variant) {
+            return (int) $variant->stock;
+        }
+
+        return (int) ($product->inventory?->quantity ?? $product->stock ?? 0);
+    }
+
+    private function getEffectivePrice(Product $product, ?ProductVariant $variant = null): float
+    {
+        $basePrice = $variant
+            ? (float) $variant->price
+            : (float) $product->price;
+
+        return (float) $product->getDiscountedPrice($basePrice);
+    }
+
     public function store(Request $request)
     {
         try {
@@ -35,6 +92,10 @@ class OrderController extends Controller
                 'shipping_barangay' => 'nullable|string|max:150',
                 'shipping_street' => 'nullable|string|max:255',
                 'payment_method' => 'required|string|in:gcash,maya,bank_transfer,cash,online_banking,paymongo',
+                'payment_option' => 'nullable|string|in:full,downpayment',
+                'downpayment_rate' => 'nullable|numeric|min:1|max:99',
+                'downpayment_amount' => 'nullable|numeric|min:0',
+                'remaining_balance' => 'nullable|numeric|min:0',
                 'payment_status' => 'nullable|string|in:pending,paid,verified,failed',
                 'payment_reference' => 'nullable|string',
                 'subtotal' => 'required|numeric|min:0',
@@ -46,6 +107,7 @@ class OrderController extends Controller
                 'notes' => 'nullable|string',
                 'items' => 'required|array|min:1',
                 'items.*.product_id' => 'required|integer|exists:products,id',
+                'items.*.variant_id' => 'nullable|integer|exists:product_variants,id',
                 'items.*.quantity' => 'required|integer|min:1',
                 'gcash_receipt' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
                 'bank_receipt' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
@@ -64,9 +126,14 @@ class OrderController extends Controller
             }
 
             $isPrepaid = in_array($validated['payment_method'], ['gcash', 'bank_transfer']);
+            $autoMarkPaid = $isPrepaid && strtolower((string) ($validated['payment_option'] ?? 'full')) !== 'downpayment';
             $paymentStatus = ($validated['payment_status'] ?? null) === 'paid'
                 ? 'paid'
-                : ($isPrepaid ? 'paid' : ($validated['payment_status'] ?? 'pending'));
+                : ($autoMarkPaid ? 'paid' : ($validated['payment_status'] ?? 'pending'));
+            $paymentOption = $validated['payment_option'] ?? 'full';
+            $requestedDownpaymentRate = isset($validated['downpayment_rate'])
+                ? (float) $validated['downpayment_rate']
+                : null;
 
             // Normalise payment_method: 'online_banking' → 'maya'
             $dbPaymentMethod = $validated['payment_method'] === 'online_banking' ? 'maya' : $validated['payment_method'];
@@ -80,7 +147,9 @@ class OrderController extends Controller
             $customerName = $validated['customer_name'] ?? $user->name;
             $customerEmail = $validated['customer_email'] ?? $user->email;
 
-            $order = Order::create([
+            \DB::beginTransaction();
+
+            $orderData = [
                 'order_ref' => $orderRef,
                 'tracking_number' => $orderRef,
                 'user_id' => $user->id,  // Always link to authenticated user
@@ -105,32 +174,104 @@ class OrderController extends Controller
                 'source' => 'mobile',
                 'gcash_receipt' => $gcashReceiptPath,
                 'bank_receipt' => $bankReceiptPath,
-            ]);
+            ];
 
-            // Resolve server-side prices — never trust client-supplied prices
+            if ($this->supportsDownpaymentFields()) {
+                $initialPlan = $this->resolveDownpaymentPlan(0, $paymentOption, $requestedDownpaymentRate);
+                $orderData = array_merge($orderData, $initialPlan);
+            }
+
+            if (Schema::hasColumn('orders', 'total')) {
+                $orderData['total'] = 0;
+            }
+
+            $order = Order::create($orderData);
+
+            // Resolve server-side prices and stock — never trust client data
             $serverSubtotal = 0;
             foreach ($validated['items'] as $item) {
-                $product = Product::findOrFail($item['product_id']);
-                $unitPrice = $product->price;
-                $serverSubtotal += $unitPrice * $item['quantity'];
+                $quantity = (int) $item['quantity'];
+                $product = Product::with(['inventory', 'variants'])
+                    ->lockForUpdate()
+                    ->findOrFail($item['product_id']);
+
+                $activeVariants = $this->getActiveVariants($product);
+                $variant = null;
+                if (!empty($item['variant_id'])) {
+                    $variant = ProductVariant::where('id', $item['variant_id'])
+                        ->where('product_id', $product->id)
+                        ->where('is_active', true)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (!$variant) {
+                        throw ValidationException::withMessages([
+                            'items' => ['One or more selected product variants are no longer available.'],
+                        ]);
+                    }
+                }
+
+                if ($activeVariants->isNotEmpty() && !$variant) {
+                    throw ValidationException::withMessages([
+                        'items' => ["Please select a variant for {$product->name}."],
+                    ]);
+                }
+
+                $availableStock = $this->getEffectiveStock($product, $variant);
+                if ($quantity > $availableStock) {
+                    throw ValidationException::withMessages([
+                        'items' => ["Insufficient stock for {$product->name}. Requested {$quantity}, available {$availableStock}."],
+                    ]);
+                }
+
+                $unitPrice = $this->getEffectivePrice($product, $variant);
+                $serverSubtotal += $unitPrice * $quantity;
+
                 $order->items()->create([
-                    'product_id' => $item['product_id'],
-                    'quantity'   => $item['quantity'],
-                    'price'      => $unitPrice,
+                    'product_id' => $product->id,
+                    'variant_id' => $variant?->id,
+                    'variant_size' => $variant?->size,
+                    'variant_color' => $variant?->color,
+                    'quantity' => $quantity,
+                    'price' => $unitPrice,
                 ]);
+
+                if ($variant) {
+                    $variant->decrement('stock', $quantity);
+                } elseif ($product->inventory) {
+                    $product->inventory->decrement('quantity', $quantity);
+                }
+
+                // Keep aggregate product stock in sync for legacy list views.
+                $product->decrement('stock', $quantity);
             }
 
             $shippingFee = $validated['shipping_fee'] ?? 0;
             $discount    = $validated['discount'] ?? 0;
-            $order->update([
+            $orderTotal = max(0, $serverSubtotal + $shippingFee - $discount);
+
+            $orderUpdateData = [
                 'subtotal'     => $serverSubtotal,
-                'total_amount' => max(0, $serverSubtotal + $shippingFee - $discount),
-            ]);
+                'total_amount' => $orderTotal,
+            ];
+
+            if (Schema::hasColumn('orders', 'total')) {
+                $orderUpdateData['total'] = $orderTotal;
+            }
+
+            if ($this->supportsDownpaymentFields()) {
+                $resolvedPlan = $this->resolveDownpaymentPlan($orderTotal, $paymentOption, $requestedDownpaymentRate);
+                $orderUpdateData = array_merge($orderUpdateData, $resolvedPlan);
+            }
+
+            $order->update($orderUpdateData);
+
+            \DB::commit();
 
             // Keep mobile behavior aligned with website checkout by sending
             // an order confirmation email immediately after successful creation.
             try {
-                $order->loadMissing('user', 'items.product');
+                $order->loadMissing('user', 'items.product', 'items.variant');
                 $orderEmail = trim((string) (optional($order->user)->email ?: $order->customer_email));
 
                 if ($orderEmail !== '') {
@@ -150,10 +291,24 @@ class OrderController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $order->load('items'),
+                'data' => tap($order->load('items'), function (Order $savedOrder): void {
+                    $savedOrder->setAttribute('amount_due_now', $savedOrder->getAmountDueNow());
+                }),
                 'message' => 'Order created successfully'
             ], 201);
+        } catch (ValidationException $e) {
+            if (\DB::transactionLevel() > 0) {
+                \DB::rollBack();
+            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
         } catch (\Exception $e) {
+            if (\DB::transactionLevel() > 0) {
+                \DB::rollBack();
+            }
             \Log::error('Order store error', ['message' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
@@ -172,7 +327,11 @@ class OrderController extends Controller
 
         $orders = Order::with(['items.product' => function($query) {
             $query->select('id', 'name', 'image');
-        }])->where('user_id', $user->id)->latest()->get();
+        }, 'items.variant:id,size,color'])->where('user_id', $user->id)->latest()->get();
+
+        $orders->each(function (Order $order): void {
+            $order->setAttribute('amount_due_now', $order->getAmountDueNow());
+        });
         
         return response()->json([
             'success' => true,
@@ -187,7 +346,7 @@ class OrderController extends Controller
 
         $order = Order::with(['items.product' => function($query) {
             $query->select('id', 'name', 'image');
-        }])->where('id', $id)->where('user_id', $user?->id)->first();
+        }, 'items.variant:id,size,color'])->where('id', $id)->where('user_id', $user?->id)->first();
         
         if (!$order) {
             return response()->json([
@@ -195,6 +354,8 @@ class OrderController extends Controller
                 'message' => 'Order not found'
             ], 404);
         }
+
+        $order->setAttribute('amount_due_now', $order->getAmountDueNow());
 
         return response()->json([
             'success' => true,
@@ -339,9 +500,16 @@ class OrderController extends Controller
             ]);
 
             foreach ($order->items as $item) {
-                $inventory = \App\Models\Inventory::where('product_id', $item->product_id)->first();
-                if ($inventory) {
-                    $inventory->increment('quantity', $item->quantity);
+                if (!empty($item->variant_id)) {
+                    $variant = ProductVariant::find($item->variant_id);
+                    if ($variant) {
+                        $variant->increment('stock', $item->quantity);
+                    }
+                } else {
+                    $inventory = \App\Models\Inventory::where('product_id', $item->product_id)->first();
+                    if ($inventory) {
+                        $inventory->increment('quantity', $item->quantity);
+                    }
                 }
 
                 $product = Product::find($item->product_id);

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 
 class Product extends Model
@@ -41,6 +42,10 @@ class Product extends Model
         'name',
         'description',
         'price',
+        'discount_type',
+        'discount_value',
+        'discount_starts_at',
+        'discount_ends_at',
         'stock',
         'category_id',
         'image',
@@ -53,10 +58,58 @@ class Product extends Model
 
     protected $casts = [
         'price' => 'float',
+        'discount_value' => 'float',
+        'discount_starts_at' => 'datetime',
+        'discount_ends_at' => 'datetime',
         'available_sizes' => 'array',
         'available_colors' => 'array',
         'all_images' => 'array',
     ];
+
+    public function hasActiveProductDiscount(?Carbon $at = null): bool
+    {
+        $at = $at ?? now();
+        $type = strtolower((string) ($this->discount_type ?? ''));
+        $value = (float) ($this->discount_value ?? 0);
+
+        if (!in_array($type, ['percent', 'fixed'], true) || $value <= 0) {
+            return false;
+        }
+
+        if ($this->discount_starts_at && $at->lt($this->discount_starts_at)) {
+            return false;
+        }
+
+        if ($this->discount_ends_at && $at->gt($this->discount_ends_at)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function getDiscountedPrice(float $basePrice, ?Carbon $at = null): float
+    {
+        $basePrice = max(0, $basePrice);
+
+        if (!$this->hasActiveProductDiscount($at)) {
+            return round($basePrice, 2);
+        }
+
+        $type = strtolower((string) ($this->discount_type ?? ''));
+        $value = (float) ($this->discount_value ?? 0);
+
+        $discountAmount = $type === 'percent'
+            ? $basePrice * (min(100, max(0, $value)) / 100)
+            : min($basePrice, $value);
+
+        return round(max(0, $basePrice - $discountAmount), 2);
+    }
+
+    public function getDiscountAmount(float $basePrice, ?Carbon $at = null): float
+    {
+        $discounted = $this->getDiscountedPrice($basePrice, $at);
+        return round(max(0, $basePrice - $discounted), 2);
+    }
 
     public function category()
     {
@@ -76,6 +129,11 @@ class Product extends Model
     public function bundledInItems(): HasMany
     {
         return $this->hasMany(ProductBundleItem::class, 'product_id');
+    }
+
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class);
     }
 
     public function inventory(): HasOne
@@ -111,6 +169,15 @@ class Product extends Model
     public function isLowStock(): bool
     {
         return $this->inventory ? $this->inventory->isLowStock() : false;
+    }
+
+    public function hasActiveVariants(): bool
+    {
+        if ($this->relationLoaded('variants')) {
+            return $this->variants->where('is_active', true)->isNotEmpty();
+        }
+
+        return $this->variants()->where('is_active', true)->exists();
     }
 
     public function getStockStatusAttribute(): string

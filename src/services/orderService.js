@@ -10,7 +10,8 @@ class OrderService {
   async createOrder(cartItems, shippingAddress, paymentMethod = null) {
     const orderData = {
       items: cartItems.map(item => ({
-        product_id: item.id,
+        product_id: item.product_id || item.id,
+        variant_id: item.variant_id || null,
         quantity: item.quantity,
         price: item.price,
       })),

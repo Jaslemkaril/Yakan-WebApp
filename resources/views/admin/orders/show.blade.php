@@ -20,6 +20,13 @@
     $summarySubtotal = $order->subtotal !== null
         ? (float) $order->subtotal
         : max(((float) ($order->total_amount ?? 0) - $summaryShippingFee), 0);
+
+    $paymentOption = strtolower((string) ($order->payment_option ?? 'full'));
+    $isDownpayment = $paymentOption === 'downpayment';
+    $downpaymentRate = (float) ($order->downpayment_rate ?? 0);
+    $downpaymentAmount = (float) ($order->downpayment_amount ?? 0);
+    $remainingBalance = (float) ($order->remaining_balance ?? 0);
+    $isDownpaymentFullyPaid = $isDownpayment && $remainingBalance <= 0;
 @endphp
 <div class="max-w-7xl mx-auto p-6">
     <!-- Header Section -->
@@ -96,7 +103,15 @@
                         {{ in_array($order->payment_status, ['paid', 'verified']) ? 'bg-gray-900' : '' }}
                         {{ $order->payment_status == 'refunded' ? 'bg-purple-600' : '' }}
                         {{ $order->payment_status == 'failed' ? 'bg-red-600' : '' }}">
-                        {{ in_array($order->payment_status, ['paid', 'verified']) ? 'Paid' : ucfirst($order->payment_status) }}
+                        @if(in_array($order->payment_status, ['paid', 'verified']) && $isDownpayment && !$isDownpaymentFullyPaid)
+                            Downpayment Paid
+                        @elseif(in_array($order->payment_status, ['paid', 'verified']) && $isDownpaymentFullyPaid)
+                            Fully Paid
+                        @elseif(in_array($order->payment_status, ['paid', 'verified']))
+                            Paid
+                        @else
+                            {{ ucfirst($order->payment_status) }}
+                        @endif
                     </span>
                 </div>
             </div>
@@ -117,6 +132,16 @@
                     <span class="text-sm text-gray-600">Total Amount:</span>
                     <span class="text-lg font-bold text-gray-900">₱{{ number_format($order->total_amount, 2) }}</span>
                 </div>
+                @if($isDownpayment)
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Downpayment:</span>
+                        <span class="text-sm font-semibold text-gray-900">₱{{ number_format($downpaymentAmount, 2) }} ({{ number_format($downpaymentRate, 0) }}%)</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Remaining Balance:</span>
+                        <span class="text-sm font-semibold {{ $isDownpaymentFullyPaid ? 'text-green-700' : 'text-amber-700' }}">₱{{ number_format($remainingBalance, 2) }}</span>
+                    </div>
+                @endif
                 <div class="flex items-center justify-between">
                     <span class="text-sm text-gray-600">Order Date:</span>
                     <span class="text-sm text-gray-700">{{ $order->created_at->format('M j, Y') }}</span>
@@ -163,9 +188,39 @@
                         {{ in_array($order->payment_status, ['paid', 'verified']) ? 'bg-gray-900 text-white' : '' }}
                         {{ $order->payment_status == 'refunded' ? 'bg-purple-100 text-purple-800' : '' }}
                         {{ $order->payment_status == 'failed' ? 'bg-red-100 text-red-800' : '' }}">
-                        {{ in_array($order->payment_status, ['paid', 'verified']) ? 'Paid' : ucfirst($order->payment_status) }}
+                        @if(in_array($order->payment_status, ['paid', 'verified']) && $isDownpayment && !$isDownpaymentFullyPaid)
+                            Downpayment Paid
+                        @elseif(in_array($order->payment_status, ['paid', 'verified']) && $isDownpaymentFullyPaid)
+                            Fully Paid
+                        @elseif(in_array($order->payment_status, ['paid', 'verified']))
+                            Paid
+                        @else
+                            {{ ucfirst($order->payment_status) }}
+                        @endif
                     </span>
                 </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Option:</span>
+                    <span class="text-sm font-medium text-gray-900">
+                        @if($isDownpayment && $isDownpaymentFullyPaid)
+                            Downpayment (Settled)
+                        @elseif($isDownpayment)
+                            Downpayment
+                        @else
+                            Full Payment
+                        @endif
+                    </span>
+                </div>
+                @if($isDownpayment)
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Amount Due Now:</span>
+                        <span class="text-sm font-semibold text-gray-900">₱{{ number_format($downpaymentAmount, 2) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Balance on Delivery:</span>
+                        <span class="text-sm font-semibold {{ $isDownpaymentFullyPaid ? 'text-green-700' : 'text-amber-700' }}">₱{{ number_format($remainingBalance, 2) }}</span>
+                    </div>
+                @endif
                 <div class="flex justify-between">
                     <span class="text-sm text-gray-600">Reference Number:</span>
                     <span class="text-sm font-medium text-gray-900">{{ $order->order_ref ?? ('ORDER-' . $order->id) }}</span>
@@ -706,7 +761,23 @@
             <div class="space-y-3">
                 @php
                     $canCancelOrder = !in_array(strtolower((string) $order->status), ['delivered', 'completed', 'refunded', 'cancelled'], true);
+                    $canSettleRemainingBalance = $isDownpayment
+                        && $remainingBalance > 0
+                        && in_array($order->payment_status, ['paid', 'verified'], true)
+                        && !in_array(strtolower((string) $order->status), ['cancelled', 'refunded'], true);
                 @endphp
+
+                @if($canSettleRemainingBalance)
+                <form action="{{ route('admin.orders.settle-balance', $order->id) }}" method="POST">
+                    @csrf
+                    <button type="submit" onclick="return confirm('Mark the remaining balance as settled for this order?');" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium flex items-center justify-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Settle Remaining Balance (₱{{ number_format($remainingBalance, 2) }})
+                    </button>
+                </form>
+                @endif
 
                 @if(isset($latestRefundRequest) && $latestRefundRequest)
                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -946,6 +1017,34 @@
                             <p id="pmCustomerEmail" class="text-sm font-semibold text-gray-900 break-all text-right">-</p>
                         </div>
                         <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
+                            <p class="text-sm text-gray-500">Shipping Label</p>
+                            <p id="pmShippingLabel" class="text-sm font-semibold text-gray-900 text-right">-</p>
+                        </div>
+                        <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
+                            <p class="text-sm text-gray-500">Recipient</p>
+                            <p id="pmRecipientName" class="text-sm font-semibold text-gray-900 text-right">-</p>
+                        </div>
+                        <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
+                            <p class="text-sm text-gray-500">Contact Number</p>
+                            <p id="pmRecipientPhone" class="text-sm font-semibold text-gray-900 text-right">-</p>
+                        </div>
+                        <div class="flex items-start justify-between border-b border-dashed border-gray-200 pb-3 gap-6">
+                            <p class="text-sm text-gray-500">Shipping Address</p>
+                            <p id="pmShippingAddress" class="text-sm font-semibold text-gray-900 break-words text-right">-</p>
+                        </div>
+                        <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
+                            <p class="text-sm text-gray-500">City / Province</p>
+                            <p id="pmShippingCityProvince" class="text-sm font-semibold text-gray-900 text-right">-</p>
+                        </div>
+                        <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
+                            <p class="text-sm text-gray-500">Location Coordinates</p>
+                            <p id="pmCoordinates" class="text-sm font-semibold text-gray-900 text-right">-</p>
+                        </div>
+                        <div id="pmMapRow" class="hidden flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
+                            <p class="text-sm text-gray-500">Location Map</p>
+                            <a id="pmMapLink" href="#" target="_blank" rel="noopener noreferrer" class="text-sm font-semibold" style="color:#800000;">Open Map</a>
+                        </div>
+                        <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-3">
                             <p class="text-sm text-gray-500">Payment ID</p>
                             <p id="pmPaymentId" class="text-sm font-semibold text-gray-900 break-all text-right">-</p>
                         </div>
@@ -1079,6 +1178,19 @@ function printPaymongoReceipt() {
     }
 
     const amountText = `${safeText(receipt.currency, 'PHP')} ${Number(receipt.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const shippingLabel = safeText(receipt.shipping_label, safeText(receipt.delivery_type, 'N/A'));
+    const recipientName = safeText(receipt.recipient_name, 'N/A');
+    const recipientPhone = safeText(receipt.recipient_phone, 'N/A');
+    const shippingAddress = safeText(receipt.shipping_address, 'N/A');
+    const shippingCityProvince = safeText(receipt.shipping_city_province, 'N/A');
+    const hasCoordinates = Number.isFinite(Number(receipt.delivery_latitude)) && Number.isFinite(Number(receipt.delivery_longitude));
+    const coordinatesText = hasCoordinates
+        ? `${Number(receipt.delivery_latitude).toFixed(6)}, ${Number(receipt.delivery_longitude).toFixed(6)}`
+        : 'N/A';
+    const mapUrl = safeText(receipt.delivery_map_url, '');
+    const mapDisplay = mapUrl !== ''
+        ? `<a href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer">Open Map</a>`
+        : 'N/A';
     const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -1110,6 +1222,13 @@ function printPaymongoReceipt() {
             <div class="row"><div class="label">Reference Number</div><div class="value">${escapeHtml(safeText(receipt.reference_number, 'N/A'))}</div></div>
             <div class="row"><div class="label">Customer Name</div><div class="value">${escapeHtml(safeText(receipt.customer_name, 'N/A'))}</div></div>
             <div class="row"><div class="label">Customer Email</div><div class="value">${escapeHtml(safeText(receipt.customer_email, 'N/A'))}</div></div>
+            <div class="row"><div class="label">Shipping Label</div><div class="value">${escapeHtml(shippingLabel)}</div></div>
+            <div class="row"><div class="label">Recipient</div><div class="value">${escapeHtml(recipientName)}</div></div>
+            <div class="row"><div class="label">Contact Number</div><div class="value">${escapeHtml(recipientPhone)}</div></div>
+            <div class="row"><div class="label">Shipping Address</div><div class="value">${escapeHtml(shippingAddress)}</div></div>
+            <div class="row"><div class="label">City / Province</div><div class="value">${escapeHtml(shippingCityProvince)}</div></div>
+            <div class="row"><div class="label">Location Coordinates</div><div class="value">${escapeHtml(coordinatesText)}</div></div>
+            <div class="row"><div class="label">Location Map</div><div class="value">${mapDisplay}</div></div>
             <div class="row"><div class="label">Payment ID</div><div class="value">${escapeHtml(safeText(receipt.payment_id, 'N/A'))}</div></div>
             <div class="row"><div class="label">Payment Method</div><div class="value">${escapeHtml(safeText(receipt.payment_method, 'N/A'))}</div></div>
             <div class="row"><div class="label">Payment Date</div><div class="value">${escapeHtml(formatReceiptDate(receipt.paid_at))}</div></div>
@@ -1179,6 +1298,28 @@ async function viewPaymongoReceipt(endpointUrl) {
         document.getElementById('pmRefNumber').textContent = safeText(receipt.reference_number, 'N/A');
         document.getElementById('pmCustomerName').textContent = safeText(receipt.customer_name, 'N/A');
         document.getElementById('pmCustomerEmail').textContent = safeText(receipt.customer_email, 'N/A');
+        document.getElementById('pmShippingLabel').textContent = safeText(receipt.shipping_label, safeText(receipt.delivery_type, 'N/A'));
+        document.getElementById('pmRecipientName').textContent = safeText(receipt.recipient_name, 'N/A');
+        document.getElementById('pmRecipientPhone').textContent = safeText(receipt.recipient_phone, 'N/A');
+        document.getElementById('pmShippingAddress').textContent = safeText(receipt.shipping_address, 'N/A');
+        document.getElementById('pmShippingCityProvince').textContent = safeText(receipt.shipping_city_province, 'N/A');
+
+        const hasCoordinates = Number.isFinite(Number(receipt.delivery_latitude)) && Number.isFinite(Number(receipt.delivery_longitude));
+        document.getElementById('pmCoordinates').textContent = hasCoordinates
+            ? `${Number(receipt.delivery_latitude).toFixed(6)}, ${Number(receipt.delivery_longitude).toFixed(6)}`
+            : 'N/A';
+
+        const mapRow = document.getElementById('pmMapRow');
+        const mapLink = document.getElementById('pmMapLink');
+        const mapUrl = safeText(receipt.delivery_map_url, '');
+        if (mapUrl !== '') {
+            mapLink.href = mapUrl;
+            mapRow.classList.remove('hidden');
+        } else {
+            mapLink.href = '#';
+            mapRow.classList.add('hidden');
+        }
+
         document.getElementById('pmPaymentId').textContent = safeText(receipt.payment_id, 'N/A');
         document.getElementById('pmPaymentMethod').textContent = safeText(receipt.payment_method, 'N/A');
         document.getElementById('pmStatus').textContent = formatPaymongoStatus(receipt.status);

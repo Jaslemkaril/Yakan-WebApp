@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Image,
   Alert,
@@ -18,10 +17,10 @@ import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
 
 const CartScreen = ({ navigation }) => {
-  const { cartItems, removeFromCart, updateQuantity, getCartTotal, clearCart, fetchCart, isLoggedIn, setCheckoutItems } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, clearCart, fetchCart, isLoggedIn, setCheckoutItems } = useCart();
   const { theme } = useTheme();
   const styles = getStyles(theme);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessing] = useState(false);
   const [selectedItems, setSelectedItems] = useState({});
 
   // Initialize all items as selected when cart loads
@@ -193,6 +192,12 @@ const CartScreen = ({ navigation }) => {
           <Text style={styles.productName} numberOfLines={2}>
             {item.name || 'Product'}
           </Text>
+
+          {(item.variant_size || item.variant_color) ? (
+            <Text style={styles.productDescription} numberOfLines={1}>
+              Variant: {[item.variant_size, item.variant_color].filter(Boolean).join(' / ')}
+            </Text>
+          ) : null}
           
           {item.description && (
             <Text style={styles.productDescription} numberOfLines={1}>
@@ -201,7 +206,12 @@ const CartScreen = ({ navigation }) => {
           )}
 
           <View style={styles.priceRow}>
-            <Text style={styles.unitPrice}>₱{(item.price || 0).toFixed(2)}</Text>
+            <View>
+              <Text style={styles.unitPrice}>₱{(item.price || 0).toFixed(2)}</Text>
+              {(item.has_product_discount && (item.original_price || 0) > (item.price || 0)) ? (
+                <Text style={styles.unitPriceOriginal}>₱{(item.original_price || 0).toFixed(2)}</Text>
+              ) : null}
+            </View>
             <Text style={styles.totalPrice}>
               ₱{((item.price || 0) * (item.quantity || 1)).toFixed(2)}
             </Text>
@@ -473,9 +483,15 @@ const getStyles = (theme) => StyleSheet.create({
     marginBottom: 8,
   },
   unitPrice: {
-    fontSize: 12,
-    color: theme.textSecondary,
+    fontSize: 13,
+    color: theme.text,
+    fontWeight: '600',
+  },
+  unitPriceOriginal: {
+    fontSize: 11,
+    color: theme.textMuted,
     textDecorationLine: 'line-through',
+    marginTop: 2,
   },
   totalPrice: {
     fontSize: 14,

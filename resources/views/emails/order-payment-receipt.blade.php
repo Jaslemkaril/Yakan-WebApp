@@ -7,7 +7,48 @@
 <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
     @php
         $reference = $order->order_ref ?? ('ORD-' . str_pad((string) $order->id, 5, '0', STR_PAD_LEFT));
-        $totalAmount = (float) ($order->total_amount ?? $order->total ?? 0);
+        $orderTotalAmount = (float) ($order->total_amount ?? $order->total ?? 0);
+        $paymentOption = strtolower((string) ($order->payment_option ?? 'full'));
+        $isDownpayment = $paymentOption === 'downpayment';
+        $remainingBalance = (float) ($order->remaining_balance ?? 0);
+        $downpaymentAmount = (float) ($order->downpayment_amount ?? 0);
+        $amountPaid = ($isDownpayment && $remainingBalance > 0)
+            ? ($downpaymentAmount > 0 ? $downpaymentAmount : max(0, $orderTotalAmount - $remainingBalance))
+            : $orderTotalAmount;
+
+        $deliveryType = strtolower((string) ($order->delivery_type ?? 'delivery'));
+        if ($deliveryType === 'deliver') {
+            $deliveryType = 'delivery';
+        }
+
+        $shippingLabel = $deliveryType === 'pickup' ? 'Store Pickup' : 'Home Delivery';
+        $shippingAddress = trim((string) ($order->delivery_address ?: $order->shipping_address ?: ''));
+        if ($shippingLabel === 'Store Pickup' && $shippingAddress === '') {
+            $shippingAddress = 'Yakan Village, Brgy. Upper Calarian, Zamboanga City, Philippines 7000';
+        }
+
+        $shippingCity = trim((string) ($order->shipping_city ?? ''));
+        $shippingProvince = trim((string) ($order->shipping_province ?? ''));
+        $cityProvince = trim($shippingCity . ($shippingCity !== '' && $shippingProvince !== '' ? ', ' : '') . $shippingProvince);
+        if ($shippingLabel === 'Store Pickup' && $cityProvince === '') {
+            $cityProvince = 'Zamboanga City, Zamboanga del Sur';
+        }
+
+        $recipientName = $order->userAddress->full_name ?? $order->customer_name ?? $order->user->name ?? 'Customer';
+        $recipientPhone = $order->userAddress->phone_number ?? $order->customer_phone ?? $order->user->phone ?? 'N/A';
+
+        $hasCoordinates = is_numeric($order->delivery_latitude ?? null) && is_numeric($order->delivery_longitude ?? null);
+        $coordinates = $hasCoordinates
+            ? number_format((float) $order->delivery_latitude, 6) . ', ' . number_format((float) $order->delivery_longitude, 6)
+            : null;
+
+        $mapLink = null;
+        if ($hasCoordinates) {
+            $mapLink = 'https://www.google.com/maps?q=' . (float) $order->delivery_latitude . ',' . (float) $order->delivery_longitude;
+        } elseif ($shippingAddress !== '') {
+            $mapLink = 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($shippingAddress);
+        }
+
         $paidAt = $order->payment_verified_at ?? $order->updated_at;
     @endphp
 
@@ -38,12 +79,58 @@
                         <td style="font-size:13px;text-align:right;">{{ $order->payment_reference ?: 'N/A' }}</td>
                     </tr>
                     <tr>
+                        <td style="font-size:13px;color:#6b7280;">Shipping Label</td>
+                        <td style="font-size:13px;text-align:right;">{{ $shippingLabel }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-size:13px;color:#6b7280;">Recipient</td>
+                        <td style="font-size:13px;text-align:right;">{{ $recipientName }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-size:13px;color:#6b7280;">Contact Number</td>
+                        <td style="font-size:13px;text-align:right;">{{ $recipientPhone }}</td>
+                    </tr>
+                    @if($shippingAddress !== '')
+                    <tr>
+                        <td style="font-size:13px;color:#6b7280;vertical-align:top;">Shipping Address</td>
+                        <td style="font-size:13px;text-align:right;">{{ $shippingAddress }}</td>
+                    </tr>
+                    @endif
+                    @if($cityProvince !== '')
+                    <tr>
+                        <td style="font-size:13px;color:#6b7280;">City / Province</td>
+                        <td style="font-size:13px;text-align:right;">{{ $cityProvince }}</td>
+                    </tr>
+                    @endif
+                    @if($coordinates)
+                    <tr>
+                        <td style="font-size:13px;color:#6b7280;">Location Coordinates</td>
+                        <td style="font-size:13px;text-align:right;">{{ $coordinates }}</td>
+                    </tr>
+                    @endif
+                    @if($mapLink)
+                    <tr>
+                        <td style="font-size:13px;color:#6b7280;">Location Map</td>
+                        <td style="font-size:13px;text-align:right;"><a href="{{ $mapLink }}" target="_blank" rel="noopener noreferrer" style="color:#166534;font-weight:600;text-decoration:none;">Open Map</a></td>
+                    </tr>
+                    @endif
+                    <tr>
                         <td style="font-size:13px;color:#6b7280;">Paid At</td>
                         <td style="font-size:13px;text-align:right;">{{ optional($paidAt)->format('M d, Y h:i A') }}</td>
                     </tr>
                     <tr>
+                        <td style="font-size:13px;color:#6b7280;">Payment Option</td>
+                        <td style="font-size:13px;text-align:right;">{{ $isDownpayment ? ($remainingBalance > 0 ? 'Downpayment' : 'Downpayment (Settled)') : 'Full Payment' }}</td>
+                    </tr>
+                    @if($isDownpayment && $remainingBalance > 0)
+                    <tr>
+                        <td style="font-size:13px;color:#6b7280;">Remaining Balance</td>
+                        <td style="font-size:13px;text-align:right;">₱{{ number_format($remainingBalance, 2) }}</td>
+                    </tr>
+                    @endif
+                    <tr>
                         <td style="font-size:16px;font-weight:700;color:#166534;border-top:2px solid #16a34a;">Amount Paid</td>
-                        <td style="font-size:16px;font-weight:700;color:#166534;text-align:right;border-top:2px solid #16a34a;">₱{{ number_format($totalAmount, 2) }}</td>
+                        <td style="font-size:16px;font-weight:700;color:#166534;text-align:right;border-top:2px solid #16a34a;">₱{{ number_format($amountPaid, 2) }}</td>
                     </tr>
                 </table>
 

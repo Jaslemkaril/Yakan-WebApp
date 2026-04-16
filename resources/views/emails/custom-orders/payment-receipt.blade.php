@@ -11,6 +11,27 @@
         $paidAt = $order->payment_confirmed_at ?? $order->payment_verified_at ?? $order->updated_at;
         $method = ucfirst(str_replace('_', ' ', (string) ($order->payment_method ?? 'Payment')));
         $reference = $order->transaction_id ?: 'N/A';
+        $deliveryType = strtolower((string) ($order->delivery_type ?? 'delivery'));
+        if ($deliveryType === 'deliver') {
+            $deliveryType = 'delivery';
+        }
+
+        $shippingLabel = $deliveryType === 'pickup' ? 'Store Pickup' : 'Home Delivery';
+        $shippingAddress = trim((string) ($order->delivery_address ?? ''));
+        if ($shippingLabel === 'Store Pickup' && $shippingAddress === '') {
+            $shippingAddress = 'Yakan Village, Brgy. Upper Calarian, Zamboanga City, Philippines 7000';
+        }
+
+        $deliveryCity = trim((string) ($order->delivery_city ?? ''));
+        $deliveryProvince = trim((string) ($order->delivery_province ?? ''));
+        $cityProvince = trim($deliveryCity . ($deliveryCity !== '' && $deliveryProvince !== '' ? ', ' : '') . $deliveryProvince);
+        if ($shippingLabel === 'Store Pickup' && $cityProvince === '') {
+            $cityProvince = 'Zamboanga City, Zamboanga del Sur';
+        }
+
+        $mapLink = $shippingAddress !== ''
+            ? ('https://www.google.com/maps/search/?api=1&query=' . rawurlencode($shippingAddress))
+            : null;
     @endphp
 
     <table width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;margin:20px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,0.08);">
@@ -43,6 +64,28 @@
                         <td style="font-size:13px;color:#6b7280;">Transaction Reference</td>
                         <td style="font-size:13px;text-align:right;">{{ $reference }}</td>
                     </tr>
+                    <tr>
+                        <td style="font-size:13px;color:#6b7280;">Shipping Label</td>
+                        <td style="font-size:13px;text-align:right;">{{ $shippingLabel }}</td>
+                    </tr>
+                    @if($shippingAddress !== '')
+                    <tr>
+                        <td style="font-size:13px;color:#6b7280;vertical-align:top;">Shipping Address</td>
+                        <td style="font-size:13px;text-align:right;">{{ $shippingAddress }}</td>
+                    </tr>
+                    @endif
+                    @if($cityProvince !== '')
+                    <tr>
+                        <td style="font-size:13px;color:#6b7280;">City / Province</td>
+                        <td style="font-size:13px;text-align:right;">{{ $cityProvince }}</td>
+                    </tr>
+                    @endif
+                    @if($mapLink)
+                    <tr>
+                        <td style="font-size:13px;color:#6b7280;">Location Map</td>
+                        <td style="font-size:13px;text-align:right;"><a href="{{ $mapLink }}" target="_blank" rel="noopener noreferrer" style="color:#7a0018;font-weight:600;text-decoration:none;">Open Map</a></td>
+                    </tr>
+                    @endif
                     <tr>
                         <td style="font-size:13px;color:#6b7280;">Confirmed At</td>
                         <td style="font-size:13px;text-align:right;">{{ optional($paidAt)->format('M d, Y h:i A') }}</td>

@@ -200,10 +200,21 @@ use Illuminate\Support\Facades\Storage;
                             <i class="fas fa-layer-group mr-1"></i>{{ $product->bundle_items_count }} component item(s)
                         </p>
                     @endif
+
+                    @php
+                        $cardBasePrice = (float) $product->price;
+                        $cardDiscountedPrice = (float) $product->getDiscountedPrice($cardBasePrice);
+                        $cardHasDiscount = $cardDiscountedPrice < $cardBasePrice;
+                    @endphp
                     
                     <div class="flex items-center justify-between mb-3">
                         <div>
-                            <p class="text-lg font-bold text-gray-900">₱{{ number_format($product->price, 2) }}</p>
+                            @if($cardHasDiscount)
+                                <p class="text-lg font-bold text-[#800000]">₱{{ number_format($cardDiscountedPrice, 2) }}</p>
+                                <p class="text-xs text-gray-500 line-through">₱{{ number_format($cardBasePrice, 2) }}</p>
+                            @else
+                                <p class="text-lg font-bold text-gray-900">₱{{ number_format($cardBasePrice, 2) }}</p>
+                            @endif
                             <p class="text-xs text-gray-500">Stock: {{ $product->available_stock }}</p>
                         </div>
                         <div class="text-right">

@@ -1886,6 +1886,9 @@ HTML, 200, ['Content-Type' => 'text/html']);
         $order->payment_status = 'paid';
         $order->status = 'processing';
 
+        $isDownpayment = strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment'
+            && (float) ($order->remaining_balance ?? 0) > 0;
+
         $paymentId = $session ? $this->extractPayMongoPaymentId($session) : null;
         if (!empty($paymentId)) {
             $order->payment_reference = $paymentId;
@@ -1893,6 +1896,17 @@ HTML, 200, ['Content-Type' => 'text/html']);
 
         $paymentDate = $session ? $this->extractPayMongoPaymentDate($session) : null;
         $order->payment_verified_at = $paymentDate ?? now();
+
+        if ($isDownpayment) {
+            $downpaymentAmount = number_format((float) ($order->downpayment_amount ?? 0), 2);
+            $remainingBalance = number_format((float) ($order->remaining_balance ?? 0), 2);
+            $tag = "Downpayment received: PHP {$downpaymentAmount}; remaining balance: PHP {$remainingBalance}";
+            $existingNotes = trim((string) ($order->notes ?? ''));
+
+            if (!str_contains($existingNotes, $tag)) {
+                $order->notes = $existingNotes === '' ? $tag : ($existingNotes . "\n" . $tag);
+            }
+        }
 
         $order->save();
     }

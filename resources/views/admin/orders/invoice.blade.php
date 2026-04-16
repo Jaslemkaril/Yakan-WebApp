@@ -271,6 +271,37 @@
                       ($order->payment_method === 'bank_transfer' ? 'Bank Transfer' : ucfirst(str_replace('_', ' ', $order->payment_method ?? 'N/A')))))) }}
                 </p>
                 <p><strong>Payment Status:</strong> {{ ucfirst($order->payment_status ?? 'pending') }}</p>
+                @php
+                    $invoiceDeliveryType = strtolower((string) ($order->delivery_type ?? 'delivery'));
+                    if ($invoiceDeliveryType === 'deliver') {
+                        $invoiceDeliveryType = 'delivery';
+                    }
+
+                    $invoiceShippingLabel = $invoiceDeliveryType === 'pickup' ? 'Store Pickup' : 'Home Delivery';
+                    $invoiceShippingAddress = trim((string) ($order->delivery_address ?: $order->shipping_address ?: ''));
+                    if ($invoiceDeliveryType === 'pickup' && $invoiceShippingAddress === '') {
+                        $invoiceShippingAddress = 'Yakan Village, Brgy. Upper Calarian, Zamboanga City, Philippines 7000';
+                    }
+
+                    $invoiceCity = trim((string) ($order->shipping_city ?? ''));
+                    $invoiceProvince = trim((string) ($order->shipping_province ?? ''));
+                    $invoiceCityProvince = trim($invoiceCity . ($invoiceCity !== '' && $invoiceProvince !== '' ? ', ' : '') . $invoiceProvince);
+                    if ($invoiceDeliveryType === 'pickup' && $invoiceCityProvince === '') {
+                        $invoiceCityProvince = 'Zamboanga City, Zamboanga del Sur';
+                    }
+
+                    $invoiceHasCoordinates = is_numeric($order->delivery_latitude ?? null) && is_numeric($order->delivery_longitude ?? null);
+                @endphp
+                <p><strong>Shipping Label:</strong> {{ $invoiceShippingLabel }}</p>
+                @if($invoiceShippingAddress !== '')
+                <p><strong>Shipping Address:</strong> {{ $invoiceShippingAddress }}</p>
+                @endif
+                @if($invoiceCityProvince !== '')
+                <p><strong>City / Province:</strong> {{ $invoiceCityProvince }}</p>
+                @endif
+                @if($invoiceHasCoordinates)
+                <p><strong>Location Coordinates:</strong> {{ number_format((float) $order->delivery_latitude, 6) }}, {{ number_format((float) $order->delivery_longitude, 6) }}</p>
+                @endif
                 @if($order->tracking_number)
                 <p><strong>Tracking #:</strong> {{ $order->tracking_number }}</p>
                 @endif

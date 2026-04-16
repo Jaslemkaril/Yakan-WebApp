@@ -109,10 +109,15 @@ export const CartProvider = ({ children }) => {
         
         // Transform API format to local format
         const formattedItems = items.map(item => ({
-          id: item.product.id,
-          cart_id: item.id,
+          id: item.id,
+          product_id: item.product_id,
+          variant_id: item.variant_id || null,
+          variant_size: item.variant?.size || null,
+          variant_color: item.variant?.color || null,
           name: item.product.name,
           price: parseFloat(item.product.price),
+          original_price: parseFloat(item.product.original_price ?? item.product.price ?? 0),
+          has_product_discount: !!item.product.has_product_discount,
           image: item.product.image,
           stock: item.product.stock,
           quantity: item.quantity,
@@ -140,6 +145,8 @@ export const CartProvider = ({ children }) => {
           id: item.product?.id || item.id,
           name: item.product?.name || item.name,
           price: parseFloat(item.product?.price || item.price || 0),
+          original_price: parseFloat(item.product?.original_price || item.original_price || item.product?.price || item.price || 0),
+          has_product_discount: !!(item.product?.has_product_discount || item.has_product_discount),
           image: item.product?.image || item.image,
           description: item.product?.description || item.description,
           stock: item.product?.stock || item.stock || 0,
@@ -153,27 +160,49 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const addToCart = async (product, quantity = 1) => {
+  const addToCart = async (product, quantity = 1, selectedVariant = null) => {
     // Save snapshot for rollback
     let snapshot;
+    const selectedVariantId = selectedVariant?.id || null;
+    const selectedVariantPrice = selectedVariant?.price != null
+      ? parseFloat(selectedVariant.price)
+      : parseFloat(product.price || 0);
+    const selectedVariantOriginalPrice = selectedVariant?.original_price != null
+      ? parseFloat(selectedVariant.original_price)
+      : parseFloat(product.originalPrice ?? product.original_price ?? product.price || 0);
+    const itemKey = `${product.id}:${selectedVariantId || 'base'}`;
+
     setCartItems(prev => {
       snapshot = prev;
-      const existingItem = prev.find(item => item.id === product.id);
+      const existingItem = prev.find(item => `${item.product_id || item.id}:${item.variant_id || 'base'}` === itemKey);
       if (existingItem) {
         return prev.map(item =>
-          item.id === product.id
+          item.id === existingItem.id
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       } else {
-        return [...prev, { ...product, quantity }];
+        return [...prev, {
+          id: `temp-${itemKey}`,
+          product_id: product.id,
+          variant_id: selectedVariantId,
+          variant_size: selectedVariant?.size || null,
+          variant_color: selectedVariant?.color || null,
+          name: product.name,
+          price: selectedVariantPrice,
+          original_price: selectedVariantOriginalPrice,
+          has_product_discount: selectedVariantOriginalPrice > selectedVariantPrice,
+          image: product.image,
+          stock: selectedVariant?.stock ?? product.stock,
+          quantity,
+        }];
       }
     });
 
     // Sync with backend if logged in
     if (isLoggedIn) {
       try {
-        await ApiService.addToCart(product.id, quantity);
+        await ApiService.addToCart(product.id, quantity, selectedVariantId);
         // Refresh cart to get accurate data (including cart_id)
         await fetchCart();
       } catch (error) {
@@ -187,19 +216,19 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const removeFromCart = async (productId) => {
+  const removeFromCart = async (cartItemId) => {
     let snapshot;
     let removedItem;
     setCartItems(prev => {
       snapshot = prev;
-      removedItem = prev.find(i => i.id === productId);
-      return prev.filter(item => item.id !== productId);
+      removedItem = prev.find(i => i.id === cartItemId);
+      return prev.filter(item => item.id !== cartItemId);
     });
 
     // Sync with backend if logged in
-    if (isLoggedIn && removedItem?.cart_id) {
+    if (isLoggedIn && removedItem?.id && !String(removedItem.id).startsWith('temp-')) {
       try {
-        await ApiService.removeFromCart(removedItem.cart_id);
+        await ApiService.removeFromCart(removedItem.id);
         // Refresh cart to ensure consistency
         await fetchCart();
       } catch (error) {
@@ -212,9 +241,9 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const updateQuantity = async (productId, quantity) => {
+  const updateQuantity = async (cartItemId, quantity) => {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(cartItemId);
       return;
     }
 
@@ -222,16 +251,16 @@ export const CartProvider = ({ children }) => {
     let targetItem;
     setCartItems(prev => {
       snapshot = prev;
-      targetItem = prev.find(i => i.id === productId);
+      targetItem = prev.find(i => i.id === cartItemId);
       return prev.map(item =>
-        item.id === productId ? { ...item, quantity } : item
+        item.id === cartItemId ? { ...item, quantity } : item
       );
     });
 
     // Sync with backend if logged in
-    if (isLoggedIn && targetItem?.cart_id) {
+    if (isLoggedIn && targetItem?.id && !String(targetItem.id).startsWith('temp-')) {
       try {
-        await ApiService.updateCartItem(targetItem.cart_id, quantity);
+        await ApiService.updateCartItem(targetItem.id, quantity);
         // Refresh cart to ensure consistency
         await fetchCart();
       } catch (error) {

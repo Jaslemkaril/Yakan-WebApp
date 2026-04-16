@@ -44,6 +44,10 @@ class Order extends Model
         'shipping_city',
         'shipping_province',
         'payment_method',
+        'payment_option',
+        'downpayment_rate',
+        'downpayment_amount',
+        'remaining_balance',
         'payment_status',
         'payment_reference',
         'payment_verified_at',
@@ -78,6 +82,9 @@ class Order extends Model
         'shipping_fee' => 'decimal:2',
         'discount' => 'decimal:2',
         'discount_amount' => 'decimal:2',
+        'downpayment_rate' => 'decimal:2',
+        'downpayment_amount' => 'decimal:2',
+        'remaining_balance' => 'decimal:2',
         'total' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'tracking_history' => 'array',
@@ -288,5 +295,34 @@ class Order extends Model
     public function getDisplayCustomerEmail(): string
     {
         return $this->user ? $this->user->email : ($this->customer_email ?? 'N/A');
+    }
+
+    /**
+     * Whether this order uses the downpayment option.
+     */
+    public function isDownpaymentOrder(): bool
+    {
+        return strtolower((string) ($this->payment_option ?? 'full')) === 'downpayment';
+    }
+
+    /**
+     * Amount that should be collected at checkout for this order.
+     */
+    public function getAmountDueNow(): float
+    {
+        $total = (float) ($this->total_amount ?? $this->total ?? 0);
+
+        if (!$this->isDownpaymentOrder()) {
+            return max(0, $total);
+        }
+
+        $downpayment = (float) ($this->downpayment_amount ?? 0);
+        if ($downpayment <= 0 && $total > 0) {
+            $rate = (float) ($this->downpayment_rate ?? 50);
+            $rate = min(99, max(1, $rate));
+            $downpayment = round($total * ($rate / 100), 2);
+        }
+
+        return max(0, min($total, $downpayment));
     }
 }

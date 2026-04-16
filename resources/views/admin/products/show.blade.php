@@ -88,6 +88,12 @@
                 </div>
 
                 <!-- Product Details Grid -->
+                @php
+                    $displayStock = $product->inventory->quantity ?? $product->stock;
+                    $basePrice = (float) $product->price;
+                    $discountedPrice = (float) $product->getDiscountedPrice($basePrice);
+                    $hasActiveDiscount = $discountedPrice < $basePrice;
+                @endphp
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div class="space-y-4">
                         <div class="bg-gray-50 rounded-lg p-4">
@@ -99,12 +105,14 @@
                         
                         <div class="bg-gray-50 rounded-lg p-4">
                             <div class="text-sm text-gray-600 mb-1">Price</div>
-                            <div class="text-2xl font-bold text-green-600">₱{{ number_format($product->price, 2) }}</div>
+                            @if($hasActiveDiscount)
+                                <div class="text-2xl font-bold text-green-600">₱{{ number_format($discountedPrice, 2) }}</div>
+                                <div class="text-sm text-gray-500 line-through">₱{{ number_format($basePrice, 2) }}</div>
+                            @else
+                                <div class="text-2xl font-bold text-green-600">₱{{ number_format($basePrice, 2) }}</div>
+                            @endif
                         </div>
-                        
-                        @php
-                            $displayStock = $product->inventory->quantity ?? $product->stock;
-                        @endphp
+
                         <div class="bg-gray-50 rounded-lg p-4">
                             <div class="text-sm text-gray-600 mb-1">Stock Quantity</div>
                             <div class="flex items-center justify-between">
@@ -128,7 +136,10 @@
                     <div class="space-y-4">
                         <div class="bg-gray-50 rounded-lg p-4">
                             <div class="text-sm text-gray-600 mb-1">Total Inventory Value</div>
-                            <div class="text-2xl font-bold text-[#800000]">₱{{ number_format($product->price * $displayStock, 2) }}</div>
+                            <div class="text-2xl font-bold text-[#800000]">₱{{ number_format($discountedPrice * $displayStock, 2) }}</div>
+                            @if($hasActiveDiscount)
+                                <div class="text-xs text-gray-500">Base value: ₱{{ number_format($basePrice * $displayStock, 2) }}</div>
+                            @endif
                         </div>
                         
                         <div class="bg-gray-50 rounded-lg p-4">
@@ -273,7 +284,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-[#800000] font-medium">Potential Revenue</p>
-                                <p class="text-2xl font-bold text-[#800000]">₱{{ number_format($product->price * $displayStock, 2) }}</p>
+                                <p class="text-2xl font-bold text-[#800000]">₱{{ number_format($discountedPrice * $displayStock, 2) }}</p>
                             </div>
                             <i class="fas fa-dollar-sign text-[#800000] text-2xl"></i>
                         </div>
@@ -308,7 +319,7 @@
                     <div class="space-y-3">
                         <div class="flex items-center justify-between">
                             <span class="text-sm text-gray-600">Price Range</span>
-                            <span class="text-sm font-medium text-gray-900">₱{{ number_format($product->price * 0.8, 2) }} - ₱{{ number_format($product->price * 1.2, 2) }}</span>
+                            <span class="text-sm font-medium text-gray-900">₱{{ number_format($discountedPrice * 0.8, 2) }} - ₱{{ number_format($discountedPrice * 1.2, 2) }}</span>
                         </div>
                         <div class="flex items-center justify-between">
                             <span class="text-sm text-gray-600">Profit Margin (Est.)</span>

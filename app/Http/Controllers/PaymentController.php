@@ -189,6 +189,29 @@ class PaymentController extends Controller
         // Store relative path only, not full URL
         $order->payment_proof_path = $path;
         $order->payment_status = 'paid';
+
+        if (in_array((string) $order->status, ['pending', 'pending_confirmation', 'confirmed'], true)) {
+            $order->status = 'processing';
+        }
+
+        if (!$order->payment_verified_at) {
+            $order->payment_verified_at = now();
+        }
+
+        $isDownpayment = strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment'
+            && (float) ($order->remaining_balance ?? 0) > 0;
+
+        if ($isDownpayment) {
+            $downpaymentAmount = number_format((float) ($order->downpayment_amount ?? 0), 2);
+            $remainingBalance = number_format((float) ($order->remaining_balance ?? 0), 2);
+            $tag = "Downpayment proof submitted: PHP {$downpaymentAmount}; remaining balance: PHP {$remainingBalance}";
+            $existingNotes = trim((string) ($order->notes ?? ''));
+
+            if (!str_contains($existingNotes, $tag)) {
+                $order->notes = $existingNotes === '' ? $tag : ($existingNotes . "\n" . $tag);
+            }
+        }
+
         $order->save();
 
         return response()->json([

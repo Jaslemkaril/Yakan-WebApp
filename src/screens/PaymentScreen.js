@@ -120,10 +120,28 @@ export default function PaymentScreen({ navigation, route }) {
   const subtotalAmount = Number(orderData?.subtotal) || 0;
   const shippingAmount = Number(orderData?.shippingFee) || 0;
   const discountAmount = Math.max(0, Number(orderData?.discount) || 0);
-  const baseTotal = Math.max(
+  const fullOrderTotal = Math.max(
     0,
     Number(orderData?.total) || (subtotalAmount + shippingAmount - discountAmount)
   );
+  const paymentOption = (orderData?.paymentOption || 'full').toLowerCase() === 'downpayment'
+    ? 'downpayment'
+    : 'full';
+  const downpaymentRate = Number(orderData?.downpaymentRate)
+    || (paymentOption === 'downpayment' ? 50 : 100);
+  const payableNowAmount = Math.max(
+    0,
+    Number(orderData?.payableNow)
+      || (paymentOption === 'downpayment'
+        ? Number((fullOrderTotal * (downpaymentRate / 100)).toFixed(2))
+        : fullOrderTotal)
+  );
+  const remainingBalanceAmount = Math.max(
+    0,
+    Number(orderData?.remainingBalance)
+      || Number((fullOrderTotal - payableNowAmount).toFixed(2))
+  );
+  const baseTotal = payableNowAmount;
 
   const updateOrderInStorage = async (updatedOrder) => {
     try {
@@ -198,7 +216,8 @@ export default function PaymentScreen({ navigation, route }) {
         payment_reference: referenceNumber || null,
         delivery_type: orderData.deliveryOption || 'deliver', // 'deliver' or 'pickup'
         items: orderData.items.map(item => ({
-          product_id: item.id,
+          product_id: item.product_id || item.id,
+          variant_id: item.variant_id || null,
           quantity: item.quantity || 1,
           price: item.price,
         })),
@@ -207,8 +226,12 @@ export default function PaymentScreen({ navigation, route }) {
         discount: discountAmount,
         discount_amount: discountAmount,
         coupon_code: orderData.couponCode || null,
-        total: finalTotal,
-        total_amount: finalTotal,
+        total: fullOrderTotal,
+        total_amount: fullOrderTotal,
+        payment_option: paymentOption,
+        downpayment_rate: downpaymentRate,
+        downpayment_amount: payableNowAmount,
+        remaining_balance: remainingBalanceAmount,
         notes: 'Order from mobile app',
       };
 
@@ -248,7 +271,11 @@ export default function PaymentScreen({ navigation, route }) {
         subtotal: subtotalAmount,
         shippingFee: shippingAmount,
         discount: discountAmount,
-        total: finalTotal,
+        total: fullOrderTotal,
+        payableNow: finalTotal,
+        remainingBalance: remainingBalanceAmount,
+        paymentOption,
+        downpaymentRate,
         paymentMethod: selectedPaymentMethod,
         paymentReference: referenceNumber,
         status: isPaymongo ? 'pending_payment' : 'payment_verified', // align with timeline stage
@@ -329,7 +356,8 @@ export default function PaymentScreen({ navigation, route }) {
         orderRef: finalOrderData.orderRef,
         customerName: orderData.shippingAddress.fullName,
         customerPhone: orderData.shippingAddress.phoneNumber,
-        total: finalTotal,
+        total: fullOrderTotal,
+        amountDueNow: finalTotal,
         itemCount: orderData.items.length,
         paymentMethod: selectedPaymentMethod,
         items: orderData.items,
@@ -365,7 +393,11 @@ export default function PaymentScreen({ navigation, route }) {
         subtotal: subtotalAmount,
         shippingFee: shippingAmount,
         discount: discountAmount,
-        total: finalTotal,
+        total: fullOrderTotal,
+        payableNow: finalTotal,
+        remainingBalance: remainingBalanceAmount,
+        paymentOption,
+        downpaymentRate,
         paymentMethod: selectedPaymentMethod,
         paymentReference: referenceNumber,
         status: isPaymongo ? 'pending_payment' : 'payment_verified',
@@ -379,7 +411,8 @@ export default function PaymentScreen({ navigation, route }) {
         orderRef: finalOrderData.orderRef,
         customerName: orderData.shippingAddress.fullName,
         customerPhone: orderData.shippingAddress.phoneNumber,
-        total: finalTotal,
+        total: fullOrderTotal,
+        amountDueNow: finalTotal,
         itemCount: orderData.items.length,
         paymentMethod: selectedPaymentMethod,
         items: orderData.items,
@@ -408,6 +441,7 @@ export default function PaymentScreen({ navigation, route }) {
   const finalTotal = Math.max(0, baseTotal + (selectedMethod?.fee || 0));
   const isPaymongo = selectedPaymentMethod === 'paymongo';
   const isBankTransfer = selectedPaymentMethod === 'bank_transfer';
+  const isDownpaymentOrder = paymentOption === 'downpayment';
   // Stub wallet vars — PayMongo uses redirect, only bank_transfer shows manual instructions
   const walletLabel = 'Online Payment';
   const walletNumber = '';
@@ -655,9 +689,28 @@ export default function PaymentScreen({ navigation, route }) {
               <View style={styles.orderSummaryDivider} />
               
               <View style={styles.orderSummaryRow}>
-                <Text style={styles.orderSummaryTotalLabel}>Total</Text>
-                <Text style={styles.orderSummaryTotalValue}>₱{finalTotal.toFixed(2)}</Text>
+                <Text style={styles.orderSummaryTotalLabel}>Total Order Value</Text>
+                <Text style={styles.orderSummaryTotalValue}>₱{fullOrderTotal.toFixed(2)}</Text>
               </View>
+
+              {isDownpaymentOrder && (
+                <View style={styles.orderSummaryRow}>
+                  <Text style={styles.orderSummaryLabel}>Downpayment ({downpaymentRate.toFixed(0)}%)</Text>
+                  <Text style={styles.orderSummaryValue}>₱{payableNowAmount.toFixed(2)}</Text>
+                </View>
+              )}
+
+              <View style={styles.orderSummaryRow}>
+                <Text style={styles.orderSummaryLabel}>Amount Due Now</Text>
+                <Text style={styles.orderSummaryValue}>₱{finalTotal.toFixed(2)}</Text>
+              </View>
+
+              {isDownpaymentOrder && (
+                <View style={styles.orderSummaryRow}>
+                  <Text style={[styles.orderSummaryLabel, { color: '#92400E' }]}>Remaining Balance</Text>
+                  <Text style={[styles.orderSummaryValue, { color: '#92400E' }]}>₱{remainingBalanceAmount.toFixed(2)}</Text>
+                </View>
+              )}
 
               <View style={styles.orderInfoRow}>
                 <Text style={styles.orderInfoLabel}>Order ID:</Text>
@@ -676,8 +729,15 @@ export default function PaymentScreen({ navigation, route }) {
                 <Text style={styles.orderInfoValue}>{selectedMethod?.name}</Text>
               </View>
 
+              <View style={styles.orderInfoRow}>
+                <Text style={styles.orderInfoLabel}>Payment Option:</Text>
+                <Text style={styles.orderInfoValue}>
+                  {isDownpaymentOrder ? `Downpayment (${downpaymentRate.toFixed(0)}%)` : 'Full Payment'}
+                </Text>
+              </View>
+
               <View style={styles.statusBadge}>
-                <Text style={styles.statusBadgeText}>Pending</Text>
+                <Text style={styles.statusBadgeText}>{isDownpaymentOrder ? 'Pending Downpayment' : 'Pending'}</Text>
               </View>
 
               {/* Quick Reference */}
@@ -824,9 +884,28 @@ export default function PaymentScreen({ navigation, route }) {
             </View>
           )}
           <View style={[styles.summaryRow, styles.summaryTotal]}>
-            <Text style={styles.summaryTotalLabel}>Total</Text>
+            <Text style={styles.summaryTotalLabel}>Total Order Value</Text>
+            <Text style={styles.summaryTotalValue}>₱{fullOrderTotal.toFixed(2)}</Text>
+          </View>
+
+          {isDownpaymentOrder && (
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Downpayment ({downpaymentRate.toFixed(0)}%)</Text>
+              <Text style={styles.summaryValue}>₱{payableNowAmount.toFixed(2)}</Text>
+            </View>
+          )}
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryTotalLabel}>Amount Due Now</Text>
             <Text style={styles.summaryTotalValue}>₱{finalTotal.toFixed(2)}</Text>
           </View>
+
+          {isDownpaymentOrder && (
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: '#92400E' }]}>Remaining Balance</Text>
+              <Text style={[styles.summaryValue, { color: '#92400E' }]}>₱{remainingBalanceAmount.toFixed(2)}</Text>
+            </View>
+          )}
         </View>
 
         {/* Payment Methods */}

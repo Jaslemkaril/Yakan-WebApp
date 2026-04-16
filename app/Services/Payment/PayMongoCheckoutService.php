@@ -26,7 +26,8 @@ class PayMongoCheckoutService
             throw new \RuntimeException('PayMongo secret key is not configured.');
         }
 
-        $amount = (float) ($order->total_amount ?? $order->total ?? 0);
+        $totalAmount = (float) ($order->total_amount ?? $order->total ?? 0);
+        $amount = $this->resolveCheckoutAmount($order);
         if ($amount <= 0) {
             throw new \RuntimeException('Order amount must be greater than zero.');
         }
@@ -64,14 +65,24 @@ class PayMongoCheckoutService
         $lineItemsTotal = collect($lineItems)->sum(fn($i) => $i['amount'] * $i['quantity']);
         $orderTotal     = (int) round($amount * 100);
         if ($lineItemsTotal !== $orderTotal) {
+            $isDownpayment = $this->isDownpaymentOrder($order);
+            $lineItemName = $isDownpayment ? 'Yakan Order Downpayment' : 'Yakan Order';
+            $lineItemDescription = $isDownpayment
+                ? 'Downpayment for order ' . ($order->order_ref ?? $order->id)
+                : 'Order ' . ($order->order_ref ?? $order->id);
+
             $lineItems = [[
                 'currency'    => 'PHP',
                 'amount'      => $orderTotal,
-                'description' => 'Order ' . ($order->order_ref ?? $order->id),
-                'name'        => 'Yakan Order',
+                'description' => $lineItemDescription,
+                'name'        => $lineItemName,
                 'quantity'    => 1,
             ]];
         }
+
+        $paymentDescription = $this->isDownpaymentOrder($order)
+            ? 'Downpayment for order ' . ($order->order_ref ?? $order->id)
+            : 'Order ' . ($order->order_ref ?? $order->id);
 
         $payload = [
             'data' => [
@@ -85,7 +96,7 @@ class PayMongoCheckoutService
                     'payment_method_types' => ['card', 'gcash', 'grab_pay'],
                     'success_url'          => $successUrl,
                     'cancel_url'           => $cancelUrl,
-                    'description'          => 'Order ' . ($order->order_ref ?? $order->id),
+                    'description'          => $paymentDescription,
                     'reference_number'     => $order->order_ref ?? (string) $order->id,
                     'send_email_receipt'   => false,
                     'show_description'     => true,
@@ -96,6 +107,7 @@ class PayMongoCheckoutService
 
         Log::info('PayMongo checkout session creating', [
             'order_id'    => $order->id,
+            'total_amount' => $totalAmount,
             'total_cents' => $orderTotal,
         ]);
 
@@ -135,6 +147,32 @@ class PayMongoCheckoutService
             'checkout_id'  => $checkoutId,
             'checkout_url' => $checkoutUrl,
         ];
+    }
+
+    private function isDownpaymentOrder(Order $order): bool
+    {
+        return strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment';
+    }
+
+    private function resolveCheckoutAmount(Order $order): float
+    {
+        $total = (float) ($order->total_amount ?? $order->total ?? 0);
+        if ($total <= 0) {
+            return 0;
+        }
+
+        if (!$this->isDownpaymentOrder($order)) {
+            return $total;
+        }
+
+        $downpaymentAmount = (float) ($order->downpayment_amount ?? 0);
+        if ($downpaymentAmount <= 0) {
+            $rate = (float) ($order->downpayment_rate ?? 50);
+            $rate = min(99, max(1, $rate));
+            $downpaymentAmount = round($total * ($rate / 100), 2);
+        }
+
+        return max(0, min($total, $downpaymentAmount));
     }
 
     /**
@@ -318,11 +356,70 @@ class PayMongoCheckoutService
             'N/A',
         ]);
 
+        $deliveryType = strtolower((string) ($order->delivery_type ?? 'delivery'));
+        if ($deliveryType === 'deliver') {
+            $deliveryType = 'delivery';
+        }
+
+        $shippingCity = trim((string) ($order->shipping_city ?? ''));
+        $shippingProvince = trim((string) ($order->shipping_province ?? ''));
+        $pickupHint = strtolower(trim($shippingCity . ' ' . $shippingProvince));
+        $isPickup = $deliveryType === 'pickup' || str_contains($pickupHint, 'store pickup');
+
+        $shippingLabel = $isPickup ? 'Store Pickup' : 'Home Delivery';
+        $shippingAddress = trim((string) ($order->delivery_address ?: $order->shipping_address ?: ''));
+        if ($isPickup && $shippingAddress === '') {
+            $shippingAddress = 'Yakan Village, Brgy. Upper Calarian, Zamboanga City, Philippines 7000';
+        }
+
+        $shippingCityProvince = trim($shippingCity . ($shippingCity !== '' && $shippingProvince !== '' ? ', ' : '') . $shippingProvince);
+        if ($isPickup && $shippingCityProvince === '') {
+            $shippingCityProvince = 'Zamboanga City, Zamboanga del Sur';
+        }
+
+        $recipientName = $this->firstNonEmpty([
+            optional($order->userAddress)->full_name,
+            $order->customer_name,
+            optional($order->user)->name,
+            $customerName,
+            'Customer',
+        ]);
+
+        $recipientPhone = $this->firstNonEmpty([
+            optional($order->userAddress)->phone_number,
+            $order->customer_phone,
+            optional($order->user)->phone,
+            'N/A',
+        ]);
+
+        $deliveryLatitude = is_numeric($order->delivery_latitude ?? null)
+            ? (float) $order->delivery_latitude
+            : null;
+        $deliveryLongitude = is_numeric($order->delivery_longitude ?? null)
+            ? (float) $order->delivery_longitude
+            : null;
+
+        $deliveryMapUrl = null;
+        if ($deliveryLatitude !== null && $deliveryLongitude !== null) {
+            $deliveryMapUrl = 'https://www.google.com/maps?q=' . $deliveryLatitude . ',' . $deliveryLongitude;
+        } elseif ($shippingAddress !== '') {
+            $deliveryMapUrl = 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($shippingAddress);
+        }
+
         return [
             'gateway' => 'PayMongo',
             'verified' => true,
             'customer_name' => $customerName,
             'customer_email' => $customerEmail,
+            'recipient_name' => $recipientName,
+            'recipient_phone' => $recipientPhone,
+            'delivery_type' => $deliveryType,
+            'shipping_label' => $shippingLabel,
+            'shipping_address' => $shippingAddress !== '' ? $shippingAddress : null,
+            'shipping_city_province' => $shippingCityProvince !== '' ? $shippingCityProvince : null,
+            'delivery_latitude' => $deliveryLatitude,
+            'delivery_longitude' => $deliveryLongitude,
+            'delivery_map_url' => $deliveryMapUrl,
             'reference_number' => $referenceNumber,
             'payment_id' => $paymentId,
             'status' => $status,

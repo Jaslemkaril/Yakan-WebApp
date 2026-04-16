@@ -121,6 +121,9 @@ const OrderDetailsScreen = ({ navigation, route }) => {
             orderRef: apiOrder.orderRef || apiOrder.order_ref || prev?.orderRef,
             status: normalizedStatus,
             paymentStatus: apiOrder.payment_status || prev?.paymentStatus,
+            paymentOption: apiOrder.payment_option || apiOrder.paymentOption || prev?.paymentOption,
+            downpaymentAmount: apiOrder.downpayment_amount ?? apiOrder.downpaymentAmount ?? prev?.downpaymentAmount,
+            remainingBalance: apiOrder.remaining_balance ?? apiOrder.remainingBalance ?? prev?.remainingBalance,
             subtotal: apiOrder.subtotal ?? prev?.subtotal ?? 0,
             shippingFee: apiOrder.shipping_fee ?? prev?.shippingFee ?? 0,
             total: apiOrder.total ?? apiOrder.total_amount ?? prev?.total ?? 0,
@@ -179,31 +182,6 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     });
   };
 
-  const handleContactSeller = () => {
-    Alert.alert(
-      'Contact Seller',
-      'How would you like to contact the seller?',
-      [
-        {
-          text: 'Messenger',
-          onPress: () => Alert.alert('Opening Messenger...'),
-        },
-        {
-          text: 'Call',
-          onPress: () => Alert.alert('Opening Phone...'),
-        },
-        {
-          text: 'Chat',
-          onPress: () => Alert.alert('Opening Chat...'),
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ]
-    );
-  };
-
   const markAsCompleted = async () => {
     try {
       const backendId = order.backendOrderId || order.id;
@@ -241,23 +219,6 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       console.error('Error marking order as completed:', error);
       Alert.alert('Error', 'Failed to mark order as completed');
     }
-  };
-
-  const handleReturnRequest = () => {
-    Alert.alert(
-      'Return Request',
-      'Do you want to initiate a return for this order?',
-      [
-        {
-          text: 'Yes',
-          onPress: () => Alert.alert('Return initiated', 'Seller has been notified'),
-        },
-        {
-          text: 'No',
-          style: 'cancel',
-        },
-      ]
-    );
   };
 
   const canCancelOrder = order?.status === 'pending' || order?.status === 'pending_confirmation';
@@ -357,6 +318,19 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     : isRefunded
       ? 'Refunded'
       : (trackingStages[displayStageIndex]?.label || 'Pending');
+  const normalizedPaymentStatus = (order.paymentStatus || order.payment_status || 'pending').toLowerCase();
+  const isPaymentSettled = normalizedPaymentStatus === 'paid' || normalizedPaymentStatus === 'verified';
+  const paymentOption = ((order.paymentOption || order.payment_option || 'full') + '').toLowerCase();
+  const isDownpaymentOrder = paymentOption === 'downpayment';
+  const totalAmount = parseFloat(order.total ?? order.total_amount) || 0;
+  const downpaymentAmount = parseFloat(order.payableNow ?? order.downpayment_amount) || 0;
+  const remainingBalance = Math.max(0, parseFloat(order.remainingBalance ?? order.remaining_balance) || 0);
+  const amountDueNow = isDownpaymentOrder
+    ? (downpaymentAmount > 0 ? downpaymentAmount : Math.max(0, totalAmount - remainingBalance))
+    : totalAmount;
+  const paymentLabel = isDownpaymentOrder
+    ? (isPaymentSettled ? (remainingBalance > 0 ? 'Downpayment Paid' : 'Fully Paid') : 'Downpayment Pending')
+    : (isPaymentSettled ? 'Paid' : 'Pending');
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -396,14 +370,14 @@ const OrderDetailsScreen = ({ navigation, route }) => {
           <View style={styles.statusSummaryItem}>
             <Ionicons name="cash-outline" size={28} color={colors.primary} style={styles.statusSummaryIconStyle} />
             <Text style={styles.statusSummaryLabel}>Total</Text>
-            <Text style={styles.statusSummaryValue}>₱{(parseFloat(order.total) || 0).toFixed(2)}</Text>
+            <Text style={styles.statusSummaryValue}>₱{totalAmount.toFixed(2)}</Text>
           </View>
           <View style={styles.statusSummaryDivider} />
           <View style={styles.statusSummaryItem}>
-            <Ionicons name="checkmark-circle-outline" size={28} color={order.paymentStatus === 'paid' ? '#6B1F1F' : '#f59e0b'} style={styles.statusSummaryIconStyle} />
+            <Ionicons name="checkmark-circle-outline" size={28} color={isPaymentSettled ? '#6B1F1F' : '#f59e0b'} style={styles.statusSummaryIconStyle} />
             <Text style={styles.statusSummaryLabel}>Payment</Text>
-            <Text style={[styles.statusSummaryValue, { color: order.paymentStatus === 'paid' ? '#6B1F1F' : '#f59e0b' }]}>
-              {order.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
+            <Text style={[styles.statusSummaryValue, { color: isPaymentSettled ? '#6B1F1F' : '#f59e0b' }]}>
+              {paymentLabel}
             </Text>
           </View>
         </View>
@@ -547,11 +521,27 @@ const OrderDetailsScreen = ({ navigation, route }) => {
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Shipping</Text>
-            <Text style={styles.summaryValue}>₱{(parseFloat(order.shippingFee) || 0).toFixed(2)}</Text>
+            <Text style={styles.summaryValue}>₱{(parseFloat(order.shippingFee ?? order.shipping_fee) || 0).toFixed(2)}</Text>
           </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Payment Option</Text>
+            <Text style={styles.summaryValue}>{isDownpaymentOrder ? 'Downpayment' : 'Full Payment'}</Text>
+          </View>
+          {isDownpaymentOrder && (
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Amount Due Now</Text>
+              <Text style={styles.summaryValue}>₱{amountDueNow.toFixed(2)}</Text>
+            </View>
+          )}
+          {isDownpaymentOrder && (
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: '#92400E' }]}>Remaining Balance</Text>
+              <Text style={[styles.summaryValue, { color: '#92400E' }]}>₱{remainingBalance.toFixed(2)}</Text>
+            </View>
+          )}
           <View style={[styles.summaryRow, styles.summaryTotal]}>
             <Text style={styles.summaryTotalLabel}>Total</Text>
-            <Text style={styles.summaryTotalValue}>₱{(parseFloat(order.total) || 0).toFixed(2)}</Text>
+            <Text style={styles.summaryTotalValue}>₱{totalAmount.toFixed(2)}</Text>
           </View>
         </View>
 

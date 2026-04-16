@@ -11,11 +11,10 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
-import colors from '../constants/colors';
 import API_CONFIG from '../config/config';
 import ApiService from '../services/api';
 
@@ -29,24 +28,75 @@ export default function ProductDetailScreen({ route, navigation }) {
   // All hooks MUST be called before any conditional return (React Rules of Hooks)
   const [quantity, setQuantity] = useState(1);
   const { addToCart, isLoggedIn, addToWishlist, removeFromWishlist, isInWishlist, setCheckoutItems } = useCart();
+  const [productData, setProductData] = useState(product || null);
+  const [productLoading, setProductLoading] = useState(false);
+  const [selectedVariantId, setSelectedVariantId] = useState(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
 
+  const currentProduct = productData || product;
+  const variantOptions = Array.isArray(currentProduct?.variants)
+    ? currentProduct.variants.filter(v => v && v.is_active !== false)
+    : [];
+  const selectedVariant = variantOptions.find(v => Number(v.id) === Number(selectedVariantId)) || null;
+  const effectivePrice = selectedVariant ? parseFloat(selectedVariant.price || 0) : parseFloat(currentProduct?.price || 0);
+  const effectiveOriginalPrice = selectedVariant
+    ? parseFloat(selectedVariant.original_price ?? selectedVariant.price ?? 0)
+    : parseFloat(currentProduct?.original_price ?? currentProduct?.originalPrice ?? currentProduct?.price ?? 0);
+  const hasActiveDiscount = effectiveOriginalPrice > effectivePrice;
+  const effectiveStock = selectedVariant ? Number(selectedVariant.stock || 0) : Number(currentProduct?.stock || 0);
+
+  useEffect(() => {
+    if (!product?.id) {
+      return;
+    }
+
+    const loadProduct = async () => {
+      setProductLoading(true);
+      try {
+        const res = await ApiService.getProduct(product.id);
+        const fullProduct = res?.data?.data || res?.data || null;
+        if (res?.success && fullProduct) {
+          setProductData(fullProduct);
+        }
+      } catch (_) {
+        // Keep route product fallback if request fails.
+      } finally {
+        setProductLoading(false);
+      }
+    };
+
+    loadProduct();
+  }, [product?.id]);
+
+  useEffect(() => {
+    if (!currentProduct) {
+      return;
+    }
+
+    if (variantOptions.length > 0) {
+      const defaultVariantId = currentProduct?.default_variant?.id || variantOptions[0]?.id || null;
+      setSelectedVariantId(prev => prev ?? defaultVariantId);
+    } else {
+      setSelectedVariantId(null);
+    }
+  }, [currentProduct?.id, currentProduct?.default_variant?.id, variantOptions.length]);
+
   // Update isFavorite when product changes
   React.useEffect(() => {
-    if (product?.id) {
-      setIsFavorite(isInWishlist(product.id));
+    if (currentProduct?.id) {
+      setIsFavorite(isInWishlist(currentProduct.id));
     }
-  }, [product?.id, isInWishlist]);
+  }, [currentProduct?.id, isInWishlist]);
 
   // Fetch real reviews from backend
   useEffect(() => {
-    if (!product?.id) return;
+    if (!currentProduct?.id) return;
     const loadReviews = async () => {
       setReviewsLoading(true);
       try {
-        const res = await ApiService.request('GET', `/products/${product.id}/reviews?per_page=5&sort=newest`);
+        const res = await ApiService.request('GET', `/products/${currentProduct.id}/reviews?per_page=5&sort=newest`);
         if (res.success) {
           const data = res.data?.data?.data ?? res.data?.data ?? res.data ?? [];
           setReviews(Array.isArray(data) ? data : []);
@@ -58,9 +108,9 @@ export default function ProductDetailScreen({ route, navigation }) {
       }
     };
     loadReviews();
-  }, [product?.id]);
+  }, [currentProduct?.id]);
   
-  if (!product) {
+  if (!currentProduct) {
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>Product not found</Text>
@@ -69,6 +119,10 @@ export default function ProductDetailScreen({ route, navigation }) {
   }
 
   const increaseQuantity = () => {
+    if (effectiveStock > 0 && quantity >= effectiveStock) {
+      Alert.alert('Stock limit', `Only ${effectiveStock} item(s) available for this selection.`);
+      return;
+    }
     setQuantity(quantity + 1);
   };
 
@@ -88,9 +142,9 @@ export default function ProductDetailScreen({ route, navigation }) {
     }
     try {
       if (isFavorite) {
-        await removeFromWishlist(product.id);
+        await removeFromWishlist(currentProduct.id);
       } else {
-        await addToWishlist(product);
+        await addToWishlist(currentProduct);
       }
       setIsFavorite(!isFavorite);
     } catch (error) {
@@ -107,14 +161,19 @@ export default function ProductDetailScreen({ route, navigation }) {
       return;
     }
 
-    if (!product.stock || product.stock <= 0) {
+    if (variantOptions.length > 0 && !selectedVariant) {
+      Alert.alert('Select Variant', 'Please select a product variant first.');
+      return;
+    }
+
+    if (!effectiveStock || effectiveStock <= 0) {
       Alert.alert('Out of Stock', 'Sorry, this product is currently out of stock.');
       return;
     }
 
     try {
-      await addToCart(product, quantity);
-      Alert.alert('Success', `${product.name} added to cart!`, [
+      await addToCart(currentProduct, quantity, selectedVariant);
+      Alert.alert('Success', `${currentProduct.name} added to cart!`, [
         { text: 'Continue Shopping', onPress: () => navigation.goBack() },
         { text: 'View Cart', onPress: () => navigation.navigate('Cart') },
       ]);
@@ -132,7 +191,12 @@ export default function ProductDetailScreen({ route, navigation }) {
       return;
     }
 
-    if (!product.stock || product.stock <= 0) {
+    if (variantOptions.length > 0 && !selectedVariant) {
+      Alert.alert('Select Variant', 'Please select a product variant first.');
+      return;
+    }
+
+    if (!effectiveStock || effectiveStock <= 0) {
       Alert.alert('Out of Stock', 'Sorry, this product is currently out of stock.');
       return;
     }
@@ -140,13 +204,18 @@ export default function ProductDetailScreen({ route, navigation }) {
     try {
       // Set checkout items directly (bypasses cart), then go straight to Checkout
       const checkoutItem = {
-        id: product.id,
-        product_id: product.id,
-        name: product.name,
-        price: parseFloat(product.price || 0),
+        id: `buy-now-${currentProduct.id}-${selectedVariant?.id || 'base'}`,
+        product_id: currentProduct.id,
+        variant_id: selectedVariant?.id || null,
+        variant_size: selectedVariant?.size || null,
+        variant_color: selectedVariant?.color || null,
+        name: currentProduct.name,
+        price: effectivePrice,
+        original_price: effectiveOriginalPrice,
+        has_product_discount: hasActiveDiscount,
         quantity: quantity,
-        image: product.image,
-        stock: product.stock,
+        image: currentProduct.image,
+        stock: effectiveStock,
       };
       setCheckoutItems([checkoutItem]);
       navigation.navigate('Checkout');
@@ -183,14 +252,14 @@ export default function ProductDetailScreen({ route, navigation }) {
         <View style={styles.imageContainer}>
           <Image 
             source={
-              product.image 
-                ? (typeof product.image === 'object' && product.image.uri)
-                  ? product.image  // Already transformed with {uri: ...}
-                  : { uri: product.image.startsWith('http')
-                      ? product.image
-                      : product.image.startsWith('/uploads') || product.image.startsWith('/storage')
-                        ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${product.image}`
-                        : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/uploads/products/${product.image}`
+              currentProduct.image 
+                ? (typeof currentProduct.image === 'object' && currentProduct.image.uri)
+                  ? currentProduct.image  // Already transformed with {uri: ...}
+                  : { uri: currentProduct.image.startsWith('http')
+                      ? currentProduct.image
+                      : currentProduct.image.startsWith('/uploads') || currentProduct.image.startsWith('/storage')
+                        ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${currentProduct.image}`
+                        : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/uploads/products/${currentProduct.image}`
                     }
                 : require('../assets/images/Saputangan.jpg')
             }
@@ -198,23 +267,76 @@ export default function ProductDetailScreen({ route, navigation }) {
             resizeMode="cover"
             onError={(error) => {
               console.log('[ProductDetail] Image load error:', error);
-              console.log('[ProductDetail] Product image:', product.image);
+              console.log('[ProductDetail] Product image:', currentProduct.image);
             }}
           />
         </View>
 
         {/* Product Info */}
         <View style={styles.infoContainer}>
-          <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.productPrice}>₱{parseFloat(product.price || 0).toFixed(2)}</Text>
+          <Text style={styles.productName}>{currentProduct.name}</Text>
+          <View style={styles.productPriceRow}>
+            <Text style={styles.productPrice}>₱{effectivePrice.toFixed(2)}</Text>
+            {hasActiveDiscount ? (
+              <Text style={styles.productOriginalPrice}>₱{effectiveOriginalPrice.toFixed(2)}</Text>
+            ) : null}
+          </View>
+
+          {variantOptions.length > 0 && (
+            <View style={[styles.section, { marginHorizontal: 0 }]}> 
+              <Text style={styles.sectionTitle}>Variant</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                {variantOptions.map((variant) => {
+                  const isSelected = Number(variant.id) === Number(selectedVariantId);
+                  const label = [variant.size, variant.color].filter(Boolean).join(' / ') || 'Default';
+                  return (
+                    <TouchableOpacity
+                      key={variant.id}
+                      onPress={() => {
+                        setSelectedVariantId(variant.id);
+                        setQuantity(1);
+                      }}
+                      style={{
+                        borderWidth: 1.5,
+                        borderColor: isSelected ? theme.primary : '#d1d5db',
+                        backgroundColor: isSelected ? `${theme.primary}14` : '#fff',
+                        borderRadius: 12,
+                        paddingVertical: 8,
+                        paddingHorizontal: 12,
+                        marginRight: 8,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: isSelected ? theme.primary : theme.text }}>
+                        {label}
+                      </Text>
+                      <View style={styles.variantMetaRow}>
+                        <Text style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+                          ₱{parseFloat(variant.price || 0).toFixed(2)}
+                        </Text>
+                        {parseFloat(variant.original_price ?? variant.price ?? 0) > parseFloat(variant.price || 0) ? (
+                          <Text style={styles.variantOriginalPrice}>
+                            ₱{parseFloat(variant.original_price ?? 0).toFixed(2)}
+                          </Text>
+                        ) : null}
+                        <Text style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+                          · {Number(variant.stock || 0)} in stock
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
 
           {/* Stock Badge */}
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: product.stock > 0 ? '#27AE60' : '#E74C3C', marginRight: 6 }} />
-            <Text style={{ fontSize: 13, fontWeight: '600', color: product.stock > 0 ? '#27AE60' : '#E74C3C' }}>
-              {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: effectiveStock > 0 ? '#27AE60' : '#E74C3C', marginRight: 6 }} />
+            <Text style={{ fontSize: 13, fontWeight: '600', color: effectiveStock > 0 ? '#27AE60' : '#E74C3C' }}>
+              {effectiveStock > 0 ? `${effectiveStock} in stock` : 'Out of stock'}
             </Text>
-          </View>}
+          </View>
           {(() => {
             const avgRating = reviews.length
               ? reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length
@@ -245,7 +367,7 @@ export default function ProductDetailScreen({ route, navigation }) {
           {/* Description */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.description}>{product.description}</Text>
+            <Text style={styles.description}>{currentProduct.description}</Text>
             <Text style={styles.descriptionExtra}>
               This traditional Yakan weaving represents centuries of cultural heritage. 
               Each piece is handwoven by skilled artisans using traditional techniques 
@@ -284,7 +406,7 @@ export default function ProductDetailScreen({ route, navigation }) {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <Text style={styles.sectionTitle}>Customer Reviews</Text>
               {reviews.length > 0 && (
-                <TouchableOpacity onPress={() => navigation.navigate('Reviews', { productId: product.id, productName: product.name })}>
+                <TouchableOpacity onPress={() => navigation.navigate('Reviews', { productId: currentProduct.id, productName: currentProduct.name })}>
                   <Text style={{ color: theme.primary, fontSize: 13, fontWeight: '600' }}>See All →</Text>
                 </TouchableOpacity>
               )}
@@ -323,30 +445,37 @@ export default function ProductDetailScreen({ route, navigation }) {
           <View style={styles.totalContainer}>
             <Text style={styles.totalLabel}>Total Price:</Text>
             <Text style={styles.totalPrice}>
-              ₱{(parseFloat(product.price || 0) * quantity).toFixed(2)}
+              ₱{(effectivePrice * quantity).toFixed(2)}
             </Text>
           </View>
+
+          {productLoading && (
+            <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center' }}>
+              <ActivityIndicator size="small" color={theme.primary} />
+              <Text style={{ color: theme.textMuted, fontSize: 12, marginLeft: 8 }}>Refreshing product details...</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
       {/* Bottom Action Buttons */}
       <View style={styles.bottomActions}>
         <TouchableOpacity
-          style={[styles.addToCartButton, product.stock <= 0 && { opacity: 0.4 }]}
+          style={[styles.addToCartButton, effectiveStock <= 0 && { opacity: 0.4 }]}
           onPress={handleAddToCart}
-          disabled={product.stock <= 0}
+          disabled={effectiveStock <= 0}
         >
           <MaterialCommunityIcons name="shopping" size={20} color="#8B1A1A" style={{ marginRight: 8 }} />
-          <Text style={styles.addToCartText}>{product.stock <= 0 ? 'Out of Stock' : 'Add to Cart'}</Text>
+          <Text style={styles.addToCartText}>{effectiveStock <= 0 ? 'Out of Stock' : 'Add to Cart'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.buyNowButton, product.stock <= 0 && { opacity: 0.4 }]}
+          style={[styles.buyNowButton, effectiveStock <= 0 && { opacity: 0.4 }]}
           onPress={handleBuyNow}
-          disabled={product.stock <= 0}
+          disabled={effectiveStock <= 0}
         >
           <MaterialCommunityIcons name="flash" size={20} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={styles.buyNowText}>{product.stock <= 0 ? 'Unavailable' : 'Buy Now'}</Text>
+          <Text style={styles.buyNowText}>{effectiveStock <= 0 ? 'Unavailable' : 'Buy Now'}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -393,11 +522,35 @@ const getStyles = (theme) => StyleSheet.create({
     marginBottom: 12,
     lineHeight: 36,
   },
+  productPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: 15,
+  },
   productPrice: {
     fontSize: 32,
     fontWeight: '700',
     color: theme.primary,
-    marginBottom: 15,
+  },
+  productOriginalPrice: {
+    marginLeft: 10,
+    marginBottom: 5,
+    fontSize: 15,
+    color: theme.textMuted,
+    textDecorationLine: 'line-through',
+  },
+  variantMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginTop: 2,
+  },
+  variantOriginalPrice: {
+    fontSize: 10,
+    color: '#9ca3af',
+    textDecorationLine: 'line-through',
+    marginTop: 2,
+    marginLeft: 6,
   },
   ratingContainer: {
     flexDirection: 'row',

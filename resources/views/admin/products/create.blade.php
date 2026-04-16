@@ -22,6 +22,10 @@
     @php
         $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && request('as_bundle') ? 1 : 0);
         $initialBundleItems = old('bundle_items', $isBundleForm ? [['product_id' => '', 'quantity' => 1]] : []);
+        $initialVariantRows = old('variant_rows', $initialVariantRows ?? []);
+        if (!is_array($initialVariantRows)) {
+            $initialVariantRows = [];
+        }
     @endphp
 
     @if ($errors->any())
@@ -349,12 +353,129 @@
                 placeholder="0.00" required>
         </div>
 
+        <!-- Product-level Discount -->
+        <div class="rounded-lg border border-[#800000]/20 bg-[#fff8f8] p-4 space-y-3">
+            <div>
+                <h3 class="font-semibold text-gray-900">Product-level Discount</h3>
+                <p class="text-sm text-gray-600">Optional. This discount applies to the base product price and all variant prices.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Discount Type</label>
+                    <select name="discount_type" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                        <option value="">No Discount</option>
+                        <option value="percent" {{ old('discount_type') === 'percent' ? 'selected' : '' }}>Percent (%)</option>
+                        <option value="fixed" {{ old('discount_type') === 'fixed' ? 'selected' : '' }}>Fixed Amount (₱)</option>
+                    </select>
+                    @error('discount_type')
+                        <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Discount Value</label>
+                    <input
+                        type="number"
+                        name="discount_value"
+                        value="{{ old('discount_value') }}"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#800000]"
+                    >
+                    @error('discount_value')
+                        <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Starts At (optional)</label>
+                    <input
+                        type="datetime-local"
+                        name="discount_starts_at"
+                        value="{{ old('discount_starts_at') ? str_replace(' ', 'T', old('discount_starts_at')) : '' }}"
+                        class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#800000]"
+                    >
+                    @error('discount_starts_at')
+                        <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Ends At (optional)</label>
+                    <input
+                        type="datetime-local"
+                        name="discount_ends_at"
+                        value="{{ old('discount_ends_at') ? str_replace(' ', 'T', old('discount_ends_at')) : '' }}"
+                        class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#800000]"
+                    >
+                    @error('discount_ends_at')
+                        <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+        </div>
+
         <!-- Stock -->
         <div>
             <label class="block font-medium text-gray-700">Stock</label>
             <input type="number" name="stock" value="{{ old('stock', 0) }}"
                 class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#800000]" min="0"
                 required>
+        </div>
+
+        <!-- Product Variants -->
+        <div class="rounded-lg border border-[#800000]/20 bg-[#fff8f8] p-4 space-y-3">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="font-semibold text-gray-900">Product Variants</h3>
+                    <p class="text-sm text-gray-600">Define size/color variants with different price and stock.</p>
+                </div>
+                <button type="button" id="addVariantRowBtn" class="inline-flex items-center px-3 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] text-sm font-medium">
+                    <i class="fas fa-plus mr-2"></i>Add Variant
+                </button>
+            </div>
+
+            <div id="variantRowsContainer" class="space-y-2">
+                @foreach($initialVariantRows as $variantIndex => $variantRow)
+                    <div class="variant-row grid grid-cols-12 gap-2 items-center rounded-lg bg-white border border-[#800000]/10 p-2">
+                        <div class="col-span-2">
+                            <input type="text" name="variant_rows[{{ $variantIndex }}][sku]" value="{{ $variantRow['sku'] ?? '' }}" placeholder="SKU" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                        </div>
+                        <div class="col-span-2">
+                            <input type="text" name="variant_rows[{{ $variantIndex }}][size]" value="{{ $variantRow['size'] ?? '' }}" placeholder="Size" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                        </div>
+                        <div class="col-span-2">
+                            <input type="text" name="variant_rows[{{ $variantIndex }}][color]" value="{{ $variantRow['color'] ?? '' }}" placeholder="Color" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                        </div>
+                        <div class="col-span-2">
+                            <input type="number" step="0.01" min="0" name="variant_rows[{{ $variantIndex }}][price]" value="{{ $variantRow['price'] ?? '' }}" placeholder="Price" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                        </div>
+                        <div class="col-span-2">
+                            <input type="number" min="0" name="variant_rows[{{ $variantIndex }}][stock]" value="{{ $variantRow['stock'] ?? '' }}" placeholder="Stock" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                        </div>
+                        <div class="col-span-1 text-center">
+                            <input type="hidden" name="variant_rows[{{ $variantIndex }}][is_active]" value="0">
+                            <label class="inline-flex items-center justify-center">
+                                <input type="checkbox" name="variant_rows[{{ $variantIndex }}][is_active]" value="1" {{ !array_key_exists('is_active', $variantRow) || (int) ($variantRow['is_active'] ?? 1) === 1 ? 'checked' : '' }} class="rounded border-gray-300 text-[#800000] focus:ring-[#800000]">
+                            </label>
+                        </div>
+                        <div class="col-span-1 text-right">
+                            <button type="button" class="remove-variant-row px-2 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            <p class="text-xs text-gray-500">Tip: when variants are provided, product base price/stock are auto-derived from variants.</p>
+            @error('variant_rows')
+                <p class="text-sm text-red-600">{{ $message }}</p>
+            @enderror
         </div>
 
         <!-- Description -->
@@ -586,8 +707,11 @@
         const bundleBuilder = document.getElementById('bundleBuilder');
         const bundleItemsContainer = document.getElementById('bundleItemsContainer');
         const addBundleItemBtn = document.getElementById('addBundleItemBtn');
+        const variantRowsContainer = document.getElementById('variantRowsContainer');
+        const addVariantRowBtn = document.getElementById('addVariantRowBtn');
 
         let bundleIndex = {{ is_array($initialBundleItems) ? count($initialBundleItems) : 0 }};
+        let variantIndex = {{ is_array($initialVariantRows) ? count($initialVariantRows) : 0 }};
 
         const bundleOptionsHtml = `
             <option value="">Select product</option>
@@ -638,6 +762,46 @@
             bundleIndex += 1;
         }
 
+        function addVariantRow() {
+            if (!variantRowsContainer) {
+                return;
+            }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'variant-row grid grid-cols-12 gap-2 items-center rounded-lg bg-white border border-[#800000]/10 p-2';
+            wrapper.innerHTML = `
+                <div class="col-span-2">
+                    <input type="text" name="variant_rows[${variantIndex}][sku]" placeholder="SKU" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                </div>
+                <div class="col-span-2">
+                    <input type="text" name="variant_rows[${variantIndex}][size]" placeholder="Size" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                </div>
+                <div class="col-span-2">
+                    <input type="text" name="variant_rows[${variantIndex}][color]" placeholder="Color" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                </div>
+                <div class="col-span-2">
+                    <input type="number" step="0.01" min="0" name="variant_rows[${variantIndex}][price]" placeholder="Price" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                </div>
+                <div class="col-span-2">
+                    <input type="number" min="0" name="variant_rows[${variantIndex}][stock]" placeholder="Stock" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                </div>
+                <div class="col-span-1 text-center">
+                    <input type="hidden" name="variant_rows[${variantIndex}][is_active]" value="0">
+                    <label class="inline-flex items-center justify-center">
+                        <input type="checkbox" name="variant_rows[${variantIndex}][is_active]" value="1" checked class="rounded border-gray-300 text-[#800000] focus:ring-[#800000]">
+                    </label>
+                </div>
+                <div class="col-span-1 text-right">
+                    <button type="button" class="remove-variant-row px-2 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+
+            variantRowsContainer.appendChild(wrapper);
+            variantIndex += 1;
+        }
+
         if (addBundleItemBtn) {
             addBundleItemBtn.addEventListener('click', addBundleItemRow);
         }
@@ -655,6 +819,21 @@
                 }
 
                 removeBtn.closest('.bundle-item-row')?.remove();
+            });
+        }
+
+        if (addVariantRowBtn) {
+            addVariantRowBtn.addEventListener('click', addVariantRow);
+        }
+
+        if (variantRowsContainer) {
+            variantRowsContainer.addEventListener('click', function (event) {
+                const removeBtn = event.target.closest('.remove-variant-row');
+                if (!removeBtn) {
+                    return;
+                }
+
+                removeBtn.closest('.variant-row')?.remove();
             });
         }
 

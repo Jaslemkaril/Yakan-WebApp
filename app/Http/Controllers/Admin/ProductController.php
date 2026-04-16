@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use App\Models\ProductBundleItem;
+use App\Models\ProductVariant;
 
 class ProductController extends Controller
 {
@@ -94,8 +95,9 @@ class ProductController extends Controller
         $bundleComponents = $bundleFeatureEnabled
             ? Product::orderBy('name')->get(['id', 'name', 'price', 'stock'])
             : collect();
+        $initialVariantRows = old('variant_rows', []);
 
-        return view('admin.products.create', compact('categories', 'bundleComponents', 'bundleFeatureEnabled'));
+        return view('admin.products.create', compact('categories', 'bundleComponents', 'bundleFeatureEnabled', 'initialVariantRows'));
     }
 
     /**
@@ -108,6 +110,10 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'price' => 'required|numeric',
             'stock' => 'required|integer|min:0',
+            'discount_type' => 'nullable|in:percent,fixed',
+            'discount_value' => 'nullable|numeric|min:0',
+            'discount_starts_at' => 'nullable|date',
+            'discount_ends_at' => 'nullable|date|after_or_equal:discount_starts_at',
             'description' => 'nullable|string',
             'images' => 'nullable|array',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
@@ -121,6 +127,13 @@ class ProductController extends Controller
             'bundle_items' => 'nullable|array',
             'bundle_items.*.product_id' => 'nullable|integer|exists:products,id',
             'bundle_items.*.quantity' => 'nullable|integer|min:1',
+            'variant_rows' => 'nullable|array',
+            'variant_rows.*.sku' => 'nullable|string|max:100',
+            'variant_rows.*.size' => 'nullable|string|max:50',
+            'variant_rows.*.color' => 'nullable|string|max:50',
+            'variant_rows.*.price' => 'nullable|numeric|min:0',
+            'variant_rows.*.stock' => 'nullable|integer|min:0',
+            'variant_rows.*.is_active' => 'nullable|boolean',
         ]);
 
         $bundleFeatureEnabled = $this->bundleFeatureEnabled();
@@ -129,6 +142,9 @@ class ProductController extends Controller
             ? $this->sanitizeBundleItems($request->input('bundle_items', []))
             : [];
         $this->validateBundleItems($bundleItems, $isBundle);
+
+        $variantRows = $this->sanitizeVariantRows($request->input('variant_rows', []));
+        $this->validateVariantRows($variantRows);
 
         // Handle multiple image uploads with color associations
         $imagePath = null;
@@ -178,28 +194,70 @@ class ProductController extends Controller
             }
         }
 
-        // Parse sizes and colors JSON
+        // Parse sizes and colors JSON (kept for backward compatibility if no variants are defined)
         $sizes = $request->available_sizes ? json_decode($request->available_sizes, true) : null;
         $colors = $request->available_colors ? json_decode($request->available_colors, true) : null;
 
+        $resolvedPrice = (float) $request->price;
+        $resolvedStock = (int) $request->stock;
+
+        if (!empty($variantRows)) {
+            $resolvedPrice = (float) collect($variantRows)->min('price');
+            $resolvedStock = (int) collect($variantRows)->sum('stock');
+
+            $sizes = collect($variantRows)
+                ->pluck('size')
+                ->filter(fn($value) => !empty($value))
+                ->unique()
+                ->values()
+                ->all();
+
+            $colors = collect($variantRows)
+                ->pluck('color')
+                ->filter(fn($value) => !empty($value))
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        $supportsProductDiscounts = Schema::hasColumns('products', ['discount_type', 'discount_value', 'discount_starts_at', 'discount_ends_at']);
+        $discountPayload = $supportsProductDiscounts
+            ? $this->normalizeProductDiscountInput($request, $resolvedPrice)
+            : [
+                'discount_type' => null,
+                'discount_value' => null,
+                'discount_starts_at' => null,
+                'discount_ends_at' => null,
+            ];
+
         // Create product
-        $product = Product::create([
+        $createPayload = [
             'name' => $request->name,
-            'price' => $request->price,
-            'stock' => $request->stock,
+            'price' => $resolvedPrice,
+            'stock' => $resolvedStock,
             'description' => $request->description,
             'image' => $imagePath,
             'status' => $request->status,
             'category_id' => $request->category_id,
             'available_sizes' => $sizes,
             'available_colors' => $colors,
-        ]);
+        ];
+
+        if ($supportsProductDiscounts) {
+            $createPayload['discount_type'] = $discountPayload['discount_type'];
+            $createPayload['discount_value'] = $discountPayload['discount_value'];
+            $createPayload['discount_starts_at'] = $discountPayload['discount_starts_at'];
+            $createPayload['discount_ends_at'] = $discountPayload['discount_ends_at'];
+        }
+
+        $product = Product::create($createPayload);
         
         // Store all images with color associations in JSON column
         if (!empty($allImages)) {
             $product->update(['all_images' => json_encode($allImages)]);
         }
 
+        $this->syncVariantRows($product, $variantRows);
         $this->syncBundleItems($product, $bundleItems, $isBundle);
 
         // Ensure session is saved before redirect
@@ -244,7 +302,7 @@ class ProductController extends Controller
     {
         $bundleFeatureEnabled = $this->bundleFeatureEnabled();
 
-        $productQuery = Product::with('category');
+        $productQuery = Product::with('category', 'variants');
         if ($bundleFeatureEnabled) {
             $productQuery->with(['bundleItems.componentProduct']);
         }
@@ -259,6 +317,19 @@ class ProductController extends Controller
         $existingBundleItems = $bundleFeatureEnabled
             ? $product->bundleItems
             : collect();
+        $existingVariantRows = $product->variants
+            ->map(function (ProductVariant $variant) {
+                return [
+                    'sku' => $variant->sku,
+                    'size' => $variant->size,
+                    'color' => $variant->color,
+                    'price' => (float) $variant->price,
+                    'stock' => (int) $variant->stock,
+                    'is_active' => (bool) $variant->is_active,
+                ];
+            })
+            ->values()
+            ->all();
 
         // Stock logs grouped for display (guard against missing table during migration)
         $stockLogs   = collect();
@@ -282,7 +353,7 @@ class ProductController extends Controller
             $recentLogs = $stockLogs->take(15);
         }
 
-        return view('admin.products.edit', compact('product', 'categories', 'bundleComponents', 'existingBundleItems', 'bundleFeatureEnabled', 'stockLogs', 'today', 'thisWeek', 'thisYear', 'overall', 'recentLogs'));
+        return view('admin.products.edit', compact('product', 'categories', 'bundleComponents', 'existingBundleItems', 'existingVariantRows', 'bundleFeatureEnabled', 'stockLogs', 'today', 'thisWeek', 'thisYear', 'overall', 'recentLogs'));
     }
 
 
@@ -297,6 +368,10 @@ class ProductController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric',
+            'discount_type' => 'nullable|in:percent,fixed',
+            'discount_value' => 'nullable|numeric|min:0',
+            'discount_starts_at' => 'nullable|date',
+            'discount_ends_at' => 'nullable|date|after_or_equal:discount_starts_at',
             'description' => 'nullable|string',
             'images' => 'nullable|array',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
@@ -311,6 +386,13 @@ class ProductController extends Controller
             'bundle_items' => 'nullable|array',
             'bundle_items.*.product_id' => 'nullable|integer|exists:products,id',
             'bundle_items.*.quantity' => 'nullable|integer|min:1',
+            'variant_rows' => 'nullable|array',
+            'variant_rows.*.sku' => 'nullable|string|max:100',
+            'variant_rows.*.size' => 'nullable|string|max:50',
+            'variant_rows.*.color' => 'nullable|string|max:50',
+            'variant_rows.*.price' => 'nullable|numeric|min:0',
+            'variant_rows.*.stock' => 'nullable|integer|min:0',
+            'variant_rows.*.is_active' => 'nullable|boolean',
         ]);
 
         $bundleFeatureEnabled = $this->bundleFeatureEnabled();
@@ -319,6 +401,9 @@ class ProductController extends Controller
             ? $this->sanitizeBundleItems($request->input('bundle_items', []))
             : [];
         $this->validateBundleItems($bundleItems, $isBundle, $product->id);
+
+        $variantRows = $this->sanitizeVariantRows($request->input('variant_rows', []));
+        $this->validateVariantRows($variantRows);
 
         // Handle image deletions
         $allImages = $product->all_images ?? [];
@@ -411,14 +496,47 @@ class ProductController extends Controller
             $imagePath = $allImages[0]['path'];
         }
 
-        // Parse sizes and colors JSON
+        // Parse sizes and colors JSON (kept for backward compatibility if no variants are defined)
         $sizes = $request->available_sizes ? json_decode($request->available_sizes, true) : null;
         $colors = $request->available_colors ? json_decode($request->available_colors, true) : null;
 
+        $resolvedPrice = (float) $request->price;
+        $resolvedStock = (int) $product->stock;
+
+        if (!empty($variantRows)) {
+            $resolvedPrice = (float) collect($variantRows)->min('price');
+            $resolvedStock = (int) collect($variantRows)->sum('stock');
+
+            $sizes = collect($variantRows)
+                ->pluck('size')
+                ->filter(fn($value) => !empty($value))
+                ->unique()
+                ->values()
+                ->all();
+
+            $colors = collect($variantRows)
+                ->pluck('color')
+                ->filter(fn($value) => !empty($value))
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        $supportsProductDiscounts = Schema::hasColumns('products', ['discount_type', 'discount_value', 'discount_starts_at', 'discount_ends_at']);
+        $discountPayload = $supportsProductDiscounts
+            ? $this->normalizeProductDiscountInput($request, $resolvedPrice)
+            : [
+                'discount_type' => null,
+                'discount_value' => null,
+                'discount_starts_at' => null,
+                'discount_ends_at' => null,
+            ];
+
         // Update product (stock managed via Stock In, not edit form)
-        $product->update([
+        $updatePayload = [
             'name' => $request->name,
-            'price' => $request->price,
+            'price' => $resolvedPrice,
+            'stock' => $resolvedStock,
             'description' => $request->description,
             'status' => $request->status,
             'category_id' => $request->category_id,
@@ -426,8 +544,18 @@ class ProductController extends Controller
             'available_sizes' => $sizes,
             'available_colors' => $colors,
             'all_images' => !empty($allImages) ? json_encode($allImages) : null,
-        ]);
+        ];
 
+        if ($supportsProductDiscounts) {
+            $updatePayload['discount_type'] = $discountPayload['discount_type'];
+            $updatePayload['discount_value'] = $discountPayload['discount_value'];
+            $updatePayload['discount_starts_at'] = $discountPayload['discount_starts_at'];
+            $updatePayload['discount_ends_at'] = $discountPayload['discount_ends_at'];
+        }
+
+        $product->update($updatePayload);
+
+        $this->syncVariantRows($product, $variantRows);
         $this->syncBundleItems($product, $bundleItems, $isBundle);
 
         $imageCount = count($allImages);
@@ -478,6 +606,43 @@ class ProductController extends Controller
             })
             ->values()
             ->all();
+    }
+
+    private function normalizeProductDiscountInput(Request $request, float $resolvedPrice): array
+    {
+        $type = strtolower(trim((string) $request->input('discount_type', '')));
+        if (!in_array($type, ['percent', 'fixed'], true)) {
+            $type = null;
+        }
+
+        $rawValue = $request->input('discount_value');
+        $value = is_numeric($rawValue) ? (float) $rawValue : 0;
+
+        if (!$type || $value <= 0) {
+            return [
+                'discount_type' => null,
+                'discount_value' => null,
+                'discount_starts_at' => null,
+                'discount_ends_at' => null,
+            ];
+        }
+
+        if ($type === 'percent' && $value > 100) {
+            throw ValidationException::withMessages([
+                'discount_value' => 'Percentage discount cannot exceed 100%.',
+            ]);
+        }
+
+        if ($type === 'fixed' && $resolvedPrice > 0 && $value > $resolvedPrice) {
+            $value = $resolvedPrice;
+        }
+
+        return [
+            'discount_type' => $type,
+            'discount_value' => round($value, 2),
+            'discount_starts_at' => $request->filled('discount_starts_at') ? $request->input('discount_starts_at') : null,
+            'discount_ends_at' => $request->filled('discount_ends_at') ? $request->input('discount_ends_at') : null,
+        ];
     }
 
     private function validateBundleItems(array $bundleItems, bool $isBundle, ?int $currentProductId = null): void
@@ -536,6 +701,73 @@ class ProductController extends Controller
         ProductBundleItem::insert($rows);
     }
 
+    private function sanitizeVariantRows(array $rawRows): array
+    {
+        return collect($rawRows)
+            ->filter(fn($row) => is_array($row))
+            ->map(function ($row) {
+                return [
+                    'sku' => trim((string) ($row['sku'] ?? '')) ?: null,
+                    'size' => trim((string) ($row['size'] ?? '')) ?: null,
+                    'color' => trim((string) ($row['color'] ?? '')) ?: null,
+                    'price' => isset($row['price']) && $row['price'] !== '' ? (float) $row['price'] : null,
+                    'stock' => isset($row['stock']) && $row['stock'] !== '' ? (int) $row['stock'] : null,
+                    'is_active' => filter_var($row['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true,
+                ];
+            })
+            ->filter(function ($row) {
+                return $row['price'] !== null
+                    && $row['stock'] !== null
+                    && ($row['size'] !== null || $row['color'] !== null);
+            })
+            ->values()
+            ->all();
+    }
+
+    private function validateVariantRows(array $variantRows): void
+    {
+        if (empty($variantRows)) {
+            return;
+        }
+
+        $combinationKeys = collect($variantRows)
+            ->map(function ($row) {
+                return strtolower((string) ($row['size'] ?? '')) . '|' . strtolower((string) ($row['color'] ?? ''));
+            });
+
+        if ($combinationKeys->count() !== $combinationKeys->unique()->count()) {
+            throw ValidationException::withMessages([
+                'variant_rows' => 'Variant combinations must be unique (size + color).',
+            ]);
+        }
+    }
+
+    private function syncVariantRows(Product $product, array $variantRows): void
+    {
+        ProductVariant::where('product_id', $product->id)->delete();
+
+        if (empty($variantRows)) {
+            return;
+        }
+
+        $now = now();
+        $rows = collect($variantRows)->map(function ($row) use ($product, $now) {
+            return [
+                'product_id' => $product->id,
+                'sku' => $row['sku'],
+                'size' => $row['size'],
+                'color' => $row['color'],
+                'price' => $row['price'],
+                'stock' => $row['stock'],
+                'is_active' => $row['is_active'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        })->all();
+
+        ProductVariant::insert($rows);
+    }
+
     private function bundleFeatureEnabled(): bool
     {
         return Schema::hasTable('product_bundle_items');
@@ -560,6 +792,10 @@ class ProductController extends Controller
             $base = route('admin.products.index');
         }
         $redirectUrl = $authToken ? $base . '?auth_token=' . urlencode($authToken) : $base;
+
+        if ($product->variants()->exists()) {
+            return redirect($redirectUrl)->with('error', 'This product uses variants. Update stock per variant in the product edit form.');
+        }
 
         if ($product->inventory) {
             $product->inventory->increment('quantity', $qty);
@@ -601,6 +837,10 @@ class ProductController extends Controller
             $base = route('admin.products.index');
         }
         $redirectUrl = $authToken ? $base . '?auth_token=' . urlencode($authToken) : $base;
+
+        if ($product->variants()->exists()) {
+            return redirect($redirectUrl)->with('error', 'This product uses variants. Update stock per variant in the product edit form.');
+        }
 
         $currentStock = (int) $product->fresh()->available_stock;
         if ($qty > $currentStock) {

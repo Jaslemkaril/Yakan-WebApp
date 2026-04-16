@@ -74,14 +74,28 @@ const ProductsScreen = ({ navigation }) => {
       // Transform API data to match app structure
       const transformedProducts = productsData.map(product => {
         console.log(`[Product ${product.id}] Original image:`, product.image);
+        const price = parseFloat(product.price || 0);
+        const originalPrice = parseFloat(product.original_price ?? product.price ?? 0);
         return {
           id: product.id,
           name: product.name,
           description: product.description,
-          price: parseFloat(product.price),
+          price,
+          originalPrice,
+          hasProductDiscount: !!product.has_product_discount && originalPrice > price,
           category: product.category?.name || 'Uncategorized',
           image: product.image || null,
           stock: product.stock || 0,
+          has_variants: !!product.has_variants,
+          variants: Array.isArray(product.variants)
+            ? product.variants.map(variant => ({
+                ...variant,
+                price: parseFloat(variant.price || 0),
+                original_price: parseFloat(variant.original_price ?? variant.price ?? 0),
+                stock: Number(variant.stock || 0),
+              }))
+            : [],
+          default_variant: product.default_variant || null,
         };
       });
       
@@ -237,7 +251,7 @@ const ProductsScreen = ({ navigation }) => {
                     }
                     style={styles.productImage}
                     resizeMode="cover"
-                    onError={(error) => {
+                    onError={() => {
                       console.log('[ProductsScreen] Image load error for:', product.name);
                       console.log('[ProductsScreen] Image path:', product.image);
                       const attemptedUrl = product.image?.startsWith('http') 
@@ -276,7 +290,12 @@ const ProductsScreen = ({ navigation }) => {
                     </Text>
                   </View>
                   <View style={styles.productFooter}>
-                    <Text style={styles.productPrice}>₱{product.price.toFixed(2)}</Text>
+                    <View>
+                      <Text style={styles.productPrice}>₱{product.price.toFixed(2)}</Text>
+                      {product.hasProductDiscount ? (
+                        <Text style={styles.productOriginalPrice}>₱{product.originalPrice.toFixed(2)}</Text>
+                      ) : null}
+                    </View>
                     <TouchableOpacity
                       style={[styles.cartButton, product.stock === 0 && { opacity: 0.4 }]}
                       onPress={() => product.stock > 0 && handleAddToCart(product)}
@@ -466,6 +485,12 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: theme.text,
+  },
+  productOriginalPrice: {
+    fontSize: 12,
+    color: theme.textMuted,
+    textDecorationLine: 'line-through',
+    marginTop: 2,
   },
   cartButton: {
     backgroundColor: theme.primary,

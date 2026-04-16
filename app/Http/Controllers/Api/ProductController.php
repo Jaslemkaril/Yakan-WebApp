@@ -4,17 +4,121 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Order;
 use App\Models\CustomOrder;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 
 class ProductController extends Controller
 {
-    private function getEffectiveStock(Product $product): int
+    private function buildPriceMeta(Product $product, float $basePrice): array
     {
+        $basePrice = max(0, $basePrice);
+        $effectivePrice = (float) $product->getDiscountedPrice($basePrice);
+        $discountAmount = (float) $product->getDiscountAmount($basePrice);
+
+        return [
+            'price' => $effectivePrice,
+            'original_price' => round($basePrice, 2),
+            'discount_amount' => $discountAmount,
+            'has_product_discount' => $discountAmount > 0,
+        ];
+    }
+
+    private function getActiveVariants(Product $product)
+    {
+        if ($product->relationLoaded('variants')) {
+            return $product->variants->where('is_active', true)->values();
+        }
+
+        return $product->variants()
+            ->where('is_active', true)
+            ->get(['id', 'product_id', 'size', 'color', 'price', 'stock', 'is_active']);
+    }
+
+    private function formatVariant(Product $product, ProductVariant $variant): array
+    {
+        $priceMeta = $this->buildPriceMeta($product, (float) $variant->price);
+
+        return [
+            'id' => $variant->id,
+            'size' => $variant->size,
+            'color' => $variant->color,
+            'price' => $priceMeta['price'],
+            'original_price' => $priceMeta['original_price'],
+            'discount_amount' => $priceMeta['discount_amount'],
+            'has_product_discount' => $priceMeta['has_product_discount'],
+            'stock' => (int) $variant->stock,
+            'is_active' => (bool) $variant->is_active,
+            'label' => collect([$variant->size, $variant->color])->filter()->implode(' / '),
+        ];
+    }
+
+    private function getEffectiveStock(Product $product, ?ProductVariant $variant = null): int
+    {
+        if ($variant) {
+            return (int) $variant->stock;
+        }
+
+        $activeVariants = $this->getActiveVariants($product);
+        if ($activeVariants->isNotEmpty()) {
+            return (int) $activeVariants->sum('stock');
+        }
+
         return (int) ($product->inventory?->quantity ?? $product->stock ?? 0);
+    }
+
+    private function getEffectivePrice(Product $product, ?ProductVariant $variant = null): float
+    {
+        if ($variant) {
+            return $this->buildPriceMeta($product, (float) $variant->price)['price'];
+        }
+
+        $activeVariants = $this->getActiveVariants($product);
+        if ($activeVariants->isNotEmpty()) {
+            return $this->buildPriceMeta($product, (float) $activeVariants->min('price'))['price'];
+        }
+
+        return $this->buildPriceMeta($product, (float) $product->price)['price'];
+    }
+
+    private function decorateProduct(Product $product, bool $includeVariants = false): Product
+    {
+        $activeVariants = $this->getActiveVariants($product);
+        $hasVariants = $activeVariants->isNotEmpty();
+        $basePrice = $hasVariants
+            ? (float) $activeVariants->min('price')
+            : (float) $product->price;
+        $priceMeta = $this->buildPriceMeta($product, $basePrice);
+
+        $product->stock = $this->getEffectiveStock($product);
+        $product->price = $priceMeta['price'];
+        $product->setAttribute('original_price', $priceMeta['original_price']);
+        $product->setAttribute('discount_amount', $priceMeta['discount_amount']);
+        $product->setAttribute('has_product_discount', $priceMeta['has_product_discount']);
+        $product->setAttribute('discount_type', $priceMeta['has_product_discount'] ? $product->discount_type : null);
+        $product->setAttribute('discount_value', $priceMeta['has_product_discount'] ? (float) $product->discount_value : null);
+        $product->setAttribute('has_variants', $hasVariants);
+        $product->setAttribute('variant_count', $activeVariants->count());
+
+        if ($hasVariants) {
+            $defaultVariant = $activeVariants->first();
+            $product->setAttribute('default_variant', $defaultVariant ? $this->formatVariant($product, $defaultVariant) : null);
+
+            if ($includeVariants) {
+                $product->setAttribute('variants', $activeVariants->map(fn(ProductVariant $variant) => $this->formatVariant($product, $variant))->values());
+            }
+        } else {
+            $product->setAttribute('default_variant', null);
+            if ($includeVariants) {
+                $product->setAttribute('variants', []);
+            }
+        }
+
+        return $product;
     }
 
     public function index(Request $request): JsonResponse
@@ -23,9 +127,16 @@ class ProductController extends Controller
             $cacheKey = 'products:' . md5(json_encode($request->all()));
             
             $products = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 300), function () use ($request) {
-                $query = Product::select([
-                    'id', 'name', 'description', 'price', 'stock', 'category_id', 'image', 'status', 'sku', 'created_at'
-                ])->with(['category:id,name,slug', 'inventory:product_id,quantity'])->active(); // show all active products; out-of-stock handled in app
+                $selectColumns = ['id', 'name', 'description', 'price', 'stock', 'category_id', 'image', 'status', 'sku', 'created_at'];
+                if (Schema::hasColumns('products', ['discount_type', 'discount_value', 'discount_starts_at', 'discount_ends_at'])) {
+                    array_splice($selectColumns, 4, 0, ['discount_type', 'discount_value', 'discount_starts_at', 'discount_ends_at']);
+                }
+
+                $query = Product::select($selectColumns)->with([
+                    'category:id,name,slug',
+                    'inventory:product_id,quantity',
+                    'variants:id,product_id,size,color,price,stock,is_active',
+                ])->active(); // show all active products; out-of-stock handled in app
                 
                 if ($request->has('category')) {
                     $query->where('category_id', $request->category);
@@ -64,7 +175,7 @@ class ProductController extends Controller
                 }
 
                 $products->each(function ($product) {
-                    $product->stock = $this->getEffectiveStock($product);
+                    $this->decorateProduct($product, false);
                 });
 
                 return $products;
@@ -91,10 +202,17 @@ class ProductController extends Controller
             $cacheKey = 'products:featured';
             
             $products = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 7200), function () use ($request) {
-                $products = Product::select([
-                    'id', 'name', 'description', 'price', 'stock', 'category_id', 'image', 'status'
+                $selectColumns = ['id', 'name', 'description', 'price', 'stock', 'category_id', 'image', 'status'];
+                if (Schema::hasColumns('products', ['discount_type', 'discount_value', 'discount_starts_at', 'discount_ends_at'])) {
+                    array_splice($selectColumns, 4, 0, ['discount_type', 'discount_value', 'discount_starts_at', 'discount_ends_at']);
+                }
+
+                $products = Product::select($selectColumns)
+                ->with([
+                    'category:id,name,slug',
+                    'inventory:product_id,quantity',
+                    'variants:id,product_id,size,color,price,stock,is_active',
                 ])
-                ->with(['category:id,name,slug', 'inventory:product_id,quantity'])
                 ->active()
                 ->where('featured', true)
                 ->limit($request->get('limit', 6))
@@ -105,7 +223,7 @@ class ProductController extends Controller
                 })->values();
 
                 $products->each(function ($product) {
-                    $product->stock = $this->getEffectiveStock($product);
+                    $this->decorateProduct($product, false);
                 });
 
                 return $products;
@@ -131,9 +249,13 @@ class ProductController extends Controller
         $cacheKey = "product:{$product->id}";
         
         $product = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 7200), function () use ($product) {
-            $product->load(['category', 'orderItems', 'inventory']);
-            $product->stock = $this->getEffectiveStock($product);
-            return $product;
+            $product->load([
+                'category',
+                'orderItems',
+                'inventory',
+                'variants:id,product_id,size,color,price,stock,is_active',
+            ]);
+            return $this->decorateProduct($product, true);
         });
 
         return response()->json([
@@ -147,7 +269,11 @@ class ProductController extends Controller
         $cacheKey = "products:category:{$category}";
         
         $products = Cache::remember($cacheKey, env('CATEGORY_CACHE_TTL', 86400), function () use ($category) {
-            return Product::with(['category', 'inventory:product_id,quantity'])
+            return Product::with([
+                'category',
+                'inventory:product_id,quantity',
+                'variants:id,product_id,size,color,price,stock,is_active',
+            ])
                 ->whereHas('category', function($query) use ($category) {
                     $query->where('slug', $category);
                 })
@@ -156,8 +282,7 @@ class ProductController extends Controller
         });
 
         $products->getCollection()->transform(function ($product) {
-            $product->stock = $this->getEffectiveStock($product);
-            return $product;
+            return $this->decorateProduct($product, false);
         });
 
         return response()->json([

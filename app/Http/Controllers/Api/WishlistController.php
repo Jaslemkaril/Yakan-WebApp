@@ -48,12 +48,20 @@ class WishlistController extends Controller
                 if (!$item) {
                     return null;
                 }
+
+                $isProduct = $wishlistItem->item_type === 'product' && $item instanceof Product;
+                $basePrice = (float) ($item->price ?? 0);
+                $effectivePrice = $isProduct ? (float) $item->getDiscountedPrice($basePrice) : $basePrice;
+                $discountAmount = $isProduct ? (float) $item->getDiscountAmount($basePrice) : 0;
                 
                 return [
                     'id' => $item->id,
                     'name' => $item->name ?? '',
                     'description' => $item->description ?? '',
-                    'price' => (float) ($item->price ?? 0),
+                    'price' => $effectivePrice,
+                    'original_price' => $basePrice,
+                    'discount_amount' => $discountAmount,
+                    'has_product_discount' => $discountAmount > 0,
                     'image' => $item->image_url ?? $item->image ?? '',
                     'category' => optional($item->category)->name ?? '',
                     'type' => $wishlistItem->item_type,
@@ -308,7 +316,8 @@ class WishlistController extends Controller
             'patterns_count' => $wishlist->items->where('item_type', 'pattern')->count(),
             'total_value' => $wishlist->items->reduce(function ($total, $item) {
                 if ($item->item_type === 'product' && $item->item) {
-                    return $total + $item->item->price;
+                    $basePrice = (float) ($item->item->price ?? 0);
+                    return $total + (float) $item->item->getDiscountedPrice($basePrice);
                 }
                 return $total;
             }, 0)

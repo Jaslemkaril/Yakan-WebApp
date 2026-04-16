@@ -839,10 +839,11 @@ class ApiService {
   /**
    * Add item to cart
    */
-  async addToCart(productId, quantity = 1) {
-    console.log('[CartAPI] Adding to cart:', productId, quantity);
-    return await this.request('POST', '/cart', { 
+  async addToCart(productId, quantity = 1, variantId = null) {
+    console.log('[CartAPI] Adding to cart:', productId, quantity, variantId);
+    return await this.request('POST', '/cart', {
       product_id: productId,
+      variant_id: variantId,
       quantity 
     });
   }
