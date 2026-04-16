@@ -316,7 +316,7 @@
                                                 <span class="font-medium">Price:</span>
                                                 <span class="ml-1 text-gray-900">₱{{ number_format($unitPrice, 2) }}</span>
                                                 @if($unitPrice < $baseUnitPrice)
-                                                    <span class="ml-1 text-xs text-gray-500 line-through">₱{{ number_format($baseUnitPrice, 2) }}</span>
+                                                    <span class="ml-2 text-sm text-gray-500 line-through">₱{{ number_format($baseUnitPrice, 2) }}</span>
                                                 @endif
                                                 <span class="text-gray-400 mx-2">•</span>
                                                 <span class="font-medium">Qty:</span>
@@ -392,7 +392,7 @@
                             </div>
                         </div>
 
-                        <div class="mt-6 border-t border-gray-200 pt-5">
+                        <div id="payment-plan-section" class="mt-6 border-t border-gray-200 pt-5 {{ $selectedDeliveryType === 'delivery' ? 'hidden' : '' }}">
                             <h3 class="text-sm font-bold text-gray-900 mb-3">Payment Plan</h3>
                             @php $selectedPaymentOption = old('payment_option', 'full'); @endphp
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -616,7 +616,7 @@
                                 <p class="text-xs text-gray-600 text-right">Inclusive of shipping</p>
                             </div>
 
-                            <div id="paymentPlanSummary" class="rounded-xl p-4 border border-gray-200 bg-gray-50 mt-3">
+                            <div id="paymentPlanSummary" class="rounded-xl p-4 border border-gray-200 bg-gray-50 mt-3 {{ $selectedDeliveryType === 'delivery' ? 'hidden' : '' }}">
                                 <div class="flex justify-between items-center">
                                     <span id="payNowLabel" class="text-sm font-semibold text-gray-700">Pay Now</span>
                                     <span id="payNowDisplay" class="text-xl font-bold" style="color: #800000;">₱{{ number_format($finalTotal, 2) }}</span>
@@ -726,15 +726,25 @@ function enforcePaymentPlanAvailabilityByDelivery() {
     const downpaymentRadio = document.getElementById('payment-option-downpayment');
     const downpaymentLabel = document.getElementById('downpayment-option-label');
     const availabilityHint = document.getElementById('downpaymentAvailabilityHint');
+    const paymentPlanSection = document.getElementById('payment-plan-section');
+    const paymentPlanSummary = document.getElementById('paymentPlanSummary');
 
     if (!fullRadio || !downpaymentRadio) {
-        return;
+        return { isDelivery: true };
     }
 
     const isDelivery = deliveryType === 'delivery';
+    if (paymentPlanSection) {
+        paymentPlanSection.classList.toggle('hidden', isDelivery);
+    }
+    if (paymentPlanSummary) {
+        paymentPlanSummary.classList.toggle('hidden', isDelivery);
+    }
+
     downpaymentRadio.disabled = isDelivery;
 
-    if (isDelivery && downpaymentRadio.checked) {
+    if (isDelivery) {
+        downpaymentRadio.checked = false;
         fullRadio.checked = true;
     }
 
@@ -750,10 +760,12 @@ function enforcePaymentPlanAvailabilityByDelivery() {
             ? 'Downpayment is disabled for delivery orders. Select pickup to enable it.'
             : 'Downpayment is available because pickup is selected.';
     }
+
+    return { isDelivery };
 }
 
 function updatePaymentPlanSummary() {
-    enforcePaymentPlanAvailabilityByDelivery();
+    const { isDelivery } = enforcePaymentPlanAvailabilityByDelivery();
 
     const totalEl = document.getElementById('finalTotalDisplay');
     const payNowLabel = document.getElementById('payNowLabel');
@@ -761,7 +773,9 @@ function updatePaymentPlanSummary() {
     const remainingRow = document.getElementById('remainingBalanceRow');
     const remainingDisplay = document.getElementById('remainingBalanceDisplay');
     const paymentPlanHint = document.getElementById('paymentPlanHint');
-    const selectedOption = document.querySelector('input[name="payment_option"]:checked')?.value || 'full';
+    const selectedOption = isDelivery
+        ? 'full'
+        : (document.querySelector('input[name="payment_option"]:checked')?.value || 'full');
     const downpaymentRateInput = document.getElementById('downpaymentRateInput');
 
     if (!totalEl || !payNowDisplay) {
