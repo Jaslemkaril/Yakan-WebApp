@@ -855,6 +855,17 @@ class CartController extends Controller
             ? (float) $request->input('downpayment_rate', 50)
             : null;
         $deliveryType = $request->input('delivery_type') === 'delivery' ? 'deliver' : $request->input('delivery_type');
+
+        // Business rule: downpayment is only allowed for pickup orders.
+        if ($deliveryType !== 'pickup' && $paymentOption === 'downpayment') {
+            \Log::info('Downpayment request forced to full payment because delivery type is not pickup.', [
+                'user_id' => Auth::id(),
+                'delivery_type' => $deliveryType,
+            ]);
+            $paymentOption = 'full';
+            $requestedDownpaymentRate = null;
+        }
+
         $status = 'pending_confirmation'; // Map 'pending' to 'pending_confirmation'
 
         $userId = Auth::id();
@@ -1212,7 +1223,7 @@ class CartController extends Controller
                     'cancel_url'  => $this->appendAuthToken(route('payment.failed', $order->id), $authToken),
                 ];
 
-                if ($isDownpaymentOrder && !$supportsDownpayment) {
+                if ($isDownpaymentOrder) {
                     $checkoutOptions['amount_override'] = $payableNowAmount;
                     $checkoutOptions['is_downpayment_override'] = true;
                 }
@@ -2107,9 +2118,53 @@ HTML, 200, ['Content-Type' => 'text/html']);
     private function applyPayMongoPaymentResult(Order $order, ?array $session = null): void
     {
         $previousPaymentStatus = strtolower((string) $order->payment_status);
+        $totalAmount = (float) ($order->total_amount ?? $order->total ?? 0);
+        $supportsDownpayment = $this->supportsDownpaymentFields();
+        $paidAmount = $session ? $this->extractPayMongoPaidAmount($session, $totalAmount) : null;
+
+        // Fallback to expected payable amount if gateway payload omits amount details.
+        if (is_null($paidAmount) && $totalAmount > 0) {
+            $paidAmount = $this->resolvePayableNowAmount($order, $totalAmount);
+        }
 
         $order->payment_status = 'paid';
         $order->status = 'processing';
+
+        $normalizedPaidAmount = null;
+        $isPartialPayment = false;
+
+        if ($totalAmount > 0 && !is_null($paidAmount)) {
+            $normalizedPaidAmount = max(0, min($totalAmount, round($paidAmount, 2)));
+            $isPartialPayment = ($normalizedPaidAmount + 0.01) < $totalAmount;
+
+            if ($supportsDownpayment) {
+                if ($isPartialPayment) {
+                    $computedRate = max(1, min(99, round(($normalizedPaidAmount / $totalAmount) * 100, 2)));
+                    $order->payment_option = 'downpayment';
+                    $order->downpayment_rate = $computedRate;
+                    $order->downpayment_amount = $normalizedPaidAmount;
+                    $order->remaining_balance = max(0, round($totalAmount - $normalizedPaidAmount, 2));
+                } else {
+                    $order->payment_option = 'full';
+                    $order->downpayment_rate = 100;
+                    $order->downpayment_amount = $totalAmount;
+                    $order->remaining_balance = 0;
+                }
+            }
+
+            if ($isPartialPayment) {
+                $remaining = max(0, round($totalAmount - $normalizedPaidAmount, 2));
+                $tag = 'Downpayment received: PHP '
+                    . number_format($normalizedPaidAmount, 2)
+                    . '; remaining balance: PHP '
+                    . number_format($remaining, 2);
+
+                $existingNotes = trim((string) ($order->notes ?? ''));
+                if (!str_contains($existingNotes, $tag)) {
+                    $order->notes = $existingNotes === '' ? $tag : ($existingNotes . "\n" . $tag);
+                }
+            }
+        }
 
         $isDownpayment = strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment'
             && (float) ($order->remaining_balance ?? 0) > 0;
@@ -2187,6 +2242,40 @@ HTML, 200, ['Content-Type' => 'text/html']);
         return null;
     }
 
+    private function extractPayMongoPaidAmount(array $session, float $orderTotal): ?float
+    {
+        $candidates = [
+            data_get($session, 'attributes.payments.0.attributes.amount'),
+            data_get($session, 'attributes.payments.0.amount'),
+            data_get($session, 'attributes.payment.attributes.amount'),
+            data_get($session, 'attributes.payment.amount'),
+            data_get($session, 'attributes.payment_intent.attributes.amount'),
+            data_get($session, 'attributes.payment_intent.amount'),
+            data_get($session, 'attributes.amount_total'),
+            data_get($session, 'attributes.amountTotal'),
+        ];
+
+        foreach ($candidates as $value) {
+            if (!is_numeric($value)) {
+                continue;
+            }
+
+            $amount = (float) $value;
+            if ($amount <= 0) {
+                continue;
+            }
+
+            // PayMongo amount fields are often in centavos.
+            if ($orderTotal > 0 && $amount > ($orderTotal * 2)) {
+                $amount = $amount / 100;
+            }
+
+            return max(0, round($amount, 2));
+        }
+
+        return null;
+    }
+
     private function resolveOrderPaymentContext(Order $order): array
     {
         $totalAmount = (float) ($order->total_amount ?? $order->total ?? 0);
@@ -2197,6 +2286,22 @@ HTML, 200, ['Content-Type' => 'text/html']);
 
         $downpaymentAmount = (float) ($order->downpayment_amount ?? 0);
         $downpaymentRate = (float) ($order->downpayment_rate ?? 0);
+
+        // Fallback for environments where downpayment columns are unavailable:
+        // parse a stored payment note like "Downpayment received: PHP X; remaining balance: PHP Y".
+        if (!$isPartialPayment && !$isDownpaymentOrder) {
+            $notes = (string) ($order->notes ?? '');
+            if (preg_match('/Downpayment received:\s*PHP\s*([0-9,]+(?:\.[0-9]{1,2})?)\s*;\s*remaining balance:\s*PHP\s*([0-9,]+(?:\.[0-9]{1,2})?)/i', $notes, $matches) === 1) {
+                $parsedPaid = (float) str_replace(',', '', $matches[1]);
+                $parsedRemaining = (float) str_replace(',', '', $matches[2]);
+
+                if ($parsedRemaining > 0) {
+                    $isPartialPayment = true;
+                    $downpaymentAmount = $parsedPaid;
+                    $remainingBalance = $parsedRemaining;
+                }
+            }
+        }
 
         if ($downpaymentAmount <= 0 && $totalAmount > 0) {
             $resolvedRate = $downpaymentRate > 0 ? $downpaymentRate : 50;

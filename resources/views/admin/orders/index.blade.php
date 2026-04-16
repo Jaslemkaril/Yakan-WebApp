@@ -357,9 +357,26 @@
                                     </span>
                                 </td>
                                 <td>
+                                    @php
+                                        $legacyPartialFromNotes = false;
+                                        if (strtolower((string) ($order->payment_option ?? 'full')) !== 'downpayment') {
+                                            $paymentNotes = (string) ($order->notes ?? '');
+                                            if (preg_match('/Downpayment received:\s*PHP\s*([0-9,]+(?:\.[0-9]{1,2})?)\s*;\s*remaining balance:\s*PHP\s*([0-9,]+(?:\.[0-9]{1,2})?)/i', $paymentNotes, $matches) === 1) {
+                                                $legacyPartialFromNotes = ((float) str_replace(',', '', $matches[2])) > 0;
+                                            }
+                                        }
+
+                                        $isPartialPaymentBadge = in_array($order->payment_status, ['paid', 'verified'])
+                                            && (
+                                                (strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment' && ((float) ($order->remaining_balance ?? 0)) > 0)
+                                                || $legacyPartialFromNotes
+                                            );
+                                    @endphp
                                     <span class="status-badge status-{{ strtolower($order->payment_status) }}">
-                                        @if(in_array($order->payment_status, ['paid', 'verified']) && strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment')
-                                            {{ ((float) ($order->remaining_balance ?? 0)) > 0 ? 'DP Paid' : 'Fully Paid' }}
+                                        @if($isPartialPaymentBadge)
+                                            Partial Payment
+                                        @elseif(in_array($order->payment_status, ['paid', 'verified']) && strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment')
+                                            Fully Paid
                                         @else
                                             {{ ucfirst($order->payment_status) }}
                                         @endif

@@ -66,13 +66,29 @@
                             $totalAmountForPayment = (float) ($order->total_amount ?? $order->total ?? 0);
                             $remainingBalance = max(0, (float) ($order->remaining_balance ?? 0));
                             $isDownpaymentOrder = strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment';
+
+                            $notesDownpaymentAmount = 0.0;
+                            $notesRemainingBalance = 0.0;
+                            if (!$isDownpaymentOrder) {
+                                $paymentNotes = (string) ($order->notes ?? '');
+                                if (preg_match('/Downpayment received:\s*PHP\s*([0-9,]+(?:\.[0-9]{1,2})?)\s*;\s*remaining balance:\s*PHP\s*([0-9,]+(?:\.[0-9]{1,2})?)/i', $paymentNotes, $matches) === 1) {
+                                    $notesDownpaymentAmount = (float) str_replace(',', '', $matches[1]);
+                                    $notesRemainingBalance = (float) str_replace(',', '', $matches[2]);
+                                }
+                            }
+
                             $isDownpaymentPartialPaid = in_array($effectivePaymentStatus, ['paid', 'verified'], true)
-                                && $isDownpaymentOrder
-                                && $remainingBalance > 0;
+                                && (
+                                    ($isDownpaymentOrder && $remainingBalance > 0)
+                                    || (!$isDownpaymentOrder && $notesRemainingBalance > 0)
+                                );
 
                             $downpaymentRate = (float) ($order->downpayment_rate ?? 0);
                             if ($downpaymentRate <= 0 && $totalAmountForPayment > 0) {
                                 $downpaymentAmount = (float) ($order->downpayment_amount ?? 0);
+                                if ($downpaymentAmount <= 0 && $notesDownpaymentAmount > 0) {
+                                    $downpaymentAmount = $notesDownpaymentAmount;
+                                }
                                 if ($downpaymentAmount > 0) {
                                     $downpaymentRate = ($downpaymentAmount / $totalAmountForPayment) * 100;
                                 }
@@ -85,10 +101,10 @@
 
                             $paymentStatusLabel = [
                                 'paid' => $isDownpaymentPartialPaid
-                                    ? "Downpayment Paid ({$downpaymentRateLabel}%)"
+                                    ? "Partial Payment ({$downpaymentRateLabel}%)"
                                     : (($isDownpaymentOrder && $remainingBalance <= 0) ? 'Fully Paid ✓' : 'Paid ✓'),
                                 'verified' => $isDownpaymentPartialPaid
-                                    ? "Downpayment Paid ({$downpaymentRateLabel}%)"
+                                    ? "Partial Payment ({$downpaymentRateLabel}%)"
                                     : (($isDownpaymentOrder && $remainingBalance <= 0) ? 'Fully Paid ✓' : 'Paid ✓'),
                                 'verification_pending' => 'Awaiting Verification',
                                 'pending' => 'Pending',
@@ -513,7 +529,7 @@
                             @php
                                 $statusChip = match($effectivePaymentStatus) {
                                     'paid', 'verified' => $isDownpaymentPartialPaid
-                                        ? ["◐ Downpayment Paid ({$downpaymentRateLabel}%)", 'bg-amber-100 text-amber-800']
+                                        ? ["◐ Partial Payment ({$downpaymentRateLabel}%)", 'bg-amber-100 text-amber-800']
                                         : [($isDownpaymentOrder && $remainingBalance <= 0) ? '✓ Fully Paid' : '✓ Paid', 'bg-green-100 text-green-700'],
                                     'verification_pending' => ['⏳ Verification Pending', 'bg-yellow-100 text-yellow-800'],
                                     'pending' => ['⏳ Pending', 'bg-yellow-100 text-yellow-800'],

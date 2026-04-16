@@ -80,8 +80,25 @@
                                             ⏳ Pending
                                         @endif
                                     </span>
+                                    @php
+                                        $legacyPartialFromNotes = false;
+                                        if (strtolower((string) ($order->payment_option ?? 'full')) !== 'downpayment') {
+                                            $paymentNotes = (string) ($order->notes ?? '');
+                                            if (preg_match('/Downpayment received:\s*PHP\s*([0-9,]+(?:\.[0-9]{1,2})?)\s*;\s*remaining balance:\s*PHP\s*([0-9,]+(?:\.[0-9]{1,2})?)/i', $paymentNotes, $matches) === 1) {
+                                                $legacyPartialFromNotes = ((float) str_replace(',', '', $matches[2])) > 0;
+                                            }
+                                        }
+
+                                        $isPartialPaymentBadge = ($order->payment_status === 'paid' || $order->payment_status === 'verified')
+                                            && (
+                                                (strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment' && (float) ($order->remaining_balance ?? 0) > 0)
+                                                || $legacyPartialFromNotes
+                                            );
+                                    @endphp
                                     <span style="display: inline-flex; align-items: center; padding: 0.375rem 0.75rem; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); color: #166534; font-size: 0.75rem; font-weight: bold; border-radius: 9999px; border: 1px solid #86efac;">
-                                        @if($order->payment_status === 'paid' || $order->payment_status === 'verified')
+                                        @if($isPartialPaymentBadge)
+                                            ◐ Partial Payment
+                                        @elseif($order->payment_status === 'paid' || $order->payment_status === 'verified')
                                             💚 Paid
                                         @elseif($order->payment_status === 'pending')
                                             ⏳ Pending

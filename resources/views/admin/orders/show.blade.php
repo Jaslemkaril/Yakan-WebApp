@@ -26,6 +26,23 @@
     $downpaymentRate = (float) ($order->downpayment_rate ?? 0);
     $downpaymentAmount = (float) ($order->downpayment_amount ?? 0);
     $remainingBalance = (float) ($order->remaining_balance ?? 0);
+
+    if (!$isDownpayment) {
+        $paymentNotes = (string) ($order->notes ?? '');
+        if (preg_match('/Downpayment received:\s*PHP\s*([0-9,]+(?:\.[0-9]{1,2})?)\s*;\s*remaining balance:\s*PHP\s*([0-9,]+(?:\.[0-9]{1,2})?)/i', $paymentNotes, $matches) === 1) {
+            $isDownpayment = true;
+            $downpaymentAmount = (float) str_replace(',', '', $matches[1]);
+            $remainingBalance = (float) str_replace(',', '', $matches[2]);
+        }
+    }
+
+    if ($isDownpayment && $downpaymentRate <= 0) {
+        $totalAmountForRate = (float) ($order->total_amount ?? $order->total ?? 0);
+        if ($totalAmountForRate > 0 && $downpaymentAmount > 0) {
+            $downpaymentRate = ($downpaymentAmount / $totalAmountForRate) * 100;
+        }
+    }
+
     $isDownpaymentFullyPaid = $isDownpayment && $remainingBalance <= 0;
 @endphp
 <div class="max-w-7xl mx-auto p-6">

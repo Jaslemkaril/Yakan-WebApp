@@ -75,7 +75,6 @@
     @csrf
     <!-- radios above are bound here via form="checkout-form" -->
     <input type="hidden" name="confirm" value="1" />
-    <input type="hidden" name="payment_option" id="paymentOptionInput" value="{{ old('payment_option', 'full') }}" />
     <input type="hidden" name="coupon_code" id="coupon-code-input" value="{{ $appliedCoupon->code ?? '' }}" />
     <input type="hidden" name="discount_amount" id="discount-amount-input" value="{{ $discount ?? 0 }}" />
     <input type="hidden" name="coupon_applies_to" id="coupon-applies-to-input" value="{{ !empty($appliedCoupon) ? $appliedCoupon->getAppliesTo() : '' }}" />
@@ -393,22 +392,23 @@
                             <h3 class="text-sm font-bold text-gray-900 mb-3">Payment Plan</h3>
                             @php $selectedPaymentOption = old('payment_option', 'full'); @endphp
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <label class="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-all">
-                                    <input type="radio" name="payment_option_selector" value="full" {{ $selectedPaymentOption !== 'downpayment' ? 'checked' : '' }} class="mt-0.5 w-5 h-5" style="accent-color: #800000;">
+                                <label id="full-payment-option-label" class="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-all">
+                                    <input id="payment-option-full" type="radio" name="payment_option" value="full" form="checkout-form" {{ $selectedPaymentOption !== 'downpayment' ? 'checked' : '' }} class="mt-0.5 w-5 h-5" style="accent-color: #800000;">
                                     <span>
                                         <span class="block font-semibold text-gray-900">Full Payment</span>
                                         <span class="block text-xs text-gray-600">Pay 100% now at checkout.</span>
                                     </span>
                                 </label>
 
-                                <label class="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-all">
-                                    <input type="radio" name="payment_option_selector" value="downpayment" {{ $selectedPaymentOption === 'downpayment' ? 'checked' : '' }} class="mt-0.5 w-5 h-5" style="accent-color: #800000;">
+                                <label id="downpayment-option-label" class="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-all">
+                                    <input id="payment-option-downpayment" type="radio" name="payment_option" value="downpayment" form="checkout-form" {{ $selectedPaymentOption === 'downpayment' ? 'checked' : '' }} class="mt-0.5 w-5 h-5" style="accent-color: #800000;">
                                     <span>
                                         <span class="block font-semibold text-gray-900">50% Downpayment</span>
-                                        <span class="block text-xs text-gray-600">Pay 50% now and settle the remaining 50% before release/shipping.</span>
+                                        <span class="block text-xs text-gray-600">Pay 50% now and settle the remaining 50% before order release.</span>
                                     </span>
                                 </label>
                             </div>
+                            <p id="downpaymentAvailabilityHint" class="text-xs text-gray-500 mt-2">Downpayment is available for pickup orders only.</p>
                         </div>
 
                         <script>
@@ -716,16 +716,49 @@ function parsePesoAmount(text) {
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function enforcePaymentPlanAvailabilityByDelivery() {
+    const deliveryType = document.querySelector('input[name="delivery_type"]:checked')?.value || 'delivery';
+    const fullRadio = document.getElementById('payment-option-full');
+    const downpaymentRadio = document.getElementById('payment-option-downpayment');
+    const downpaymentLabel = document.getElementById('downpayment-option-label');
+    const availabilityHint = document.getElementById('downpaymentAvailabilityHint');
+
+    if (!fullRadio || !downpaymentRadio) {
+        return;
+    }
+
+    const isDelivery = deliveryType === 'delivery';
+    downpaymentRadio.disabled = isDelivery;
+
+    if (isDelivery && downpaymentRadio.checked) {
+        fullRadio.checked = true;
+    }
+
+    if (downpaymentLabel) {
+        downpaymentLabel.classList.toggle('opacity-60', isDelivery);
+        downpaymentLabel.classList.toggle('cursor-not-allowed', isDelivery);
+        downpaymentLabel.classList.toggle('pointer-events-none', isDelivery);
+        downpaymentLabel.classList.toggle('bg-gray-50', isDelivery);
+    }
+
+    if (availabilityHint) {
+        availabilityHint.textContent = isDelivery
+            ? 'Downpayment is disabled for delivery orders. Select pickup to enable it.'
+            : 'Downpayment is available because pickup is selected.';
+    }
+}
+
 function updatePaymentPlanSummary() {
+    enforcePaymentPlanAvailabilityByDelivery();
+
     const totalEl = document.getElementById('finalTotalDisplay');
     const payNowLabel = document.getElementById('payNowLabel');
     const payNowDisplay = document.getElementById('payNowDisplay');
     const remainingRow = document.getElementById('remainingBalanceRow');
     const remainingDisplay = document.getElementById('remainingBalanceDisplay');
     const paymentPlanHint = document.getElementById('paymentPlanHint');
-    const selectedOption = document.querySelector('input[name="payment_option_selector"]:checked')?.value || 'full';
+    const selectedOption = document.querySelector('input[name="payment_option"]:checked')?.value || 'full';
     const downpaymentRateInput = document.getElementById('downpaymentRateInput');
-    const paymentOptionInput = document.getElementById('paymentOptionInput');
 
     if (!totalEl || !payNowDisplay) {
         return;
@@ -757,10 +790,6 @@ function updatePaymentPlanSummary() {
 
     if (downpaymentRateInput) {
         downpaymentRateInput.value = isDownpayment ? '50' : '';
-    }
-
-    if (paymentOptionInput) {
-        paymentOptionInput.value = isDownpayment ? 'downpayment' : 'full';
     }
 }
 
@@ -972,6 +1001,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             const discount = Math.min(rawDiscount, activeFee);
             if (totalEl) totalEl.textContent = '₱' + (subtotal + activeFee - discount).toFixed(2);
+            enforcePaymentPlanAvailabilityByDelivery();
             updatePaymentPlanSummary();
             
             // Update visual styling for selected option
@@ -996,7 +1026,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const paymentSection = document.getElementById('payment-method-section');
     const placeOrderButton = document.getElementById('place-order-button');
 
-    document.querySelectorAll('input[name="payment_option_selector"]').forEach(function(radio) {
+    document.querySelectorAll('input[name="payment_option"]').forEach(function(radio) {
         radio.addEventListener('change', updatePaymentPlanSummary);
     });
 
@@ -1008,6 +1038,7 @@ document.addEventListener('DOMContentLoaded', function() {
         totalObserver.observe(finalTotalDisplayEl, { childList: true, characterData: true, subtree: true });
     }
 
+    enforcePaymentPlanAvailabilityByDelivery();
     updatePaymentPlanSummary();
 
     // Handle Place Order button click
