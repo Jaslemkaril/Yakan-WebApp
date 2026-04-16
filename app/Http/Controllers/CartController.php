@@ -20,6 +20,22 @@ use Illuminate\Support\Facades\Schema;
 
 class CartController extends Controller
 {
+    private function cartProductRelations(): array
+    {
+        $relations = [
+            'product.inventory',
+            'product.variants',
+            'variant',
+        ];
+
+        if (Schema::hasTable('product_bundle_items')) {
+            $relations[] = 'product.bundleItems.componentProduct.inventory';
+            $relations[] = 'product.bundleItems.componentProduct.variants';
+        }
+
+        return $relations;
+    }
+
     private function getActiveVariants(Product $product)
     {
         if ($product->relationLoaded('variants')) {
@@ -359,13 +375,7 @@ class CartController extends Controller
             }
             $subtotal = $product ? $this->getEffectiveUnitPrice($product, $variant) * ($bni['quantity'] ?? 1) : 0;
         } else {
-            $cartItems = Cart::with([
-                'product.inventory',
-                'product.variants',
-                'product.bundleItems.componentProduct.inventory',
-                'product.bundleItems.componentProduct.variants',
-                'variant'
-            ])->where('user_id', Auth::id())->get();
+            $cartItems = Cart::with($this->cartProductRelations())->where('user_id', Auth::id())->get();
             $subtotal  = $cartItems->sum(function ($item) {
                 if (!$item->product) {
                     return 0;
@@ -700,13 +710,7 @@ class CartController extends Controller
         }
 
         // Handle regular cart item (database-based)
-        $cartItem = Cart::with([
-                        'product.inventory',
-                        'product.variants',
-                        'product.bundleItems.componentProduct.inventory',
-                        'product.bundleItems.componentProduct.variants',
-                        'variant'
-                    ])
+        $cartItem = Cart::with($this->cartProductRelations())
                         ->where('id', $id)
                         ->where('user_id', Auth::id())
                         ->first();
@@ -735,13 +739,7 @@ class CartController extends Controller
             $itemSubtotal = $cartItem->quantity * $this->getEffectiveUnitPrice($cartItem->product, $cartItem->variant);
             
             // Get all cart items and calculate totals
-            $allCartItems = Cart::with([
-                'product.inventory',
-                'product.variants',
-                'product.bundleItems.componentProduct.inventory',
-                'product.bundleItems.componentProduct.variants',
-                'variant'
-            ])->where('user_id', Auth::id())->get();
+            $allCartItems = Cart::with($this->cartProductRelations())->where('user_id', Auth::id())->get();
             $cartTotal = $allCartItems->sum(function($item) {
                 if (!$item->product) {
                     return 0;
@@ -870,13 +868,7 @@ class CartController extends Controller
             $subtotal = $this->getEffectiveUnitPrice($product, $variant) * $buyNowItem['quantity'];
         } else {
             // Regular cart checkout
-            $cartItems = Cart::with([
-                            'product.inventory',
-                            'product.variants',
-                            'product.bundleItems.componentProduct.inventory',
-                            'product.bundleItems.componentProduct.variants',
-                            'variant'
-                        ])
+            $cartItems = Cart::with($this->cartProductRelations())
                             ->where('user_id', Auth::id())
                             ->get();
 
@@ -1031,13 +1023,7 @@ class CartController extends Controller
             ]);
         } else {
             // Regular cart checkout
-            $cartItems = Cart::with([
-                'product.inventory',
-                'product.variants',
-                'product.bundleItems.componentProduct.inventory',
-                'product.bundleItems.componentProduct.variants',
-                'variant'
-            ])->where('user_id', $userId)->get();
+            $cartItems = Cart::with($this->cartProductRelations())->where('user_id', $userId)->get();
 
             if ($cartItems->isEmpty()) {
                 return redirect()->back()->with('error', 'Your cart is empty.');

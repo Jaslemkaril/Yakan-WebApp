@@ -5,9 +5,52 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Schema;
 
 class ProductController extends Controller
 {
+    private function productRelationsForListing(): array
+    {
+        $relations = ['category', 'inventory'];
+
+        if (Schema::hasTable('product_bundle_items')) {
+            $relations[] = 'bundleItems.componentProduct';
+        }
+
+        return $relations;
+    }
+
+    private function productWithCountColumns(): array
+    {
+        $counts = ['reviews'];
+
+        if (Schema::hasTable('product_bundle_items')) {
+            $counts[] = 'bundleItems';
+        }
+
+        return $counts;
+    }
+
+    private function productDetailRelations(): array
+    {
+        $relations = [
+            'inventory',
+            'variants' => function ($query) {
+                $query->where('is_active', true)
+                    ->orderBy('size')
+                    ->orderBy('color')
+                    ->orderBy('id');
+            },
+        ];
+
+        if (Schema::hasTable('product_bundle_items')) {
+            $relations[] = 'bundleItems.componentProduct';
+        }
+
+        return $relations;
+    }
+
     /**
      * Display a listing of all active products for the shop.
      *
@@ -15,6 +58,24 @@ class ProductController extends Controller
      */
     public function shopIndex(Request $request)
     {
+        if (!Schema::hasTable('products') || !Schema::hasTable('categories')) {
+            $products = new LengthAwarePaginator(
+                collect(),
+                0,
+                12,
+                max(1, (int) $request->input('page', 1)),
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+
+            return view('products.index', [
+                'products' => $products,
+                'categories' => collect(),
+                'selectedCategory' => null,
+                'wishlistProductIds' => [],
+                'priceStats' => (object) ['min_p' => null, 'max_p' => null],
+            ]);
+        }
+
         // Get all categories with product counts
         $categories = Category::withCount(['products' => function($query) {
             $query->where('status', 'active');
@@ -62,7 +123,11 @@ class ProductController extends Controller
         }
 
         // Fetch products with pagination and category relationship
-        $products = $query->with(['category', 'inventory'])->withCount('reviews')->paginate(12)->appends($request->all());
+        $products = $query
+            ->with($this->productRelationsForListing())
+            ->withCount($this->productWithCountColumns())
+            ->paginate(12)
+            ->appends($request->all());
 
         // Get wishlist items if user is authenticated
         $wishlistProductIds = [];
@@ -97,15 +162,7 @@ class ProductController extends Controller
     {
         try {
             // Eager load inventory + active variants for storefront rendering.
-            $product->load([
-                'inventory',
-                'variants' => function ($query) {
-                    $query->where('is_active', true)
-                        ->orderBy('size')
-                        ->orderBy('color')
-                        ->orderBy('id');
-                },
-            ]);
+            $product->load($this->productDetailRelations());
 
             $activeVariants = $product->variants->values();
             $hasVariants = $activeVariants->isNotEmpty();
@@ -188,6 +245,23 @@ class ProductController extends Controller
      */
     public function byCategory($category)
     {
+        if (!Schema::hasTable('products') || !Schema::hasTable('categories')) {
+            $products = new LengthAwarePaginator(
+                collect(),
+                0,
+                12,
+                1,
+                ['path' => route('products.index')]
+            );
+
+            return view('products.index', [
+                'products' => $products,
+                'categories' => collect(),
+                'selectedCategory' => null,
+                'wishlistProductIds' => [],
+            ]);
+        }
+
         // Get all categories with product counts
         $categories = Category::withCount(['products' => function($query) {
             $query->where('status', 'active');
@@ -196,17 +270,24 @@ class ProductController extends Controller
         // Find the category by slug
         $selectedCategory = null;
         if ($category === 'all') {
-            $products = Product::where('status', 'active')->with(['category', 'inventory'])->paginate(12);
+            $products = Product::where('status', 'active')
+                ->with($this->productRelationsForListing())
+                ->withCount($this->productWithCountColumns())
+                ->paginate(12);
         } else {
             $selectedCategory = Category::where('slug', $category)->first();
             if ($selectedCategory) {
                 $products = Product::where('category_id', $selectedCategory->id)
                                     ->where('status', 'active')
-                                    ->with(['category', 'inventory'])
+                                    ->with($this->productRelationsForListing())
+                                    ->withCount($this->productWithCountColumns())
                                     ->paginate(12);
             } else {
                 // Fallback to all if category not found
-                $products = Product::where('status', 'active')->with(['category', 'inventory'])->paginate(12);
+                $products = Product::where('status', 'active')
+                    ->with($this->productRelationsForListing())
+                    ->withCount($this->productWithCountColumns())
+                    ->paginate(12);
             }
         }
 
@@ -231,6 +312,21 @@ class ProductController extends Controller
     public function search(Request $request)
     {
         try {
+            if (!Schema::hasTable('products') || !Schema::hasTable('categories')) {
+                return view('products.search', [
+                    'products' => new LengthAwarePaginator(
+                        collect(),
+                        0,
+                        12,
+                        max(1, (int) $request->input('page', 1)),
+                        ['path' => $request->url(), 'query' => $request->query()]
+                    ),
+                    'categories' => collect(),
+                    'selectedCategory' => null,
+                    'query' => $request->input('q', ''),
+                ]);
+            }
+
             $query = $request->input('q', '');
             $category = $request->input('category');
             $minPrice = $request->input('min_price');
@@ -298,7 +394,11 @@ class ProductController extends Controller
                     $productsQuery->orderBy('created_at', 'desc');
             }
 
-            $products = $productsQuery->with(['category', 'inventory'])->paginate(12)->appends($request->all());
+            $products = $productsQuery
+                ->with($this->productRelationsForListing())
+                ->withCount($this->productWithCountColumns())
+                ->paginate(12)
+                ->appends($request->all());
 
             $selectedCategory = null;
             if (!empty($category) && $category !== 'all') {
