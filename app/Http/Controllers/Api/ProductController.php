@@ -244,18 +244,22 @@ class ProductController extends Controller
         }
     }
 
-    public function show(Product $product): JsonResponse
+    public function show($id): JsonResponse
     {
-        $cacheKey = "product:{$product->id}";
+        $productId = (int) $id;
+        $cacheKey = "product:{$productId}";
         
-        $product = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 7200), function () use ($product) {
-            $product->load([
+        $product = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 7200), function () use ($productId) {
+            $productModel = Product::query()->findOrFail($productId);
+
+            $productModel->load([
                 'category',
                 'orderItems',
                 'inventory',
                 'variants:id,product_id,size,color,price,stock,is_active',
             ]);
-            return $this->decorateProduct($product, true);
+
+            return $this->decorateProduct($productModel, true);
         });
 
         return response()->json([
