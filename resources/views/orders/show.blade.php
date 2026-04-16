@@ -582,6 +582,23 @@
                     </div>
                     
                     <div class="space-y-4 mb-6">
+                        @php
+                            $summaryTotalAmount = (float) ($order->total_amount ?? $order->total ?? 0);
+                            $summaryDownpaymentAmount = (float) ($order->downpayment_amount ?? 0);
+                            if ($summaryDownpaymentAmount <= 0 && !empty($notesDownpaymentAmount ?? 0)) {
+                                $summaryDownpaymentAmount = (float) $notesDownpaymentAmount;
+                            }
+
+                            $summaryRemainingBalance = max(0, (float) ($order->remaining_balance ?? 0));
+                            if ($summaryRemainingBalance <= 0 && !empty($notesRemainingBalance ?? 0)) {
+                                $summaryRemainingBalance = (float) $notesRemainingBalance;
+                            }
+
+                            if ($summaryDownpaymentAmount <= 0 && !empty($isDownpaymentPartialPaid) && $summaryTotalAmount > 0) {
+                                $summaryDownpaymentAmount = round($summaryTotalAmount * (($downpaymentRate ?? 50) / 100), 2);
+                                $summaryRemainingBalance = max(0, round($summaryTotalAmount - $summaryDownpaymentAmount, 2));
+                            }
+                        @endphp
                         <div class="flex justify-between text-gray-700">
                             <span class="font-medium">Subtotal</span>
                             <span class="font-bold">₱{{ number_format($order->subtotal, 2) }}</span>
@@ -600,6 +617,19 @@
                             <span class="font-bold text-gray-900">Total</span>
                             <span class="text-2xl font-bold text-[#800000]">₱{{ number_format($order->total_amount ?? $order->total, 2) }}</span>
                         </div>
+
+                        @if(!empty($isDownpaymentPartialPaid))
+                            <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+                                <div class="flex justify-between text-sm text-amber-900">
+                                    <span class="font-semibold">Pay Now ({{ $downpaymentRateLabel ?? '50' }}%)</span>
+                                    <span class="font-bold">₱{{ number_format($summaryDownpaymentAmount, 2) }}</span>
+                                </div>
+                                <div class="flex justify-between text-sm text-gray-700 pt-2 border-t border-amber-200">
+                                    <span class="font-medium">Remaining Balance</span>
+                                    <span class="font-bold">₱{{ number_format($summaryRemainingBalance, 2) }}</span>
+                                </div>
+                            </div>
+                        @endif
                     </div>
 
                     <!-- Customer Info -->
