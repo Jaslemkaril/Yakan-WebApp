@@ -7,8 +7,10 @@ use App\Models\Order;
 use App\Models\CustomOrder;
 use App\Models\OrderItem;
 use App\Models\Product;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Services\CloudinaryService;
 
 class ReviewController extends Controller
@@ -179,6 +181,15 @@ class ReviewController extends Controller
             ->where('user_id', Auth::id())
             ->first();
 
+        // Resolve a product reference for compatibility with schemas where product_id is non-null.
+        $resolvedProductId = $customOrder->product_id;
+
+        if (empty($resolvedProductId) && !empty($customOrder->product_type)) {
+            $resolvedProductId = Product::query()
+                ->whereRaw('LOWER(name) = ?', [strtolower(trim((string) $customOrder->product_type))])
+                ->value('id');
+        }
+
         if ($existingReview) {
             // Update existing review
             $existingReview->update(array_merge($validated, [
@@ -186,18 +197,74 @@ class ReviewController extends Controller
             ]));
             $message = 'Review updated successfully!';
         } else {
-            // Create new review
-            Review::create([
-                'user_id' => Auth::id(),
-                'product_id' => $customOrder->product_id,
-                'custom_order_id' => $customOrder->id,
-                'rating' => $validated['rating'],
-                'title' => $validated['title'],
-                'comment' => $validated['comment'],
-                'review_images' => $imageUrls,
-                'verified_purchase' => true,
-            ]);
-            $message = 'Review submitted successfully!';
+            try {
+                // Respect the user+product unique key by updating an existing product review if present.
+                if (!empty($resolvedProductId)) {
+                    $existingProductReview = Review::where('user_id', Auth::id())
+                        ->where('product_id', $resolvedProductId)
+                        ->first();
+
+                    if ($existingProductReview) {
+                        $existingProductReview->update([
+                            'custom_order_id' => $customOrder->id,
+                            'rating' => $validated['rating'],
+                            'title' => $validated['title'] ?? null,
+                            'comment' => $validated['comment'] ?? null,
+                            'review_images' => !empty($imageUrls) ? $imageUrls : ($existingProductReview->review_images ?? []),
+                            'verified_purchase' => true,
+                        ]);
+
+                        $message = 'Review updated successfully!';
+
+                        return redirect()->route('custom_orders.show', $customOrder)
+                            ->with('success', $message);
+                    }
+                }
+
+                // Create new review (works with both nullable and non-nullable product_id schemas).
+                Review::create([
+                    'user_id' => Auth::id(),
+                    'product_id' => $resolvedProductId,
+                    'custom_order_id' => $customOrder->id,
+                    'rating' => $validated['rating'],
+                    'title' => $validated['title'] ?? null,
+                    'comment' => $validated['comment'] ?? null,
+                    'review_images' => $imageUrls,
+                    'verified_purchase' => true,
+                ]);
+                $message = 'Review submitted successfully!';
+            } catch (QueryException $e) {
+                $sqlState = (string) ($e->errorInfo[0] ?? '');
+                $driverCode = (string) ($e->errorInfo[1] ?? '');
+                $errorText = strtolower($e->getMessage());
+
+                Log::warning('Custom order review insert failed', [
+                    'custom_order_id' => $customOrder->id,
+                    'user_id' => Auth::id(),
+                    'resolved_product_id' => $resolvedProductId,
+                    'sql_state' => $sqlState,
+                    'driver_code' => $driverCode,
+                    'message' => $e->getMessage(),
+                ]);
+
+                // Gracefully handle strict deployments where reviews.product_id is still required.
+                if (($sqlState === '23000' || $driverCode === '1048') && str_contains($errorText, 'product_id')) {
+                    return redirect()->back()->withInput()->with(
+                        'error',
+                        'This custom order cannot be reviewed yet because it has no linked product. Please contact support to link the product first.'
+                    );
+                }
+
+                // Gracefully handle user+product unique collisions.
+                if ($sqlState === '23000' && ($driverCode === '1062' || str_contains($errorText, 'duplicate'))) {
+                    return redirect()->back()->withInput()->with(
+                        'error',
+                        'You already have a review for this product. Please edit your existing review instead.'
+                    );
+                }
+
+                throw $e;
+            }
         }
 
         return redirect()->route('custom_orders.show', $customOrder)
