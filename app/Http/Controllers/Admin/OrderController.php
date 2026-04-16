@@ -658,8 +658,13 @@ class OrderController extends Controller
     }
 
     // Cancel order
-    public function cancel(Order $order)
+    public function cancel(Request $request, Order $order)
     {
+        $validated = $request->validate([
+            'cancel_reason' => 'required|string|max:255',
+        ]);
+
+        $cancelReason = trim((string) $validated['cancel_reason']);
         $currentStatus = strtolower((string) $order->status);
 
         if (in_array($currentStatus, ['delivered', 'completed', 'refunded'], true)) {
@@ -672,17 +677,110 @@ class OrderController extends Controller
 
         $currentPaymentStatus = strtolower((string) $order->payment_status);
         $wasPaid = in_array($currentPaymentStatus, ['paid', 'verified'], true);
+        $refundProcessStarted = false;
+
+        if ($wasPaid) {
+            $this->ensureRefundRequestsTableExists();
+            $this->ensureRefundWorkflowColumnsExist();
+
+            if (Schema::hasTable('order_refund_requests') && !empty($order->user_id)) {
+                $activeStatuses = ['requested', 'under_review', 'approved', 'processed'];
+                $activeWorkflowStatuses = [
+                    'pending_review',
+                    'under_review',
+                    'awaiting_return_shipment',
+                    'return_in_transit',
+                    'return_received',
+                    'pending_payout',
+                    'approved',
+                    'processed',
+                ];
+
+                $existingRefund = OrderRefundRequest::where('order_id', $order->id)
+                    ->where('user_id', $order->user_id)
+                    ->where(function ($query) use ($activeStatuses, $activeWorkflowStatuses) {
+                        $query->whereIn('status', $activeStatuses);
+
+                        if (Schema::hasColumn('order_refund_requests', 'workflow_status')) {
+                            $query->orWhereIn('workflow_status', $activeWorkflowStatuses);
+                        }
+                    })
+                    ->latest()
+                    ->first();
+
+                if (!$existingRefund) {
+                    $totalAmount = (float) ($order->total_amount ?? $order->total ?? 0);
+                    $refundPayload = [
+                        'order_id' => $order->id,
+                        'user_id' => (int) $order->user_id,
+                        'reason' => 'Order cancellation by admin',
+                        'details' => 'Auto-generated admin cancellation refund request. Reason: ' . $cancelReason,
+                        'status' => 'requested',
+                    ];
+
+                    if (Schema::hasColumn('order_refund_requests', 'requested_at')) {
+                        $refundPayload['requested_at'] = now();
+                    }
+                    if (Schema::hasColumn('order_refund_requests', 'refund_type')) {
+                        $refundPayload['refund_type'] = 'full';
+                    }
+                    if (Schema::hasColumn('order_refund_requests', 'comment')) {
+                        $refundPayload['comment'] = 'Order cancelled by admin before fulfillment: ' . $cancelReason;
+                    }
+                    if (Schema::hasColumn('order_refund_requests', 'workflow_status')) {
+                        $refundPayload['workflow_status'] = 'pending_review';
+                    }
+                    if (Schema::hasColumn('order_refund_requests', 'recommended_decision')) {
+                        $refundPayload['recommended_decision'] = 'FULL_REFUND';
+                    }
+                    if (Schema::hasColumn('order_refund_requests', 'recommended_refund_amount')) {
+                        $refundPayload['recommended_refund_amount'] = $totalAmount;
+                    }
+                    if (Schema::hasColumn('order_refund_requests', 'return_required')) {
+                        $refundPayload['return_required'] = false;
+                    }
+                    if (Schema::hasColumn('order_refund_requests', 'payout_status')) {
+                        $refundPayload['payout_status'] = 'pending';
+                    }
+
+                    OrderRefundRequest::create($refundPayload);
+                }
+
+                $refundProcessStarted = true;
+            }
+        }
+
+        $paymentNote = $wasPaid
+            ? ($refundProcessStarted
+                ? 'Payment was received. Refund request is now pending admin review and payout processing.'
+                : 'Payment was received. Please process refund manually because no customer refund record was created.')
+            : 'No completed payment was recorded, so no refund action is needed.';
 
         $order->status = 'cancelled';
         $order->payment_status = $wasPaid ? $order->payment_status : 'failed';
         $order->cancelled_at = now();
         $order->tracking_status = 'Cancelled';
-        $order->appendTrackingEvent('Cancelled');
-        if ($wasPaid) {
-            $order->admin_notes = trim((string) $order->admin_notes);
-            $order->admin_notes = ($order->admin_notes !== '' ? $order->admin_notes . "\n" : '')
-                . 'Order cancelled by admin. Payment received; refund must be processed separately.';
+        $order->appendTrackingEvent('Cancelled - Reason: ' . $cancelReason);
+
+        $existingNotes = trim((string) $order->notes);
+        $reasonLine = 'Cancellation reason: ' . $cancelReason;
+        if (!str_contains($existingNotes, $reasonLine)) {
+            $existingNotes = $existingNotes !== '' ? ($existingNotes . "\n" . $reasonLine) : $reasonLine;
         }
+        $order->notes = $existingNotes;
+
+        $existingAdminNotes = trim((string) $order->admin_notes);
+        $adminReasonLine = 'Cancelled by admin. Reason: ' . $cancelReason;
+        if (!str_contains($existingAdminNotes, $adminReasonLine)) {
+            $existingAdminNotes = $existingAdminNotes !== ''
+                ? ($existingAdminNotes . "\n" . $adminReasonLine)
+                : $adminReasonLine;
+        }
+        $existingAdminNotes = $existingAdminNotes !== ''
+            ? ($existingAdminNotes . "\n" . $paymentNote)
+            : $paymentNote;
+        $order->admin_notes = trim($existingAdminNotes);
+
         $order->save();
 
         foreach ($order->orderItems as $item) {
@@ -693,11 +791,67 @@ class OrderController extends Controller
             }
         }
 
-        $this->notifyOrderCancellationByAdmin($order);
+        $this->notifyOrderCancellationByAdmin($order, $cancelReason, $paymentNote);
 
-        return redirect()->back()->with('success', $wasPaid
-            ? 'Order cancelled. Payment remains marked as paid until refund payout is processed.'
-            : 'Order cancelled successfully.');
+        return redirect()->back()->with('success', ($wasPaid && $refundProcessStarted)
+            ? 'Order cancelled. Refund request has started and is now pending review.'
+            : ($wasPaid
+                ? 'Order cancelled. Payment remains marked as paid until refund payout is processed.'
+                : 'Order cancelled successfully.'));
+    }
+
+    /**
+     * Ensure refund requests table exists for deployments with delayed migrations.
+     */
+    private function ensureRefundRequestsTableExists(): void
+    {
+        if (Schema::hasTable('order_refund_requests')) {
+            return;
+        }
+
+        try {
+            Schema::create('order_refund_requests', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $table->id();
+                $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
+                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+                $table->string('refund_type', 40)->nullable();
+                $table->string('reason', 150);
+                $table->text('comment')->nullable();
+                $table->text('details')->nullable();
+                $table->json('evidence_paths')->nullable();
+                $table->enum('status', ['requested', 'under_review', 'approved', 'rejected', 'processed'])
+                    ->default('requested');
+                $table->string('workflow_status', 60)->nullable();
+                $table->json('system_validation')->nullable();
+                $table->json('fraud_flags')->nullable();
+                $table->string('fraud_risk_level', 20)->nullable();
+                $table->string('recommended_decision', 40)->nullable();
+                $table->decimal('recommended_refund_amount', 12, 2)->nullable();
+                $table->boolean('return_required')->default(false);
+                $table->string('final_decision', 40)->nullable();
+                $table->decimal('refund_amount', 12, 2)->nullable();
+                $table->string('refund_channel', 40)->nullable();
+                $table->string('refund_reference', 120)->nullable();
+                $table->string('payout_status', 40)->nullable();
+                $table->string('return_tracking_number', 120)->nullable();
+                $table->timestamp('return_shipped_at')->nullable();
+                $table->timestamp('return_received_at')->nullable();
+                $table->text('admin_note')->nullable();
+                $table->decimal('approved_amount', 12, 2)->nullable();
+                $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->timestamp('requested_at')->nullable();
+                $table->timestamp('reviewed_at')->nullable();
+                $table->timestamp('processed_at')->nullable();
+                $table->timestamps();
+
+                $table->index(['order_id', 'status']);
+                $table->index(['user_id', 'status']);
+            });
+        } catch (\Throwable $e) {
+            Log::warning('Unable to auto-create order_refund_requests table from admin order controller', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -752,7 +906,7 @@ class OrderController extends Controller
     /**
      * Notify customer when admin cancels an order.
      */
-    private function notifyOrderCancellationByAdmin(Order $order): void
+    private function notifyOrderCancellationByAdmin(Order $order, string $cancelReason, string $paymentNote): void
     {
         $recipient = $order->user?->email ?: $order->customer_email;
         if (!$recipient) {
@@ -774,10 +928,10 @@ class OrderController extends Controller
                     'orderId' => $order->id,
                     'requestType' => 'Order Cancellation',
                     'decision' => 'Approved',
-                    'reason' => null,
+                    'reason' => $cancelReason,
                     'adminNote' => $order->admin_notes,
                     'approvedAmount' => null,
-                    'extraMessage' => 'Payment status: ' . strtoupper((string) $order->payment_status),
+                    'extraMessage' => $paymentNote . ' Payment status: ' . strtoupper((string) $order->payment_status),
                 ]
             );
         } catch (\Throwable $e) {

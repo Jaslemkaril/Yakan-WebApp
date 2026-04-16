@@ -6,6 +6,22 @@
         @php
             $canCancelOrder = in_array(strtolower((string) $order->status), ['pending', 'pending_confirmation', 'confirmed', 'processing'], true);
             $showCancelForm = $errors->has('cancel_reason') || !empty(old('cancel_reason'));
+
+            $cancellationReason = null;
+            $cancellationSourceText = trim((string) ($order->notes ?? '')) . "\n" . trim((string) ($order->admin_notes ?? ''));
+            $cancellationReasonPatterns = [
+                '/Cancellation reason:\s*(.+)$/mi',
+                '/Cancelled by admin\.\s*Reason:\s*(.+)$/mi',
+                '/Customer cancel request approved:\s*(.+)$/mi',
+                '/Customer order cancelled\.\s*Refund pending review\.\s*Reason:\s*(.+)$/mi',
+            ];
+
+            foreach ($cancellationReasonPatterns as $pattern) {
+                if (preg_match($pattern, $cancellationSourceText, $cancelMatches) === 1) {
+                    $cancellationReason = trim((string) $cancelMatches[1]);
+                    break;
+                }
+            }
         @endphp
         <!-- Header -->
         <div class="mb-8">
@@ -121,6 +137,24 @@
                 </div>
             </div>
         </div>
+
+        @if(strtolower((string) ($order->status ?? '')) === 'cancelled')
+        <div class="mb-8 bg-red-50 border border-red-200 rounded-xl p-5">
+            <div class="flex items-center gap-3">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+                <div>
+                    <p class="text-sm font-bold text-red-700">Order Cancelled</p>
+                    @if(!empty($cancellationReason))
+                        <p class="text-sm text-red-700 mt-1"><span class="font-semibold">Reason:</span> {{ $cancellationReason }}</p>
+                    @else
+                        <p class="text-sm text-red-700 mt-1">This order was cancelled by the store team.</p>
+                    @endif
+                </div>
+            </div>
+        </div>
+        @endif
 
         <!-- Customer Action Buttons -->
         @if($canCancelOrder)

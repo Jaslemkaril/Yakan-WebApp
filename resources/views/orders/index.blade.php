@@ -81,6 +81,21 @@
                                         @endif
                                     </span>
                                     @php
+                                        $cancellationReason = null;
+                                        $cancellationSourceText = trim((string) ($order->notes ?? '')) . "\n" . trim((string) ($order->admin_notes ?? ''));
+                                        $cancellationReasonPatterns = [
+                                            '/Cancellation reason:\s*(.+)$/mi',
+                                            '/Cancelled by admin\.\s*Reason:\s*(.+)$/mi',
+                                            '/Customer cancel request approved:\s*(.+)$/mi',
+                                            '/Customer order cancelled\.\s*Refund pending review\.\s*Reason:\s*(.+)$/mi',
+                                        ];
+                                        foreach ($cancellationReasonPatterns as $pattern) {
+                                            if (preg_match($pattern, $cancellationSourceText, $cancelMatches) === 1) {
+                                                $cancellationReason = trim((string) $cancelMatches[1]);
+                                                break;
+                                            }
+                                        }
+
                                         $legacyPartialFromNotes = false;
                                         if (strtolower((string) ($order->payment_option ?? 'full')) !== 'downpayment') {
                                             $paymentNotes = (string) ($order->notes ?? '');
@@ -108,6 +123,12 @@
                                     </span>
                                 </div>
                             </div>
+
+                            @if($order->status === 'cancelled' && !empty($cancellationReason))
+                                <div style="margin-top: -0.5rem; margin-bottom: 1rem; padding: 0.625rem 0.875rem; border-radius: 0.75rem; border: 1px solid #fecaca; background: #fef2f2; color: #991b1b; font-size: 0.8rem;">
+                                    <strong>Cancellation reason:</strong> {{ $cancellationReason }}
+                                </div>
+                            @endif
 
                             <!-- Product Images -->
                             <div style="display: flex; gap: 0.5rem; overflow-x: auto; margin-bottom: 1.5rem; padding-bottom: 0.5rem;">

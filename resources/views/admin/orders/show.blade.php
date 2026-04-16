@@ -43,6 +43,22 @@
         }
     }
 
+    $cancellationReason = null;
+    $cancellationSourceText = trim((string) ($order->notes ?? '')) . "\n" . trim((string) ($order->admin_notes ?? ''));
+    $cancellationReasonPatterns = [
+        '/Cancellation reason:\s*(.+)$/mi',
+        '/Cancelled by admin\.\s*Reason:\s*(.+)$/mi',
+        '/Customer cancel request approved:\s*(.+)$/mi',
+        '/Customer order cancelled\.\s*Refund pending review\.\s*Reason:\s*(.+)$/mi',
+    ];
+
+    foreach ($cancellationReasonPatterns as $pattern) {
+        if (preg_match($pattern, $cancellationSourceText, $cancelMatches) === 1) {
+            $cancellationReason = trim((string) $cancelMatches[1]);
+            break;
+        }
+    }
+
     $isDownpaymentFullyPaid = $isDownpayment && $remainingBalance <= 0;
 @endphp
 <div class="max-w-7xl mx-auto p-6">
@@ -658,6 +674,9 @@
                     </svg>
                     <span class="text-sm font-semibold text-red-700">This order has been cancelled</span>
                 </div>
+                @if(!empty($cancellationReason))
+                    <p class="text-xs text-red-700 mt-2"><span class="font-semibold">Reason:</span> {{ $cancellationReason }}</p>
+                @endif
             </div>
         @endif
     </div>
@@ -982,8 +1001,18 @@
                 
                 <!-- Cancel Order -->
                 @if($canCancelOrder)
-                <form action="{{ route('admin.orders.cancel', $order->id) }}" method="POST">
+                <form action="{{ route('admin.orders.cancel', $order->id) }}" method="POST" class="space-y-2">
                     @csrf
+                    <select name="cancel_reason" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option value="">Select cancellation reason</option>
+                        <option value="Customer requested cancellation">Customer requested cancellation</option>
+                        <option value="Item unavailable">Item unavailable</option>
+                        <option value="Pricing/stock mismatch">Pricing/stock mismatch</option>
+                        <option value="Fraud risk detected">Fraud risk detected</option>
+                        <option value="Delivery issue">Delivery issue</option>
+                        <option value="Payment validation failed">Payment validation failed</option>
+                        <option value="Other">Other</option>
+                    </select>
                     <button type="submit" onclick="return confirm('Are you sure you want to cancel this order?');" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium flex items-center justify-center">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
