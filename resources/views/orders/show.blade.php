@@ -63,9 +63,33 @@
                             $effectivePaymentStatus = ($hasProof && $order->payment_status === 'pending')
                                 ? 'verification_pending'
                                 : $order->payment_status;
+                            $totalAmountForPayment = (float) ($order->total_amount ?? $order->total ?? 0);
+                            $remainingBalance = max(0, (float) ($order->remaining_balance ?? 0));
+                            $isDownpaymentOrder = strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment';
+                            $isDownpaymentPartialPaid = in_array($effectivePaymentStatus, ['paid', 'verified'], true)
+                                && $isDownpaymentOrder
+                                && $remainingBalance > 0;
+
+                            $downpaymentRate = (float) ($order->downpayment_rate ?? 0);
+                            if ($downpaymentRate <= 0 && $totalAmountForPayment > 0) {
+                                $downpaymentAmount = (float) ($order->downpayment_amount ?? 0);
+                                if ($downpaymentAmount > 0) {
+                                    $downpaymentRate = ($downpaymentAmount / $totalAmountForPayment) * 100;
+                                }
+                            }
+                            if ($downpaymentRate <= 0) {
+                                $downpaymentRate = 50;
+                            }
+                            $downpaymentRate = max(0, min(100, $downpaymentRate));
+                            $downpaymentRateLabel = rtrim(rtrim(number_format($downpaymentRate, 2, '.', ''), '0'), '.');
+
                             $paymentStatusLabel = [
-                                'paid' => 'Paid ✓',
-                                'verified' => 'Paid ✓',
+                                'paid' => $isDownpaymentPartialPaid
+                                    ? "Downpayment Paid ({$downpaymentRateLabel}%)"
+                                    : (($isDownpaymentOrder && $remainingBalance <= 0) ? 'Fully Paid ✓' : 'Paid ✓'),
+                                'verified' => $isDownpaymentPartialPaid
+                                    ? "Downpayment Paid ({$downpaymentRateLabel}%)"
+                                    : (($isDownpaymentOrder && $remainingBalance <= 0) ? 'Fully Paid ✓' : 'Paid ✓'),
                                 'verification_pending' => 'Awaiting Verification',
                                 'pending' => 'Pending',
                                 'failed' => 'Failed',
@@ -488,7 +512,9 @@
                             <p class="text-xs text-gray-600 font-semibold uppercase mb-2">Payment Status</p>
                             @php
                                 $statusChip = match($effectivePaymentStatus) {
-                                    'paid', 'verified' => ['✓ Paid', 'bg-green-100 text-green-700'],
+                                    'paid', 'verified' => $isDownpaymentPartialPaid
+                                        ? ["◐ Downpayment Paid ({$downpaymentRateLabel}%)", 'bg-amber-100 text-amber-800']
+                                        : [($isDownpaymentOrder && $remainingBalance <= 0) ? '✓ Fully Paid' : '✓ Paid', 'bg-green-100 text-green-700'],
                                     'verification_pending' => ['⏳ Verification Pending', 'bg-yellow-100 text-yellow-800'],
                                     'pending' => ['⏳ Pending', 'bg-yellow-100 text-yellow-800'],
                                     default => ['✕ Failed', 'bg-red-100 text-red-700'],

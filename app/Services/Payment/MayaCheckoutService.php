@@ -305,6 +305,8 @@ class MayaCheckoutService
         }
 
         if ((string) $order->payment_status === 'paid' && $previousPaymentStatus !== 'paid') {
+            $paymentContext = $this->resolveOrderPaymentContext($order);
+
             $order->appendTrackingEvent('Maya payment confirmed (' . str_replace('_', ' ', $source) . ').');
             $order->save();
 
@@ -324,16 +326,27 @@ class MayaCheckoutService
 
             $admins = User::where('role', 'admin')->get();
             foreach ($admins as $admin) {
+                $adminMessage = 'Order #' . $order->id . ' was paid via Maya (' . $paymentContext['phase_label'] . '). '
+                    . 'Paid: ₱' . number_format((float) $paymentContext['paid_amount'], 2);
+
+                if ($paymentContext['is_partial']) {
+                    $adminMessage .= '. Remaining: ₱' . number_format((float) $paymentContext['remaining_amount'], 2);
+                }
+
                 Notification::createNotification(
                     $admin->id,
                     'payment',
                     'Maya payment received',
-                    'Order #' . $order->id . ' was paid via Maya. Amount: ₱' . number_format((float) ($order->total_amount ?? $order->total ?? 0), 2),
+                    $adminMessage,
                     url('/admin/orders/' . $order->id),
                     [
                         'order_id' => $order->id,
                         'payment_method' => 'maya',
                         'payment_status' => 'paid',
+                        'payment_phase' => $paymentContext['phase_label'],
+                        'is_partial_payment' => $paymentContext['is_partial'],
+                        'paid_amount' => $paymentContext['paid_amount'],
+                        'remaining_amount' => $paymentContext['remaining_amount'],
                         'source' => $source,
                     ]
                 );
@@ -358,6 +371,60 @@ class MayaCheckoutService
                 ]
             );
         }
+    }
+
+    private function resolveOrderPaymentContext(Order $order): array
+    {
+        $totalAmount = (float) ($order->total_amount ?? $order->total ?? 0);
+        $paymentOption = strtolower((string) ($order->payment_option ?? 'full'));
+        $remainingBalance = max(0, (float) ($order->remaining_balance ?? 0));
+        $isDownpaymentOrder = $paymentOption === 'downpayment';
+        $isPartialPayment = $isDownpaymentOrder && $remainingBalance > 0;
+
+        $downpaymentAmount = (float) ($order->downpayment_amount ?? 0);
+        $downpaymentRate = (float) ($order->downpayment_rate ?? 0);
+
+        if ($downpaymentAmount <= 0 && $totalAmount > 0) {
+            $resolvedRate = $downpaymentRate > 0 ? $downpaymentRate : 50;
+            $resolvedRate = min(99, max(1, $resolvedRate));
+            $downpaymentAmount = round($totalAmount * ($resolvedRate / 100), 2);
+        }
+
+        $paidAmount = $isPartialPayment ? $downpaymentAmount : $totalAmount;
+        if ($totalAmount > 0) {
+            $paidAmount = max(0, min($totalAmount, $paidAmount));
+        } else {
+            $paidAmount = max(0, $paidAmount);
+        }
+
+        $remainingAmount = $isPartialPayment
+            ? $remainingBalance
+            : max(0, $totalAmount - $paidAmount);
+
+        $rate = $totalAmount > 0 ? (($paidAmount / $totalAmount) * 100) : 0;
+        $rateLabel = $this->formatPaymentPercent($rate);
+        $isHalfPayment = $isPartialPayment && abs($rate - 50.0) < 0.01;
+
+        $phaseLabel = 'Full Payment';
+        if ($isPartialPayment) {
+            $phaseLabel = $isHalfPayment
+                ? 'Half Payment (50%)'
+                : "Downpayment ({$rateLabel}%)";
+        }
+
+        return [
+            'is_partial' => $isPartialPayment,
+            'is_half' => $isHalfPayment,
+            'phase_label' => $phaseLabel,
+            'paid_amount' => $paidAmount,
+            'remaining_amount' => $remainingAmount,
+        ];
+    }
+
+    private function formatPaymentPercent(float $percent): string
+    {
+        $normalized = max(0, min(100, $percent));
+        return rtrim(rtrim(number_format($normalized, 2, '.', ''), '0'), '.');
     }
 
     private function parseName(?string $fullName): array

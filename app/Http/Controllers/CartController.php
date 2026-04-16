@@ -1165,20 +1165,24 @@ class CartController extends Controller
         );
 
         // Create notification for admins
+        $paymentContext = $this->resolveOrderPaymentContext($order);
         $adminUsers = \App\Models\User::where('role', 'admin')->get();
         foreach ($adminUsers as $admin) {
             \App\Models\Notification::createNotification(
                 $admin->id,
                 'order',
                 'New Order Received',
-                "A new order #{$order->id} has been placed by {$order->user->name}. Amount: ₱" . number_format($totalAmount, 2),
+                "A new order #{$order->id} has been placed by {$order->user->name}. Amount: ₱" . number_format($totalAmount, 2)
+                    . ". Payment plan: {$paymentContext['phase_label']}",
                 url('/admin/orders'),
                 [
                     'order_id' => $order->id,
                     'customer_name' => $order->user->name,
                     'tracking_number' => $order->tracking_number,
                     'total_amount' => $totalAmount,
-                    'payment_method' => $paymentMethod
+                    'payment_method' => $paymentMethod,
+                    'payment_plan' => $paymentContext['phase_label'],
+                    'amount_due_now' => $paymentContext['paid_amount'],
                 ]
             );
         }
@@ -1726,21 +1730,7 @@ HTML
                 );
 
                 // Notify admins about the payment
-                $adminUsers = \App\Models\User::where('role', 'admin')->get();
-                foreach ($adminUsers as $admin) {
-                    \App\Models\Notification::createNotification(
-                        $admin->id,
-                        'payment',
-                        'Payment Received',
-                        "Payment received for order #{$order->id} via Bank Transfer. Amount: ₱" . number_format($order->total_amount, 2),
-                        route('admin.orders.show', $order->id),
-                        [
-                            'order_id' => $order->id,
-                            'payment_method' => $order->payment_method,
-                            'payment_status' => $order->payment_status,
-                        ]
-                    );
-                }
+                $this->notifyAdminsForOrderPayment($order, 'Bank Transfer');
 
                 $authToken = $request->input('auth_token') ?? session('auth_token');
                 $tokenParam = $authToken ? '?auth_token=' . $authToken : '';
@@ -1917,21 +1907,7 @@ HTML
             );
 
             // Notify admins about the payment
-            $adminUsers = \App\Models\User::where('role', 'admin')->get();
-            foreach ($adminUsers as $admin) {
-                \App\Models\Notification::createNotification(
-                    $admin->id,
-                    'payment',
-                    'Payment Received',
-                    "Payment received for order #{$order->id} via {$walletLabel}. Amount: ₱" . number_format($order->total_amount, 2),
-                    route('admin.orders.show', $order->id),
-                    [
-                        'order_id' => $order->id,
-                        'payment_method' => $order->payment_method,
-                        'payment_status' => $order->payment_status,
-                    ]
-                );
-            }
+            $this->notifyAdminsForOrderPayment($order, $walletLabel);
 
             $authToken = request()->input('auth_token') ?? session('auth_token');
             $tokenParam = $authToken ? '?auth_token=' . $authToken : '';
@@ -2130,6 +2106,8 @@ HTML, 200, ['Content-Type' => 'text/html']);
 
     private function applyPayMongoPaymentResult(Order $order, ?array $session = null): void
     {
+        $previousPaymentStatus = strtolower((string) $order->payment_status);
+
         $order->payment_status = 'paid';
         $order->status = 'processing';
 
@@ -2156,6 +2134,10 @@ HTML, 200, ['Content-Type' => 'text/html']);
         }
 
         $order->save();
+
+        if (!in_array($previousPaymentStatus, ['paid', 'verified'], true)) {
+            $this->notifyAdminsForOrderPayment($order, 'PayMongo');
+        }
     }
 
     private function extractPayMongoPaymentId(array $session): ?string
@@ -2203,6 +2185,98 @@ HTML, 200, ['Content-Type' => 'text/html']);
         }
 
         return null;
+    }
+
+    private function resolveOrderPaymentContext(Order $order): array
+    {
+        $totalAmount = (float) ($order->total_amount ?? $order->total ?? 0);
+        $paymentOption = strtolower((string) ($order->payment_option ?? 'full'));
+        $remainingBalance = max(0, (float) ($order->remaining_balance ?? 0));
+        $isDownpaymentOrder = $paymentOption === 'downpayment';
+        $isPartialPayment = $isDownpaymentOrder && $remainingBalance > 0;
+
+        $downpaymentAmount = (float) ($order->downpayment_amount ?? 0);
+        $downpaymentRate = (float) ($order->downpayment_rate ?? 0);
+
+        if ($downpaymentAmount <= 0 && $totalAmount > 0) {
+            $resolvedRate = $downpaymentRate > 0 ? $downpaymentRate : 50;
+            $resolvedRate = min(99, max(1, $resolvedRate));
+            $downpaymentAmount = round($totalAmount * ($resolvedRate / 100), 2);
+        }
+
+        $paidAmount = $isPartialPayment ? $downpaymentAmount : $totalAmount;
+        if ($totalAmount > 0) {
+            $paidAmount = max(0, min($totalAmount, $paidAmount));
+        } else {
+            $paidAmount = max(0, $paidAmount);
+        }
+
+        $remainingAmount = $isPartialPayment
+            ? $remainingBalance
+            : max(0, $totalAmount - $paidAmount);
+
+        $rate = $totalAmount > 0 ? (($paidAmount / $totalAmount) * 100) : 0;
+        $rateLabel = $this->formatPaymentPercent($rate);
+        $isHalfPayment = $isPartialPayment && abs($rate - 50.0) < 0.01;
+
+        $phaseLabel = 'Full Payment';
+        if ($isPartialPayment) {
+            $phaseLabel = $isHalfPayment
+                ? 'Half Payment (50%)'
+                : "Downpayment ({$rateLabel}%)";
+        }
+
+        return [
+            'is_partial' => $isPartialPayment,
+            'is_half' => $isHalfPayment,
+            'phase_label' => $phaseLabel,
+            'rate' => $rate,
+            'paid_amount' => $paidAmount,
+            'remaining_amount' => $remainingAmount,
+            'total_amount' => $totalAmount,
+        ];
+    }
+
+    private function formatPaymentPercent(float $percent): string
+    {
+        $normalized = max(0, min(100, $percent));
+        return rtrim(rtrim(number_format($normalized, 2, '.', ''), '0'), '.');
+    }
+
+    private function notifyAdminsForOrderPayment(Order $order, string $methodLabel): void
+    {
+        $paymentContext = $this->resolveOrderPaymentContext($order);
+        $title = $paymentContext['is_partial']
+            ? ($paymentContext['is_half'] ? 'Half Payment Received' : 'Downpayment Received')
+            : 'Full Payment Received';
+
+        $message = "Payment received for order #{$order->id} via {$methodLabel} ({$paymentContext['phase_label']}). "
+            . 'Paid: ₱' . number_format((float) $paymentContext['paid_amount'], 2);
+
+        if ($paymentContext['is_partial']) {
+            $message .= '. Remaining: ₱' . number_format((float) $paymentContext['remaining_amount'], 2);
+        }
+
+        $adminUsers = \App\Models\User::where('role', 'admin')->get();
+        foreach ($adminUsers as $admin) {
+            \App\Models\Notification::createNotification(
+                $admin->id,
+                'payment',
+                $title,
+                $message,
+                route('admin.orders.show', $order->id),
+                [
+                    'order_id' => $order->id,
+                    'payment_method' => $order->payment_method,
+                    'payment_status' => $order->payment_status,
+                    'payment_phase' => $paymentContext['phase_label'],
+                    'is_partial_payment' => $paymentContext['is_partial'],
+                    'paid_amount' => $paymentContext['paid_amount'],
+                    'remaining_amount' => $paymentContext['remaining_amount'],
+                    'total_amount' => $paymentContext['total_amount'],
+                ]
+            );
+        }
     }
 
     private function syncMayaPaymentStatus(Order $order, ?string $checkoutId = null): string
