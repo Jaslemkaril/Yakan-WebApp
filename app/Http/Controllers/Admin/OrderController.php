@@ -352,11 +352,38 @@ class OrderController extends Controller
         }
 
         $paymentOption = strtolower((string) ($order->payment_option ?? 'full'));
+        $remainingBalance = max(0, (float) ($order->remaining_balance ?? 0));
+        $notes = (string) ($order->notes ?? '');
+        $legacyMatched = false;
+
+        // Fallback for legacy partial orders where downpayment columns were not populated.
+        if (($paymentOption !== 'downpayment' || $remainingBalance <= 0)
+            && preg_match_all('/Downpayment received:\s*PHP\s*([0-9,]+(?:\.[0-9]{1,2})?)\s*;\s*remaining balance:\s*PHP\s*([0-9,]+(?:\.[0-9]{1,2})?)/i', $notes, $matches, PREG_SET_ORDER)
+        ) {
+            $lastMatch = end($matches);
+            $legacyPaidAmount = isset($lastMatch[1]) ? (float) str_replace(',', '', $lastMatch[1]) : 0;
+            $legacyRemaining = isset($lastMatch[2]) ? (float) str_replace(',', '', $lastMatch[2]) : 0;
+
+            if ($legacyRemaining > 0) {
+                $paymentOption = 'downpayment';
+                $remainingBalance = max(0, round($legacyRemaining, 2));
+                $order->payment_option = 'downpayment';
+                $order->downpayment_amount = max(0, round($legacyPaidAmount, 2));
+
+                $orderTotal = (float) ($order->total_amount ?? $order->total ?? 0);
+                if ($orderTotal > 0 && $legacyPaidAmount > 0) {
+                    $order->downpayment_rate = max(1, min(99, round(($legacyPaidAmount / $orderTotal) * 100, 2)));
+                }
+
+                $order->remaining_balance = $remainingBalance;
+                $legacyMatched = true;
+            }
+        }
+
         if ($paymentOption !== 'downpayment') {
             return redirect()->back()->with('error', 'Only downpayment orders can settle a remaining balance.');
         }
 
-        $remainingBalance = (float) ($order->remaining_balance ?? 0);
         if ($remainingBalance <= 0) {
             return redirect()->back()->with('info', 'This order is already fully paid.');
         }
@@ -369,9 +396,37 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Cancelled or refunded orders cannot be settled.');
         }
 
+        $totalAmount = (float) ($order->total_amount ?? $order->total ?? 0);
+        $order->payment_option = 'full';
+        $order->downpayment_rate = $totalAmount > 0 ? 100 : ($order->downpayment_rate ?? 100);
+        $order->downpayment_amount = $totalAmount > 0 ? $totalAmount : (float) ($order->downpayment_amount ?? 0);
         $order->remaining_balance = 0;
+        $order->payment_status = in_array(strtolower((string) $order->payment_status), ['paid', 'verified'], true)
+            ? $order->payment_status
+            : 'paid';
         $order->payment_verified_at = now();
+        $order->tracking_status = 'Payment Settled';
         $order->appendTrackingEvent('Remaining Balance Settled');
+
+        // Remove legacy partial-payment marker lines so invoice/user badges stop showing partial.
+        $normalizedNotes = preg_replace('/\s*Downpayment received:\s*PHP\s*[0-9,]+(?:\.[0-9]{1,2})?\s*;\s*remaining balance:\s*PHP\s*[0-9,]+(?:\.[0-9]{1,2})?\s*/i', "\n", $notes);
+        $normalizedNotes = trim(preg_replace('/\n{2,}/', "\n", (string) $normalizedNotes));
+        $settledLine = 'Remaining balance settled by admin on ' . now()->format('M d, Y h:i A');
+        if (!str_contains($normalizedNotes, $settledLine)) {
+            $normalizedNotes = $normalizedNotes === '' ? $settledLine : ($normalizedNotes . "\n" . $settledLine);
+        }
+        $order->notes = $normalizedNotes;
+
+        if ($legacyMatched) {
+            $order->admin_notes = trim((string) $order->admin_notes);
+            $legacyLine = 'Legacy partial-payment record normalized during settlement.';
+            if (!str_contains((string) $order->admin_notes, $legacyLine)) {
+                $order->admin_notes = $order->admin_notes === ''
+                    ? $legacyLine
+                    : ($order->admin_notes . "\n" . $legacyLine);
+            }
+        }
+
         $order->save();
 
         return redirect()->back()->with('success', 'Remaining balance marked as settled. This order is now fully paid.');

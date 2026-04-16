@@ -295,19 +295,57 @@
     $downpaymentRate = (float) ($order->downpayment_rate ?? 0);
     $downpaymentAmount = max((float) ($order->downpayment_amount ?? 0), 0);
 
-    $isPaidStatus = in_array(strtolower((string) ($order->payment_status ?? '')), ['paid', 'verified'], true);
-    $amountPaid = $downpaymentAmount > 0
-        ? $downpaymentAmount
-        : ($isPaidStatus ? $grandTotal : 0.0);
+    $rawPaymentStatus = strtolower((string) ($order->payment_status ?? ''));
+    $isPaidStatus = in_array($rawPaymentStatus, ['paid', 'verified'], true);
 
-    $remainingBalance = (float) ($order->remaining_balance ?? 0);
-    if ($remainingBalance <= 0) {
-        $remainingBalance = max($grandTotal - $amountPaid, 0);
+    $notesText = (string) ($order->notes ?? '');
+    $legacyPartialPaid = 0.0;
+    $legacyPartialRemaining = 0.0;
+    if (preg_match_all('/Downpayment received:\s*PHP\s*([0-9,]+(?:\.[0-9]{1,2})?)\s*;\s*remaining balance:\s*PHP\s*([0-9,]+(?:\.[0-9]{1,2})?)/i', $notesText, $legacyMatches, PREG_SET_ORDER)) {
+        $legacyLastMatch = end($legacyMatches);
+        $legacyPartialPaid = isset($legacyLastMatch[1]) ? (float) str_replace(',', '', $legacyLastMatch[1]) : 0.0;
+        $legacyPartialRemaining = isset($legacyLastMatch[2]) ? (float) str_replace(',', '', $legacyLastMatch[2]) : 0.0;
+    }
+    $legacySettlementRecorded = stripos($notesText, 'Remaining balance settled by admin') !== false;
+
+    $remainingBalance = max((float) ($order->remaining_balance ?? 0), 0);
+    if ($remainingBalance <= 0 && !$legacySettlementRecorded && $legacyPartialRemaining > 0) {
+        $remainingBalance = max(0, round($legacyPartialRemaining, 2));
+    }
+
+    if ($paymentOption !== 'downpayment' && $remainingBalance > 0) {
+        $paymentOption = 'downpayment';
+    }
+
+    if ($downpaymentAmount <= 0 && $legacyPartialPaid > 0 && $remainingBalance > 0) {
+        $downpaymentAmount = max(0, round($legacyPartialPaid, 2));
+    }
+
+    if ($remainingBalance > 0) {
+        $amountPaid = max($grandTotal - $remainingBalance, 0);
+    } else {
+        $amountPaid = $isPaidStatus ? $grandTotal : max($downpaymentAmount, 0);
+    }
+    if ($grandTotal > 0) {
+        $amountPaid = min($amountPaid, $grandTotal);
     }
 
     $paymentPlanLabel = 'Full Payment';
-    if ($paymentOption === 'downpayment' || $downpaymentAmount > 0 || $downpaymentRate > 0) {
-        $paymentPlanLabel = ($downpaymentRate > 0 ? rtrim(rtrim(number_format($downpaymentRate, 2), '0'), '.') : '50') . '% Downpayment';
+    if ($remainingBalance > 0) {
+        $resolvedRate = $downpaymentRate > 0
+            ? $downpaymentRate
+            : ($grandTotal > 0 ? (($amountPaid / $grandTotal) * 100) : 50);
+        $paymentPlanLabel = rtrim(rtrim(number_format(max(1, min(99, $resolvedRate)), 2), '0'), '.') . '% Downpayment';
+    }
+
+    $invoicePaymentStatusClass = $resolveStatusClass($order->payment_status ?? null);
+    $invoicePaymentStatusLabel = $resolveStatusLabel($order->payment_status ?? null);
+    if ($remainingBalance > 0 && $isPaidStatus) {
+        $invoicePaymentStatusClass = 'pill-warn';
+        $invoicePaymentStatusLabel = 'Partial Payment';
+    } elseif ($remainingBalance <= 0 && $isPaidStatus) {
+        $invoicePaymentStatusClass = 'pill-ok';
+        $invoicePaymentStatusLabel = 'Paid';
     }
 
     $invoiceDeliveryType = strtolower((string) ($order->delivery_type ?? 'delivery'));
@@ -375,7 +413,7 @@
                 <p class="kv"><strong>Payment Plan:</strong> {{ $paymentPlanLabel }}</p>
                 <p class="kv">
                     <strong>Payment Status:</strong>
-                    <span class="pill {{ $resolveStatusClass($order->payment_status ?? null) }}">{{ $resolveStatusLabel($order->payment_status ?? null) }}</span>
+                    <span class="pill {{ $invoicePaymentStatusClass }}">{{ $invoicePaymentStatusLabel }}</span>
                 </p>
                 <p class="kv"><strong>Delivery:</strong> {{ $shippingLabel }}</p>
                 @if($cityProvince !== '')
