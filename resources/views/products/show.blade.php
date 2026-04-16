@@ -105,6 +105,11 @@
             @php
                 $displayPrice = isset($initialDisplayPrice) ? (float) $initialDisplayPrice : (float) $product->getDiscountedPrice((float) $product->price);
                 $displayOriginalPrice = isset($initialOriginalPrice) ? (float) $initialOriginalPrice : (float) $product->price;
+                $discountType = strtolower((string) ($product->discount_type ?? ''));
+                $discountValue = (float) ($product->discount_value ?? 0);
+                $hasConfiguredDiscount = in_array($discountType, ['percent', 'fixed'], true) && $discountValue > 0;
+                $discountStartsAtIso = optional($product->discount_starts_at)->toIso8601String();
+                $discountEndsAtIso = optional($product->discount_ends_at)->toIso8601String();
                 $availableStock = isset($initialAvailableStock)
                     ? (int) $initialAvailableStock
                     : (int) ($product->inventory ? $product->inventory->quantity : $product->stock);
@@ -127,6 +132,22 @@
                         {{ $availableStock > 0 ? $availableStock . ' units in stock - Ready to ship' : 'Out of stock' }}
                     </span>
                 </div>
+
+                @if($hasConfiguredDiscount && ($discountStartsAtIso || $discountEndsAtIso))
+                    <div id="productDiscountCountdown"
+                         class="mt-3 flex items-center gap-2 px-4 py-3 rounded-xl border"
+                         style="background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%); border-color: #fecdd3;"
+                         data-discount-start="{{ $discountStartsAtIso }}"
+                         data-discount-end="{{ $discountEndsAtIso }}">
+                        <svg class="w-5 h-5 flex-shrink-0" style="color:#800000;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div>
+                            <p id="productDiscountCountdownLabel" class="text-xs font-semibold uppercase text-gray-600">Discount ends in</p>
+                            <p id="productDiscountCountdownValue" class="text-sm font-bold" style="color:#800000;">--d --h --m --s</p>
+                        </div>
+                    </div>
+                @endif
 
                 <!-- Estimated Delivery -->
                 @if($availableStock > 0)
@@ -942,7 +963,64 @@ document.addEventListener('DOMContentLoaded', function() {
 
     updateHiddenInputs();
     checkWishlistStatus();
+    initProductDiscountCountdown();
 });
+
+function formatRemainingTime(totalSeconds) {
+    const safeSeconds = Math.max(0, totalSeconds);
+    const days = Math.floor(safeSeconds / 86400);
+    const hours = Math.floor((safeSeconds % 86400) / 3600);
+    const minutes = Math.floor((safeSeconds % 3600) / 60);
+    const seconds = safeSeconds % 60;
+
+    return `${days}d ${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+}
+
+function initProductDiscountCountdown() {
+    const wrapper = document.getElementById('productDiscountCountdown');
+    const labelEl = document.getElementById('productDiscountCountdownLabel');
+    const valueEl = document.getElementById('productDiscountCountdownValue');
+
+    if (!wrapper || !labelEl || !valueEl) {
+        return;
+    }
+
+    const startRaw = wrapper.dataset.discountStart || '';
+    const endRaw = wrapper.dataset.discountEnd || '';
+    const startsAt = startRaw ? new Date(startRaw) : null;
+    const endsAt = endRaw ? new Date(endRaw) : null;
+
+    if (!startsAt && !endsAt) {
+        wrapper.classList.add('hidden');
+        return;
+    }
+
+    let intervalId = null;
+
+    const tick = () => {
+        const now = new Date();
+        let target = null;
+
+        if (startsAt && now < startsAt) {
+            labelEl.textContent = 'Discount starts in';
+            target = startsAt;
+        } else if (endsAt && now < endsAt) {
+            labelEl.textContent = 'Discount ends in';
+            target = endsAt;
+        } else {
+            labelEl.textContent = 'Discount ended';
+            valueEl.textContent = '0d 00h 00m 00s';
+            clearInterval(intervalId);
+            return;
+        }
+
+        const remainingSeconds = Math.floor((target.getTime() - now.getTime()) / 1000);
+        valueEl.textContent = formatRemainingTime(remainingSeconds);
+    };
+
+    tick();
+    intervalId = setInterval(tick, 1000);
+}
 
 // Global double-click prevention
 document.addEventListener('dblclick', function(e) {

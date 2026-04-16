@@ -512,10 +512,20 @@
                                         @php
                                             $basePrice = (float) ($product->price ?? 0);
                                             $displayPrice = (float) $product->getDiscountedPrice($basePrice);
+                                            $discountType = strtolower((string) ($product->discount_type ?? ''));
+                                            $discountValue = (float) ($product->discount_value ?? 0);
+                                            $hasConfiguredDiscount = in_array($discountType, ['percent', 'fixed'], true) && $discountValue > 0;
                                         @endphp
                                         <div class="text-lg sm:text-xl md:text-2xl font-bold" style="color: #800000;">₱{{ number_format($displayPrice, 2) }}</div>
                                         @if($displayPrice < $basePrice)
                                             <div class="text-xs sm:text-sm text-gray-500 line-through">₱{{ number_format($basePrice, 2) }}</div>
+                                        @endif
+                                        @if($hasConfiguredDiscount && ($product->discount_starts_at || $product->discount_ends_at))
+                                            <div class="js-discount-countdown text-[11px] font-semibold mt-1" style="color: #9f1239;"
+                                                 data-discount-start="{{ optional($product->discount_starts_at)->toIso8601String() }}"
+                                                 data-discount-end="{{ optional($product->discount_ends_at)->toIso8601String() }}">
+                                                --
+                                            </div>
                                         @endif
                                     </div>
                                     
@@ -777,6 +787,48 @@ function updateCartBadge(count) {
     }
 }
 
+function formatDiscountCountdown(seconds) {
+    const safeSeconds = Math.max(0, seconds);
+    const days = Math.floor(safeSeconds / 86400);
+    const hours = Math.floor((safeSeconds % 86400) / 3600);
+    const minutes = Math.floor((safeSeconds % 3600) / 60);
+    const secs = safeSeconds % 60;
+    return `${days}d ${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
+}
+
+function initDiscountCountdowns() {
+    const countdownEls = document.querySelectorAll('.js-discount-countdown');
+    if (!countdownEls.length) return;
+
+    const tick = () => {
+        const now = new Date();
+
+        countdownEls.forEach((el) => {
+            const startRaw = el.dataset.discountStart || '';
+            const endRaw = el.dataset.discountEnd || '';
+            const startsAt = startRaw ? new Date(startRaw) : null;
+            const endsAt = endRaw ? new Date(endRaw) : null;
+
+            if (startsAt && now < startsAt) {
+                const remaining = Math.floor((startsAt.getTime() - now.getTime()) / 1000);
+                el.textContent = `Starts in: ${formatDiscountCountdown(remaining)}`;
+                return;
+            }
+
+            if (endsAt && now < endsAt) {
+                const remaining = Math.floor((endsAt.getTime() - now.getTime()) / 1000);
+                el.textContent = `Ends in: ${formatDiscountCountdown(remaining)}`;
+                return;
+            }
+
+            el.textContent = 'Discount ended';
+        });
+    };
+
+    tick();
+    setInterval(tick, 1000);
+}
+
 // Add click handler to product cards - make globally available
 window.initProductCards = function() {
     const productCards = document.querySelectorAll('.product-card');
@@ -823,6 +875,7 @@ window.initProductCards = function() {
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
     window.initProductCards();
+    initDiscountCountdowns();
 });
 
 // Prevent double-click issues globally
