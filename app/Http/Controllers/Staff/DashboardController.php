@@ -10,22 +10,72 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+        $allowedScopes = [
+            'recent',
+            'pending_confirmation',
+            'processing_shipping',
+            'refund_eligible',
+            'refunded_today',
+        ];
+
+        $activeScope = (string) $request->query('scope', 'recent');
+        if (!in_array($activeScope, $allowedScopes, true)) {
+            $activeScope = 'recent';
+        }
+
         $pendingConfirmationCount = Order::whereIn('status', ['pending_confirmation', 'pending'])->count();
         $processingCount = Order::whereIn('status', ['confirmed', 'processing', 'shipped'])->count();
         $readyForRefundCount = Order::whereIn('status', ['delivered', 'completed'])->count();
         $refundedTodayCount = Order::where('status', 'refunded')->whereDate('updated_at', today())->count();
 
-        $recentOrders = Order::with('user')
-            ->orderByDesc('created_at')
-            ->take(10)
-            ->get();
+        $ordersQuery = Order::with('user');
+        $ordersTitle = 'Recent Orders';
+
+        switch ($activeScope) {
+            case 'pending_confirmation':
+                $ordersQuery->whereIn('status', ['pending_confirmation', 'pending'])
+                    ->orderByDesc('created_at');
+                $ordersTitle = 'Pending Confirmation Orders';
+                break;
+
+            case 'processing_shipping':
+                $ordersQuery->whereIn('status', ['confirmed', 'processing', 'shipped'])
+                    ->orderByDesc('updated_at')
+                    ->orderByDesc('created_at');
+                $ordersTitle = 'Processing / Shipping Orders';
+                break;
+
+            case 'refund_eligible':
+                $ordersQuery->whereIn('status', ['delivered', 'completed'])
+                    ->orderByDesc('updated_at')
+                    ->orderByDesc('created_at');
+                $ordersTitle = 'Refund-Eligible Orders';
+                break;
+
+            case 'refunded_today':
+                $ordersQuery->where('status', 'refunded')
+                    ->whereDate('updated_at', today())
+                    ->orderByDesc('updated_at')
+                    ->orderByDesc('created_at');
+                $ordersTitle = 'Refunded Today';
+                break;
+
+            case 'recent':
+            default:
+                $ordersQuery->orderByDesc('created_at');
+                break;
+        }
+
+        $recentOrders = $ordersQuery->take(20)->get();
 
         return view('staff.dashboard', compact(
             'pendingConfirmationCount',
             'processingCount',
             'readyForRefundCount',
             'refundedTodayCount',
-            'recentOrders'
+            'recentOrders',
+            'activeScope',
+            'ordersTitle'
         ));
     }
 
