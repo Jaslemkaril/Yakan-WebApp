@@ -832,12 +832,24 @@
                         <div class="mt-3">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Evidence</p>
                             <div class="flex flex-wrap gap-3">
+                                @php
+                                    $adminAuthToken = request('auth_token') ?? request()->attributes->get('admin_auth_token');
+                                @endphp
                                 @foreach($adminRefundEvidence as $evidencePath)
                                     @php
-                                        $adminEvidenceUrl = route('admin.orders.refund_evidence.view', ['refundRequest' => $latestRefundRequest->id, 'index' => $loop->index]);
+                                        $adminEvidenceUrl = route('admin.orders.refund_evidence.view', array_filter([
+                                            'refundRequest' => $latestRefundRequest->id,
+                                            'index' => $loop->index,
+                                            'auth_token' => $adminAuthToken,
+                                        ]));
                                         $adminExt = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
                                         $adminIsImageEvidence = in_array($adminExt, ['jpg', 'jpeg', 'png', 'webp'], true);
                                         $adminIsVideoEvidence = in_array($adminExt, ['mp4', 'mov', 'webm'], true);
+                                        $adminVideoMime = match ($adminExt) {
+                                            'mov' => 'video/quicktime',
+                                            'webm' => 'video/webm',
+                                            default => 'video/mp4',
+                                        };
                                     @endphp
 
                                     @if($adminIsImageEvidence)
@@ -847,9 +859,12 @@
                                     @elseif($adminIsVideoEvidence)
                                         <div class="rounded-lg overflow-hidden border border-blue-200 bg-black">
                                             <video controls preload="metadata" class="w-40 h-24 object-cover">
-                                                <source src="{{ $adminEvidenceUrl }}">
+                                                <source src="{{ $adminEvidenceUrl }}" type="{{ $adminVideoMime }}">
                                                 Your browser does not support video playback.
                                             </video>
+                                            <div class="px-2 py-1 bg-white border-t border-blue-100">
+                                                <a href="{{ $adminEvidenceUrl }}" target="_blank" class="text-xs text-blue-700 hover:underline">Open video in new tab</a>
+                                            </div>
                                         </div>
                                     @else
                                         <a href="{{ $adminEvidenceUrl }}" target="_blank" class="inline-flex items-center px-2 py-1 rounded border border-gray-300 text-xs text-gray-700 bg-white hover:bg-gray-100 transition-colors">

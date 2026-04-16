@@ -96,33 +96,30 @@
             </div>
 
             <!-- Price Section -->
+            @php
+                $displayPrice = isset($initialDisplayPrice) ? (float) $initialDisplayPrice : (float) $product->getDiscountedPrice((float) $product->price);
+                $displayOriginalPrice = isset($initialOriginalPrice) ? (float) $initialOriginalPrice : (float) $product->price;
+                $availableStock = isset($initialAvailableStock)
+                    ? (int) $initialAvailableStock
+                    : (int) ($product->inventory ? $product->inventory->quantity : $product->stock);
+            @endphp
             <div class="bg-gradient-to-r from-red-50 to-red-50 rounded-2xl p-6 border" style="border-color: #800000;">
                 <div class="flex items-baseline gap-3">
-                    <div class="text-4xl font-bold" style="color: #800000;">₱{{ number_format($product->price, 2) }}</div>
-                    @if($product->original_price && $product->original_price > $product->price)
-                        <div class="text-lg text-gray-500 line-through">₱{{ number_format($product->original_price, 2) }}</div>
-                        <span class="text-white px-2 py-1 rounded-full text-xs font-semibold" style="background-color: #800000;">
-                            Save ₱{{ number_format($product->original_price - $product->price, 2) }}
-                        </span>
-                    @endif
+                    <div id="productDisplayPrice" class="text-4xl font-bold" style="color: #800000;">₱{{ number_format($displayPrice, 2) }}</div>
+                    <div id="productOriginalPriceWrap" class="{{ $displayOriginalPrice > $displayPrice ? '' : 'hidden' }}">
+                        <div id="productOriginalPrice" class="text-lg text-gray-500 line-through">₱{{ number_format($displayOriginalPrice, 2) }}</div>
+                    </div>
+                    <span id="productSavingsBadge" class="text-white px-2 py-1 rounded-full text-xs font-semibold {{ $displayOriginalPrice > $displayPrice ? '' : 'hidden' }}" style="background-color: #800000;">
+                        Save ₱<span id="productSavingsValue">{{ number_format(max(0, $displayOriginalPrice - $displayPrice), 2) }}</span>
+                    </span>
                 </div>
                 
                 <!-- Stock Status -->
                 <div class="mt-4 flex items-center gap-2">
-                    @php
-                        $availableStock = $product->inventory ? $product->inventory->quantity : $product->stock;
-                    @endphp
-                    @if($availableStock > 0)
-                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span class="text-sm font-medium text-green-700">
-                            {{ $availableStock }} units in stock - Ready to ship
-                        </span>
-                    @else
-                        <div class="w-2 h-2 bg-red-500 rounded-full"></div>
-                        <span class="text-sm font-medium text-red-700">
-                            Out of stock
-                        </span>
-                    @endif
+                    <div id="productStockDot" class="w-2 h-2 {{ $availableStock > 0 ? 'bg-green-500 animate-pulse' : 'bg-red-500' }} rounded-full"></div>
+                    <span id="productStockText" class="text-sm font-medium {{ $availableStock > 0 ? 'text-green-700' : 'text-red-700' }}">
+                        {{ $availableStock > 0 ? $availableStock . ' units in stock - Ready to ship' : 'Out of stock' }}
+                    </span>
                 </div>
 
                 <!-- Estimated Delivery -->
@@ -159,6 +156,37 @@
                 </div>
                 @endif
             </div>
+
+            @if(!empty($hasVariants) && isset($activeVariants) && $activeVariants->isNotEmpty())
+                <div class="bg-white rounded-xl border border-gray-200 p-4">
+                    <h3 class="text-sm font-semibold text-gray-900 mb-2">Variants</h3>
+                    <select id="variantSelector" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent">
+                        @foreach($activeVariants as $variant)
+                            @php
+                                $variantBasePrice = (float) $variant->price;
+                                $variantDisplayPrice = (float) $product->getDiscountedPrice($variantBasePrice);
+                                $variantData = [
+                                    'id' => (int) $variant->id,
+                                    'size' => (string) ($variant->size ?? ''),
+                                    'color' => (string) ($variant->color ?? ''),
+                                    'sku' => (string) ($variant->sku ?? ''),
+                                    'stock' => (int) ($variant->stock ?? 0),
+                                    'price' => round($variantDisplayPrice, 2),
+                                    'original_price' => round($variantBasePrice, 2),
+                                ];
+                            @endphp
+                            <option
+                                value="{{ $variant->id }}"
+                                data-variant='@json($variantData)'
+                                {{ isset($defaultVariant) && (int) $defaultVariant->id === (int) $variant->id ? 'selected' : '' }}
+                            >
+                                {{ $variant->display_name }} | ₱{{ number_format($variantDisplayPrice, 2) }} | Stock: {{ (int) ($variant->stock ?? 0) }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs text-gray-500 mt-2">Select size/color variant before adding to cart or buying now.</p>
+                </div>
+            @endif
 
             <!-- Description -->
             <div class="prose prose-gray max-w-none">
@@ -202,6 +230,7 @@
                     <form id="addToCartForm" method="POST" action="{{ route('cart.add', $product) }}" class="flex-1">
                         @csrf
                         <input type="hidden" name="quantity" id="cartQty" value="1">
+                        <input type="hidden" name="variant_id" id="cartVariantId" value="{{ isset($defaultVariant) ? $defaultVariant->id : '' }}">
                         <button type="submit" 
                                 class="w-full h-full text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 whitespace-nowrap"
                                 style="background: linear-gradient(135deg, #800000 0%, #600000 100%);"
@@ -237,6 +266,7 @@
                 <form id="buyNowForm" method="POST" action="{{ route('cart.add', $product) }}" class="flex-1">
                     @csrf
                     <input type="hidden" name="quantity" id="buyNowQty" value="1">
+                    <input type="hidden" name="variant_id" id="buyNowVariantId" value="{{ isset($defaultVariant) ? $defaultVariant->id : '' }}">
                     <input type="hidden" name="buy_now" value="1">
                     <button type="submit" 
                             id="buyNowBtn"
@@ -578,6 +608,114 @@ function previewProductImages(input) {
 </script>
 
 <script>
+const HAS_VARIANTS = @json(!empty($hasVariants));
+
+function formatPeso(amount) {
+    const numeric = Number(amount || 0);
+    return '₱' + numeric.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function syncSelectedVariant(variantId) {
+    const cartVariantInput = document.getElementById('cartVariantId');
+    const buyNowVariantInput = document.getElementById('buyNowVariantId');
+    if (cartVariantInput) cartVariantInput.value = variantId || '';
+    if (buyNowVariantInput) buyNowVariantInput.value = variantId || '';
+}
+
+function applyVariantFromSelector() {
+    const selector = document.getElementById('variantSelector');
+    if (!selector) {
+        return;
+    }
+
+    const selectedOption = selector.options[selector.selectedIndex];
+    const variantDataRaw = selectedOption ? selectedOption.getAttribute('data-variant') : null;
+    if (!variantDataRaw) {
+        return;
+    }
+
+    let variant = null;
+    try {
+        variant = JSON.parse(variantDataRaw);
+    } catch (error) {
+        return;
+    }
+
+    syncSelectedVariant(variant.id || '');
+
+    const displayPrice = document.getElementById('productDisplayPrice');
+    const originalPriceWrap = document.getElementById('productOriginalPriceWrap');
+    const originalPrice = document.getElementById('productOriginalPrice');
+    const savingsBadge = document.getElementById('productSavingsBadge');
+    const savingsValue = document.getElementById('productSavingsValue');
+    const stockDot = document.getElementById('productStockDot');
+    const stockText = document.getElementById('productStockText');
+    const qtyInput = document.getElementById('qty');
+    const addToCartBtn = document.querySelector('#addToCartForm button[type="submit"]');
+    const buyNowBtn = document.getElementById('buyNowBtn');
+    const buyNowBtnText = document.getElementById('buyNowBtnText');
+
+    const variantPrice = Number(variant.price || 0);
+    const variantOriginal = Number(variant.original_price || variantPrice);
+    const variantStock = Number(variant.stock || 0);
+
+    if (displayPrice) {
+        displayPrice.textContent = formatPeso(variantPrice);
+    }
+    if (originalPrice) {
+        originalPrice.textContent = formatPeso(variantOriginal);
+    }
+
+    const hasSavings = variantOriginal > variantPrice;
+    if (originalPriceWrap) originalPriceWrap.classList.toggle('hidden', !hasSavings);
+    if (savingsBadge) savingsBadge.classList.toggle('hidden', !hasSavings);
+    if (savingsValue && hasSavings) {
+        savingsValue.textContent = (variantOriginal - variantPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    if (stockDot) {
+        stockDot.classList.toggle('bg-green-500', variantStock > 0);
+        stockDot.classList.toggle('animate-pulse', variantStock > 0);
+        stockDot.classList.toggle('bg-red-500', variantStock <= 0);
+    }
+    if (stockText) {
+        stockText.classList.toggle('text-green-700', variantStock > 0);
+        stockText.classList.toggle('text-red-700', variantStock <= 0);
+        stockText.textContent = variantStock > 0
+            ? `${variantStock} units in stock - Ready to ship`
+            : 'Out of stock';
+    }
+
+    if (qtyInput) {
+        qtyInput.max = String(Math.max(variantStock, 1));
+        const currentQty = Number(qtyInput.value || 1);
+        if (variantStock <= 0) {
+            qtyInput.value = '1';
+            qtyInput.disabled = true;
+        } else {
+            qtyInput.disabled = false;
+            if (currentQty > variantStock) {
+                qtyInput.value = String(variantStock);
+            }
+            if (currentQty < 1) {
+                qtyInput.value = '1';
+            }
+        }
+    }
+
+    if (addToCartBtn) {
+        addToCartBtn.disabled = variantStock <= 0;
+    }
+    if (buyNowBtn) {
+        buyNowBtn.disabled = variantStock <= 0;
+    }
+    if (buyNowBtnText) {
+        buyNowBtnText.textContent = variantStock > 0 ? 'Buy Now' : 'Out of Stock';
+    }
+
+    updateHiddenInputs();
+}
+
 // Quantity controls
 function showQtyError(show) {
     const qtyError = document.getElementById('qtyError');
@@ -774,6 +912,14 @@ function showNotification(message, type = 'success') {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
+    const variantSelector = document.getElementById('variantSelector');
+    if (variantSelector) {
+        variantSelector.addEventListener('change', applyVariantFromSelector);
+        applyVariantFromSelector();
+    } else {
+        syncSelectedVariant('');
+    }
+
     updateHiddenInputs();
     checkWishlistStatus();
 });

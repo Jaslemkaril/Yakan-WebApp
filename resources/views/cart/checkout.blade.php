@@ -267,11 +267,14 @@
                         </h2>
                         
                         <div class="space-y-4">
-                            @php $total = 0; @endphp
                             @foreach($cartItems as $item)
                                 @php 
-                                    $subtotal = $item->quantity * $item->product->price;
-                                    $total += $subtotal;
+                                    $variant = $item->variant ?? null;
+                                    $unitPrice = (float) $item->product->getDiscountedPrice((float) ($variant?->price ?? $item->product->price));
+                                    $lineSubtotal = (int) $item->quantity * $unitPrice;
+                                    $maxStock = $variant
+                                        ? (int) ($variant->stock ?? 0)
+                                        : (int) ($item->product->inventory?->quantity ?? $item->product->stock ?? 0);
                                 @endphp
                                 
                                 <div class="flex items-start gap-4 py-4 border-b border-gray-100 last:border-0 cart-item-card">
@@ -294,19 +297,22 @@
                                     <form id="update-form-{{ $item->id }}" action="{{ route('cart.update', $item->id) }}" method="POST" class="hidden">
                                         @csrf
                                         @method('PUT')
-                                        <input id="update-qty-{{ $item->id }}" name="quantity" type="number" min="1" @if(!is_null($item->product->stock)) max="{{ $item->product->stock }}" @endif value="{{ $item->quantity }}">
+                                        <input id="update-qty-{{ $item->id }}" name="quantity" type="number" min="1" max="{{ max(1, $maxStock) }}" value="{{ $item->quantity }}">
                                     </form>
                                     
                                     <!-- Product Details -->
                                     <div class="flex-1 min-w-0">
                                         <h3 class="font-semibold text-gray-900 mb-1">{{ $item->product->name }}</h3>
+                                        @if($variant)
+                                            <p class="text-xs text-gray-500 mb-2">Variant: {{ $variant->display_name }}</p>
+                                        @endif
                                         @if($item->product->description)
                                             <p class="text-sm text-gray-500 mb-2 line-clamp-1">{{ $item->product->description }}</p>
                                         @endif
                                         <div class="flex flex-col sm:flex-row sm:items-center sm:gap-4 text-sm text-gray-600">
                                             <div class="mb-2 sm:mb-0">
                                                 <span class="font-medium">Price:</span>
-                                                <span class="ml-1 text-gray-900">₱{{ number_format($item->product->price, 2) }}</span>
+                                                <span class="ml-1 text-gray-900">₱{{ number_format($unitPrice, 2) }}</span>
                                                 <span class="text-gray-400 mx-2">•</span>
                                                 <span class="font-medium">Qty:</span>
                                                 <span class="ml-1 text-gray-900">{{ $item->quantity }}</span>
@@ -314,7 +320,7 @@
                                             <div class="flex items-center gap-2">
                                                 <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden">
                                                     <button type="button" class="px-3 py-1.5 text-gray-700 hover:bg-gray-100 qty-btn qty-minus" data-target="qty-{{ $item->id }}" data-item-id="{{ $item->id }}" data-action="decrease">−</button>
-                                                    <input id="qty-{{ $item->id }}" name="quantity" type="number" min="1" @if(!is_null($item->product->stock)) max="{{ $item->product->stock }}" @endif value="{{ $item->quantity }}" class="w-12 text-center py-1.5 focus:outline-none" readonly />
+                                                    <input id="qty-{{ $item->id }}" name="quantity" type="number" min="1" max="{{ max(1, $maxStock) }}" value="{{ $item->quantity }}" class="w-12 text-center py-1.5 focus:outline-none" readonly />
                                                     <button type="button" class="px-3 py-1.5 text-gray-700 hover:bg-gray-100 qty-btn qty-plus" data-target="qty-{{ $item->id }}" data-item-id="{{ $item->id }}" data-action="increase">+</button>
                                                 </div>
                                             </div>
@@ -323,7 +329,7 @@
                                     
                                     <!-- Subtotal and Remove -->
                                     <div class="flex flex-col items-end gap-2">
-                                        <div class="text-lg font-bold text-gray-900 subtotal-price" id="subtotal-{{ $item->id }}">₱{{ number_format($subtotal, 2) }}</div>
+                                        <div class="text-lg font-bold text-gray-900 subtotal-price" id="subtotal-{{ $item->id }}">₱{{ number_format($lineSubtotal, 2) }}</div>
                                         <form action="{{ route('cart.remove', $item->id) }}" method="POST" class="inline-block">
                                             @csrf
                                             @method('DELETE')
@@ -654,7 +660,7 @@ function injectAuthAndSubmit(form) {
     // Carry buy_now params through the form POST (so processCheckout knows it's Buy Now)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('buy_now') === '1') {
-        ['buy_now', 'product_id', 'quantity'].forEach(function(key) {
+        ['buy_now', 'product_id', 'variant_id', 'quantity'].forEach(function(key) {
             if (urlParams.has(key) && !form.querySelector('input[name="' + key + '"]')) {
                 const inp = document.createElement('input');
                 inp.type = 'hidden'; inp.name = key; inp.value = urlParams.get(key);
@@ -690,7 +696,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (itemId === 'buy_now') {
             const urlParams = new URLSearchParams(window.location.search);
             const pid = urlParams.get('product_id');
+            const vid = urlParams.get('variant_id');
             if (pid) bodyPayload.product_id = pid;
+            if (vid) bodyPayload.variant_id = vid;
         }
         
         fetch(`/cart/update/${itemId}`, {
@@ -1303,7 +1311,7 @@ function submitEditAddress() {
     // Buy-now params
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('buy_now') === '1') {
-        ['buy_now','product_id','quantity'].forEach(k => { if (urlParams.has(k)) formData.set(k, urlParams.get(k)); });
+        ['buy_now','product_id','variant_id','quantity'].forEach(k => { if (urlParams.has(k)) formData.set(k, urlParams.get(k)); });
     }
 
     // Show loading spinner on button
@@ -2215,8 +2223,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const body = { code };
             body.shipping_fee = parseFloat(document.getElementById('shippingFeeInput')?.value || 0);
             const urlParams2 = new URLSearchParams(window.location.search);
-            const bn = urlParams2.get('buy_now'), pid = urlParams2.get('product_id'), qty = urlParams2.get('quantity') || 1;
-            if (bn) { body.buy_now = 1; body.product_id = pid; body.quantity = qty; }
+            const bn = urlParams2.get('buy_now'), pid = urlParams2.get('product_id'), vid = urlParams2.get('variant_id'), qty = urlParams2.get('quantity') || 1;
+            if (bn) { body.buy_now = 1; body.product_id = pid; body.quantity = qty; if (vid) body.variant_id = vid; }
             const res = await fetch('{{ route("cart.coupon.apply") }}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },

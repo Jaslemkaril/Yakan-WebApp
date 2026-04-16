@@ -96,8 +96,30 @@ class ProductController extends Controller
     public function show(Product $product)
     {
         try {
-            // Eager load inventory so show.blade.php can use $product->inventory->quantity
-            $product->load('inventory');
+            // Eager load inventory + active variants for storefront rendering.
+            $product->load([
+                'inventory',
+                'variants' => function ($query) {
+                    $query->where('is_active', true)
+                        ->orderBy('size')
+                        ->orderBy('color')
+                        ->orderBy('id');
+                },
+            ]);
+
+            $activeVariants = $product->variants->values();
+            $hasVariants = $activeVariants->isNotEmpty();
+            $defaultVariant = $hasVariants
+                ? ($activeVariants->firstWhere('stock', '>', 0) ?: $activeVariants->first())
+                : null;
+
+            $initialOriginalPrice = $defaultVariant
+                ? (float) $defaultVariant->price
+                : (float) $product->price;
+            $initialDisplayPrice = (float) $product->getDiscountedPrice($initialOriginalPrice);
+            $initialAvailableStock = $defaultVariant
+                ? (int) $defaultVariant->stock
+                : (int) ($product->inventory?->quantity ?? $product->stock ?? 0);
 
             // Track recent view
             if (auth()->check()) {
@@ -141,7 +163,18 @@ class ProductController extends Controller
             }
 
             // Return the product details view
-            return view('products.show', compact('product', 'relatedProducts', 'userOrderItem', 'userReview'));
+            return view('products.show', compact(
+                'product',
+                'relatedProducts',
+                'userOrderItem',
+                'userReview',
+                'activeVariants',
+                'hasVariants',
+                'defaultVariant',
+                'initialOriginalPrice',
+                'initialDisplayPrice',
+                'initialAvailableStock'
+            ));
         } catch (\Exception $e) {
             \Log::error('ProductController::show error: ' . $e->getMessage());
             

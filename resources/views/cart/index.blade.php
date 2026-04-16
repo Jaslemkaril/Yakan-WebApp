@@ -336,6 +336,14 @@
                         @foreach($cartItems as $index => $item)
                             @php
                                 $product = $item->product;
+                                $variant = $item->variant;
+                                $unitPrice = $product
+                                    ? (float) $product->getDiscountedPrice((float) ($variant?->price ?? $product->price))
+                                    : 0;
+                                $lineSubtotal = $unitPrice * (int) $item->quantity;
+                                $stockLevel = $variant
+                                    ? (int) ($variant->stock ?? 0)
+                                    : (int) ($product?->inventory?->quantity ?? $product?->stock ?? 0);
                             @endphp
                             
                             @if($product)
@@ -343,7 +351,7 @@
                                     <div class="flex gap-4">
                                         <!-- Checkbox -->
                                         <div class="flex items-start pt-1">
-                                            <input type="checkbox" class="item-checkbox cart-checkbox" data-item-id="{{ $item->id }}" data-price="{{ $product->price * $item->quantity }}" checked onchange="updateSelection()">
+                                            <input type="checkbox" class="item-checkbox cart-checkbox" data-item-id="{{ $item->id }}" data-price="{{ $lineSubtotal }}" checked onchange="updateSelection()">
                                         </div>
 
                                         <!-- Product Image -->
@@ -364,6 +372,9 @@
                                             <div class="flex justify-between items-start mb-3">
                                                 <div>
                                                     <h3 class="text-lg font-bold text-gray-900 mb-2">{{ $product->name }}</h3>
+                                                    @if($variant)
+                                                        <div class="text-sm font-medium text-gray-600 mb-2">Variant: {{ $variant->display_name }}</div>
+                                                    @endif
                                                     @if($product->category)
                                                         <span class="category-badge">
                                                             {{ $product->category->name }}
@@ -382,23 +393,18 @@
 
                                             <div class="flex items-center justify-between flex-wrap gap-4">
                                                 <div>
-                                                    <div class="text-2xl font-bold text-maroon-600 item-subtotal">₱{{ number_format($product->price * $item->quantity, 2) }}</div>
-                                                    <div class="text-sm text-gray-500">₱{{ number_format($product->price, 2) }} each</div>
+                                                    <div class="text-2xl font-bold text-maroon-600 item-subtotal">₱{{ number_format($lineSubtotal, 2) }}</div>
+                                                    <div class="text-sm text-gray-500">₱{{ number_format($unitPrice, 2) }} each</div>
                                                 </div>
 
                                                 <div class="quantity-control">
                                                     <button type="button" class="quantity-btn" onclick="updateQuantity({{ $item->id }}, parseInt(this.parentElement.querySelector('.quantity-input').value) - 1)">−</button>
-                                                    <input type="number" value="{{ $item->quantity }}" min="1" class="quantity-input" data-item-id="{{ $item->id }}" readonly>
+                                                    <input type="number" value="{{ $item->quantity }}" min="1" max="{{ max(1, $stockLevel) }}" class="quantity-input" data-item-id="{{ $item->id }}" readonly>
                                                     <button type="button" class="quantity-btn" onclick="updateQuantity({{ $item->id }}, parseInt(this.parentElement.querySelector('.quantity-input').value) + 1)">+</button>
                                                 </div>
                                             </div>
 
                                             <div class="mt-4">
-                                                @php
-                                                    // Check inventory table first (correct source), fallback to product.stock
-                                                    $stockLevel = $product->inventory ? $product->inventory->quantity : ($product->stock ?? 0);
-                                                @endphp
-                                                
                                                 @if($stockLevel > 10)
                                                     <span class="stock-badge">
                                                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -460,7 +466,8 @@
                             $subtotal = 0;
                             foreach($cartItems as $item) {
                                 if($item->product) {
-                                    $subtotal += $item->product->price * $item->quantity;
+                                    $unitPrice = (float) $item->product->getDiscountedPrice((float) ($item->variant?->price ?? $item->product->price));
+                                    $subtotal += $unitPrice * $item->quantity;
                                 }
                             }
                             $itemCount = count($cartItems);
@@ -709,6 +716,12 @@
 
         function updateQuantity(itemId, newQuantity) {
             if (newQuantity < 1) return;
+
+            const qtyInput = document.querySelector('.quantity-input[data-item-id="' + itemId + '"]');
+            const maxQty = qtyInput ? parseInt(qtyInput.getAttribute('max') || '0', 10) : 0;
+            if (maxQty > 0 && newQuantity > maxQty) {
+                newQuantity = maxQty;
+            }
             
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
             const authToken = localStorage.getItem('yakan_auth_token') 

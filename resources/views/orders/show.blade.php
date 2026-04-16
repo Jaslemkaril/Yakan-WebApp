@@ -147,7 +147,9 @@
                 </div>
             </div>
         </div>
+        @endif
 
+        @if(($order->status ?? '') === 'completed' || !empty($refundRequest))
         <div class="mb-8 bg-white rounded-xl shadow-md border border-gray-200 p-6">
             <div class="flex items-center gap-3 mb-4">
                 <div class="w-10 h-10 bg-[#800000] rounded-lg flex items-center justify-center">
@@ -157,7 +159,13 @@
                 </div>
                 <div>
                     <h3 class="text-lg font-bold text-gray-900">Refund Request</h3>
-                    <p class="text-sm text-gray-600">Need help with your order? You can request a refund after order received.</p>
+                    <p class="text-sm text-gray-600">
+                        @if(!empty($refundRequest))
+                            Quick Actions update: Track your latest refund progress and admin decision here.
+                        @else
+                            Need help with your order? You can request a refund after order received.
+                        @endif
+                    </p>
                     <p class="text-xs text-gray-500 mt-1">
                         Refund policy: within {{ $refundWarrantyDays ?? 7 }} days after order completion
                         @if(!empty($refundWarrantyDeadline))
@@ -194,6 +202,18 @@
                     <p class="text-sm text-gray-700"><span class="font-semibold">Reason:</span> {{ $refundRequest->reason }}</p>
                     <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Refund Type:</span> {{ ucfirst(str_replace('_', ' ', $refundRequest->refund_type ?? 'full')) }}</p>
                     <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Comment:</span> {{ $refundRequest->comment ?? $refundRequest->details }}</p>
+                    @if(!empty($refundRequest->final_decision))
+                        <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Final Decision:</span> {{ strtoupper(str_replace('_', ' ', $refundRequest->final_decision)) }}</p>
+                    @endif
+                    @if(!is_null($refundRequest->refund_amount))
+                        <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Approved Refund:</span> PHP {{ number_format((float) $refundRequest->refund_amount, 2) }}</p>
+                    @endif
+                    @if(!empty($refundRequest->payout_status))
+                        <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Payout Status:</span> {{ ucfirst(str_replace('_', ' ', $refundRequest->payout_status)) }}</p>
+                    @endif
+                    @if(!empty($refundRequest->reviewed_at))
+                        <p class="text-xs text-gray-500 mt-2">Last reviewed: {{ \Carbon\Carbon::parse($refundRequest->reviewed_at)->format('M d, Y h:i A') }}</p>
+                    @endif
 
                     @if(!empty($refundRequest->recommended_decision))
                         <div class="mt-3 rounded-md border border-blue-200 bg-blue-50 p-3">

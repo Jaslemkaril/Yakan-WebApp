@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Cart;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Coupon;
@@ -18,6 +19,50 @@ use App\Services\Payment\PayMongoCheckoutService;
 
 class CartController extends Controller
 {
+    private function getActiveVariants(Product $product)
+    {
+        if ($product->relationLoaded('variants')) {
+            return $product->variants->where('is_active', true)->values();
+        }
+
+        return $product->variants()->where('is_active', true)->get();
+    }
+
+    private function resolveVariant(Product $product, ?int $variantId): ?ProductVariant
+    {
+        if (!$variantId) {
+            return null;
+        }
+
+        return ProductVariant::where('id', $variantId)
+            ->where('product_id', $product->id)
+            ->where('is_active', true)
+            ->first();
+    }
+
+    private function getEffectiveStock(Product $product, ?ProductVariant $variant = null): int
+    {
+        if ($variant) {
+            return (int) ($variant->stock ?? 0);
+        }
+
+        $activeVariants = $this->getActiveVariants($product);
+        if ($activeVariants->isNotEmpty()) {
+            return (int) $activeVariants->sum('stock');
+        }
+
+        return (int) ($product->inventory?->quantity ?? $product->stock ?? 0);
+    }
+
+    private function getEffectiveUnitPrice(Product $product, ?ProductVariant $variant = null): float
+    {
+        $basePrice = $variant
+            ? (float) ($variant->price ?? 0)
+            : (float) ($product->price ?? 0);
+
+        return (float) $product->getDiscountedPrice(max(0, $basePrice));
+    }
+
     /**
      * Add product to cart
      */
@@ -36,6 +81,32 @@ class CartController extends Controller
             
             $userId = Auth::id();
             $qty = max(1, (int)($request->input('quantity', 1)));
+            $variantIdRaw = $request->input('variant_id');
+            $variantId = is_numeric($variantIdRaw) ? (int) $variantIdRaw : null;
+
+            $product->loadMissing(['inventory', 'variants']);
+            $hasVariants = $this->getActiveVariants($product)->isNotEmpty();
+            $variant = $this->resolveVariant($product, $variantId);
+
+            if ($hasVariants && !$variant) {
+                $msg = 'Please select a valid product variant before adding to cart.';
+                if ($isAjax) {
+                    return response()->json(['success' => false, 'message' => $msg], 422);
+                }
+                return redirect()->back()->with('error', $msg);
+            }
+
+            if (!$hasVariants) {
+                $variantId = null;
+            }
+
+            if ($variantIdRaw && !$variant) {
+                $msg = 'The selected variant does not belong to this product.';
+                if ($isAjax) {
+                    return response()->json(['success' => false, 'message' => $msg], 422);
+                }
+                return redirect()->back()->with('error', $msg);
+            }
 
             \Log::info('Buy Now/Add to Cart attempt', [
                 'user_id' => $userId,
@@ -45,27 +116,8 @@ class CartController extends Controller
                 'buy_now' => $request->input('buy_now') ? 'yes' : 'no'
             ]);
 
-            // Check stock — use inventory table if available, fall back to product.stock
-            $availableStock = $product->stock ?? 0;
-            try {
-                if (\Illuminate\Support\Facades\Schema::hasTable('inventory')) {
-                    $inventory = \App\Models\Inventory::where('product_id', $product->id)->first();
-                    if (!$inventory) {
-                        $inventory = \App\Models\Inventory::create([
-                            'product_id'      => $product->id,
-                            'quantity'        => $product->stock ?? 0,
-                            'min_stock_level' => 5,
-                            'max_stock_level' => 100,
-                            'cost_price'      => ($product->price ?? 0) * 0.6,
-                            'selling_price'   => $product->price ?? 0,
-                        ]);
-                        \Log::info('Auto-created inventory', ['product_id' => $product->id]);
-                    }
-                    $availableStock = $inventory->quantity;
-                }
-            } catch (\Exception $invEx) {
-                \Log::warning('Inventory check skipped, using product.stock', ['error' => $invEx->getMessage()]);
-            }
+            // Check stock from selected variant (if present), else product-level stock.
+            $availableStock = $this->getEffectiveStock($product, $variant);
 
             // Check stock availability
             if ($availableStock < $qty) {
@@ -90,6 +142,7 @@ class CartController extends Controller
                         'cart_count' => $cartCount,
                         'buy_now'    => true,
                         'product_id' => $product->id,
+                        'variant_id' => $variantId,
                         'quantity'   => $qty,
                     ]);
                 }
@@ -97,6 +150,7 @@ class CartController extends Controller
                 // Non-AJAX fallback: redirect directly to checkout with URL params
                 $authToken = $request->input('auth_token') ?? session('auth_token');
                 $paramStr = 'buy_now=1&product_id=' . $product->id . '&quantity=' . $qty;
+                if ($variantId) $paramStr .= '&variant_id=' . $variantId;
                 if ($authToken) $paramStr .= '&auth_token=' . $authToken;
                 return redirect('/cart/checkout?' . $paramStr);
             }
@@ -104,6 +158,11 @@ class CartController extends Controller
             // Regular "Add to Cart" flow
             $cartItem = Cart::where('user_id', $userId)
                             ->where('product_id', $product->id)
+                            ->when($variantId, function ($query) use ($variantId) {
+                                $query->where('variant_id', $variantId);
+                            }, function ($query) {
+                                $query->whereNull('variant_id');
+                            })
                             ->first();
 
             if ($cartItem) {
@@ -122,6 +181,7 @@ class CartController extends Controller
                 Cart::create([
                     'user_id'    => $userId,
                     'product_id' => $product->id,
+                    'variant_id' => $variantId,
                     'quantity'   => $qty,
                 ]);
                 \Log::info('Cart item created', ['user_id' => $userId, 'product_id' => $product->id]);
@@ -182,15 +242,34 @@ class CartController extends Controller
         // Support buy-now flow: product_id + quantity passed directly in AJAX body
         if ($request->boolean('buy_now') && $request->filled('product_id')) {
             $product  = Product::find($request->input('product_id'));
+            $variantId = $request->filled('variant_id') && is_numeric($request->input('variant_id'))
+                ? (int) $request->input('variant_id')
+                : null;
+            $variant = $product ? $this->resolveVariant($product->loadMissing('variants'), $variantId) : null;
+            if ($product && $this->getActiveVariants($product)->isNotEmpty() && !$variant) {
+                return $fail('Please select a valid variant before applying coupon.');
+            }
             $qty      = max(1, (int) $request->input('quantity', 1));
-            $subtotal = $product ? $product->price * $qty : 0;
+            $subtotal = $product ? $this->getEffectiveUnitPrice($product, $variant) * $qty : 0;
         } elseif (session()->has('buy_now_item')) {
             $bni      = session('buy_now_item');
             $product  = Product::find($bni['product_id']);
-            $subtotal = $product ? $product->price * ($bni['quantity'] ?? 1) : 0;
+            $variantId = !empty($bni['variant_id']) ? (int) $bni['variant_id'] : null;
+            $variant = $product ? $this->resolveVariant($product->loadMissing('variants'), $variantId) : null;
+            if ($product && $this->getActiveVariants($product)->isNotEmpty() && !$variant) {
+                session()->forget('buy_now_item');
+                return $fail('Selected variant is unavailable. Please reselect your product variant.');
+            }
+            $subtotal = $product ? $this->getEffectiveUnitPrice($product, $variant) * ($bni['quantity'] ?? 1) : 0;
         } else {
-            $cartItems = Cart::with('product.inventory')->where('user_id', Auth::id())->get();
-            $subtotal  = $cartItems->sum(fn($item) => $item->product->price * $item->quantity);
+            $cartItems = Cart::with('product.inventory', 'product.variants', 'variant')->where('user_id', Auth::id())->get();
+            $subtotal  = $cartItems->sum(function ($item) {
+                if (!$item->product) {
+                    return 0;
+                }
+
+                return $this->getEffectiveUnitPrice($item->product, $item->variant) * $item->quantity;
+            });
         }
 
         // Detailed validation with specific error messages
@@ -320,7 +399,7 @@ class CartController extends Controller
     public function getCartCount()
     {
         $userId = Auth::id();
-        return Cache::remember('cart_count_' . $userId, 300, function () use ($userId) {
+        return \Cache::remember('cart_count_' . $userId, 300, function () use ($userId) {
             return Cart::where('user_id', $userId)->sum('quantity');
         });
     }
@@ -340,12 +419,12 @@ class CartController extends Controller
                         ->orderBy('created_at', 'desc')
                         ->get();
 
-        // Manually load products with inventory to ensure they're loaded with stock data
+        // Manually load products with inventory + variants to ensure variant-aware cart display.
         foreach ($cartItems as $item) {
             if (!$item->product) {
-                $item->load('product.inventory');
+                $item->load('product.inventory', 'product.variants', 'variant');
             } else {
-                $item->load('product.inventory');
+                $item->load('product.inventory', 'product.variants', 'variant');
             }
         }
 
@@ -448,8 +527,10 @@ class CartController extends Controller
             // Try session first; fall back to product_id from request body (URL-param buy_now flow)
             if (session()->has('buy_now_item')) {
                 $productId = session('buy_now_item')['product_id'];
+                $variantId = session('buy_now_item')['variant_id'] ?? null;
             } elseif ($request->filled('product_id')) {
                 $productId = $request->input('product_id');
+                $variantId = $request->filled('variant_id') ? (int) $request->input('variant_id') : null;
             } else {
                 if ($request->wantsJson()) {
                     return response()->json(['success' => false, 'message' => 'Cart item not found'], 404);
@@ -457,6 +538,8 @@ class CartController extends Controller
                 return redirect()->back()->with('error', 'Cart item not found');
             }
             $product = Product::find($productId);
+            $product?->loadMissing('variants');
+            $variant = $product ? $this->resolveVariant($product, $variantId ? (int) $variantId : null) : null;
             
             if (!$product) {
                 if ($request->wantsJson()) {
@@ -466,7 +549,7 @@ class CartController extends Controller
             }
             
             $newQty = (int) $request->quantity;
-            $maxStock = $product->stock;
+            $maxStock = $this->getEffectiveStock($product, $variant);
             if (is_numeric($maxStock) && $maxStock > 0) {
                 $newQty = min($newQty, (int) $maxStock);
             }
@@ -475,11 +558,12 @@ class CartController extends Controller
             // Update session
             session(['buy_now_item' => [
                 'product_id' => $product->id,
+                'variant_id' => $variant?->id,
                 'quantity' => $newQty,
             ]]);
             
             if ($request->wantsJson()) {
-                $itemSubtotal = $newQty * $product->price;
+                $itemSubtotal = $newQty * $this->getEffectiveUnitPrice($product, $variant);
                 $cartTotal = $itemSubtotal;
                 
                 // Apply coupon if exists
@@ -513,7 +597,7 @@ class CartController extends Controller
         }
 
         // Handle regular cart item (database-based)
-        $cartItem = Cart::with('product.inventory')
+        $cartItem = Cart::with('product.inventory', 'product.variants', 'variant')
                         ->where('id', $id)
                         ->where('user_id', Auth::id())
                         ->first();
@@ -525,7 +609,7 @@ class CartController extends Controller
             return redirect()->back()->with('error', 'Cart item not found');
         }
 
-        $maxStock = $cartItem->product?->stock;
+        $maxStock = $this->getEffectiveStock($cartItem->product, $cartItem->variant);
         $newQty = (int) $request->quantity;
         if (is_numeric($maxStock) && $maxStock > 0) {
             $newQty = min($newQty, (int) $maxStock);
@@ -539,12 +623,16 @@ class CartController extends Controller
         // If it's a JSON request, return JSON with updated cart data
         if ($request->wantsJson()) {
             // Calculate new item subtotal
-            $itemSubtotal = $cartItem->quantity * $cartItem->product->price;
+            $itemSubtotal = $cartItem->quantity * $this->getEffectiveUnitPrice($cartItem->product, $cartItem->variant);
             
             // Get all cart items and calculate totals
-            $allCartItems = Cart::with('product.inventory')->where('user_id', Auth::id())->get();
+            $allCartItems = Cart::with('product.inventory', 'product.variants', 'variant')->where('user_id', Auth::id())->get();
             $cartTotal = $allCartItems->sum(function($item) {
-                return $item->quantity * $item->product->price;
+                if (!$item->product) {
+                    return 0;
+                }
+
+                return $item->quantity * $this->getEffectiveUnitPrice($item->product, $item->variant);
             });
             
             // Apply coupon if exists
@@ -591,17 +679,28 @@ class CartController extends Controller
         // Check for buy_now via URL params first (Railway: sessions don't persist across redirects)
         if ($request->boolean('buy_now') && $request->filled('product_id')) {
             $product = Product::find($request->input('product_id'));
+            $variantId = $request->filled('variant_id') && is_numeric($request->input('variant_id'))
+                ? (int) $request->input('variant_id')
+                : null;
+            $variant = $product ? $this->resolveVariant($product->loadMissing('variants'), $variantId) : null;
             $qty = max(1, (int) $request->input('quantity', 1));
             if ($product) {
+                $hasVariants = $this->getActiveVariants($product)->isNotEmpty();
+                if ($hasVariants && !$variant) {
+                    return redirect()->route('products.show', $product)->with('error', 'Please select a valid product variant.');
+                }
+
                 $cartItems = collect([
                     (object)[
                         'id'         => 'buy_now',
                         'product_id' => $product->id,
+                        'variant_id' => $variant?->id,
                         'quantity'   => $qty,
                         'product'    => $product,
+                        'variant'    => $variant,
                     ]
                 ]);
-                $subtotal = $product->price * $qty;
+                $subtotal = $this->getEffectiveUnitPrice($product, $variant) * $qty;
                 $discount = 0;
                 $appliedCoupon = null;
                 $total = $subtotal;
@@ -626,10 +725,19 @@ class CartController extends Controller
         if (session()->has('buy_now_item')) {
             $buyNowItem = session('buy_now_item');
             $product = Product::find($buyNowItem['product_id']);
+            $variant = $product
+                ? $this->resolveVariant($product->loadMissing('variants'), !empty($buyNowItem['variant_id']) ? (int) $buyNowItem['variant_id'] : null)
+                : null;
             
             if (!$product) {
                 session()->forget('buy_now_item');
                 return redirect()->route('products.index')->with('error', 'Product not found.');
+            }
+
+            $hasVariants = $this->getActiveVariants($product)->isNotEmpty();
+            if ($hasVariants && !$variant) {
+                session()->forget('buy_now_item');
+                return redirect()->route('products.show', $product)->with('error', 'Selected product variant is no longer available.');
             }
 
             // Create a collection with just the Buy Now item
@@ -637,15 +745,17 @@ class CartController extends Controller
                 (object)[
                     'id' => 'buy_now',
                     'product_id' => $product->id,
+                    'variant_id' => $variant?->id,
                     'quantity' => $buyNowItem['quantity'],
                     'product' => $product,
+                    'variant' => $variant,
                 ]
             ]);
             
-            $subtotal = $product->price * $buyNowItem['quantity'];
+            $subtotal = $this->getEffectiveUnitPrice($product, $variant) * $buyNowItem['quantity'];
         } else {
             // Regular cart checkout
-            $cartItems = Cart::with('product.inventory')
+            $cartItems = Cart::with('product.inventory', 'product.variants', 'variant')
                             ->where('user_id', Auth::id())
                             ->get();
 
@@ -665,7 +775,13 @@ class CartController extends Controller
                 }
             }
             
-            $subtotal = $cartItems->sum(fn($item) => $item->product->price * $item->quantity);
+            $subtotal = $cartItems->sum(function ($item) {
+                if (!$item->product) {
+                    return 0;
+                }
+
+                return $this->getEffectiveUnitPrice($item->product, $item->variant) * $item->quantity;
+            });
         }
 
         // Load user addresses first (needed for shipping fee estimate)
@@ -739,10 +855,17 @@ class CartController extends Controller
         if (($request->boolean('buy_now') && $request->filled('product_id')) || session()->has('buy_now_item')) {
             if ($request->boolean('buy_now') && $request->filled('product_id')) {
                 $product = Product::find($request->input('product_id'));
+                $variantId = $request->filled('variant_id') && is_numeric($request->input('variant_id'))
+                    ? (int) $request->input('variant_id')
+                    : null;
+                $variant = $product ? $this->resolveVariant($product->loadMissing('variants'), $variantId) : null;
                 $qty = max(1, (int) $request->input('quantity', 1));
             } else {
                 $buyNowItem = session('buy_now_item');
                 $product = Product::find($buyNowItem['product_id']);
+                $variant = $product
+                    ? $this->resolveVariant($product->loadMissing('variants'), !empty($buyNowItem['variant_id']) ? (int) $buyNowItem['variant_id'] : null)
+                    : null;
                 $qty = $buyNowItem['quantity'];
             }
             if (!$product) {
@@ -750,17 +873,25 @@ class CartController extends Controller
                 return redirect()->route('products.index')->with('error', 'Product not found.');
             }
 
+            $hasVariants = $this->getActiveVariants($product)->isNotEmpty();
+            if ($hasVariants && !$variant) {
+                session()->forget('buy_now_item');
+                return redirect()->route('products.show', $product)->with('error', 'Please select a valid product variant to continue checkout.');
+            }
+
             // Create a collection with just the Buy Now item
             $cartItems = collect([
                 (object)[
                     'product_id' => $product->id,
+                    'variant_id' => $variant?->id,
                     'quantity' => $qty,
                     'product' => $product,
+                    'variant' => $variant,
                 ]
             ]);
         } else {
             // Regular cart checkout
-            $cartItems = Cart::with('product.inventory')->where('user_id', $userId)->get();
+            $cartItems = Cart::with('product.inventory', 'product.variants', 'variant')->where('user_id', $userId)->get();
 
             if ($cartItems->isEmpty()) {
                 return redirect()->back()->with('error', 'Your cart is empty.');
@@ -783,14 +914,27 @@ class CartController extends Controller
 
         // Validate stock availability for all items before processing
         foreach ($cartItems as $item) {
-            $inventory = \App\Models\Inventory::where('product_id', $item->product_id)->first();
-            if (!$inventory || !$inventory->hasSufficientStock($item->quantity)) {
-                $availableQty = $inventory?->quantity ?? 0;
-                return redirect()->back()->with('error', "Product \"{$item->product->name}\" has insufficient stock. Only {$availableQty} available.");
+            $variant = $item->variant ?? null;
+
+            if ($variant) {
+                if ((int) $variant->stock < (int) $item->quantity) {
+                    $availableQty = (int) $variant->stock;
+                    $variantLabel = $variant->display_name;
+                    return redirect()->back()->with('error', "Variant \"{$variantLabel}\" for product \"{$item->product->name}\" has insufficient stock. Only {$availableQty} available.");
+                }
+            } else {
+                $inventory = \App\Models\Inventory::where('product_id', $item->product_id)->first();
+                if (!$inventory || !$inventory->hasSufficientStock($item->quantity)) {
+                    $availableQty = $inventory?->quantity ?? 0;
+                    return redirect()->back()->with('error', "Product \"{$item->product->name}\" has insufficient stock. Only {$availableQty} available.");
+                }
             }
         }
 
-        $subtotal = $cartItems->sum(fn($item) => $item->product->price * $item->quantity);
+        $subtotal = $cartItems->sum(function ($item) {
+            $variant = $item->variant ?? null;
+            return $this->getEffectiveUnitPrice($item->product, $variant) * $item->quantity;
+        });
         $discount = 0;
         $coupon = null;
         // Find coupon; discount calculated after shippingFee is known.
@@ -889,11 +1033,22 @@ class CartController extends Controller
 
         // Add order items
         foreach ($cartItems as $item) {
+            $variant = $item->variant ?? null;
+            $unitPrice = $this->getEffectiveUnitPrice($item->product, $variant);
+
             $order->orderItems()->create([
                 'product_id' => $item->product_id,
+                'variant_id' => $variant?->id,
+                'variant_size' => $variant?->size,
+                'variant_color' => $variant?->color,
                 'quantity'   => $item->quantity,
-                'price'      => $item->product->price,
+                'price'      => $unitPrice,
+                'total'      => $unitPrice * $item->quantity,
             ]);
+
+            if ($variant && $variant->stock >= $item->quantity) {
+                $variant->decrement('stock', $item->quantity);
+            }
 
             // Decrement inventory stock
             $inventory = \App\Models\Inventory::where('product_id', $item->product_id)->first();
