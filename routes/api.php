@@ -40,9 +40,9 @@ Route::prefix('v1')->group(function () {
     // ===================== PRODUCTS (Public) =====================
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/products/featured', [ProductController::class, 'featured']);
-    Route::get('/products/{product}/reviews', [ReviewController::class, 'index']);
-    Route::get('/products/{id}', [ProductController::class, 'show']);
     Route::get('/products/search', [ProductController::class, 'search']);
+    Route::get('/products/{product}/reviews', [ReviewController::class, 'index']);
+    Route::get('/products/{product}', [ProductController::class, 'show']);
 
     // ===================== CULTURAL HERITAGE (Public) =====================
     Route::get('/cultural-heritage', [CulturalHeritageController::class, 'index']);
