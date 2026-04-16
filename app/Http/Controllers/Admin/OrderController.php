@@ -400,17 +400,21 @@ class OrderController extends Controller
     }
 
     /**
-     * Approve and process a user refund request.
+     * Review refund request and move it through workflow states.
      */
     public function approveRefundRequest(Request $request, OrderRefundRequest $refundRequest)
     {
+        $this->ensureRefundWorkflowColumnsExist();
+
         $validated = $request->validate([
+            'admin_decision' => 'nullable|in:recommended,FULL_REFUND,PARTIAL_REFUND,RETURN_REQUIRED,REJECT',
             'admin_note' => 'nullable|string|max:2000',
             'approved_amount' => 'nullable|numeric|min:0',
         ]);
 
-        if (!in_array($refundRequest->status, ['requested', 'under_review'], true)) {
-            return redirect()->back()->with('error', 'This refund request can no longer be approved.');
+        $workflowStatus = strtolower((string) ($refundRequest->workflow_status ?: $refundRequest->status));
+        if (!in_array($workflowStatus, ['pending_review', 'under_review', 'requested'], true)) {
+            return redirect()->back()->with('error', 'This refund request is not in a reviewable state.');
         }
 
         $order = $refundRequest->order;
@@ -418,32 +422,47 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Associated order was not found.');
         }
 
-        $refundRequest->status = 'processed';
-        $refundRequest->admin_note = $validated['admin_note'] ?? $refundRequest->admin_note;
-        $refundRequest->approved_amount = $validated['approved_amount'] ?? ($order->total_amount ?? $order->total);
-        $refundRequest->reviewed_by = auth()->id();
-        $refundRequest->reviewed_at = now();
-        $refundRequest->processed_at = now();
-        $refundRequest->save();
-
-        $this->ensureRefundedPaymentStatusSupported();
-
-        $order->status = 'refunded';
-        $order->payment_status = 'refunded';
-        $order->appendTrackingEvent('Refunded');
-        $order->save();
-
-        foreach ($order->orderItems as $item) {
-            $product = $item->product;
-            if ($product) {
-                $product->stock += $item->quantity;
-                $product->save();
-            }
+        $selectedDecision = strtoupper((string) ($validated['admin_decision'] ?? 'recommended'));
+        if ($selectedDecision === 'RECOMMENDED') {
+            $selectedDecision = strtoupper((string) ($refundRequest->recommended_decision ?? 'REJECT'));
+        }
+        if (!in_array($selectedDecision, ['FULL_REFUND', 'PARTIAL_REFUND', 'RETURN_REQUIRED', 'REJECT'], true)) {
+            $selectedDecision = 'REJECT';
         }
 
-        $this->notifyRefundDecision($refundRequest, 'approved');
+        $orderTotal = (float) ($order->total_amount ?? $order->total ?? 0);
+        $recommendedAmount = (float) ($refundRequest->recommended_refund_amount ?? 0);
+        $approvedAmount = array_key_exists('approved_amount', $validated) && $validated['approved_amount'] !== null
+            ? (float) $validated['approved_amount']
+            : ($recommendedAmount > 0 ? $recommendedAmount : $orderTotal);
+        $approvedAmount = max(0, min($approvedAmount, $orderTotal));
 
-        return redirect()->back()->with('success', 'Refund request approved and order marked as refunded.');
+        $refundRequest->status = $selectedDecision === 'REJECT' ? 'rejected' : 'approved';
+        $refundRequest->workflow_status = match ($selectedDecision) {
+            'REJECT' => 'rejected',
+            'RETURN_REQUIRED' => 'awaiting_return_shipment',
+            default => 'pending_payout',
+        };
+        $refundRequest->final_decision = $selectedDecision;
+        $refundRequest->refund_amount = $selectedDecision === 'REJECT' ? 0 : $approvedAmount;
+        $refundRequest->approved_amount = $selectedDecision === 'REJECT' ? 0 : $approvedAmount;
+        $refundRequest->return_required = $selectedDecision === 'RETURN_REQUIRED';
+        $refundRequest->payout_status = $selectedDecision === 'REJECT' ? 'not_applicable' : 'pending';
+        $refundRequest->admin_note = $validated['admin_note'] ?? $refundRequest->admin_note;
+        $refundRequest->reviewed_by = auth()->id();
+        $refundRequest->reviewed_at = now();
+        $refundRequest->save();
+
+        if ($selectedDecision === 'REJECT') {
+            $this->notifyRefundDecision($refundRequest, 'rejected');
+            return redirect()->back()->with('success', 'Refund request rejected.');
+        }
+
+        if ($selectedDecision === 'RETURN_REQUIRED') {
+            return redirect()->back()->with('success', 'Refund review saved. Waiting for customer return shipment details.');
+        }
+
+        return redirect()->back()->with('success', 'Refund decision saved. Request is now pending payout processing.');
     }
 
     /**
@@ -451,23 +470,105 @@ class OrderController extends Controller
      */
     public function rejectRefundRequest(Request $request, OrderRefundRequest $refundRequest)
     {
-        $validated = $request->validate([
+        $request->validate([
             'admin_note' => 'required|string|max:2000',
         ]);
 
-        if (!in_array($refundRequest->status, ['requested', 'under_review'], true)) {
-            return redirect()->back()->with('error', 'This refund request can no longer be rejected.');
+        $request->merge(['admin_decision' => 'REJECT']);
+
+        return $this->approveRefundRequest($request, $refundRequest);
+    }
+
+    /**
+     * Confirm returned item receipt and move request to pending payout.
+     */
+    public function markRefundReturnReceived(Request $request, OrderRefundRequest $refundRequest)
+    {
+        $this->ensureRefundWorkflowColumnsExist();
+
+        $validated = $request->validate([
+            'admin_note' => 'nullable|string|max:2000',
+        ]);
+
+        $workflowStatus = strtolower((string) ($refundRequest->workflow_status ?: $refundRequest->status));
+        if (!in_array($workflowStatus, ['awaiting_return_shipment', 'return_in_transit'], true)) {
+            return redirect()->back()->with('error', 'Return can only be confirmed after a return shipment is initiated.');
         }
 
-        $refundRequest->status = 'rejected';
-        $refundRequest->admin_note = $validated['admin_note'];
+        $refundRequest->workflow_status = 'pending_payout';
+        $refundRequest->status = 'approved';
+        $refundRequest->return_received_at = now();
+        $refundRequest->payout_status = 'pending';
         $refundRequest->reviewed_by = auth()->id();
         $refundRequest->reviewed_at = now();
+
+        if (!empty($validated['admin_note'])) {
+            $existing = trim((string) ($refundRequest->admin_note ?? ''));
+            $suffix = trim((string) $validated['admin_note']);
+            $refundRequest->admin_note = $existing !== '' ? ($existing . "\n" . $suffix) : $suffix;
+        }
+
         $refundRequest->save();
 
-        $this->notifyRefundDecision($refundRequest, 'rejected');
+        return redirect()->back()->with('success', 'Return marked as received. Refund is now pending payout.');
+    }
 
-        return redirect()->back()->with('success', 'Refund request has been rejected.');
+    /**
+     * Execute payout and finalize refund request + order status.
+     */
+    public function executeRefundPayout(Request $request, OrderRefundRequest $refundRequest)
+    {
+        $this->ensureRefundWorkflowColumnsExist();
+
+        $validated = $request->validate([
+            'refund_channel' => 'required|string|max:40',
+            'refund_reference' => 'required|string|max:120',
+            'admin_note' => 'nullable|string|max:2000',
+        ]);
+
+        $workflowStatus = strtolower((string) ($refundRequest->workflow_status ?: $refundRequest->status));
+        if (!in_array($workflowStatus, ['pending_payout', 'return_received', 'approved'], true)) {
+            return redirect()->back()->with('error', 'Refund is not yet ready for payout processing.');
+        }
+
+        $order = $refundRequest->order;
+        if (!$order) {
+            return redirect()->back()->with('error', 'Associated order was not found.');
+        }
+
+        $this->ensureRefundedPaymentStatusSupported();
+
+        $refundRequest->refund_channel = trim((string) $validated['refund_channel']);
+        $refundRequest->refund_reference = trim((string) $validated['refund_reference']);
+        $refundRequest->payout_status = 'completed';
+        $refundRequest->workflow_status = 'processed';
+        $refundRequest->status = 'processed';
+        $refundRequest->processed_at = now();
+        $refundRequest->reviewed_by = auth()->id();
+        $refundRequest->reviewed_at = now();
+
+        if (!empty($validated['admin_note'])) {
+            $refundRequest->admin_note = $validated['admin_note'];
+        }
+
+        if (empty($refundRequest->final_decision)) {
+            $refundRequest->final_decision = strtoupper((string) ($refundRequest->recommended_decision ?? 'FULL_REFUND'));
+        }
+        if ((float) ($refundRequest->refund_amount ?? 0) <= 0) {
+            $fallbackAmount = (float) ($refundRequest->approved_amount ?? $refundRequest->recommended_refund_amount ?? 0);
+            $refundRequest->refund_amount = max(0, $fallbackAmount);
+        }
+
+        $refundRequest->save();
+
+        $order->status = 'refunded';
+        $order->payment_status = 'refunded';
+        $order->appendTrackingEvent('Refunded');
+        $order->save();
+
+        $this->notifyRefundDecision($refundRequest, 'approved');
+
+        return redirect()->back()->with('success', 'Refund payout recorded. Order is now marked as refunded.');
     }
 
     /**
@@ -505,6 +606,52 @@ class OrderController extends Controller
             \DB::statement("ALTER TABLE orders MODIFY COLUMN payment_status ENUM('pending','paid','verified','failed','refunded') NOT NULL DEFAULT 'pending'");
         } catch (\Throwable $e) {
             Log::warning('Unable to ensure payment_status supports refunded', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Ensure refund workflow columns exist for deployments with lagging migrations.
+     */
+    private function ensureRefundWorkflowColumnsExist(): void
+    {
+        if (!Schema::hasTable('order_refund_requests')) {
+            return;
+        }
+
+        try {
+            Schema::table('order_refund_requests', function (\Illuminate\Database\Schema\Blueprint $table) {
+                if (!Schema::hasColumn('order_refund_requests', 'workflow_status')) {
+                    $table->string('workflow_status', 60)->nullable()->after('status');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'final_decision')) {
+                    $table->string('final_decision', 40)->nullable()->after('workflow_status');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'refund_amount')) {
+                    $table->decimal('refund_amount', 12, 2)->nullable()->after('final_decision');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'refund_channel')) {
+                    $table->string('refund_channel', 40)->nullable()->after('refund_amount');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'refund_reference')) {
+                    $table->string('refund_reference', 120)->nullable()->after('refund_channel');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'payout_status')) {
+                    $table->string('payout_status', 40)->nullable()->after('refund_reference');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'return_tracking_number')) {
+                    $table->string('return_tracking_number', 120)->nullable()->after('payout_status');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'return_shipped_at')) {
+                    $table->timestamp('return_shipped_at')->nullable()->after('return_tracking_number');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'return_received_at')) {
+                    $table->timestamp('return_received_at')->nullable()->after('return_shipped_at');
+                }
+            });
+        } catch (\Throwable $e) {
+            Log::warning('Unable to ensure admin refund workflow columns exist', [
                 'error' => $e->getMessage(),
             ]);
         }

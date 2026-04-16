@@ -561,6 +561,7 @@ class OrderController extends Controller
     public function requestRefund(Request $request, Order $order)
     {
         $this->ensureRefundRequestsTableExists();
+        $this->ensureRefundWorkflowColumnsExist();
 
         if (!Schema::hasTable('order_refund_requests')) {
             return redirect()->back()->with('error', 'Refund feature is not ready yet. Please try again shortly.');
@@ -570,18 +571,27 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Unauthorized action.');
         }
 
-        if (strtolower((string) $order->status) !== 'completed') {
-            return redirect()->back()->with('error', 'You can request a refund only after confirming order received.');
-        }
-
-        if (!$order->isRefundWithinWarranty()) {
-            return redirect()->back()->with('error', 'Refund window expired. Refund requests are only allowed within ' . $order->getRefundWarrantyDays() . ' days after order completion.');
-        }
-
         $activeStatuses = ['requested', 'under_review', 'approved', 'processed'];
+        $activeWorkflowStatuses = [
+            'pending_review',
+            'under_review',
+            'awaiting_return_shipment',
+            'return_in_transit',
+            'return_received',
+            'pending_payout',
+            'approved',
+            'processed',
+        ];
+
         $existing = OrderRefundRequest::where('order_id', $order->id)
             ->where('user_id', auth()->id())
-            ->whereIn('status', $activeStatuses)
+            ->where(function ($query) use ($activeStatuses, $activeWorkflowStatuses) {
+                $query->whereIn('status', $activeStatuses);
+
+                if (Schema::hasColumn('order_refund_requests', 'workflow_status')) {
+                    $query->orWhereIn('workflow_status', $activeWorkflowStatuses);
+                }
+            })
             ->latest()
             ->first();
 
@@ -591,10 +601,21 @@ class OrderController extends Controller
 
         $validated = $request->validate([
             'reason' => 'required|string|max:150',
-            'details' => 'required|string|max:2000',
+            'refund_type' => 'nullable|in:full,partial,change_of_mind',
+            'comment' => 'nullable|string|max:2000',
+            'details' => 'nullable|string|max:2000',
             'evidence' => 'required|array|min:1|max:5',
             'evidence.*' => 'required|file|mimes:jpg,jpeg,png,webp,pdf,mp4,mov,webm|max:20480',
         ]);
+
+        $comment = trim((string) ($validated['comment'] ?? $validated['details'] ?? ''));
+        if ($comment === '') {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors([
+                    'comment' => 'Please provide a short explanation for your refund request.',
+                ]);
+        }
 
         if (strtolower((string) $validated['reason']) === 'damaged item' && !$this->hasVideoEvidence($request->file('evidence', []))) {
             return redirect()->back()
@@ -611,17 +632,76 @@ class OrderController extends Controller
             }
         }
 
-        OrderRefundRequest::create([
+        $refundType = $this->normalizeRefundType($validated['refund_type'] ?? null, $validated['reason']);
+
+        // Step 2: create refund request record as pending review.
+        $refundRequest = OrderRefundRequest::create([
             'order_id' => $order->id,
             'user_id' => auth()->id(),
+            'refund_type' => $refundType,
             'reason' => $validated['reason'],
-            'details' => $validated['details'],
+            'comment' => $comment,
+            'details' => $validated['details'] ?? $comment,
             'evidence_paths' => $evidencePaths,
             'status' => 'requested',
+            'workflow_status' => 'pending_review',
             'requested_at' => now(),
+            'payout_status' => 'pending',
         ]);
 
-        return redirect()->back()->with('success', 'Refund request submitted. Our team will review it shortly.');
+        // Step 3 + 4 + 5: system validation + decision engine recommendation.
+        $systemValidation = $this->buildRefundValidationSnapshot($order, (int) auth()->id());
+        $recommendation = $this->buildRefundRecommendation($order, $refundType, $validated['reason'], $comment, $systemValidation);
+
+        $refundRequest->system_validation = $systemValidation['checks'] ?? [];
+        $refundRequest->fraud_flags = $systemValidation['fraud']['flags'] ?? [];
+        $refundRequest->fraud_risk_level = $systemValidation['fraud']['risk_level'] ?? 'low';
+        $refundRequest->recommended_decision = $recommendation['decision'] ?? 'REJECT';
+        $refundRequest->recommended_refund_amount = $recommendation['refund_amount'] ?? 0;
+        $refundRequest->return_required = (bool) ($recommendation['return_required'] ?? false);
+        $refundRequest->save();
+
+        $recommendationLabel = str_replace('_', ' ', (string) ($refundRequest->recommended_decision ?? 'REJECT'));
+
+        return redirect()->back()->with(
+            'success',
+            'Refund request submitted. System recommendation: ' . strtoupper($recommendationLabel) . '. Awaiting admin review.'
+        );
+    }
+
+    /**
+     * Buyer submits return shipment details when return is required.
+     */
+    public function shipRefundReturn(Request $request, OrderRefundRequest $refundRequest)
+    {
+        if ((int) $refundRequest->user_id !== (int) auth()->id()) {
+            return redirect()->back()->with('error', 'Unauthorized action.');
+        }
+
+        $currentWorkflowStatus = strtolower((string) ($refundRequest->workflow_status ?: $refundRequest->status));
+        if ($currentWorkflowStatus !== 'awaiting_return_shipment') {
+            return redirect()->back()->with('error', 'Return shipment details are not required at this stage.');
+        }
+
+        $validated = $request->validate([
+            'return_tracking_number' => 'required|string|max:120',
+            'return_comment' => 'nullable|string|max:1000',
+        ]);
+
+        $refundRequest->return_tracking_number = trim((string) $validated['return_tracking_number']);
+        $refundRequest->return_shipped_at = now();
+        $refundRequest->workflow_status = 'return_in_transit';
+        $refundRequest->status = 'approved';
+
+        if (!empty($validated['return_comment'])) {
+            $existingNote = trim((string) ($refundRequest->admin_note ?? ''));
+            $suffix = 'Buyer return note: ' . trim((string) $validated['return_comment']);
+            $refundRequest->admin_note = $existingNote !== '' ? ($existingNote . "\n" . $suffix) : $suffix;
+        }
+
+        $refundRequest->save();
+
+        return redirect()->back()->with('success', 'Return shipment details submitted. Seller will verify the returned item upon receipt.');
     }
 
     /**
@@ -664,11 +744,28 @@ class OrderController extends Controller
                 $table->id();
                 $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
                 $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+                $table->string('refund_type', 40)->nullable();
                 $table->string('reason', 150);
+                $table->text('comment')->nullable();
                 $table->text('details')->nullable();
                 $table->json('evidence_paths')->nullable();
                 $table->enum('status', ['requested', 'under_review', 'approved', 'rejected', 'processed'])
                     ->default('requested');
+                $table->string('workflow_status', 60)->nullable();
+                $table->json('system_validation')->nullable();
+                $table->json('fraud_flags')->nullable();
+                $table->string('fraud_risk_level', 20)->nullable();
+                $table->string('recommended_decision', 40)->nullable();
+                $table->decimal('recommended_refund_amount', 12, 2)->nullable();
+                $table->boolean('return_required')->default(false);
+                $table->string('final_decision', 40)->nullable();
+                $table->decimal('refund_amount', 12, 2)->nullable();
+                $table->string('refund_channel', 40)->nullable();
+                $table->string('refund_reference', 120)->nullable();
+                $table->string('payout_status', 40)->nullable();
+                $table->string('return_tracking_number', 120)->nullable();
+                $table->timestamp('return_shipped_at')->nullable();
+                $table->timestamp('return_received_at')->nullable();
                 $table->text('admin_note')->nullable();
                 $table->decimal('approved_amount', 12, 2)->nullable();
                 $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
@@ -685,6 +782,255 @@ class OrderController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Ensure newer refund-workflow columns exist on lagging deployments.
+     */
+    private function ensureRefundWorkflowColumnsExist(): void
+    {
+        if (!Schema::hasTable('order_refund_requests')) {
+            return;
+        }
+
+        try {
+            Schema::table('order_refund_requests', function (\Illuminate\Database\Schema\Blueprint $table) {
+                if (!Schema::hasColumn('order_refund_requests', 'refund_type')) {
+                    $table->string('refund_type', 40)->nullable()->after('user_id');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'comment')) {
+                    $table->text('comment')->nullable()->after('reason');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'workflow_status')) {
+                    $table->string('workflow_status', 60)->nullable()->after('status');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'system_validation')) {
+                    $table->json('system_validation')->nullable()->after('workflow_status');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'fraud_flags')) {
+                    $table->json('fraud_flags')->nullable()->after('system_validation');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'fraud_risk_level')) {
+                    $table->string('fraud_risk_level', 20)->nullable()->after('fraud_flags');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'recommended_decision')) {
+                    $table->string('recommended_decision', 40)->nullable()->after('fraud_risk_level');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'recommended_refund_amount')) {
+                    $table->decimal('recommended_refund_amount', 12, 2)->nullable()->after('recommended_decision');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'return_required')) {
+                    $table->boolean('return_required')->default(false)->after('recommended_refund_amount');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'final_decision')) {
+                    $table->string('final_decision', 40)->nullable()->after('return_required');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'refund_amount')) {
+                    $table->decimal('refund_amount', 12, 2)->nullable()->after('final_decision');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'refund_channel')) {
+                    $table->string('refund_channel', 40)->nullable()->after('refund_amount');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'refund_reference')) {
+                    $table->string('refund_reference', 120)->nullable()->after('refund_channel');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'payout_status')) {
+                    $table->string('payout_status', 40)->nullable()->after('refund_reference');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'return_tracking_number')) {
+                    $table->string('return_tracking_number', 120)->nullable()->after('payout_status');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'return_shipped_at')) {
+                    $table->timestamp('return_shipped_at')->nullable()->after('return_tracking_number');
+                }
+                if (!Schema::hasColumn('order_refund_requests', 'return_received_at')) {
+                    $table->timestamp('return_received_at')->nullable()->after('return_shipped_at');
+                }
+            });
+        } catch (\Throwable $e) {
+            Log::warning('Unable to ensure refund workflow columns exist', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Normalize user-selected refund type with reason fallback.
+     */
+    private function normalizeRefundType(?string $refundType, string $reason): string
+    {
+        $normalized = strtolower(trim((string) $refundType));
+        if (in_array($normalized, ['full', 'partial', 'change_of_mind'], true)) {
+            return $normalized;
+        }
+
+        if (strtolower(trim($reason)) === 'changed my mind') {
+            return 'change_of_mind';
+        }
+
+        return 'full';
+    }
+
+    /**
+     * Build system validation snapshot for the refund request.
+     */
+    private function buildRefundValidationSnapshot(Order $order, int $userId): array
+    {
+        $status = strtolower((string) $order->status);
+        $paymentStatus = strtolower((string) $order->payment_status);
+
+        $statusAllowed = in_array($status, ['delivered', 'completed'], true);
+        $paymentAllowed = in_array($paymentStatus, ['paid', 'verified', 'completed'], true);
+        $withinWindow = $order->isRefundWithinWarranty();
+        $fraud = $this->evaluateRefundFraudHistory($order, $userId);
+
+        return [
+            'is_valid' => $statusAllowed && $paymentAllowed && $withinWindow,
+            'checks' => [
+                'order_status_ok' => $statusAllowed,
+                'payment_status_ok' => $paymentAllowed,
+                'refund_window_ok' => $withinWindow,
+                'fraud_check_ok' => $fraud['risk_level'] !== 'high',
+            ],
+            'fraud' => $fraud,
+        ];
+    }
+
+    /**
+     * Evaluate potential refund abuse signals.
+     */
+    private function evaluateRefundFraudHistory(Order $order, int $userId): array
+    {
+        $query = OrderRefundRequest::query()->where('user_id', $userId);
+
+        $recentRequestCount = (clone $query)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->count();
+
+        $rejectedCount = (clone $query)
+            ->where(function ($builder) {
+                $builder->where('status', 'rejected');
+                if (Schema::hasColumn('order_refund_requests', 'workflow_status')) {
+                    $builder->orWhere('workflow_status', 'rejected');
+                }
+            })
+            ->count();
+
+        $activeCount = (clone $query)
+            ->where(function ($builder) {
+                $builder->whereIn('status', ['requested', 'under_review', 'approved']);
+                if (Schema::hasColumn('order_refund_requests', 'workflow_status')) {
+                    $builder->orWhereIn('workflow_status', [
+                        'pending_review',
+                        'under_review',
+                        'awaiting_return_shipment',
+                        'return_in_transit',
+                        'return_received',
+                        'pending_payout',
+                        'approved',
+                    ]);
+                }
+            })
+            ->count();
+
+        $flags = [];
+        if ($recentRequestCount >= 3) {
+            $flags[] = 'high_request_frequency';
+        }
+        if ($rejectedCount >= 2) {
+            $flags[] = 'multiple_rejected_requests';
+        }
+        if ($activeCount >= 2) {
+            $flags[] = 'multiple_open_refunds';
+        }
+
+        $riskLevel = 'low';
+        if ($recentRequestCount >= 4 || $rejectedCount >= 3 || $activeCount >= 3) {
+            $riskLevel = 'high';
+        } elseif (!empty($flags)) {
+            $riskLevel = 'medium';
+        }
+
+        return [
+            'risk_level' => $riskLevel,
+            'flags' => $flags,
+            'recent_request_count' => $recentRequestCount,
+            'rejected_count' => $rejectedCount,
+            'open_request_count' => $activeCount,
+        ];
+    }
+
+    /**
+     * Decision engine for full/partial/return-required/reject recommendations.
+     */
+    private function buildRefundRecommendation(Order $order, string $refundType, string $reason, string $comment, array $validation): array
+    {
+        $orderTotal = (float) ($order->total_amount ?? $order->total ?? 0);
+        $reasonNormalized = strtolower(trim($reason));
+
+        if (empty($validation['is_valid'])) {
+            return [
+                'decision' => 'REJECT',
+                'refund_amount' => 0,
+                'return_required' => false,
+                'why' => 'Validation checks failed',
+            ];
+        }
+
+        if (($validation['fraud']['risk_level'] ?? 'low') === 'high') {
+            return [
+                'decision' => 'REJECT',
+                'refund_amount' => 0,
+                'return_required' => false,
+                'why' => 'High fraud risk',
+            ];
+        }
+
+        if ($refundType === 'change_of_mind' || $reasonNormalized === 'changed my mind') {
+            // Change-of-mind is accepted conditionally, with return requirement and restocking fee.
+            $restockingFeeRate = str_contains(strtolower($comment), 'opened') ? 0.20 : 0.10;
+            $refundAmount = max(0, round($orderTotal * (1 - $restockingFeeRate), 2));
+
+            return [
+                'decision' => 'RETURN_REQUIRED',
+                'refund_amount' => $refundAmount,
+                'return_required' => true,
+                'why' => 'Change-of-mind policy requires return before refund',
+            ];
+        }
+
+        if ($refundType === 'partial') {
+            $refundAmount = max(0, round($orderTotal * 0.50, 2));
+            return [
+                'decision' => 'PARTIAL_REFUND',
+                'refund_amount' => $refundAmount,
+                'return_required' => false,
+                'why' => 'Partial refund policy',
+            ];
+        }
+
+        $fullRefundReasons = [
+            'item not as described',
+            'damaged item',
+            'wrong item received',
+            'incomplete order',
+        ];
+
+        if (in_array($reasonNormalized, $fullRefundReasons, true)) {
+            return [
+                'decision' => 'FULL_REFUND',
+                'refund_amount' => max(0, round($orderTotal, 2)),
+                'return_required' => false,
+                'why' => 'Eligible quality/delivery issue',
+            ];
+        }
+
+        return [
+            'decision' => 'PARTIAL_REFUND',
+            'refund_amount' => max(0, round($orderTotal * 0.30, 2)),
+            'return_required' => false,
+            'why' => 'Default partial recommendation',
+        ];
     }
 
     /**

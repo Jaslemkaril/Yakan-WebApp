@@ -744,6 +744,10 @@ class ProductController extends Controller
 
     private function syncVariantRows(Product $product, array $variantRows): void
     {
+        if (!$this->ensureProductVariantsTableExists()) {
+            return;
+        }
+
         ProductVariant::where('product_id', $product->id)->delete();
 
         if (empty($variantRows)) {
@@ -766,6 +770,38 @@ class ProductController extends Controller
         })->all();
 
         ProductVariant::insert($rows);
+    }
+
+    /**
+     * Ensure product variants table exists in deployments where migrations lag behind.
+     */
+    private function ensureProductVariantsTableExists(): bool
+    {
+        if (Schema::hasTable('product_variants')) {
+            return true;
+        }
+
+        try {
+            Schema::create('product_variants', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $table->id();
+                $table->foreignId('product_id')->constrained()->onDelete('cascade');
+                $table->string('sku')->nullable();
+                $table->string('size')->nullable();
+                $table->string('color')->nullable();
+                $table->decimal('price', 10, 2);
+                $table->integer('stock')->default(0);
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+
+                $table->index(['product_id', 'is_active']);
+                $table->index(['product_id', 'size']);
+                $table->index(['product_id', 'color']);
+            });
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return Schema::hasTable('product_variants');
     }
 
     private function bundleFeatureEnabled(): bool

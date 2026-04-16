@@ -169,14 +169,20 @@
 
             @if(isset($refundRequest) && $refundRequest)
                 @php
+                    $refundCurrentStatus = $refundRequest->workflow_status ?: $refundRequest->status;
                     $refundStatusMap = [
-                        'requested' => ['label' => 'Requested', 'class' => 'bg-yellow-100 text-yellow-800'],
+                        'pending_review' => ['label' => 'Pending Review', 'class' => 'bg-yellow-100 text-yellow-800'],
                         'under_review' => ['label' => 'Under Review', 'class' => 'bg-blue-100 text-blue-800'],
-                        'approved' => ['label' => 'Approved', 'class' => 'bg-indigo-100 text-indigo-800'],
-                        'processed' => ['label' => 'Processed', 'class' => 'bg-green-100 text-green-800'],
+                        'awaiting_return_shipment' => ['label' => 'Waiting For Your Return Shipment', 'class' => 'bg-orange-100 text-orange-800'],
+                        'return_in_transit' => ['label' => 'Return In Transit', 'class' => 'bg-amber-100 text-amber-800'],
+                        'return_received' => ['label' => 'Return Received', 'class' => 'bg-cyan-100 text-cyan-800'],
+                        'pending_payout' => ['label' => 'Pending Payout', 'class' => 'bg-indigo-100 text-indigo-800'],
+                        'processed' => ['label' => 'Refund Processed', 'class' => 'bg-green-100 text-green-800'],
                         'rejected' => ['label' => 'Rejected', 'class' => 'bg-red-100 text-red-800'],
+                        'requested' => ['label' => 'Requested', 'class' => 'bg-yellow-100 text-yellow-800'],
+                        'approved' => ['label' => 'Approved', 'class' => 'bg-indigo-100 text-indigo-800'],
                     ];
-                    $refundChip = $refundStatusMap[$refundRequest->status] ?? ['label' => ucfirst($refundRequest->status), 'class' => 'bg-gray-100 text-gray-800'];
+                    $refundChip = $refundStatusMap[$refundCurrentStatus] ?? ['label' => ucfirst(str_replace('_', ' ', $refundCurrentStatus)), 'class' => 'bg-gray-100 text-gray-800'];
                 @endphp
 
                 <div class="rounded-lg border border-gray-200 p-4 bg-gray-50">
@@ -186,7 +192,22 @@
                     </div>
 
                     <p class="text-sm text-gray-700"><span class="font-semibold">Reason:</span> {{ $refundRequest->reason }}</p>
-                    <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Details:</span> {{ $refundRequest->details }}</p>
+                    <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Refund Type:</span> {{ ucfirst(str_replace('_', ' ', $refundRequest->refund_type ?? 'full')) }}</p>
+                    <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Comment:</span> {{ $refundRequest->comment ?? $refundRequest->details }}</p>
+
+                    @if(!empty($refundRequest->recommended_decision))
+                        <div class="mt-3 rounded-md border border-blue-200 bg-blue-50 p-3">
+                            <p class="text-xs font-semibold text-blue-700 uppercase tracking-wider mb-1">System Recommendation</p>
+                            <p class="text-sm text-blue-800">{{ strtoupper(str_replace('_', ' ', $refundRequest->recommended_decision)) }}</p>
+                            @if(!is_null($refundRequest->recommended_refund_amount))
+                                <p class="text-sm text-blue-700 mt-1">Suggested amount: PHP {{ number_format((float) $refundRequest->recommended_refund_amount, 2) }}</p>
+                            @endif
+                        </div>
+                    @endif
+
+                    @if(!empty($refundRequest->return_tracking_number))
+                        <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Return Tracking:</span> {{ $refundRequest->return_tracking_number }}</p>
+                    @endif
 
                     @php
                         $refundEvidence = is_array($refundRequest->evidence_paths ?? null) ? $refundRequest->evidence_paths : [];
@@ -227,6 +248,23 @@
                             <p class="text-sm text-gray-700">{{ $refundRequest->admin_note }}</p>
                         </div>
                     @endif
+
+                    @if($refundCurrentStatus === 'awaiting_return_shipment')
+                        <form action="{{ route('orders.refund-return.ship', $refundRequest->id) }}" method="POST" class="mt-4 space-y-2">
+                            @csrf
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Return Tracking Number</label>
+                                <input type="text" name="return_tracking_number" required maxlength="120" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Enter courier and tracking number">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Return Note (optional)</label>
+                                <textarea name="return_comment" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Share any return shipping details"></textarea>
+                            </div>
+                            <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-semibold" style="background:#800000;">
+                                Submit Return Shipment
+                            </button>
+                        </form>
+                    @endif
                 </div>
             @elseif(!empty($canRequestRefund))
                 <button type="button" id="refund-toggle" class="w-full md:w-auto inline-flex items-center gap-3 px-4 py-3 rounded-xl border border-[#e0b0b0] bg-[#fff5f5] hover:bg-[#feeaea] transition-colors">
@@ -252,7 +290,17 @@
                             <option value="Damaged item">Damaged item</option>
                             <option value="Wrong item received">Wrong item received</option>
                             <option value="Incomplete order">Incomplete order</option>
+                            <option value="Changed my mind">Changed my mind</option>
                             <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Refund Type <span class="text-red-600">*</span></label>
+                        <select name="refund_type" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent">
+                            <option value="full">Full Refund</option>
+                            <option value="partial">Partial Refund</option>
+                            <option value="change_of_mind">Change Of Mind</option>
                         </select>
                     </div>
 
@@ -263,8 +311,8 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Details <span class="text-red-600">*</span></label>
-                        <textarea id="refund-details-input" name="details" rows="4" maxlength="2000" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent" placeholder="Please explain what happened and what refund support you need."></textarea>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Comment <span class="text-red-600">*</span></label>
+                        <textarea id="refund-details-input" name="comment" rows="4" maxlength="2000" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent" placeholder="Please explain what happened and what refund support you need."></textarea>
                     </div>
 
                     <div>
@@ -758,6 +806,13 @@ function applyRefundReasonGuidance(reason) {
             evidence: 'Upload screenshot of order items and photo/video of everything received.',
             placeholder: 'List missing items or quantities and compare against your order receipt.',
             help: 'Required: order screenshot + proof of received package contents. Max 20MB each.'
+        },
+        'Changed my mind': {
+            title: 'Change-of-mind return policy',
+            details: 'Explain why you changed your mind and confirm if item is still unopened or in good condition.',
+            evidence: 'Upload photos/videos of the current item condition. Return shipment may be required before payout.',
+            placeholder: 'State why you want to return the item and describe its current condition.',
+            help: 'Required: condition photos or videos. Accepted: JPG, PNG, WEBP, PDF, MP4, MOV, WEBM (max 20MB each).'
         },
         'Other': {
             title: 'Provide complete explanation',

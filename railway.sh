@@ -28,7 +28,14 @@ php artisan view:clear   2>/dev/null || true
 
 # ── 4. Run database migrations (needed before serving requests) ───────────────
 echo "📦 Running migrations..."
-php artisan migrate --force --no-interaction 2>/dev/null || echo "⚠️ Migrations failed, continuing..."
+php artisan migrate --force --no-interaction || echo "⚠️ Base migrate failed, attempting critical fallback migrations..."
+
+# Critical fallback: ensure product variants table exists for admin product flows.
+php artisan migrate --force --no-interaction --path=database/migrations/2026_04_16_160000_create_product_variants_table.php || echo "⚠️ product_variants fallback migration failed."
+
+# Critical fallback: ensure dependent variant foreign-key columns are applied.
+php artisan migrate --force --no-interaction --path=database/migrations/2026_04_16_160100_add_variant_id_to_carts_table.php || echo "⚠️ carts.variant_id fallback migration failed."
+php artisan migrate --force --no-interaction --path=database/migrations/2026_04_16_160200_add_variant_columns_to_order_items_table.php || echo "⚠️ order_items.variant columns fallback migration failed."
 
 # ── 4b. Ensure Philippine address data is populated (idempotent) ─────────────
 echo "🗺️ Syncing Philippine address data..."

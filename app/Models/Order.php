@@ -139,11 +139,7 @@ class Order extends Model
      */
     public function canRequestRefund(): bool
     {
-        if (strtolower((string) $this->status) !== 'completed') {
-            return false;
-        }
-
-        if (!$this->isRefundWithinWarranty()) {
+        if (!in_array(strtolower((string) $this->status), ['completed', 'delivered'], true)) {
             return false;
         }
 
@@ -152,8 +148,26 @@ class Order extends Model
         }
 
         $activeStatuses = ['requested', 'under_review', 'approved', 'processed'];
+        $activeWorkflowStatuses = [
+            'pending_review',
+            'under_review',
+            'awaiting_return_shipment',
+            'return_in_transit',
+            'return_received',
+            'pending_payout',
+            'approved',
+            'processed',
+        ];
 
-        return !$this->refundRequests()->whereIn('status', $activeStatuses)->exists();
+        return !$this->refundRequests()
+            ->where(function ($query) use ($activeStatuses, $activeWorkflowStatuses) {
+                $query->whereIn('status', $activeStatuses);
+
+                if (Schema::hasColumn('order_refund_requests', 'workflow_status')) {
+                    $query->orWhereIn('workflow_status', $activeWorkflowStatuses);
+                }
+            })
+            ->exists();
     }
 
     /**
@@ -190,7 +204,7 @@ class Order extends Model
      */
     public function isRefundWithinWarranty(): bool
     {
-        if (strtolower((string) $this->status) !== 'completed') {
+        if (!in_array(strtolower((string) $this->status), ['completed', 'delivered'], true)) {
             return false;
         }
 
@@ -231,6 +245,7 @@ class Order extends Model
             'processing' => 'Processing',
             'shipped' => 'Shipped',
             'delivered' => 'Delivered',
+            'completed' => 'Completed',
             'cancelled' => 'Cancelled',
             'refunded' => 'Refunded',
         ];

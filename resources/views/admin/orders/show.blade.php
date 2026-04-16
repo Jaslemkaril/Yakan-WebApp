@@ -785,20 +785,45 @@
                         <p class="text-sm font-semibold text-gray-900">Customer Refund Request</p>
                         @php
                             $adminRefundStatusMap = [
-                                'requested' => 'bg-yellow-100 text-yellow-800',
+                                'pending_review' => 'bg-yellow-100 text-yellow-800',
                                 'under_review' => 'bg-blue-100 text-blue-800',
+                                'awaiting_return_shipment' => 'bg-orange-100 text-orange-800',
+                                'return_in_transit' => 'bg-amber-100 text-amber-800',
+                                'return_received' => 'bg-cyan-100 text-cyan-800',
+                                'pending_payout' => 'bg-indigo-100 text-indigo-800',
                                 'approved' => 'bg-indigo-100 text-indigo-800',
                                 'processed' => 'bg-green-100 text-green-800',
                                 'rejected' => 'bg-red-100 text-red-800',
+                                'requested' => 'bg-yellow-100 text-yellow-800',
                             ];
-                            $adminRefundClass = $adminRefundStatusMap[$latestRefundRequest->status] ?? 'bg-gray-100 text-gray-800';
+                            $adminRefundCurrentStatus = $latestRefundRequest->workflow_status ?: $latestRefundRequest->status;
+                            $adminRefundClass = $adminRefundStatusMap[$adminRefundCurrentStatus] ?? 'bg-gray-100 text-gray-800';
                         @endphp
-                        <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $adminRefundClass }}">{{ ucfirst(str_replace('_', ' ', $latestRefundRequest->status)) }}</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $adminRefundClass }}">{{ ucfirst(str_replace('_', ' ', $adminRefundCurrentStatus)) }}</span>
                     </div>
                     <p class="text-xs text-gray-500 mb-2">Requested by {{ $latestRefundRequest->user->name ?? 'Customer' }} on {{ optional($latestRefundRequest->requested_at)->format('M d, Y h:i A') ?? $latestRefundRequest->created_at->format('M d, Y h:i A') }}</p>
                     <p class="text-sm text-gray-700"><span class="font-semibold">Reason:</span> {{ $latestRefundRequest->reason }}</p>
-                    @if(!empty($latestRefundRequest->details))
-                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Details:</span> {{ $latestRefundRequest->details }}</p>
+                    <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Refund Type:</span> {{ ucfirst(str_replace('_', ' ', $latestRefundRequest->refund_type ?? 'full')) }}</p>
+                    @if(!empty($latestRefundRequest->comment) || !empty($latestRefundRequest->details))
+                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Comment:</span> {{ $latestRefundRequest->comment ?? $latestRefundRequest->details }}</p>
+                    @endif
+                    @if(!empty($latestRefundRequest->recommended_decision))
+                        <p class="text-sm text-blue-700 mt-1"><span class="font-semibold">System Recommendation:</span> {{ strtoupper(str_replace('_', ' ', $latestRefundRequest->recommended_decision)) }} @if(!is_null($latestRefundRequest->recommended_refund_amount))(PHP {{ number_format((float) $latestRefundRequest->recommended_refund_amount, 2) }})@endif</p>
+                    @endif
+                    @if(!empty($latestRefundRequest->fraud_risk_level))
+                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Fraud Risk:</span> {{ strtoupper($latestRefundRequest->fraud_risk_level) }}</p>
+                    @endif
+                    @if(!empty($latestRefundRequest->final_decision))
+                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Final Decision:</span> {{ strtoupper(str_replace('_', ' ', $latestRefundRequest->final_decision)) }}</p>
+                    @endif
+                    @if(!is_null($latestRefundRequest->refund_amount))
+                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Approved Refund:</span> PHP {{ number_format((float) $latestRefundRequest->refund_amount, 2) }}</p>
+                    @endif
+                    @if(!empty($latestRefundRequest->payout_status))
+                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Payout Status:</span> {{ ucfirst(str_replace('_', ' ', $latestRefundRequest->payout_status)) }}</p>
+                    @endif
+                    @if(!empty($latestRefundRequest->return_tracking_number))
+                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Return Tracking:</span> {{ $latestRefundRequest->return_tracking_number }}</p>
                     @endif
                     @php
                         $adminRefundEvidence = is_array($latestRefundRequest->evidence_paths ?? null) ? $latestRefundRequest->evidence_paths : [];
@@ -840,15 +865,22 @@
                     @endif
                 </div>
 
-                @if(in_array($latestRefundRequest->status, ['requested', 'under_review']))
+                @if(in_array($adminRefundCurrentStatus, ['pending_review', 'under_review', 'requested']))
                 <form action="{{ route('admin.orders.refund_requests.approve', $latestRefundRequest->id) }}" method="POST" class="space-y-2">
                     @csrf
+                    <select name="admin_decision" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
+                        <option value="recommended" selected>Use system recommendation</option>
+                        <option value="FULL_REFUND">Approve Full Refund</option>
+                        <option value="PARTIAL_REFUND">Approve Partial Refund</option>
+                        <option value="RETURN_REQUIRED">Approve With Return Required</option>
+                    </select>
+                    <input type="number" step="0.01" min="0" name="approved_amount" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Refund amount (optional override)">
                     <textarea name="admin_note" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Optional note for customer"></textarea>
-                    <button type="submit" onclick="return confirm('Approve and process this refund request?');" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium flex items-center justify-center">
+                    <button type="submit" onclick="return confirm('Submit refund review decision?');" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium flex items-center justify-center">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
-                        Approve & Process Refund
+                        Save Review Decision
                     </button>
                 </form>
 
@@ -860,6 +892,36 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                         Reject Refund Request
+                    </button>
+                </form>
+                @elseif(in_array($adminRefundCurrentStatus, ['awaiting_return_shipment', 'return_in_transit']))
+                <form action="{{ route('admin.orders.refund_requests.return_received', $latestRefundRequest->id) }}" method="POST" class="space-y-2">
+                    @csrf
+                    <textarea name="admin_note" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Optional note after return inspection"></textarea>
+                    <button type="submit" onclick="return confirm('Confirm that returned item has been received?');" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium flex items-center justify-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Confirm Return Received
+                    </button>
+                </form>
+                @elseif(in_array($adminRefundCurrentStatus, ['pending_payout', 'return_received', 'approved']))
+                <form action="{{ route('admin.orders.refund_requests.execute_payout', $latestRefundRequest->id) }}" method="POST" class="space-y-2">
+                    @csrf
+                    <select name="refund_channel" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option value="">Select payout channel</option>
+                        <option value="gcash">GCash</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="cash">Cash</option>
+                        <option value="paymongo_reverse">PayMongo Reverse</option>
+                    </select>
+                    <input type="text" name="refund_reference" required maxlength="120" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Payout reference number">
+                    <textarea name="admin_note" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Optional payout note"></textarea>
+                    <button type="submit" onclick="return confirm('Record payout and finalize this refund?');" class="w-full bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-800 transition-colors duration-200 font-medium flex items-center justify-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Execute Payout & Finalize
                     </button>
                 </form>
                 @endif
