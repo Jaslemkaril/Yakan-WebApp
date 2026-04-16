@@ -1598,6 +1598,8 @@ function submitPatternSelection() {
         hue: parseFloat(document.getElementById('hueRotation')?.value || 0),
         saturation: parseFloat(document.getElementById('saturation')?.value || 100),
         brightness: parseFloat(document.getElementById('brightness')?.value || 100),
+        color_tint: (document.getElementById('colorTint')?.value || '#ffffff'),
+        tint_strength: parseFloat(document.getElementById('tintStrength')?.value || 0),
     };
 
     // Build a normal POST form so Laravel redirects with session reliably
@@ -2336,6 +2338,8 @@ function saveCustomization() {
         hue: parseFloat(document.getElementById('hueRotation')?.value || 0),
         saturation: parseFloat(document.getElementById('saturation')?.value || 100),
         brightness: parseFloat(document.getElementById('brightness')?.value || 100),
+        color_tint: (document.getElementById('colorTint')?.value || '#ffffff'),
+        tint_strength: parseFloat(document.getElementById('tintStrength')?.value || 0),
     };
     
     // Store in localStorage for persistence

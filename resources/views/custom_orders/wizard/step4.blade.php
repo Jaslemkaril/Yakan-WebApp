@@ -313,9 +313,9 @@
                             @if(isset($selectedPatterns) && $selectedPatterns->count() > 0)
                             @php
                                 $activePatternName = $selectedPatterns->pluck('name')->implode(', ');
-                                $activePreview = null;
+                                $activePreview = $wizardData['pattern']['preview_image'] ?? ($previewImage ?? null);
                                 $activeFirstPattern = $selectedPatterns->first();
-                                if ($activeFirstPattern) {
+                                if (empty($activePreview) && $activeFirstPattern) {
                                     if (method_exists($activeFirstPattern, 'hasSvg') && $activeFirstPattern->hasSvg()) {
                                         $activeSvg = $activeFirstPattern->getSvgContent();
                                         if (!empty($activeSvg)) {
@@ -326,9 +326,7 @@
                                         $activePreview = optional($activeFirstPattern->media->first())->url;
                                     }
                                 }
-                                $activePreview = $activePreview
-                                    ?? ($previewImage ?? null)
-                                    ?? ($wizardData['pattern']['preview_image'] ?? ($wizardData['design']['image'] ?? null));
+                                $activePreview = $activePreview ?? ($wizardData['design']['image'] ?? null);
 
                                 $activeCustomization = $wizardData['pattern']['customization_settings'] ?? [];
                                 $activeScale = $activeCustomization['scale'] ?? 1;
@@ -890,9 +888,10 @@
                                 }
                             }
                         }
-                        $currentPreview = $currentPatternMedia
+                        $currentPreview = $wizardData['pattern']['preview_image']
                             ?? $previewImage
-                            ?? ($wizardData['pattern']['preview_image'] ?? ($wizardData['design']['image'] ?? null));
+                            ?? $currentPatternMedia
+                            ?? ($wizardData['design']['image'] ?? null);
                         $currentQty = (int) old('quantity', 1);
                         $totalSubmissionItems = count($batchItems) + 1;
                     @endphp
@@ -917,13 +916,13 @@
                             @php
                                 $bWizard = $bItem['wizard_data'] ?? [];
                                 $bPatternNames = collect();
-                                $bPreview = null;
+                                $bPreview = $bWizard['pattern']['preview_image'] ?? null;
                                 if (!empty($bWizard['pattern']['selected_ids']) && is_array($bWizard['pattern']['selected_ids'])) {
                                     $bSelectedPatterns = \App\Models\YakanPattern::with('media')->whereIn('id', $bWizard['pattern']['selected_ids'])->get();
                                     $bPatternNames = $bSelectedPatterns->pluck('name');
 
                                     $bFirstPattern = $bSelectedPatterns->first();
-                                    if ($bFirstPattern) {
+                                    if (empty($bPreview) && $bFirstPattern) {
                                         if (method_exists($bFirstPattern, 'hasSvg') && $bFirstPattern->hasSvg()) {
                                             $bSvg = $bFirstPattern->getSvgContent();
                                             if (!empty($bSvg)) {
@@ -937,13 +936,16 @@
                                     }
                                 }
                                 $bPatternName = $bPatternNames->isNotEmpty() ? $bPatternNames->implode(', ') : ($bWizard['pattern']['name'] ?? '—');
-                                $bPreview = $bPreview ?? ($bWizard['pattern']['preview_image'] ?? ($bWizard['design']['image'] ?? null));
+                                $bPreview = $bPreview ?? ($bWizard['design']['image'] ?? null);
                                 $bAuthToken = request('auth_token');
                                 $bEditUrl = route('custom_orders.edit.batch.item', $bIdx) . ($bAuthToken ? '?auth_token=' . urlencode($bAuthToken) : '');
                                 $bCustomization = $bWizard['pattern']['customization_settings'] ?? [];
                                 $bScale = $bCustomization['scale'] ?? 1;
                                 $bRotation = $bCustomization['rotation'] ?? 0;
                                 $bOpacity = round(($bCustomization['opacity'] ?? 0.85) * 100);
+                                $bHue = $bCustomization['hue'] ?? 0;
+                                $bSaturation = $bCustomization['saturation'] ?? 100;
+                                $bBrightness = $bCustomization['brightness'] ?? 100;
                                 $bFabricTypeName = '—';
                                 if (!empty($bWizard['fabric']['type'])) {
                                     $bFt = \App\Models\FabricType::find($bWizard['fabric']['type']);
@@ -958,6 +960,9 @@
                                  data-scale="{{ $bScale }}"
                                  data-rotation="{{ $bRotation }}"
                                  data-opacity="{{ $bOpacity }}"
+                                 data-hue="{{ $bHue }}"
+                                 data-saturation="{{ $bSaturation }}"
+                                 data-brightness="{{ $bBrightness }}"
                                  data-item-label="Item {{ $bIdx + 1 }}">
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="flex items-start min-w-0">
@@ -1015,6 +1020,9 @@
                                 $currentScale = $currentCustomization['scale'] ?? 1;
                                 $currentRotation = $currentCustomization['rotation'] ?? 0;
                                 $currentOpacity = round(($currentCustomization['opacity'] ?? 0.85) * 100);
+                                $currentHue = $currentCustomization['hue'] ?? 0;
+                                $currentSaturation = $currentCustomization['saturation'] ?? 100;
+                                $currentBrightness = $currentCustomization['brightness'] ?? 100;
                             @endphp
                             <div class="rounded-xl px-4 py-3 border-2 submission-item-card" style="background-color:#fff5f5; border-color:#c88f9f;"
                                  data-preview="{{ e((string) ($currentPreview ?? '')) }}"
@@ -1022,6 +1030,9 @@
                                  data-scale="{{ $currentScale }}"
                                  data-rotation="{{ $currentRotation }}"
                                  data-opacity="{{ $currentOpacity }}"
+                                 data-hue="{{ $currentHue }}"
+                                 data-saturation="{{ $currentSaturation }}"
+                                 data-brightness="{{ $currentBrightness }}"
                                  data-item-label="Current Item"
                                  data-default-active="true">
                                 <div class="flex items-start justify-between gap-3">
@@ -1278,6 +1289,9 @@ function initSubmissionItemPreviewSwitcher() {
         const scale = card.dataset.scale || '1';
         const rotation = card.dataset.rotation || '0';
         const opacity = card.dataset.opacity || '100';
+        const hue = card.dataset.hue || '0';
+        const saturation = card.dataset.saturation || '100';
+        const brightness = card.dataset.brightness || '100';
 
         patternNameEl.textContent = patternName;
         scaleEl.textContent = scale + 'x';
@@ -1287,10 +1301,12 @@ function initSubmissionItemPreviewSwitcher() {
         if (previewImg) {
             if (preview) {
                 previewImg.src = preview;
+                previewImg.style.filter = `hue-rotate(${hue}deg) saturate(${(parseFloat(saturation) || 100) / 100}) brightness(${(parseFloat(brightness) || 100) / 100})`;
                 previewImg.classList.remove('hidden');
                 if (previewEmpty) previewEmpty.classList.add('hidden');
             } else {
                 previewImg.src = '';
+                previewImg.style.filter = '';
                 previewImg.classList.add('hidden');
                 if (previewEmpty) previewEmpty.classList.remove('hidden');
             }
