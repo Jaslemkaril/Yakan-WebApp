@@ -656,11 +656,14 @@
                     {{ $order->status == 'shipped' ? 'text-red-900' : '' }}
                     {{ $order->status == 'delivered' ? 'text-blue-700' : '' }}
                     {{ $order->status == 'completed' ? 'text-green-700' : '' }}
+                    {{ $order->status == 'cancellation_requested' ? 'text-amber-700' : '' }}
                     {{ $order->status == 'cancelled' ? 'text-red-600' : '' }}">
                     @if($order->status == 'delivered')
                         {{ $isPickup ? 'Ready for Pickup' : 'Delivered — Awaiting Customer Confirmation' }}
                     @elseif($order->status == 'completed')
                         {{ $isPickup ? 'Picked Up' : 'Completed' }}
+                    @elseif($order->status == 'cancellation_requested')
+                        Cancellation Requested — Pending Review
                     @else
                         {{ ucfirst($order->status) }}
                     @endif
@@ -679,6 +682,15 @@
                 @if(!empty($cancellationReason))
                     <p class="text-xs text-red-700 mt-2"><span class="font-semibold">Reason:</span> {{ $cancellationReason }}</p>
                 @endif
+            </div>
+        @elseif($order->status == 'cancellation_requested')
+            <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+                <div class="flex items-center justify-center">
+                    <svg class="w-5 h-5 text-amber-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10A8 8 0 11-2 10a8 8 0 0120 0zM9 7a1 1 0 012 0v3a1 1 0 11-2 0V7zm1 7a1.25 1.25 0 100-2.5A1.25 1.25 0 0010 14z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="text-sm font-semibold text-amber-800">Cancellation request is pending review</span>
+                </div>
             </div>
         @endif
     </div>
@@ -706,6 +718,7 @@
                             {{ $order->status == 'shipped' ? 'bg-indigo-500' : '' }}
                             {{ $order->status == 'delivered' ? 'bg-gray-900' : '' }}
                             {{ $order->status == 'completed' ? 'bg-green-600' : '' }}
+                            {{ $order->status == 'cancellation_requested' ? 'bg-amber-600' : '' }}
                             {{ $order->status == 'cancelled' ? 'bg-red-600' : '' }}">
                             @if($order->status == 'pending')
                                 Pending
@@ -717,6 +730,8 @@
                                 {{ $isPickup ? 'Ready for Pickup' : 'Delivered' }}
                             @elseif($order->status == 'completed')
                                 {{ $isPickup ? 'Picked Up' : 'Completed' }}
+                            @elseif($order->status == 'cancellation_requested')
+                                Cancellation Requested
                             @elseif($order->status == 'cancelled')
                                 Cancelled
                             @endif
@@ -797,6 +812,14 @@
                         <p class="text-sm font-medium text-gray-700">Order Cancelled</p>
                         <p class="text-xs text-gray-500 mt-1">This order has been cancelled</p>
                     </div>
+                @elseif($order->status == 'cancellation_requested')
+                    <div class="text-center py-4">
+                        <svg class="w-12 h-12 text-amber-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p class="text-sm font-medium text-gray-700">Cancellation Requested</p>
+                        <p class="text-xs text-gray-500 mt-1">Review this request in Quick Actions to approve or reject.</p>
+                    </div>
                 @endif
             </div>
         </div>
@@ -813,12 +836,19 @@
             </div>
             <div class="space-y-3">
                 @php
-                    $canCancelOrder = !in_array(strtolower((string) $order->status), ['delivered', 'completed', 'refunded', 'cancelled'], true);
+                    $canCancelOrder = !in_array(strtolower((string) $order->status), ['delivered', 'completed', 'refunded', 'cancelled', 'cancellation_requested'], true);
                     $canSettleRemainingBalance = $isDownpayment
                         && $remainingBalance > 0
                         && in_array($order->payment_status, ['paid', 'verified'], true)
                         && !in_array(strtolower((string) $order->status), ['cancelled', 'refunded'], true);
                     $adminAuthToken = request('auth_token') ?? request()->attributes->get('admin_auth_token');
+                    $isCancellationFlowRequest = false;
+                    if (isset($latestRefundRequest) && $latestRefundRequest) {
+                        $adminReasonText = strtolower((string) ($latestRefundRequest->reason ?? ''));
+                        $adminCommentText = strtolower((string) ($latestRefundRequest->comment ?? $latestRefundRequest->details ?? ''));
+                        $isCancellationFlowRequest = str_contains($adminReasonText, 'cancel')
+                            || str_contains($adminCommentText, 'cancel');
+                    }
                 @endphp
 
                 @if($canSettleRemainingBalance)
@@ -839,7 +869,7 @@
                 @if(isset($latestRefundRequest) && $latestRefundRequest)
                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
                     <div class="flex items-center justify-between mb-2">
-                        <p class="text-sm font-semibold text-gray-900">Customer Refund Request</p>
+                        <p class="text-sm font-semibold text-gray-900">{{ $isCancellationFlowRequest ? 'Customer Cancellation Request' : 'Customer Refund Request' }}</p>
                         @php
                             $adminRefundStatusMap = [
                                 'pending_review' => 'bg-yellow-100 text-yellow-800',
@@ -860,9 +890,13 @@
                     </div>
                     <p class="text-xs text-gray-500 mb-2">Requested by {{ $latestRefundRequest->user->name ?? 'Customer' }} on {{ optional($latestRefundRequest->requested_at)->format('M d, Y h:i A') ?? $latestRefundRequest->created_at->format('M d, Y h:i A') }}</p>
                     <p class="text-sm text-gray-700"><span class="font-semibold">Reason:</span> {{ $latestRefundRequest->reason }}</p>
-                    <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Refund Type:</span> {{ ucfirst(str_replace('_', ' ', $latestRefundRequest->refund_type ?? 'full')) }}</p>
+                    @if($isCancellationFlowRequest)
+                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Request Type:</span> Order Cancellation</p>
+                    @else
+                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Refund Type:</span> {{ ucfirst(str_replace('_', ' ', $latestRefundRequest->refund_type ?? 'full')) }}</p>
+                    @endif
                     @if(!empty($latestRefundRequest->comment) || !empty($latestRefundRequest->details))
-                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Comment:</span> {{ $latestRefundRequest->comment ?? $latestRefundRequest->details }}</p>
+                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">{{ $isCancellationFlowRequest ? 'Details' : 'Comment' }}:</span> {{ $latestRefundRequest->comment ?? $latestRefundRequest->details }}</p>
                     @endif
                     @if(!empty($latestRefundRequest->recommended_decision))
                         <p class="text-sm text-blue-700 mt-1"><span class="font-semibold">System Recommendation:</span> {{ strtoupper(str_replace('_', ' ', $latestRefundRequest->recommended_decision)) }} @if(!is_null($latestRefundRequest->recommended_refund_amount))(PHP {{ number_format((float) $latestRefundRequest->recommended_refund_amount, 2) }})@endif</p>
@@ -948,22 +982,22 @@
                     </select>
                     <input type="number" step="0.01" min="0" name="approved_amount" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Refund amount (optional override)">
                     <textarea name="admin_note" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Optional note for customer"></textarea>
-                    <button type="submit" onclick="return confirm('Submit refund review decision?');" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium flex items-center justify-center">
+                    <button type="submit" onclick="return confirm('{{ $isCancellationFlowRequest ? 'Submit cancellation review decision?' : 'Submit refund review decision?' }}');" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium flex items-center justify-center">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
-                        Save Review Decision
+                        Save {{ $isCancellationFlowRequest ? 'Cancellation' : 'Review' }} Decision
                     </button>
                 </form>
 
                 <form action="{{ route('admin.orders.refund_requests.reject', $latestRefundRequest->id) }}" method="POST" class="space-y-2">
                     @csrf
                     <textarea name="admin_note" rows="2" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Reason for rejection (required)"></textarea>
-                    <button type="submit" onclick="return confirm('Reject this refund request?');" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium flex items-center justify-center">
+                    <button type="submit" onclick="return confirm('{{ $isCancellationFlowRequest ? 'Reject this cancellation request?' : 'Reject this refund request?' }}');" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium flex items-center justify-center">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
-                        Reject Refund Request
+                        Reject {{ $isCancellationFlowRequest ? 'Cancellation' : 'Refund' }} Request
                     </button>
                 </form>
                 @elseif(in_array($adminRefundCurrentStatus, ['awaiting_return_shipment', 'return_in_transit']))
