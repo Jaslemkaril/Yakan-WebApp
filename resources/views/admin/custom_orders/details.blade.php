@@ -1233,7 +1233,7 @@
                                                 'refundRequest' => $latestCustomRefundRequest->id,
                                                 'index' => $loop->index,
                                                 'auth_token' => $customAdminAuthToken,
-                                            ]));
+                                            ], fn ($value) => $value !== null && $value !== ''));
                                             $customAdminExt = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
                                             $customAdminIsImage = in_array($customAdminExt, ['jpg', 'jpeg', 'png', 'webp'], true);
                                             $customAdminIsVideo = in_array($customAdminExt, ['mp4', 'mov', 'webm'], true);
