@@ -1191,11 +1191,16 @@ Route::middleware(['admin:admin,order_staff'])->prefix('admin')->name('admin.')-
     // Orders (Regular Orders)
     Route::prefix('orders')->group(function () {
         Route::get('/', [AdminOrderController::class, 'index'])->name('regular.index');
+        Route::get('/create', [AdminOrderController::class, 'create'])->name('orders.create');
+        Route::post('/', [AdminOrderController::class, 'store'])->name('orders.store');
         Route::get('/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+        Route::get('/{order}/edit', [AdminOrderController::class, 'edit'])->name('orders.edit');
+        Route::put('/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
         Route::get('/{order}/paymongo-receipt', [AdminOrderController::class, 'paymongoReceipt'])->name('orders.paymongo_receipt');
         Route::post('/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.update_status');
         Route::post('/{order}/tracking', [AdminOrderController::class, 'updateTracking'])->name('orders.update_tracking');
         Route::post('/{order}/cancel', [AdminOrderController::class, 'cancel'])->name('orders.cancel');
+        Route::post('/bulk-update', [AdminOrderController::class, 'bulkUpdate'])->name('orders.bulkUpdate');
         Route::post('/{order}/settle-balance', [AdminOrderController::class, 'settleRemainingBalance'])->name('orders.settle-balance');
         Route::post('/{order}/refund', [AdminOrderController::class, 'refund'])->name('orders.refund');
         Route::post('/refund-requests/{refundRequest}/approve', [AdminOrderController::class, 'approveRefundRequest'])->name('orders.refund_requests.approve');
@@ -1213,10 +1218,27 @@ Route::middleware(['admin:admin,order_staff'])->prefix('admin')->name('admin.')-
     // Custom Orders - processing routes
     Route::prefix('custom-orders')->name('custom-orders.')->group(function () {
         Route::get('/', [AdminCustomOrderController::class, 'index'])->name('index');
+        // Create wizard routes
+        Route::get('/create', [AdminCustomOrderController::class, 'create'])->name('create');
+        Route::get('/create/choice', [AdminCustomOrderController::class, 'createChoice'])->name('create.choice');
+        Route::get('/create/product', [AdminCustomOrderController::class, 'createProductSelection'])->name('create.product');
+        Route::post('/create/product', [AdminCustomOrderController::class, 'storeProductSelection'])->name('store.product');
+        Route::get('/create/product/customize', [AdminCustomOrderController::class, 'createProductCustomization'])->name('create.product.customize');
+        Route::post('/create/product/customize', [AdminCustomOrderController::class, 'storeProductCustomization'])->name('store.product.customization');
+        Route::get('/create/fabric', [AdminCustomOrderController::class, 'createFabricSelection'])->name('create.fabric');
+        Route::post('/create/fabric', [AdminCustomOrderController::class, 'storeFabricSelection'])->name('store.fabric');
+        Route::get('/create/pattern', [AdminCustomOrderController::class, 'createPatternSelection'])->name('create.pattern');
+        Route::post('/create/pattern', [AdminCustomOrderController::class, 'storePatternSelection'])->name('store.pattern');
+        Route::get('/create/review', [AdminCustomOrderController::class, 'createReview'])->name('create.review');
+        Route::post('/store', [AdminCustomOrderController::class, 'store'])->name('store');
+
         Route::get('/production-dashboard', [AdminCustomOrderController::class, 'productionDashboard'])->name('production-dashboard');
         Route::get('/export', [AdminCustomOrderController::class, 'exportOrders'])->name('export');
         Route::get('/view/{order}', [AdminCustomOrderController::class, 'show'])->name('show');
         Route::get('/{order}/paymongo-receipt', [AdminCustomOrderController::class, 'paymongoReceipt'])->name('paymongo_receipt');
+        Route::get('/{order}/edit', [AdminCustomOrderController::class, 'edit'])->name('edit');
+        Route::put('/{order}', [AdminCustomOrderController::class, 'update'])->name('update');
+        Route::delete('/{order}', [AdminCustomOrderController::class, 'destroy'])->name('delete');
 
         Route::post('/{order}/update-status', [AdminCustomOrderController::class, 'updateStatus'])->name('update_status');
         Route::post('/{order}/quote-price', [AdminCustomOrderController::class, 'quotePrice'])->name('quote_price');
@@ -1299,15 +1321,6 @@ Route::middleware(['admin:admin'])->prefix('admin')->name('admin.')->group(funct
     Route::resource('cultural-heritage', \App\Http\Controllers\Admin\CulturalHeritageController::class);
     Route::post('/cultural-heritage/{id}/toggle-status', [\App\Http\Controllers\Admin\CulturalHeritageController::class, 'toggleStatus'])->name('cultural-heritage.toggleStatus');
 
-    // Orders (Regular Orders)
-    Route::prefix('orders')->group(function () {
-        Route::get('/create', [AdminOrderController::class, 'create'])->name('orders.create');
-        Route::post('/', [AdminOrderController::class, 'store'])->name('orders.store');
-        Route::get('/{order}/edit', [AdminOrderController::class, 'edit'])->name('orders.edit');
-        Route::put('/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
-        Route::post('/bulk-update', [AdminOrderController::class, 'bulkUpdate'])->name('orders.bulkUpdate');
-    });
-
     // Inventory Management
     Route::prefix('inventory')->name('inventory.')->group(function () {
         Route::get('/', [InventoryController::class, 'index'])->name('index');
@@ -1322,29 +1335,6 @@ Route::middleware(['admin:admin'])->prefix('admin')->name('admin.')->group(funct
         Route::patch('/{inventory}/restock', [InventoryController::class, 'restock'])->name('restock');
         Route::patch('/{inventory}/stock-out', [InventoryController::class, 'stockOut'])->name('stockOut');
         Route::delete('/{inventory}', [InventoryController::class, 'destroy'])->name('destroy');
-    });
-
-    // Custom Orders - Admin-only create/edit/delete routes
-    Route::prefix('custom-orders')->name('custom-orders.')->group(function () {
-        // Create wizard routes
-        Route::get('/create', [AdminCustomOrderController::class, 'create'])->name('create');
-        Route::get('/create/choice', [AdminCustomOrderController::class, 'createChoice'])->name('create.choice');
-        Route::get('/create/product', [AdminCustomOrderController::class, 'createProductSelection'])->name('create.product');
-        Route::post('/create/product', [AdminCustomOrderController::class, 'storeProductSelection'])->name('store.product');
-        Route::get('/create/product/customize', [AdminCustomOrderController::class, 'createProductCustomization'])->name('create.product.customize');
-        Route::post('/create/product/customize', [AdminCustomOrderController::class, 'storeProductCustomization'])->name('store.product.customization');
-        Route::get('/create/fabric', [AdminCustomOrderController::class, 'createFabricSelection'])->name('create.fabric');
-        Route::post('/create/fabric', [AdminCustomOrderController::class, 'storeFabricSelection'])->name('store.fabric');
-        Route::get('/create/pattern', [AdminCustomOrderController::class, 'createPatternSelection'])->name('create.pattern');
-        Route::post('/create/pattern', [AdminCustomOrderController::class, 'storePatternSelection'])->name('store.pattern');
-        Route::get('/create/review', [AdminCustomOrderController::class, 'createReview'])->name('create.review');
-        Route::post('/store', [AdminCustomOrderController::class, 'store'])->name('store');
-
-        Route::delete('/{order}', [AdminCustomOrderController::class, 'destroy'])->name('delete');
-
-        // Edit
-        Route::get('/{order}/edit', [AdminCustomOrderController::class, 'edit'])->name('edit');
-        Route::put('/{order}', [AdminCustomOrderController::class, 'update'])->name('update');
     });
 
     // Reports & Analytics
