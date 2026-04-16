@@ -5,9 +5,59 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class AdminLoginController extends Controller
 {
+    private function ensureDefaultOrderStaffAccount(): void
+    {
+        if (!Schema::hasTable('users')) {
+            return;
+        }
+
+        $email = 'ordersteffie@gmail.com';
+        $now = now();
+
+        $existing = DB::table('users')->where('email', $email)->first();
+        $verifiedAt = $existing && !empty($existing->email_verified_at)
+            ? $existing->email_verified_at
+            : $now;
+
+        $payload = [
+            'name' => 'Order Staff',
+            'first_name' => 'Order',
+            'last_name' => 'Staff',
+            'password' => Hash::make('staff12345'),
+            'role' => 'order_staff',
+            'email_verified_at' => $verifiedAt,
+            'updated_at' => $now,
+        ];
+
+        if ($existing) {
+            DB::table('users')->where('id', $existing->id)->update($payload);
+            return;
+        }
+
+        DB::table('users')->insert(array_merge($payload, [
+            'email' => $email,
+            'created_at' => $now,
+        ]));
+    }
+
+    private function normalizeStaffEmail(string $email): string
+    {
+        $normalized = strtolower(trim($email));
+
+        $aliases = [
+            'prdserfie@gmail.com' => 'ordersteffie@gmail.com',
+            'orderstefie@gmail.com' => 'ordersteffie@gmail.com',
+        ];
+
+        return $aliases[$normalized] ?? $normalized;
+    }
+
     // Show the admin login form
     public function showLoginForm()
     {
@@ -191,6 +241,8 @@ HTML);
     // Show the order staff login form
     public function showStaffLoginForm()
     {
+        $this->ensureDefaultOrderStaffAccount();
+
         if (Auth::check() && (string) Auth::user()->role === 'order_staff') {
             return redirect('/staff/dashboard');
         }
@@ -209,6 +261,11 @@ HTML);
     // Handle order staff login
     public function staffLogin(Request $request)
     {
+        $this->ensureDefaultOrderStaffAccount();
+
+        $normalizedEmail = $this->normalizeStaffEmail((string) $request->input('email', ''));
+        $request->merge(['email' => $normalizedEmail]);
+
         $request->validate([
             'email' => 'required|email',
             'password' => 'required|string',
