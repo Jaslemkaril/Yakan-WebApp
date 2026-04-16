@@ -2445,6 +2445,23 @@ document.addEventListener('DOMContentLoaded', function () {
         </div>
 
         <div class="px-6 py-5">
+            @if(session('error'))
+                <div class="mb-4 p-3 rounded-lg border border-red-200 bg-red-50 text-red-800 text-sm">
+                    {{ session('error') }}
+                </div>
+            @endif
+
+            @if($errors->any())
+                <div class="mb-4 p-3 rounded-lg border border-red-200 bg-red-50 text-red-800 text-sm">
+                    <p class="font-semibold mb-1">Please fix the following:</p>
+                    <ul class="list-disc pl-5 space-y-0.5">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             @if($customReview)
                 {{-- Show existing review --}}
                 <div class="space-y-3">
@@ -2490,20 +2507,29 @@ document.addEventListener('DOMContentLoaded', function () {
                                         </svg>
                                     </button>
                                 @endfor
-                                <input type="hidden" name="rating" id="custom-rating" value="" required>
+                                <input type="hidden" name="rating" id="custom-rating" value="{{ old('rating', '') }}" required>
                             </div>
+                            @error('rating')
+                                <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                            @enderror
                         </div>
 
                         {{-- Title --}}
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Review Title</label>
-                            <input type="text" name="title" maxlength="255" placeholder="Summarize your experience" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent" style="--tw-ring-color:#800000;">
+                            <input type="text" name="title" value="{{ old('title') }}" maxlength="255" placeholder="Summarize your experience" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent" style="--tw-ring-color:#800000;">
+                            @error('title')
+                                <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                            @enderror
                         </div>
 
                         {{-- Comment --}}
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Your Review</label>
-                            <textarea name="comment" rows="3" maxlength="1000" placeholder="Share your experience with this custom order..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent resize-none" style="--tw-ring-color:#800000;"></textarea>
+                            <textarea name="comment" rows="3" maxlength="1000" placeholder="Share your experience with this custom order..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent resize-none" style="--tw-ring-color:#800000;">{{ old('comment') }}</textarea>
+                            @error('comment')
+                                <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                            @enderror
                         </div>
 
                         {{-- Photo Upload --}}
@@ -2513,6 +2539,12 @@ document.addEventListener('DOMContentLoaded', function () {
                                 class="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#800000] file:text-white hover:file:bg-[#600000] cursor-pointer"
                                 onchange="previewCustomImages(this)">
                             <div id="custom-review-preview" class="flex flex-wrap gap-2 mt-2"></div>
+                            @error('images')
+                                <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                            @enderror
+                            @error('images.*')
+                                <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                            @enderror
                         </div>
 
                         <button type="submit" class="text-white font-bold py-2.5 px-6 rounded-lg transition-colors duration-200 shadow" style="background-color:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
@@ -2551,6 +2583,18 @@ function previewCustomImages(input) {
         reader.readAsDataURL(file);
     });
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    const ratingInput = document.getElementById('custom-rating');
+    if (!ratingInput) {
+        return;
+    }
+
+    const initialRating = parseInt(ratingInput.value || '0', 10);
+    if (initialRating > 0) {
+        setCustomRating(initialRating);
+    }
+});
 </script>
 @endif
 

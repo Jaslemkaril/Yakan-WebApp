@@ -11,6 +11,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use App\Services\CloudinaryService;
 
 class ReviewController extends Controller
@@ -150,14 +151,29 @@ class ReviewController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        // Validate
-        $validated = $request->validate([
+        $redirectParams = ['order' => $customOrder->id];
+        if ($request->filled('auth_token')) {
+            $redirectParams['auth_token'] = (string) $request->query('auth_token');
+        }
+        $reviewSectionUrl = route('custom_orders.show', $redirectParams) . '#review-section';
+
+        // Validate (manual so we can always return to the review section with clear feedback)
+        $validator = Validator::make($request->all(), [
             'rating' => 'required|integer|min:1|max:5',
             'title' => 'nullable|string|max:255',
             'comment' => 'nullable|string|max:1000',
             'images' => 'nullable|array|max:5',
             'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
+
+        if ($validator->fails()) {
+            return redirect()->to($reviewSectionUrl)
+                ->withErrors($validator)
+                ->withInput()
+                ->with('error', 'Please fix the review form errors and try again.');
+        }
+
+        $validated = $validator->validated();
 
         // Upload review images
         $imageUrls = [];
@@ -216,7 +232,7 @@ class ReviewController extends Controller
 
                         $message = 'Review updated successfully!';
 
-                        return redirect()->route('custom_orders.show', $customOrder)
+                        return redirect()->to($reviewSectionUrl)
                             ->with('success', $message);
                     }
                 }
@@ -249,7 +265,7 @@ class ReviewController extends Controller
 
                 // Gracefully handle strict deployments where reviews.product_id is still required.
                 if (($sqlState === '23000' || $driverCode === '1048') && str_contains($errorText, 'product_id')) {
-                    return redirect()->back()->withInput()->with(
+                    return redirect()->to($reviewSectionUrl)->withInput()->with(
                         'error',
                         'This custom order cannot be reviewed yet because it has no linked product. Please contact support to link the product first.'
                     );
@@ -257,7 +273,7 @@ class ReviewController extends Controller
 
                 // Gracefully handle user+product unique collisions.
                 if ($sqlState === '23000' && ($driverCode === '1062' || str_contains($errorText, 'duplicate'))) {
-                    return redirect()->back()->withInput()->with(
+                    return redirect()->to($reviewSectionUrl)->withInput()->with(
                         'error',
                         'You already have a review for this product. Please edit your existing review instead.'
                     );
@@ -267,7 +283,7 @@ class ReviewController extends Controller
             }
         }
 
-        return redirect()->route('custom_orders.show', $customOrder)
+        return redirect()->to($reviewSectionUrl)
             ->with('success', $message);
     }
 
