@@ -5061,7 +5061,33 @@ class CustomOrderController extends Controller
      */
     public function viewRefundEvidence(CustomOrderRefundRequest $refundRequest, int $index)
     {
-        if ((int) $refundRequest->user_id !== (int) auth()->id()) {
+        if (!Auth::check()) {
+            $token = request()->input('auth_token')
+                ?? request()->query('auth_token')
+                ?? session('auth_token');
+
+            if ($token) {
+                $authToken = \DB::table('auth_tokens')
+                    ->where('token', $token)
+                    ->where('expires_at', '>', now())
+                    ->first();
+
+                if ($authToken) {
+                    $user = User::find($authToken->user_id);
+                    if ($user) {
+                        Auth::login($user, true);
+                        session(['auth_token' => $token]);
+
+                        // Keep token alive while user is actively accessing protected pages.
+                        \DB::table('auth_tokens')
+                            ->where('token', $token)
+                            ->update(['expires_at' => now()->addDays(30), 'updated_at' => now()]);
+                    }
+                }
+            }
+        }
+
+        if ((int) $refundRequest->user_id !== (int) Auth::id()) {
             abort(403);
         }
 
