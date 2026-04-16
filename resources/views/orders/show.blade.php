@@ -621,7 +621,7 @@
                         @if(!empty($isDownpaymentPartialPaid))
                             <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
                                 <div class="flex justify-between text-sm text-amber-900">
-                                    <span class="font-semibold">Pay Now ({{ $downpaymentRateLabel ?? '50' }}%)</span>
+                                    <span class="font-semibold">Paid ({{ $downpaymentRateLabel ?? '50' }}%)</span>
                                     <span class="font-bold">₱{{ number_format($summaryDownpaymentAmount, 2) }}</span>
                                 </div>
                                 <div class="flex justify-between text-sm text-gray-700 pt-2 border-t border-amber-200">
