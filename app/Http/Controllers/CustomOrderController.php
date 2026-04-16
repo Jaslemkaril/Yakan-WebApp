@@ -5129,17 +5129,57 @@ class CustomOrderController extends Controller
         }
 
         if (!array_key_exists($index, $evidence)) {
+            \Log::warning('Custom refund evidence index missing', [
+                'refund_request_id' => $refundRequest->id,
+                'requested_index' => $index,
+                'evidence_count' => count($evidence),
+                'authorized_user_id' => $authorizedUserId,
+            ]);
             abort(404);
         }
 
-        $path = (string) $evidence[$index];
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+        $entry = $evidence[$index];
+        if (is_array($entry)) {
+            $path = (string) ($entry['url'] ?? $entry['path'] ?? $entry['secure_url'] ?? '');
+        } else {
+            $path = (string) $entry;
+        }
+
+        $path = trim($path, " \t\n\r\0\x0B\"'");
+        $path = str_replace('\\/', '/', $path);
+
+        if (preg_match('/^https?:\\/\\//i', $path) === 1) {
             return redirect()->away($path);
         }
 
-        if (Storage::disk('public')->exists($path)) {
-            return Storage::disk('public')->response($path);
+        $candidates = array_values(array_unique(array_filter([
+            $path,
+            ltrim($path, '/'),
+            str_starts_with($path, 'storage/') ? substr($path, 8) : null,
+            urldecode($path),
+            str_starts_with(urldecode($path), 'storage/') ? substr(urldecode($path), 8) : null,
+        ], fn ($v) => is_string($v) && $v !== '')));
+
+        foreach ($candidates as $candidate) {
+            if (Storage::disk('public')->exists($candidate)) {
+                return Storage::disk('public')->response($candidate);
+            }
         }
+
+        // Handle scheme-less remote links like //res.cloudinary.com/...
+        if (str_starts_with($path, '//')) {
+            return redirect()->away('https:' . $path);
+        }
+
+        \Log::warning('Custom refund evidence not found', [
+            'refund_request_id' => $refundRequest->id,
+            'index' => $index,
+            'raw_entry_type' => gettype($entry),
+            'raw_entry' => is_scalar($entry) ? (string) $entry : json_encode($entry),
+            'resolved_path' => $path,
+            'candidates' => $candidates,
+            'authorized_user_id' => $authorizedUserId,
+        ]);
 
         abort(404);
     }
