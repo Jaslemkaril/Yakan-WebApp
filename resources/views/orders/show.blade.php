@@ -296,6 +296,15 @@
         @endif
 
         @if(($order->status ?? '') === 'completed' || !empty($refundRequest))
+        @php
+            $isCancellationFlowRequest = false;
+            if (!empty($refundRequest)) {
+                $refundReasonText = strtolower((string) ($refundRequest->reason ?? ''));
+                $refundCommentText = strtolower((string) ($refundRequest->comment ?? $refundRequest->details ?? ''));
+                $isCancellationFlowRequest = str_contains($refundReasonText, 'cancel')
+                    || str_contains($refundCommentText, 'cancel');
+            }
+        @endphp
         <div class="mb-8 bg-white rounded-xl shadow-md border border-gray-200 p-6">
             <div class="flex items-center gap-3 mb-4">
                 <div class="w-10 h-10 bg-[#800000] rounded-lg flex items-center justify-center">
@@ -304,20 +313,24 @@
                     </svg>
                 </div>
                 <div>
-                    <h3 class="text-lg font-bold text-gray-900">Refund Request</h3>
+                    <h3 class="text-lg font-bold text-gray-900">{{ $isCancellationFlowRequest ? 'Cancellation Request' : 'Refund Request' }}</h3>
                     <p class="text-sm text-gray-600">
                         @if(!empty($refundRequest))
-                            Quick Actions update: Track your latest refund progress and admin decision here.
+                            {{ $isCancellationFlowRequest
+                                ? 'Track your latest cancellation request and admin decision here.'
+                                : 'Quick Actions update: Track your latest refund progress and admin decision here.' }}
                         @else
                             Need help with your order? You can request a refund after order received.
                         @endif
                     </p>
-                    <p class="text-xs text-gray-500 mt-1">
-                        Refund policy: within {{ $refundWarrantyDays ?? 7 }} days after order completion
-                        @if(!empty($refundWarrantyDeadline))
-                            (until {{ $refundWarrantyDeadline->format('M d, Y h:i A') }})
-                        @endif
-                    </p>
+                    @if(!$isCancellationFlowRequest)
+                        <p class="text-xs text-gray-500 mt-1">
+                            Refund policy: within {{ $refundWarrantyDays ?? 7 }} days after order completion
+                            @if(!empty($refundWarrantyDeadline))
+                                (until {{ $refundWarrantyDeadline->format('M d, Y h:i A') }})
+                            @endif
+                        </p>
+                    @endif
                 </div>
             </div>
 
@@ -346,8 +359,13 @@
                     </div>
 
                     <p class="text-sm text-gray-700"><span class="font-semibold">Reason:</span> {{ $refundRequest->reason }}</p>
-                    <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Refund Type:</span> {{ ucfirst(str_replace('_', ' ', $refundRequest->refund_type ?? 'full')) }}</p>
-                    <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Comment:</span> {{ $refundRequest->comment ?? $refundRequest->details }}</p>
+                    @if($isCancellationFlowRequest)
+                        <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Request Type:</span> Order Cancellation</p>
+                        <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Details:</span> {{ $refundRequest->comment ?? $refundRequest->details }}</p>
+                    @else
+                        <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Refund Type:</span> {{ ucfirst(str_replace('_', ' ', $refundRequest->refund_type ?? 'full')) }}</p>
+                        <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Comment:</span> {{ $refundRequest->comment ?? $refundRequest->details }}</p>
+                    @endif
                     @if(!empty($refundRequest->final_decision))
                         <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Final Decision:</span> {{ strtoupper(str_replace('_', ' ', $refundRequest->final_decision)) }}</p>
                     @endif
