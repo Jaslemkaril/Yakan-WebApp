@@ -271,7 +271,8 @@
                             @foreach($cartItems as $item)
                                 @php 
                                     $variant = $item->variant ?? null;
-                                    $unitPrice = (float) $item->product->getDiscountedPrice((float) ($variant?->price ?? $item->product->price));
+                                    $baseUnitPrice = (float) ($variant?->price ?? $item->product->price);
+                                    $unitPrice = (float) $item->product->getDiscountedPrice($baseUnitPrice);
                                     $lineSubtotal = (int) $item->quantity * $unitPrice;
                                     $maxStock = $variant
                                         ? (int) ($variant->stock ?? 0)
@@ -314,6 +315,9 @@
                                             <div class="mb-2 sm:mb-0">
                                                 <span class="font-medium">Price:</span>
                                                 <span class="ml-1 text-gray-900">₱{{ number_format($unitPrice, 2) }}</span>
+                                                @if($unitPrice < $baseUnitPrice)
+                                                    <span class="ml-1 text-xs text-gray-500 line-through">₱{{ number_format($baseUnitPrice, 2) }}</span>
+                                                @endif
                                                 <span class="text-gray-400 mx-2">•</span>
                                                 <span class="font-medium">Qty:</span>
                                                 <span class="ml-1 text-gray-900">{{ $item->quantity }}</span>
