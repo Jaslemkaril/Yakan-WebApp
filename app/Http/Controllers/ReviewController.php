@@ -153,7 +153,7 @@ class ReviewController extends Controller
 
         $redirectParams = ['order' => $customOrder->id];
         if ($request->filled('auth_token')) {
-            $redirectParams['auth_token'] = (string) $request->query('auth_token');
+            $redirectParams['auth_token'] = (string) $request->input('auth_token');
         }
         $reviewSectionUrl = route('custom_orders.show', $redirectParams) . '#review-section';
 

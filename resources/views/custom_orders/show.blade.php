@@ -2422,10 +2422,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
 {{-- ===== REVIEW SECTION ===== --}}
 @if(in_array($order->status, ['delivered', 'completed']) && auth()->check())
-<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-10 pb-12" id="review-section">
-    <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color:#800000;">
-            <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+<div class="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 mt-8 sm:mt-10 pb-12" id="review-section">
+    <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-5 sm:mb-6 flex items-center gap-2 sm:gap-3">
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center" style="background-color:#800000;">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
             </svg>
         </div>
@@ -2439,12 +2439,12 @@ document.addEventListener('DOMContentLoaded', function () {
     @endphp
 
     <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200" style="background-color:#fff5f5;">
-            <p class="font-semibold text-gray-800">Custom Order {{ $order->display_ref }} — {{ $order->product->name ?? 'Custom Fabric' }}</p>
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200" style="background-color:#fff5f5;">
+            <p class="font-semibold text-gray-800 text-sm sm:text-base leading-snug">Custom Order {{ $order->display_ref }} — {{ $order->product->name ?? 'Custom Fabric' }}</p>
             <p class="text-sm text-gray-500">Share your experience with this custom order</p>
         </div>
 
-        <div class="px-6 py-5">
+        <div class="px-4 sm:px-6 py-5">
             @if(session('error'))
                 <div class="mb-4 p-3 rounded-lg border border-red-200 bg-red-50 text-red-800 text-sm">
                     {{ session('error') }}
@@ -2467,12 +2467,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div class="space-y-3">
                     <div class="flex items-center gap-1 flex-wrap">
                         @for($s = 1; $s <= 5; $s++)
-                            <svg class="w-7 h-7 {{ $s <= $customReview->rating ? 'text-yellow-400' : 'text-gray-300' }}" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="w-6 h-6 sm:w-7 sm:h-7 {{ $s <= $customReview->rating ? 'text-yellow-400' : 'text-gray-300' }}" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
                             </svg>
                         @endfor
                         <span class="ml-2 text-sm text-gray-600 font-semibold">{{ $customReview->rating }}/5</span>
-                        <span class="ml-auto text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full font-semibold">✓ Review Submitted</span>
+                        <span class="w-full sm:w-auto sm:ml-auto mt-2 sm:mt-0 text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full font-semibold inline-block">✓ Review Submitted</span>
                     </div>
                     @if($customReview->title)
                         <p class="font-semibold text-gray-800">"{{ $customReview->title }}"</p>
@@ -2483,7 +2483,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     @if($customReview->review_images && count($customReview->review_images) > 0)
                         <div class="flex gap-2 flex-wrap mt-2">
                             @foreach($customReview->review_images as $imgUrl)
-                                <img src="{{ $imgUrl }}" alt="Review photo" class="w-20 h-20 object-cover rounded-lg border border-gray-200">
+                                <img src="{{ $imgUrl }}" alt="Review photo" class="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-gray-200">
                             @endforeach
                         </div>
                     @endif
@@ -2491,8 +2491,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
             @else
                 {{-- Review form --}}
-                <form action="{{ route('reviews.store.custom-order', $order) }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('reviews.store.custom-order', ['customOrder' => $order->id, 'auth_token' => $authToken]) }}" method="POST" enctype="multipart/form-data">
                     @csrf
+                    @if(!empty($authToken))
+                        <input type="hidden" name="auth_token" value="{{ $authToken }}">
+                    @endif
                     <div class="space-y-4">
                         {{-- Star Rating --}}
                         <div>
@@ -2500,7 +2503,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             <div class="flex gap-1" id="custom-stars">
                                 @for($s = 1; $s <= 5; $s++)
                                     <button type="button" data-value="{{ $s }}"
-                                        class="custom-star-btn w-10 h-10 text-gray-300 hover:text-yellow-400 transition-colors"
+                                        class="custom-star-btn w-9 h-9 sm:w-10 sm:h-10 text-gray-300 hover:text-yellow-400 transition-colors"
                                         onclick="setCustomRating({{ $s }})">
                                         <svg fill="currentColor" viewBox="0 0 20 20">
                                             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
@@ -2547,7 +2550,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             @enderror
                         </div>
 
-                        <button type="submit" class="text-white font-bold py-2.5 px-6 rounded-lg transition-colors duration-200 shadow" style="background-color:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
+                        <button type="submit" class="w-full sm:w-auto text-white font-bold py-2.5 px-6 rounded-lg transition-colors duration-200 shadow" style="background-color:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
                             Submit Review
                         </button>
                     </div>
