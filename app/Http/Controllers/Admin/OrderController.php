@@ -151,24 +151,40 @@ class OrderController extends Controller
     public function updateStatus(Request $request, Order $order)
     {
         $request->validate([
-            'status' => 'required|in:pending,processing,shipped,delivered,cancelled',
+            'status' => 'required|in:pending,processing,shipped,delivered,completed,cancelled',
             'payment_status' => 'nullable|in:pending,paid,failed,refunded',
             'confirm_delivery' => 'nullable|boolean',
         ]);
 
-        if ($request->status === 'delivered' && !$request->boolean('confirm_delivery')) {
+        $deliveryType = strtolower((string) ($order->delivery_type ?? 'delivery'));
+        if ($deliveryType === 'deliver') {
+            $deliveryType = 'delivery';
+        }
+        $isPickup = $deliveryType === 'pickup';
+
+        $targetStatus = strtolower((string) $request->status);
+        if ($isPickup && $targetStatus === 'shipped') {
+            // Pickup orders should not pass through the delivery shipping stage.
+            $targetStatus = 'delivered';
+        }
+
+        if ($targetStatus === 'completed' && !$isPickup) {
+            return redirect()->back()->with('error', 'Only pickup orders can be marked as completed by admin.');
+        }
+
+        if ($targetStatus === 'delivered' && !$isPickup && !$request->boolean('confirm_delivery')) {
             return redirect()->back()->with('error', 'Please confirm delivery before marking this order as delivered.');
         }
 
         if (
-            $request->status === 'cancelled'
+            $targetStatus === 'cancelled'
             && in_array(strtolower((string) $order->status), ['delivered', 'completed', 'refunded'], true)
         ) {
             return redirect()->back()->with('error', 'Delivered or completed orders can no longer be cancelled.');
         }
 
         $oldStatus = $order->status;
-        $order->status = $request->status;
+        $order->status = $targetStatus;
         
         // Update payment status if provided
         if ($request->filled('payment_status')) {
@@ -176,31 +192,40 @@ class OrderController extends Controller
         }
         
         // Auto-update payment status based on order status
-        if ($request->status === 'processing' && $order->payment_status === 'pending') {
+        if ($targetStatus === 'processing' && $order->payment_status === 'pending') {
             $order->payment_status = 'paid';
         }
         
-        if ($request->status === 'delivered' && $order->payment_status !== 'paid') {
+        if (in_array($targetStatus, ['delivered', 'completed'], true) && !in_array($order->payment_status, ['paid', 'verified'], true)) {
             $order->payment_status = 'paid';
         }
         
-        if ($request->status === 'cancelled') {
+        if ($targetStatus === 'cancelled') {
             $order->payment_status = 'failed';
         }
 
-        if ($request->status === 'delivered' && !$order->delivered_at) {
+        if (in_array($targetStatus, ['delivered', 'completed'], true) && !$order->delivered_at) {
             $order->delivered_at = now();
+        }
+
+        if ($targetStatus === 'completed' && !$order->confirmed_at) {
+            $order->confirmed_at = now();
         }
         
         // sync tracking status and history
-        $order->tracking_status = ucfirst($request->status);
-        $order->appendTrackingEvent(ucfirst($request->status));
+        $trackingStatusLabel = match ($targetStatus) {
+            'delivered' => $isPickup ? 'Ready for Pickup' : 'Delivered',
+            'completed' => $isPickup ? 'Picked Up' : 'Completed',
+            default => ucfirst($targetStatus),
+        };
+        $order->tracking_status = $trackingStatusLabel;
+        $order->appendTrackingEvent($trackingStatusLabel);
         $order->save();
 
         // Send notifications to user and admin
-        if ($oldStatus !== $request->status) {
+        if ($oldStatus !== $targetStatus) {
             $notificationService = new \App\Services\Notification\OrderStatusNotificationService();
-            $notificationService->notifyOrderStatusChange($order, $oldStatus, $request->status);
+            $notificationService->notifyOrderStatusChange($order, $oldStatus, $targetStatus);
         }
 
         return redirect()->back()->with('success', 'Order and payment status updated successfully!');
@@ -281,23 +306,38 @@ class OrderController extends Controller
     public function quickUpdateStatus(Request $request, Order $order)
     {
         $request->validate([
-            'status' => 'required|in:pending,processing,shipped,delivered,cancelled',
+            'status' => 'required|in:pending,processing,shipped,delivered,completed,cancelled',
             'payment_status' => 'nullable|in:pending,paid,failed,refunded',
             'confirm_delivery' => 'nullable|boolean',
         ]);
 
-        if ($request->status === 'delivered' && !$request->boolean('confirm_delivery')) {
+        $deliveryType = strtolower((string) ($order->delivery_type ?? 'delivery'));
+        if ($deliveryType === 'deliver') {
+            $deliveryType = 'delivery';
+        }
+        $isPickup = $deliveryType === 'pickup';
+
+        $targetStatus = strtolower((string) $request->status);
+        if ($isPickup && $targetStatus === 'shipped') {
+            $targetStatus = 'delivered';
+        }
+
+        if ($targetStatus === 'completed' && !$isPickup) {
+            return redirect()->back()->with('error', 'Only pickup orders can be marked as completed by admin.');
+        }
+
+        if ($targetStatus === 'delivered' && !$isPickup && !$request->boolean('confirm_delivery')) {
             return redirect()->back()->with('error', 'Please confirm delivery before marking this order as delivered.');
         }
 
         if (
-            $request->status === 'cancelled'
+            $targetStatus === 'cancelled'
             && in_array(strtolower((string) $order->status), ['delivered', 'completed', 'refunded'], true)
         ) {
             return redirect()->back()->with('error', 'Delivered or completed orders can no longer be cancelled.');
         }
 
-        $order->status = $request->status;
+        $order->status = $targetStatus;
         
         // Update payment status if provided
         if ($request->filled('payment_status')) {
@@ -305,25 +345,34 @@ class OrderController extends Controller
         }
         
         // Auto-update payment status based on order status
-        if ($request->status === 'processing' && $order->payment_status === 'pending') {
+        if ($targetStatus === 'processing' && $order->payment_status === 'pending') {
             $order->payment_status = 'paid';
         }
         
-        if ($request->status === 'delivered' && $order->payment_status !== 'paid') {
+        if (in_array($targetStatus, ['delivered', 'completed'], true) && !in_array($order->payment_status, ['paid', 'verified'], true)) {
             $order->payment_status = 'paid';
         }
         
-        if ($request->status === 'cancelled') {
+        if ($targetStatus === 'cancelled') {
             $order->payment_status = 'failed';
         }
 
-        if ($request->status === 'delivered' && !$order->delivered_at) {
+        if (in_array($targetStatus, ['delivered', 'completed'], true) && !$order->delivered_at) {
             $order->delivered_at = now();
+        }
+
+        if ($targetStatus === 'completed' && !$order->confirmed_at) {
+            $order->confirmed_at = now();
         }
         
         // sync tracking status and history
-        $order->tracking_status = ucfirst($request->status);
-        $order->appendTrackingEvent(ucfirst($request->status));
+        $trackingStatusLabel = match ($targetStatus) {
+            'delivered' => $isPickup ? 'Ready for Pickup' : 'Delivered',
+            'completed' => $isPickup ? 'Picked Up' : 'Completed',
+            default => ucfirst($targetStatus),
+        };
+        $order->tracking_status = $trackingStatusLabel;
+        $order->appendTrackingEvent($trackingStatusLabel);
         $order->save();
 
         return redirect()->back()->with('success', 'Order status updated!');

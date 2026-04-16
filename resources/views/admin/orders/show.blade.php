@@ -593,8 +593,10 @@
             <div class="absolute top-8 left-0 h-0.5 bg-[#800000] transition-all duration-500" style="margin-left: 4rem; width: 
                 @if($order->status == 'pending') 0%
                 @elseif($order->status == 'processing') calc(33.33% - 2.67rem)
-                @elseif($order->status == 'shipped') calc(66.66% - 5.33rem)
-                @elseif(in_array($order->status, ['delivered', 'completed'])) calc(100% - 8rem)
+                @elseif($isPickup && in_array($order->status, ['shipped', 'delivered'])) calc(66.66% - 5.33rem)
+                @elseif(!$isPickup && $order->status == 'shipped') calc(66.66% - 5.33rem)
+                @elseif($isPickup && $order->status == 'completed') calc(100% - 8rem)
+                @elseif(!$isPickup && in_array($order->status, ['delivered', 'completed'])) calc(100% - 8rem)
                 @else 0%
                 @endif;"></div>
             
@@ -623,13 +625,13 @@
 
                 <!-- Shipped -->
                 <div class="flex flex-col items-center" style="width: 25%;">
-                    <div class="w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 {{ in_array($order->status, ['shipped', 'delivered', 'completed']) ? 'shadow-lg' : 'bg-gray-300' }}" style="{{ in_array($order->status, ['shipped', 'delivered', 'completed']) ? 'background-color: #800000;' : '' }}">
-                        <svg class="w-8 h-8 {{ in_array($order->status, ['shipped', 'delivered', 'completed']) ? 'text-white' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 {{ ($isPickup ? in_array($order->status, ['shipped', 'delivered', 'completed']) : in_array($order->status, ['shipped', 'delivered', 'completed'])) ? 'shadow-lg' : 'bg-gray-300' }}" style="{{ ($isPickup ? in_array($order->status, ['shipped', 'delivered', 'completed']) : in_array($order->status, ['shipped', 'delivered', 'completed'])) ? 'background-color: #800000;' : '' }}">
+                        <svg class="w-8 h-8 {{ ($isPickup ? in_array($order->status, ['shipped', 'delivered', 'completed']) : in_array($order->status, ['shipped', 'delivered', 'completed'])) ? 'text-white' : 'text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
                         </svg>
                     </div>
-                    <p class="text-xs font-medium mt-2 {{ $order->status == 'shipped' ? 'text-red-900' : 'text-gray-600' }}">Shipping</p>
+                    <p class="text-xs font-medium mt-2 {{ (($isPickup && in_array($order->status, ['shipped', 'delivered'])) || (!$isPickup && $order->status == 'shipped')) ? 'text-red-900' : 'text-gray-600' }}">{{ $isPickup ? 'Ready for Pickup' : 'Shipping' }}</p>
                 </div>
 
                 <!-- Delivered -->
@@ -639,7 +641,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
                     </div>
-                    <p class="text-xs font-medium mt-2" style="{{ $order->status == 'completed' ? 'color: #800000;' : 'color: #6B7280;' }}">Delivered</p>
+                    <p class="text-xs font-medium mt-2" style="{{ $order->status == 'completed' ? 'color: #800000;' : 'color: #6B7280;' }}">{{ $isPickup ? 'Picked Up' : 'Delivered' }}</p>
                 </div>
             </div>
         </div>
@@ -656,9 +658,9 @@
                     {{ $order->status == 'completed' ? 'text-green-700' : '' }}
                     {{ $order->status == 'cancelled' ? 'text-red-600' : '' }}">
                     @if($order->status == 'delivered')
-                        Delivered — Awaiting Customer Confirmation
+                        {{ $isPickup ? 'Ready for Pickup' : 'Delivered — Awaiting Customer Confirmation' }}
                     @elseif($order->status == 'completed')
-                        Completed
+                        {{ $isPickup ? 'Picked Up' : 'Completed' }}
                     @else
                         {{ ucfirst($order->status) }}
                     @endif
@@ -710,11 +712,11 @@
                             @elseif($order->status == 'processing')
                                 Processing
                             @elseif($order->status == 'shipped')
-                                Shipped
+                                {{ $isPickup ? 'Ready for Pickup' : 'Shipped' }}
                             @elseif($order->status == 'delivered')
-                                Delivered
+                                {{ $isPickup ? 'Ready for Pickup' : 'Delivered' }}
                             @elseif($order->status == 'completed')
-                                Completed
+                                {{ $isPickup ? 'Picked Up' : 'Completed' }}
                             @elseif($order->status == 'cancelled')
                                 Cancelled
                             @endif
@@ -736,41 +738,56 @@
                 @elseif($order->status == 'processing')
                     <form action="{{ route('admin.orders.quickUpdateStatus', $order->id) }}" method="POST">
                         @csrf
-                        <input type="hidden" name="status" value="shipped">
+                        <input type="hidden" name="status" value="{{ $isPickup ? 'delivered' : 'shipped' }}">
                         <button type="submit" class="w-full text-white px-4 py-3 rounded-lg transition-colors duration-200 font-medium flex items-center justify-center" style="background-color: #800000;" onmouseover="this.style.backgroundColor='#A05050'" onmouseout="this.style.backgroundColor='#800000'">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
                             </svg>
-                            Mark as Shipped
+                            {{ $isPickup ? 'Mark as Ready for Pickup' : 'Mark as Shipped' }}
                         </button>
                     </form>
                 @elseif($order->status == 'shipped')
-                    <form action="{{ route('admin.orders.quickUpdateStatus', $order->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to mark this order as delivered? Please confirm delivery with the customer first.')">
+                    <form action="{{ route('admin.orders.quickUpdateStatus', $order->id) }}" method="POST" onsubmit="return confirm('{{ $isPickup ? 'Mark this pickup order as ready for collection?' : 'Are you sure you want to mark this order as delivered? Please confirm delivery with the customer first.' }}')">
                         @csrf
                         <input type="hidden" name="status" value="delivered">
-                        <input type="hidden" name="confirm_delivery" value="1">
+                        @if(!$isPickup)
+                            <input type="hidden" name="confirm_delivery" value="1">
+                        @endif
                         <button type="submit" class="w-full bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium flex items-center justify-center">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
-                            Mark as Delivered
+                            {{ $isPickup ? 'Mark as Ready for Pickup' : 'Mark as Delivered' }}
                         </button>
                     </form>
                 @elseif($order->status == 'delivered')
-                    <div class="text-center py-4">
-                        <svg class="w-12 h-12 text-blue-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <p class="text-sm font-medium text-gray-700">Delivered to Customer</p>
-                        <p class="text-xs text-gray-500 mt-1">Awaiting customer confirmation for final completion</p>
-                    </div>
+                    @if($isPickup)
+                        <form action="{{ route('admin.orders.quickUpdateStatus', $order->id) }}" method="POST" onsubmit="return confirm('Confirm this pickup order has been received by the customer?')">
+                            @csrf
+                            <input type="hidden" name="status" value="completed">
+                            <button type="submit" class="w-full bg-green-700 text-white px-4 py-3 rounded-lg hover:bg-green-800 transition-colors duration-200 font-medium flex items-center justify-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Mark as Picked Up
+                            </button>
+                        </form>
+                    @else
+                        <div class="text-center py-4">
+                            <svg class="w-12 h-12 text-blue-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <p class="text-sm font-medium text-gray-700">Delivered to Customer</p>
+                            <p class="text-xs text-gray-500 mt-1">Awaiting customer confirmation for final completion</p>
+                        </div>
+                    @endif
                 @elseif($order->status == 'completed')
                     <div class="text-center py-4">
                         <svg class="w-12 h-12 text-green-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
-                        <p class="text-sm font-medium text-gray-700">Order Completed</p>
-                        <p class="text-xs text-gray-500 mt-1">Confirmed as received by customer</p>
+                        <p class="text-sm font-medium text-gray-700">{{ $isPickup ? 'Order Picked Up' : 'Order Completed' }}</p>
+                        <p class="text-xs text-gray-500 mt-1">{{ $isPickup ? 'Customer pickup has been confirmed by staff' : 'Confirmed as received by customer' }}</p>
                     </div>
                 @elseif($order->status == 'cancelled')
                     <div class="text-center py-4">

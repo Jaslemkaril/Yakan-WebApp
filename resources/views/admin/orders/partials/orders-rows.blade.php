@@ -1,6 +1,11 @@
 @foreach($orders as $order)
 @php
     $currentStatus = strtolower((string) ($order->status ?? ''));
+    $normalizedDeliveryType = strtolower((string) ($order->delivery_type ?? 'delivery'));
+    if ($normalizedDeliveryType === 'deliver') {
+        $normalizedDeliveryType = 'delivery';
+    }
+    $isPickup = $normalizedDeliveryType === 'pickup';
     $canTransitionToCancelled = !in_array($currentStatus, ['delivered', 'completed', 'refunded'], true);
 @endphp
 <tr class="hover:bg-gray-100">
@@ -15,13 +20,18 @@
 
     <!-- Status -->
     <td class="py-3 px-4">
-        <form action="{{ route('admin.orders.quickUpdateStatus', $order->id) }}" method="POST" onsubmit="return confirmRowDelivered(this)">
+        <form action="{{ route('admin.orders.quickUpdateStatus', $order->id) }}" method="POST" onsubmit="return confirmRowDelivered(this)" data-is-pickup="{{ $isPickup ? '1' : '0' }}">
             @csrf
             <select name="status" class="border rounded px-2 py-1 w-full" onchange="this.form.submit()">
                 <option value="pending" {{ $order->status=='pending'?'selected':'' }}>Pending</option>
                 <option value="processing" {{ $order->status=='processing'?'selected':'' }}>Processing</option>
-                <option value="shipped" {{ $order->status=='shipped'?'selected':'' }}>Shipped</option>
-                <option value="delivered" {{ $order->status=='delivered'?'selected':'' }}>Delivered</option>
+                @if($isPickup)
+                    <option value="delivered" {{ in_array($order->status, ['shipped', 'delivered']) ? 'selected' : '' }}>Ready for Pickup</option>
+                    <option value="completed" {{ $order->status=='completed'?'selected':'' }}>Picked Up</option>
+                @else
+                    <option value="shipped" {{ $order->status=='shipped'?'selected':'' }}>Shipped</option>
+                    <option value="delivered" {{ $order->status=='delivered'?'selected':'' }}>Delivered</option>
+                @endif
                 <option value="cancelled" {{ $order->status=='cancelled'?'selected':'' }} {{ !$canTransitionToCancelled && $order->status!=='cancelled' ? 'disabled' : '' }}>Cancelled</option>
             </select>
             <input type="hidden" name="confirm_delivery" value="0">
@@ -87,16 +97,24 @@ function confirmRowDelivered(form) {
 
     const statusField = form.querySelector('select[name="status"]');
     const confirmField = form.querySelector('input[name="confirm_delivery"]');
+    const isPickup = form.getAttribute('data-is-pickup') === '1';
     const selected = (statusField?.value || '').toLowerCase();
 
     if (selected === 'delivered') {
-        const approved = confirm('Mark this order as delivered? Please confirm delivery with the customer first.');
+        const approved = isPickup
+            ? confirm('Mark this pickup order as ready for pickup?')
+            : confirm('Mark this order as delivered? Please confirm delivery with the customer first.');
         if (!approved) {
             return false;
         }
 
-        if (confirmField) {
+        if (confirmField && !isPickup) {
             confirmField.value = '1';
+        }
+    } else if (selected === 'completed' && isPickup) {
+        const approved = confirm('Confirm this order has been picked up by the customer?');
+        if (!approved) {
+            return false;
         }
     } else if (confirmField) {
         confirmField.value = '0';
