@@ -670,11 +670,19 @@ class OrderController extends Controller
             return redirect()->back()->with('info', 'Order is already cancelled.');
         }
 
+        $currentPaymentStatus = strtolower((string) $order->payment_status);
+        $wasPaid = in_array($currentPaymentStatus, ['paid', 'verified'], true);
+
         $order->status = 'cancelled';
-        $order->payment_status = $order->payment_status === 'paid' ? 'refunded' : 'failed';
+        $order->payment_status = $wasPaid ? $order->payment_status : 'failed';
         $order->cancelled_at = now();
         $order->tracking_status = 'Cancelled';
         $order->appendTrackingEvent('Cancelled');
+        if ($wasPaid) {
+            $order->admin_notes = trim((string) $order->admin_notes);
+            $order->admin_notes = ($order->admin_notes !== '' ? $order->admin_notes . "\n" : '')
+                . 'Order cancelled by admin. Payment received; refund must be processed separately.';
+        }
         $order->save();
 
         foreach ($order->orderItems as $item) {
@@ -687,7 +695,9 @@ class OrderController extends Controller
 
         $this->notifyOrderCancellationByAdmin($order);
 
-        return redirect()->back()->with('success', 'Order cancelled successfully.');
+        return redirect()->back()->with('success', $wasPaid
+            ? 'Order cancelled. Payment remains marked as paid until refund payout is processed.'
+            : 'Order cancelled successfully.');
     }
 
     /**

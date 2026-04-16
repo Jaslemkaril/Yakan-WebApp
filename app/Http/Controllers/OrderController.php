@@ -472,16 +472,90 @@ class OrderController extends Controller
 
         $currentPaymentStatus = strtolower((string) $order->payment_status);
         $wasPaid = in_array($currentPaymentStatus, ['paid', 'verified'], true);
-        $newPaymentStatus = $wasPaid ? 'refunded' : $order->payment_status;
+        $newPaymentStatus = $wasPaid ? $order->payment_status : $order->payment_status;
+        $refundProcessStarted = false;
+
+        if ($wasPaid) {
+            $this->ensureRefundRequestsTableExists();
+            $this->ensureRefundWorkflowColumnsExist();
+
+            if (Schema::hasTable('order_refund_requests')) {
+                $activeStatuses = ['requested', 'under_review', 'approved', 'processed'];
+                $activeWorkflowStatuses = [
+                    'pending_review',
+                    'under_review',
+                    'awaiting_return_shipment',
+                    'return_in_transit',
+                    'return_received',
+                    'pending_payout',
+                    'approved',
+                    'processed',
+                ];
+
+                $existingRefund = OrderRefundRequest::where('order_id', $order->id)
+                    ->where('user_id', auth()->id())
+                    ->where(function ($query) use ($activeStatuses, $activeWorkflowStatuses) {
+                        $query->whereIn('status', $activeStatuses);
+
+                        if (Schema::hasColumn('order_refund_requests', 'workflow_status')) {
+                            $query->orWhereIn('workflow_status', $activeWorkflowStatuses);
+                        }
+                    })
+                    ->latest()
+                    ->first();
+
+                if (!$existingRefund) {
+                    $totalAmount = (float) ($order->total_amount ?? $order->total ?? 0);
+
+                    $refundPayload = [
+                        'order_id' => $order->id,
+                        'user_id' => auth()->id(),
+                        'reason' => 'Order cancellation',
+                        'details' => 'Auto-generated cancellation refund request. Reason: ' . $validated['cancel_reason'],
+                        'status' => 'requested',
+                        'requested_at' => now(),
+                    ];
+
+                    if (Schema::hasColumn('order_refund_requests', 'refund_type')) {
+                        $refundPayload['refund_type'] = 'full';
+                    }
+                    if (Schema::hasColumn('order_refund_requests', 'comment')) {
+                        $refundPayload['comment'] = 'Customer cancelled order before fulfillment: ' . $validated['cancel_reason'];
+                    }
+                    if (Schema::hasColumn('order_refund_requests', 'workflow_status')) {
+                        $refundPayload['workflow_status'] = 'pending_review';
+                    }
+                    if (Schema::hasColumn('order_refund_requests', 'recommended_decision')) {
+                        $refundPayload['recommended_decision'] = 'FULL_REFUND';
+                    }
+                    if (Schema::hasColumn('order_refund_requests', 'recommended_refund_amount')) {
+                        $refundPayload['recommended_refund_amount'] = $totalAmount;
+                    }
+                    if (Schema::hasColumn('order_refund_requests', 'return_required')) {
+                        $refundPayload['return_required'] = false;
+                    }
+                    if (Schema::hasColumn('order_refund_requests', 'payout_status')) {
+                        $refundPayload['payout_status'] = 'pending';
+                    }
+
+                    OrderRefundRequest::create($refundPayload);
+                }
+
+                $refundProcessStarted = true;
+            }
+        }
+
         $paymentNote = $wasPaid
-            ? 'Payment was already received and is now tagged as refunded.'
+            ? 'Payment was received. Refund processing has started and is pending admin review.'
             : 'No completed payment was recorded, so no refund action is needed.';
 
         $order->update([
             'status' => 'cancelled',
             'payment_status' => $newPaymentStatus,
             'cancelled_at' => now(),
-            'admin_notes' => 'Customer cancel request approved: ' . $validated['cancel_reason'],
+            'admin_notes' => $wasPaid
+                ? 'Customer order cancelled. Refund pending review. Reason: ' . $validated['cancel_reason']
+                : 'Customer cancel request approved: ' . $validated['cancel_reason'],
         ]);
 
         // Restore product stock
@@ -498,7 +572,9 @@ class OrderController extends Controller
 
         $this->notifyCancelDecision($order, 'approved', $validated['cancel_reason'], $paymentNote);
 
-        return redirect()->back()->with('success', 'Order has been cancelled.');
+        return redirect()->back()->with('success', $refundProcessStarted
+            ? 'Order cancelled. Refund request is now pending review and payout processing.'
+            : 'Order has been cancelled.');
     }
 
     /**
