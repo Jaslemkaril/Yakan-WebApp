@@ -75,6 +75,7 @@ class OrderStatusNotificationService
             'processing' => 'Your order is now being processed!',
             'shipped' => 'Your order has been shipped!',
             'delivered' => 'Your order has been delivered!',
+            'cancellation_requested' => 'Your cancellation request has been submitted and is pending admin review.',
             'cancelled' => 'Your order has been cancelled.',
         ];
 

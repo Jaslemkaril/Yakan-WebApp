@@ -58,7 +58,7 @@
                                 <div>
                                     <h3 style="font-size: 1.125rem; font-weight: bold; color: #111827;">{{ $order->order_ref }}</h3>
                                     <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">{{ $order->created_at->format('M d, Y') }}</p>
-                                    @if($order->estimated_delivery_date && !in_array($order->status, ['delivered','completed','cancelled']))
+                                    @if($order->estimated_delivery_date && !in_array($order->status, ['delivered','completed','cancelled','cancellation_requested']))
                                         <p style="font-size: 0.8rem; color: #800000; margin-top: 0.25rem; font-weight: 600;">
                                             📦 Est. Delivery: {{ \Carbon\Carbon::parse($order->estimated_delivery_date)->format('M d, Y') }}
                                         </p>
@@ -74,6 +74,8 @@
                                             🚚 Shipped
                                         @elseif($order->status === 'processing' || $order->status === 'confirmed')
                                             ⚙️ Processing
+                                        @elseif($order->status === 'cancellation_requested')
+                                            ⚠️ Cancellation Requested
                                         @elseif($order->status === 'cancelled')
                                             ❌ Cancelled
                                         @else
@@ -124,9 +126,9 @@
                                 </div>
                             </div>
 
-                            @if($order->status === 'cancelled' && !empty($cancellationReason))
+                            @if(in_array($order->status, ['cancelled', 'cancellation_requested'], true) && !empty($cancellationReason))
                                 <div style="margin-top: -0.5rem; margin-bottom: 1rem; padding: 0.625rem 0.875rem; border-radius: 0.75rem; border: 1px solid #fecaca; background: #fef2f2; color: #991b1b; font-size: 0.8rem;">
-                                    <strong>Cancellation reason:</strong> {{ $cancellationReason }}
+                                    <strong>{{ $order->status === 'cancellation_requested' ? 'Requested cancellation reason:' : 'Cancellation reason:' }}</strong> {{ $cancellationReason }}
                                 </div>
                             @endif
 

@@ -4,7 +4,8 @@
 <div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-6xl mx-auto">
         @php
-            $canCancelOrder = in_array(strtolower((string) $order->status), ['pending', 'pending_confirmation', 'confirmed', 'processing'], true);
+            $orderStatusLower = strtolower((string) ($order->status ?? ''));
+            $canCancelOrder = in_array($orderStatusLower, ['pending', 'pending_confirmation', 'confirmed', 'processing'], true);
             $showCancelForm = $errors->has('cancel_reason') || !empty(old('cancel_reason'));
 
             $cancellationReason = null;
@@ -138,7 +139,7 @@
             </div>
         </div>
 
-        @if(strtolower((string) ($order->status ?? '')) === 'cancelled')
+        @if($orderStatusLower === 'cancelled')
         <div class="mb-8 bg-red-50 border border-red-200 rounded-xl p-5">
             <div class="flex items-center gap-3">
                 <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,6 +152,21 @@
                     @else
                         <p class="text-sm text-red-700 mt-1">This order was cancelled by the store team.</p>
                     @endif
+                </div>
+            </div>
+        </div>
+        @elseif($orderStatusLower === 'cancellation_requested')
+        <div class="mb-8 bg-amber-50 border border-amber-200 rounded-xl p-5">
+            <div class="flex items-center gap-3">
+                <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div>
+                    <p class="text-sm font-bold text-amber-800">Cancellation Requested</p>
+                    @if(!empty($cancellationReason))
+                        <p class="text-sm text-amber-800 mt-1"><span class="font-semibold">Requested reason:</span> {{ $cancellationReason }}</p>
+                    @endif
+                    <p class="text-sm text-amber-800 mt-1">Your request is pending admin approval. The order is not cancelled yet.</p>
                 </div>
             </div>
         </div>
@@ -527,7 +543,7 @@
                                     <p class="text-lg font-bold" style="color:#800000;">
                                         {{ \Carbon\Carbon::parse($order->estimated_delivery_date)->format('F d, Y') }}
                                     </p>
-                                    @if(!in_array($order->status, ['delivered','completed','cancelled']))
+                                    @if(!in_array($order->status, ['delivered','completed','cancelled','cancellation_requested']))
                                         <p class="text-xs text-gray-500 mt-1">
                                             {{ \Carbon\Carbon::parse($order->estimated_delivery_date)->isPast() ? 'Expected soon' : \Carbon\Carbon::parse($order->estimated_delivery_date)->diffForHumans() }}
                                         </p>

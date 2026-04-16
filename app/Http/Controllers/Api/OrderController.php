@@ -375,7 +375,7 @@ class OrderController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'required|string|in:pending,confirmed,processing,shipped,delivered,completed,cancelled'
+            'status' => 'required|string|in:pending,confirmed,processing,shipped,delivered,completed,cancellation_requested,cancelled'
         ]);
 
         $order->update(['status' => $validated['status']]);
@@ -472,6 +472,15 @@ class OrderController extends Controller
 
             $currentStatus = strtolower((string) $order->status);
             $cancellableStatuses = ['pending', 'pending_confirmation', 'confirmed', 'processing'];
+
+            if ($currentStatus === 'cancellation_requested') {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Cancellation request is already pending admin review.',
+                    'data' => $order->fresh(['items.product', 'user']),
+                ]);
+            }
+
             if (!in_array($currentStatus, $cancellableStatuses, true)) {
                 $this->notifyCancelDecision(
                     $order,
@@ -486,52 +495,36 @@ class OrderController extends Controller
                 ], 422);
             }
 
+            $this->ensureCancellationRequestedStatusSupported();
+
             \DB::beginTransaction();
 
             $currentPaymentStatus = strtolower((string) $order->payment_status);
             $wasPaid = in_array($currentPaymentStatus, ['paid', 'verified'], true);
-            $newPaymentStatus = $wasPaid ? 'refunded' : $order->payment_status;
 
             $order->update([
-                'status' => 'cancelled',
-                'payment_status' => $newPaymentStatus,
-                'cancelled_at' => now(),
-                'admin_notes' => 'Customer cancelled: ' . $validated['reason'],
+                'status' => 'cancellation_requested',
+                'payment_status' => $order->payment_status,
+                'cancelled_at' => null,
+                'admin_notes' => 'Customer cancellation requested: ' . $validated['reason'],
             ]);
-
-            foreach ($order->items as $item) {
-                if (!empty($item->variant_id)) {
-                    $variant = ProductVariant::find($item->variant_id);
-                    if ($variant) {
-                        $variant->increment('stock', $item->quantity);
-                    }
-                } else {
-                    $inventory = \App\Models\Inventory::where('product_id', $item->product_id)->first();
-                    if ($inventory) {
-                        $inventory->increment('quantity', $item->quantity);
-                    }
-                }
-
-                $product = Product::find($item->product_id);
-                if ($product) {
-                    $product->increment('stock', $item->quantity);
-                }
-            }
+            $order->appendTrackingEvent('Cancellation Requested');
+            $order->save();
 
             \DB::commit();
 
             $this->notifyCancelDecision(
                 $order,
-                'approved',
+                'pending',
                 $validated['reason'],
                 $wasPaid
-                    ? 'Payment was already received and is now tagged as refunded.'
-                    : 'No completed payment was recorded, so no refund action is needed.'
+                    ? 'Payment was received. Cancellation and refund processing will start after admin approval.'
+                    : 'Cancellation request submitted and awaiting admin approval.'
             );
 
             return response()->json([
                 'success' => true,
-                'message' => 'Order has been cancelled.',
+                'message' => 'Cancellation request submitted. Awaiting admin approval.',
                 'data' => $order->fresh(['items.product', 'user']),
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -558,8 +551,18 @@ class OrderController extends Controller
             return;
         }
 
-        $decisionLabel = strtolower($decision) === 'approved' ? 'Approved' : 'Rejected';
+        $decisionNormalized = strtolower($decision);
+        $decisionLabel = match ($decisionNormalized) {
+            'approved' => 'Approved',
+            'pending' => 'Pending Review',
+            default => 'Rejected',
+        };
         $subject = 'Order Cancel Request ' . $decisionLabel . ' - ' . ($order->order_ref ?? ('#' . $order->id));
+        $intro = match ($decisionNormalized) {
+            'approved' => 'Your order cancellation request has been approved.',
+            'pending' => 'Your order cancellation request has been submitted and is now pending admin review.',
+            default => 'Your order cancellation request has been rejected.',
+        };
 
         try {
             TransactionalMailService::sendViewDetailed(
@@ -569,9 +572,7 @@ class OrderController extends Controller
                 [
                     'subject' => $subject,
                     'customerName' => $order->user?->name ?: ($order->customer_name ?: 'Customer'),
-                    'introText' => strtolower($decision) === 'approved'
-                        ? 'Your order cancellation request has been approved.'
-                        : 'Your order cancellation request has been rejected.',
+                    'introText' => $intro,
                     'orderRef' => $order->order_ref,
                     'orderId' => $order->id,
                     'requestType' => 'Order Cancellation',
@@ -586,6 +587,21 @@ class OrderController extends Controller
             \Log::warning('Failed to send API cancellation decision email', [
                 'order_id' => $order->id,
                 'recipient' => $recipient,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    private function ensureCancellationRequestedStatusSupported(): void
+    {
+        if (!Schema::hasTable('orders') || !Schema::hasColumn('orders', 'status')) {
+            return;
+        }
+
+        try {
+            \DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('pending','pending_confirmation','confirmed','processing','shipped','delivered','completed','cancellation_requested','cancelled','refunded') NOT NULL DEFAULT 'pending_confirmation'");
+        } catch (\Throwable $exception) {
+            \Log::warning('Unable to ensure API order status supports cancellation_requested', [
                 'error' => $exception->getMessage(),
             ]);
         }

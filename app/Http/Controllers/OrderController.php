@@ -341,7 +341,7 @@ class OrderController extends Controller
 
         try {
             $validated = $request->validate([
-                'status' => 'required|in:confirmed,processing,shipped,delivered,cancelled,refunded',
+                'status' => 'required|in:confirmed,processing,shipped,delivered,cancellation_requested,cancelled,refunded',
                 'notes' => 'nullable|string',
             ]);
 
@@ -475,11 +475,17 @@ class OrderController extends Controller
         $currentStatus = strtolower((string) $order->status);
         $cancellableStatuses = ['pending', 'pending_confirmation', 'confirmed', 'processing'];
 
+        if ($currentStatus === 'cancellation_requested') {
+            return redirect()->back()->with('info', 'Your cancellation request is already pending admin review.');
+        }
+
         if (!in_array($currentStatus, $cancellableStatuses, true)) {
             $message = 'This order can no longer be cancelled because it is already in ' . strtoupper($order->status) . ' status.';
             $this->notifyCancelDecision($order, 'rejected', $validated['cancel_reason'], $message);
             return redirect()->back()->with('error', $message);
         }
+
+        $this->ensureCancellationRequestedStatusSupported();
 
         $currentPaymentStatus = strtolower((string) $order->payment_status);
         $wasPaid = in_array($currentPaymentStatus, ['paid', 'verified'], true);
@@ -557,35 +563,37 @@ class OrderController extends Controller
         }
 
         $paymentNote = $wasPaid
-            ? 'Payment was received. Refund processing has started and is pending admin review.'
-            : 'No completed payment was recorded, so no refund action is needed.';
+            ? 'Payment was received. Cancellation and refund request are pending admin review.'
+            : 'Cancellation request is pending admin review.';
 
-        $order->update([
-            'status' => 'cancelled',
-            'payment_status' => $newPaymentStatus,
-            'cancelled_at' => now(),
-            'admin_notes' => $wasPaid
-                ? 'Customer order cancelled. Refund pending review. Reason: ' . $validated['cancel_reason']
-                : 'Customer cancel request approved: ' . $validated['cancel_reason'],
-        ]);
-
-        // Restore product stock
-        foreach ($order->orderItems as $item) {
-            $inventory = \App\Models\Inventory::where('product_id', $item->product_id)->first();
-            if ($inventory) {
-                $inventory->increment('quantity', $item->quantity);
-            }
-            $product = \App\Models\Product::find($item->product_id);
-            if ($product) {
-                $product->increment('stock', $item->quantity);
-            }
+        $existingAdminNotes = trim((string) $order->admin_notes);
+        $requestReasonLine = 'Customer cancellation requested: ' . $validated['cancel_reason'];
+        if (!str_contains($existingAdminNotes, $requestReasonLine)) {
+            $existingAdminNotes = $existingAdminNotes !== ''
+                ? ($existingAdminNotes . "\n" . $requestReasonLine)
+                : $requestReasonLine;
+        }
+        if (!str_contains($existingAdminNotes, $paymentNote)) {
+            $existingAdminNotes = $existingAdminNotes !== ''
+                ? ($existingAdminNotes . "\n" . $paymentNote)
+                : $paymentNote;
         }
 
-        $this->notifyCancelDecision($order, 'approved', $validated['cancel_reason'], $paymentNote);
+        $order->update([
+            'status' => 'cancellation_requested',
+            'payment_status' => $newPaymentStatus,
+            'cancelled_at' => null,
+            'admin_notes' => trim($existingAdminNotes),
+        ]);
+
+        $order->appendTrackingEvent('Cancellation Requested');
+        $order->save();
+
+        $this->notifyCancelDecision($order, 'pending', $validated['cancel_reason'], $paymentNote);
 
         return redirect()->back()->with('success', $refundProcessStarted
-            ? 'Order cancelled. Refund request is now pending review and payout processing.'
-            : 'Order has been cancelled.');
+            ? 'Cancellation requested. Refund request is now pending admin review.'
+            : 'Cancellation requested. Please wait for admin approval.');
     }
 
     /**
@@ -612,7 +620,7 @@ class OrderController extends Controller
 
             // Ensure 'completed' is a valid ENUM value before updating
             try {
-                \DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('pending','pending_confirmation','confirmed','processing','shipped','delivered','completed','cancelled','refunded') NOT NULL DEFAULT 'pending_confirmation'");
+                \DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('pending','pending_confirmation','confirmed','processing','shipped','delivered','completed','cancellation_requested','cancelled','refunded') NOT NULL DEFAULT 'pending_confirmation'");
             } catch (\Exception $e) {
                 // ENUM already includes 'completed', safe to continue
             }
@@ -1149,11 +1157,18 @@ class OrderController extends Controller
             return;
         }
 
-        $decisionLabel = strtolower($decision) === 'approved' ? 'Approved' : 'Rejected';
+        $decisionNormalized = strtolower($decision);
+        $decisionLabel = match ($decisionNormalized) {
+            'approved' => 'Approved',
+            'pending' => 'Pending Review',
+            default => 'Rejected',
+        };
         $subject = 'Order Cancel Request ' . $decisionLabel . ' - ' . ($order->order_ref ?? ('#' . $order->id));
-        $intro = strtolower($decision) === 'approved'
-            ? 'Your order cancellation request has been approved.'
-            : 'Your order cancellation request has been rejected.';
+        $intro = match ($decisionNormalized) {
+            'approved' => 'Your order cancellation request has been approved.',
+            'pending' => 'Your order cancellation request has been submitted and is now pending admin review.',
+            default => 'Your order cancellation request has been rejected.',
+        };
 
         try {
             TransactionalMailService::sendViewDetailed(
@@ -1198,5 +1213,23 @@ class OrderController extends Controller
         // if (!auth()->user()->hasRole('admin')) {
         //     abort(403, 'Forbidden');
         // }
+    }
+
+    /**
+     * Ensure orders.status ENUM supports cancellation_requested.
+     */
+    private function ensureCancellationRequestedStatusSupported(): void
+    {
+        if (!Schema::hasTable('orders') || !Schema::hasColumn('orders', 'status')) {
+            return;
+        }
+
+        try {
+            \DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('pending','pending_confirmation','confirmed','processing','shipped','delivered','completed','cancellation_requested','cancelled','refunded') NOT NULL DEFAULT 'pending_confirmation'");
+        } catch (\Throwable $e) {
+            Log::warning('Unable to ensure status supports cancellation_requested', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

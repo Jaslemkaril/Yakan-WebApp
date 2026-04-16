@@ -246,6 +246,7 @@ class Order extends Model
             'shipped' => 'Shipped',
             'delivered' => 'Delivered',
             'completed' => 'Completed',
+            'cancellation_requested' => 'Cancellation Requested',
             'cancelled' => 'Cancelled',
             'refunded' => 'Refunded',
         ];
