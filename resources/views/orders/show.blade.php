@@ -235,10 +235,24 @@
 
                     <div class="flex items-center justify-between gap-2">
                         <button type="button" id="cancel-back-btn" class="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all">Go back</button>
-                        <button type="submit" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all">Yes, request cancellation</button>
+                        <button type="button" id="cancel-submit-btn" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all">Yes, request cancellation</button>
                     </div>
                 </div>
             </form>
+
+            <div id="cancel-confirm-modal" class="fixed inset-0 z-50 hidden">
+                <div class="absolute inset-0 bg-black/40" id="cancel-confirm-backdrop"></div>
+                <div class="absolute inset-0 flex items-center justify-center p-4">
+                    <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-200 p-6">
+                        <h4 class="text-xl font-bold text-gray-900 mb-2">Submit cancellation request?</h4>
+                        <p class="text-sm text-gray-600 mb-5">This will send your request to admin for review. The order will not be cancelled immediately.</p>
+                        <div class="flex items-center justify-end gap-2">
+                            <button type="button" id="cancel-confirm-no" class="px-5 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all">Go back</button>
+                            <button type="button" id="cancel-confirm-yes" class="px-5 py-2.5 bg-[#800000] text-white font-semibold rounded-lg hover:bg-[#600000] transition-all">Submit Request</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         @endif
 
@@ -1055,6 +1069,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelReasonOtherInput = document.getElementById('cancel_reason_other');
     const cancelReasonOtherHidden = document.getElementById('cancel_reason_other_input');
     const cancelForm = document.getElementById('cancel-order-form');
+    const cancelSubmitBtn = document.getElementById('cancel-submit-btn');
+    const cancelConfirmModal = document.getElementById('cancel-confirm-modal');
+    const cancelConfirmBackdrop = document.getElementById('cancel-confirm-backdrop');
+    const cancelConfirmNo = document.getElementById('cancel-confirm-no');
+    const cancelConfirmYes = document.getElementById('cancel-confirm-yes');
+
+    function openCancelConfirmModal() {
+        if (cancelConfirmModal) {
+            cancelConfirmModal.classList.remove('hidden');
+        }
+    }
+
+    function closeCancelConfirmModal() {
+        if (cancelConfirmModal) {
+            cancelConfirmModal.classList.add('hidden');
+        }
+    }
 
     function syncCancelReasonState() {
         const selectedReason = (cancelReasonSelect?.value || '').trim();
@@ -1159,11 +1190,51 @@ document.addEventListener('DOMContentLoaded', function() {
                     cancelReasonOtherHidden.value = otherReason;
                 }
             }
+        });
+    }
 
-            const confirmed = confirm('Submit cancellation request for admin review?');
-            if (!confirmed) {
-                e.preventDefault();
+    if (cancelSubmitBtn) {
+        cancelSubmitBtn.addEventListener('click', function() {
+            const reason = (cancelReasonInput?.value || '').trim();
+            if (!reason) {
+                alert('Please select a cancellation reason first.');
+                if (cancelStep2 && cancelStep1) {
+                    cancelStep2.classList.add('hidden');
+                    cancelStep1.classList.remove('hidden');
+                }
+                return;
             }
+
+            if (reason === 'Other') {
+                const otherReason = (cancelReasonOtherInput?.value || '').trim();
+                if (!otherReason) {
+                    alert('Please specify your cancellation reason.');
+                    if (cancelStep2 && cancelStep1) {
+                        cancelStep2.classList.add('hidden');
+                        cancelStep1.classList.remove('hidden');
+                    }
+                    cancelReasonOtherInput?.focus();
+                    return;
+                }
+                if (cancelReasonOtherHidden) {
+                    cancelReasonOtherHidden.value = otherReason;
+                }
+            }
+
+            openCancelConfirmModal();
+        });
+    }
+
+    if (cancelConfirmBackdrop) {
+        cancelConfirmBackdrop.addEventListener('click', closeCancelConfirmModal);
+    }
+    if (cancelConfirmNo) {
+        cancelConfirmNo.addEventListener('click', closeCancelConfirmModal);
+    }
+    if (cancelConfirmYes && cancelForm) {
+        cancelConfirmYes.addEventListener('click', function() {
+            closeCancelConfirmModal();
+            cancelForm.submit();
         });
     }
 
