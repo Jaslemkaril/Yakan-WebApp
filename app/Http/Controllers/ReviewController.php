@@ -10,6 +10,7 @@ use App\Models\Product;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use App\Services\CloudinaryService;
@@ -146,6 +147,34 @@ class ReviewController extends Controller
      */
     public function storeForCustomOrder(Request $request, CustomOrder $customOrder)
     {
+        // Railway/session-safe fallback: re-authenticate from auth_token when session is missing.
+        if (!Auth::check()) {
+            $token = (string) ($request->input('auth_token')
+                ?? $request->query('auth_token')
+                ?? $request->cookie('auth_token')
+                ?? $request->header('X-Auth-Token')
+                ?? '');
+
+            if ($token !== '') {
+                $authToken = DB::table('auth_tokens')
+                    ->where('token', $token)
+                    ->where('expires_at', '>', now())
+                    ->first();
+
+                if ($authToken) {
+                    $user = \App\Models\User::find($authToken->user_id);
+                    if ($user) {
+                        Auth::login($user, true);
+                        session(['auth_token' => $token]);
+
+                        DB::table('auth_tokens')
+                            ->where('token', $token)
+                            ->update(['expires_at' => now()->addDays(30), 'updated_at' => now()]);
+                    }
+                }
+            }
+        }
+
         // Check if user owns this custom order
         if ($customOrder->user_id !== Auth::id()) {
             abort(403, 'Unauthorized');

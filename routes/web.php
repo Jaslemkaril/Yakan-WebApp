@@ -876,7 +876,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/order/{order}', [ReviewController::class, 'createForOrder'])->name('create.order');
         Route::post('/order-item/{orderItem}', [ReviewController::class, 'storeForOrderItem'])->name('store.order-item');
         Route::get('/custom-order/{customOrder}', [ReviewController::class, 'createForCustomOrder'])->name('create.custom-order');
-        Route::post('/custom-order/{customOrder}', [ReviewController::class, 'storeForCustomOrder'])->name('store.custom-order');
+        Route::post('/custom-order/{customOrder}', [ReviewController::class, 'storeForCustomOrder'])
+            ->name('store.custom-order')
+            ->withoutMiddleware(['auth']);
         Route::get('/product/{product}', [ReviewController::class, 'showProductReviews'])->name('product');
         Route::post('/{review}/helpful', [ReviewController::class, 'markHelpful'])->name('helpful');
         Route::post('/{review}/unhelpful', [ReviewController::class, 'markUnhelpful'])->name('unhelpful');
