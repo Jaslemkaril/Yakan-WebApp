@@ -818,11 +818,15 @@
                         && $remainingBalance > 0
                         && in_array($order->payment_status, ['paid', 'verified'], true)
                         && !in_array(strtolower((string) $order->status), ['cancelled', 'refunded'], true);
+                    $adminAuthToken = request('auth_token') ?? request()->attributes->get('admin_auth_token');
                 @endphp
 
                 @if($canSettleRemainingBalance)
                 <form action="{{ route('admin.orders.settle-balance', $order->id) }}" method="POST">
                     @csrf
+                    @if(!empty($adminAuthToken))
+                        <input type="hidden" name="auth_token" value="{{ $adminAuthToken }}">
+                    @endif
                     <button type="submit" onclick="return confirm('Mark the remaining balance as settled for this order?');" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium flex items-center justify-center">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>

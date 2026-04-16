@@ -396,12 +396,13 @@ class OrderController extends Controller
      */
     public function settleRemainingBalance(Order $order)
     {
-        if (!Schema::hasColumn('orders', 'payment_option') || !Schema::hasColumn('orders', 'remaining_balance')) {
-            return redirect()->back()->with('error', 'Downpayment fields are not available in this deployment yet.');
-        }
+        $hasPaymentOptionColumn = Schema::hasColumn('orders', 'payment_option');
+        $hasRemainingBalanceColumn = Schema::hasColumn('orders', 'remaining_balance');
+        $hasDownpaymentAmountColumn = Schema::hasColumn('orders', 'downpayment_amount');
+        $hasDownpaymentRateColumn = Schema::hasColumn('orders', 'downpayment_rate');
 
-        $paymentOption = strtolower((string) ($order->payment_option ?? 'full'));
-        $remainingBalance = max(0, (float) ($order->remaining_balance ?? 0));
+        $paymentOption = strtolower((string) ($hasPaymentOptionColumn ? ($order->payment_option ?? 'full') : 'full'));
+        $remainingBalance = max(0, (float) ($hasRemainingBalanceColumn ? ($order->remaining_balance ?? 0) : 0));
         $notes = (string) ($order->notes ?? '');
         $legacyMatched = false;
 
@@ -416,16 +417,31 @@ class OrderController extends Controller
             if ($legacyRemaining > 0) {
                 $paymentOption = 'downpayment';
                 $remainingBalance = max(0, round($legacyRemaining, 2));
-                $order->payment_option = 'downpayment';
-                $order->downpayment_amount = max(0, round($legacyPaidAmount, 2));
+
+                if ($hasPaymentOptionColumn) {
+                    $order->payment_option = 'downpayment';
+                }
+                if ($hasDownpaymentAmountColumn) {
+                    $order->downpayment_amount = max(0, round($legacyPaidAmount, 2));
+                }
 
                 $orderTotal = (float) ($order->total_amount ?? $order->total ?? 0);
-                if ($orderTotal > 0 && $legacyPaidAmount > 0) {
+                if ($hasDownpaymentRateColumn && $orderTotal > 0 && $legacyPaidAmount > 0) {
                     $order->downpayment_rate = max(1, min(99, round(($legacyPaidAmount / $orderTotal) * 100, 2)));
                 }
 
-                $order->remaining_balance = $remainingBalance;
+                if ($hasRemainingBalanceColumn) {
+                    $order->remaining_balance = $remainingBalance;
+                }
                 $legacyMatched = true;
+            }
+        }
+
+        // Handle inconsistent records where remaining balance exists but payment_option was not saved.
+        if ($paymentOption !== 'downpayment' && $remainingBalance > 0) {
+            $paymentOption = 'downpayment';
+            if ($hasPaymentOptionColumn) {
+                $order->payment_option = 'downpayment';
             }
         }
 
@@ -437,7 +453,8 @@ class OrderController extends Controller
             return redirect()->back()->with('info', 'This order is already fully paid.');
         }
 
-        if (!in_array($order->payment_status, ['paid', 'verified'], true)) {
+        $normalizedPaymentStatus = strtolower((string) $order->payment_status);
+        if (!in_array($normalizedPaymentStatus, ['paid', 'verified'], true)) {
             return redirect()->back()->with('error', 'Collect and verify the downpayment before settling the remaining balance.');
         }
 
@@ -446,13 +463,20 @@ class OrderController extends Controller
         }
 
         $totalAmount = (float) ($order->total_amount ?? $order->total ?? 0);
-        $order->payment_option = 'full';
-        $order->downpayment_rate = $totalAmount > 0 ? 100 : ($order->downpayment_rate ?? 100);
-        $order->downpayment_amount = $totalAmount > 0 ? $totalAmount : (float) ($order->downpayment_amount ?? 0);
-        $order->remaining_balance = 0;
-        $order->payment_status = in_array(strtolower((string) $order->payment_status), ['paid', 'verified'], true)
-            ? $order->payment_status
-            : 'paid';
+        if ($hasPaymentOptionColumn) {
+            $order->payment_option = 'full';
+        }
+        if ($hasDownpaymentRateColumn) {
+            $order->downpayment_rate = $totalAmount > 0 ? 100 : (float) ($order->downpayment_rate ?? 100);
+        }
+        if ($hasDownpaymentAmountColumn) {
+            $order->downpayment_amount = $totalAmount > 0 ? $totalAmount : (float) ($order->downpayment_amount ?? 0);
+        }
+        if ($hasRemainingBalanceColumn) {
+            $order->remaining_balance = 0;
+        }
+
+        $order->payment_status = $normalizedPaymentStatus === 'verified' ? 'verified' : 'paid';
         $order->payment_verified_at = now();
         $order->tracking_status = 'Payment Settled';
         $order->appendTrackingEvent('Remaining Balance Settled');
