@@ -2435,7 +2435,16 @@ document.addEventListener('DOMContentLoaded', function () {
     @php
         $customReview = \App\Models\Review::where('custom_order_id', $order->id)
             ->where('user_id', auth()->id())
+            ->latest()
             ->first();
+
+        if (!$customReview && !empty($order->product_id) && auth()->check()) {
+            $customReview = \App\Models\Review::where('user_id', auth()->id())
+                ->where('product_id', $order->product_id)
+                ->whereNotNull('comment')
+                ->latest()
+                ->first();
+        }
     @endphp
 
     <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">

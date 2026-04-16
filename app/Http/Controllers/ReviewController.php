@@ -238,7 +238,9 @@ class ReviewController extends Controller
         if ($existingReview) {
             // Update existing review
             $existingReview->update(array_merge($validated, [
+                'custom_order_id' => $customOrder->id,
                 'review_images' => !empty($imageUrls) ? $imageUrls : ($existingReview->review_images ?? []),
+                'is_approved' => true,
             ]));
             $message = 'Review updated successfully!';
         } else {
@@ -257,6 +259,7 @@ class ReviewController extends Controller
                             'comment' => $validated['comment'] ?? null,
                             'review_images' => !empty($imageUrls) ? $imageUrls : ($existingProductReview->review_images ?? []),
                             'verified_purchase' => true,
+                            'is_approved' => true,
                         ]);
 
                         $message = 'Review updated successfully!';
@@ -276,6 +279,7 @@ class ReviewController extends Controller
                     'comment' => $validated['comment'] ?? null,
                     'review_images' => $imageUrls,
                     'verified_purchase' => true,
+                    'is_approved' => true,
                 ]);
                 $message = 'Review submitted successfully!';
             } catch (QueryException $e) {
