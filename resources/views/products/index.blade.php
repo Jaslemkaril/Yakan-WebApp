@@ -430,7 +430,9 @@
                                 
                                 <!-- Product Badge -->
                                 @php $availableStock = $product->available_stock; @endphp
-                                @if($availableStock == 0)
+                                @if($product->is_bundle)
+                                    <span class="product-badge new">Bundle</span>
+                                @elseif($availableStock == 0)
                                     <span class="product-badge">Sold Out</span>
                                 @elseif($availableStock <= 5)
                                     <span class="product-badge hot">Low Stock</span>
@@ -479,6 +481,12 @@
                                 <p class="text-gray-600 mb-2 md:mb-4 line-clamp-2 text-xs sm:text-sm leading-relaxed hidden sm:block">
                                     {{ $product->description ?? 'Premium quality product with exceptional features and craftsmanship.' }}
                                 </p>
+
+                                @if($product->is_bundle)
+                                    <p class="text-xs font-semibold mb-2 md:mb-4" style="color: #800000;">
+                                        Includes {{ $product->bundleItems->count() }} {{ \Illuminate\Support\Str::plural('item', $product->bundleItems->count()) }}
+                                    </p>
+                                @endif
                                 
                                 <!-- Rating -->
                                 <div class="flex items-center mb-2 md:mb-4">

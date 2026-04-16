@@ -158,7 +158,52 @@ class Product extends Model
 
     public function getAvailableStockAttribute(): int
     {
+        if ($this->getIsBundleAttribute()) {
+            return $this->calculateBundleAvailableStock();
+        }
+
         return $this->inventory ? $this->inventory->quantity : $this->stock;
+    }
+
+    private function calculateBundleAvailableStock(): int
+    {
+        if (!Schema::hasTable('product_bundle_items')) {
+            return (int) ($this->inventory?->quantity ?? $this->stock ?? 0);
+        }
+
+        $bundleItems = $this->relationLoaded('bundleItems')
+            ? $this->bundleItems
+            : $this->bundleItems()->with(['componentProduct.inventory', 'componentProduct.variants'])->get();
+
+        if ($bundleItems->isEmpty()) {
+            return (int) ($this->inventory?->quantity ?? $this->stock ?? 0);
+        }
+
+        $maxBundleUnits = null;
+
+        foreach ($bundleItems as $bundleItem) {
+            $component = $bundleItem->componentProduct;
+            if (!$component) {
+                return 0;
+            }
+
+            $componentStock = (int) ($component->inventory?->quantity ?? $component->stock ?? 0);
+            $activeVariants = $component->relationLoaded('variants')
+                ? $component->variants->where('is_active', true)
+                : $component->variants()->where('is_active', true)->get();
+
+            if ($activeVariants->isNotEmpty()) {
+                $componentStock = (int) $activeVariants->sum('stock');
+            }
+
+            $requiredPerBundle = max(1, (int) $bundleItem->quantity);
+            $possibleUnits = intdiv(max(0, $componentStock), $requiredPerBundle);
+            $maxBundleUnits = is_null($maxBundleUnits)
+                ? $possibleUnits
+                : min($maxBundleUnits, $possibleUnits);
+        }
+
+        return max(0, (int) ($maxBundleUnits ?? 0));
     }
 
     public function isInStock(): bool

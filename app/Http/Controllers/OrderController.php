@@ -158,7 +158,7 @@ class OrderController extends Controller
         try {
             // Get orders with matching user_id OR matching customer_email
             $user = Auth::user();
-            $query = Order::with(['orderItems.product', 'user'])
+                        $query = Order::with(['orderItems.product.bundleItems.componentProduct', 'user'])
                 ->where(function($q) use ($user) {
                     $q->where('user_id', $user->id)
                       ->orWhere('customer_email', $user->email);
@@ -216,7 +216,7 @@ class OrderController extends Controller
     public function show(Request $request, $id)
     {
         try {
-            $order = Order::with(['orderItems.product', 'user'])->find($id);
+            $order = Order::with(['orderItems.product.bundleItems.componentProduct', 'user'])->find($id);
 
             if (!$order) {
                 if ($request->wantsJson() || $request->is('api/*')) {

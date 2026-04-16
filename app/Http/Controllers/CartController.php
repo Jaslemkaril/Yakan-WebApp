@@ -47,12 +47,108 @@ class CartController extends Controller
             return (int) ($variant->stock ?? 0);
         }
 
+        if ($this->isBundleProduct($product)) {
+            return $this->getBundleAvailableStock($product);
+        }
+
         $activeVariants = $this->getActiveVariants($product);
         if ($activeVariants->isNotEmpty()) {
             return (int) $activeVariants->sum('stock');
         }
 
         return (int) ($product->inventory?->quantity ?? $product->stock ?? 0);
+    }
+
+    private function isBundleProduct(Product $product): bool
+    {
+        return Schema::hasTable('product_bundle_items') && (bool) $product->is_bundle;
+    }
+
+    private function getBundleAvailableStock(Product $bundleProduct): int
+    {
+        $bundleProduct->loadMissing([
+            'bundleItems.componentProduct.inventory',
+            'bundleItems.componentProduct.variants',
+        ]);
+
+        if ($bundleProduct->bundleItems->isEmpty()) {
+            return (int) ($bundleProduct->inventory?->quantity ?? $bundleProduct->stock ?? 0);
+        }
+
+        $maxUnits = null;
+        foreach ($bundleProduct->bundleItems as $bundleItem) {
+            $component = $bundleItem->componentProduct;
+            if (!$component) {
+                return 0;
+            }
+
+            $componentStock = (int) ($component->inventory?->quantity ?? $component->stock ?? 0);
+            $activeVariants = $component->relationLoaded('variants')
+                ? $component->variants->where('is_active', true)
+                : $component->variants()->where('is_active', true)->get();
+
+            if ($activeVariants->isNotEmpty()) {
+                $componentStock = (int) $activeVariants->sum('stock');
+            }
+
+            $requiredPerBundle = max(1, (int) $bundleItem->quantity);
+            $possibleUnits = intdiv(max(0, $componentStock), $requiredPerBundle);
+            $maxUnits = is_null($maxUnits) ? $possibleUnits : min($maxUnits, $possibleUnits);
+        }
+
+        return max(0, (int) ($maxUnits ?? 0));
+    }
+
+    private function decrementBundleComponentStock(Product $bundleProduct, int $bundleQuantity): void
+    {
+        $bundleProduct->loadMissing([
+            'bundleItems.componentProduct.inventory',
+            'bundleItems.componentProduct.variants',
+        ]);
+
+        foreach ($bundleProduct->bundleItems as $bundleItem) {
+            $component = $bundleItem->componentProduct;
+            if (!$component) {
+                throw new \RuntimeException('A bundle component product is missing.');
+            }
+
+            $deductQty = max(1, (int) $bundleItem->quantity) * max(1, $bundleQuantity);
+            $activeVariants = $component->relationLoaded('variants')
+                ? $component->variants->where('is_active', true)->sortBy('id')->values()
+                : $component->variants()->where('is_active', true)->orderBy('id')->get();
+
+            if ($activeVariants->isNotEmpty()) {
+                $remaining = $deductQty;
+
+                foreach ($activeVariants as $componentVariant) {
+                    if ($remaining <= 0) {
+                        break;
+                    }
+
+                    $variantStock = max(0, (int) $componentVariant->stock);
+                    if ($variantStock <= 0) {
+                        continue;
+                    }
+
+                    $deductFromVariant = min($variantStock, $remaining);
+                    $componentVariant->decrement('stock', $deductFromVariant);
+                    $remaining -= $deductFromVariant;
+                }
+
+                if ($remaining > 0) {
+                    throw new \RuntimeException('Insufficient component variant stock for bundle checkout.');
+                }
+            }
+
+            $componentInventory = \App\Models\Inventory::where('product_id', $component->id)->first();
+            if ($componentInventory) {
+                $componentInventory->decrementStock($deductQty, (float) $component->price);
+            }
+
+            if ((int) $component->stock >= $deductQty) {
+                $component->decrement('stock', $deductQty);
+            }
+        }
     }
 
     private function getEffectiveUnitPrice(Product $product, ?ProductVariant $variant = null): float
@@ -263,7 +359,13 @@ class CartController extends Controller
             }
             $subtotal = $product ? $this->getEffectiveUnitPrice($product, $variant) * ($bni['quantity'] ?? 1) : 0;
         } else {
-            $cartItems = Cart::with('product.inventory', 'product.variants', 'variant')->where('user_id', Auth::id())->get();
+            $cartItems = Cart::with([
+                'product.inventory',
+                'product.variants',
+                'product.bundleItems.componentProduct.inventory',
+                'product.bundleItems.componentProduct.variants',
+                'variant'
+            ])->where('user_id', Auth::id())->get();
             $subtotal  = $cartItems->sum(function ($item) {
                 if (!$item->product) {
                     return 0;
@@ -598,7 +700,13 @@ class CartController extends Controller
         }
 
         // Handle regular cart item (database-based)
-        $cartItem = Cart::with('product.inventory', 'product.variants', 'variant')
+        $cartItem = Cart::with([
+                        'product.inventory',
+                        'product.variants',
+                        'product.bundleItems.componentProduct.inventory',
+                        'product.bundleItems.componentProduct.variants',
+                        'variant'
+                    ])
                         ->where('id', $id)
                         ->where('user_id', Auth::id())
                         ->first();
@@ -627,7 +735,13 @@ class CartController extends Controller
             $itemSubtotal = $cartItem->quantity * $this->getEffectiveUnitPrice($cartItem->product, $cartItem->variant);
             
             // Get all cart items and calculate totals
-            $allCartItems = Cart::with('product.inventory', 'product.variants', 'variant')->where('user_id', Auth::id())->get();
+            $allCartItems = Cart::with([
+                'product.inventory',
+                'product.variants',
+                'product.bundleItems.componentProduct.inventory',
+                'product.bundleItems.componentProduct.variants',
+                'variant'
+            ])->where('user_id', Auth::id())->get();
             $cartTotal = $allCartItems->sum(function($item) {
                 if (!$item->product) {
                     return 0;
@@ -756,7 +870,13 @@ class CartController extends Controller
             $subtotal = $this->getEffectiveUnitPrice($product, $variant) * $buyNowItem['quantity'];
         } else {
             // Regular cart checkout
-            $cartItems = Cart::with('product.inventory', 'product.variants', 'variant')
+            $cartItems = Cart::with([
+                            'product.inventory',
+                            'product.variants',
+                            'product.bundleItems.componentProduct.inventory',
+                            'product.bundleItems.componentProduct.variants',
+                            'variant'
+                        ])
                             ->where('user_id', Auth::id())
                             ->get();
 
@@ -911,7 +1031,13 @@ class CartController extends Controller
             ]);
         } else {
             // Regular cart checkout
-            $cartItems = Cart::with('product.inventory', 'product.variants', 'variant')->where('user_id', $userId)->get();
+            $cartItems = Cart::with([
+                'product.inventory',
+                'product.variants',
+                'product.bundleItems.componentProduct.inventory',
+                'product.bundleItems.componentProduct.variants',
+                'variant'
+            ])->where('user_id', $userId)->get();
 
             if ($cartItems->isEmpty()) {
                 return redirect()->back()->with('error', 'Your cart is empty.');
@@ -936,18 +1062,18 @@ class CartController extends Controller
         foreach ($cartItems as $item) {
             $variant = $item->variant ?? null;
 
-            if ($variant) {
-                if ((int) $variant->stock < (int) $item->quantity) {
-                    $availableQty = (int) $variant->stock;
+            $availableQty = $this->getEffectiveStock($item->product, $variant);
+            if ($availableQty < (int) $item->quantity) {
+                if ($variant) {
                     $variantLabel = $variant->display_name;
                     return redirect()->back()->with('error', "Variant \"{$variantLabel}\" for product \"{$item->product->name}\" has insufficient stock. Only {$availableQty} available.");
                 }
-            } else {
-                $inventory = \App\Models\Inventory::where('product_id', $item->product_id)->first();
-                if (!$inventory || !$inventory->hasSufficientStock($item->quantity)) {
-                    $availableQty = $inventory?->quantity ?? 0;
-                    return redirect()->back()->with('error', "Product \"{$item->product->name}\" has insufficient stock. Only {$availableQty} available.");
+
+                if ($this->isBundleProduct($item->product)) {
+                    return redirect()->back()->with('error', "Bundle \"{$item->product->name}\" has insufficient component stock. Only {$availableQty} bundle unit(s) available.");
                 }
+
+                return redirect()->back()->with('error', "Product \"{$item->product->name}\" has insufficient stock. Only {$availableQty} available.");
             }
         }
 
@@ -1089,6 +1215,11 @@ class CartController extends Controller
             }
 
             $order->orderItems()->create($orderItemPayload);
+
+            if ($this->isBundleProduct($item->product)) {
+                $this->decrementBundleComponentStock($item->product, (int) $item->quantity);
+                continue;
+            }
 
             if ($variant && $variant->stock >= $item->quantity) {
                 $variant->decrement('stock', $item->quantity);

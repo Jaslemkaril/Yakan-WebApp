@@ -461,6 +461,19 @@
                                 <div class="flex-1">
                                     <h3 class="font-bold text-gray-900">{{ $item->product->name ?? 'Product' }}</h3>
                                     <p class="text-sm text-gray-600 mt-1">SKU: <span class="font-medium">{{ $item->product->sku ?? 'N/A' }}</span></p>
+
+                                    @if($item->product && $item->product->is_bundle && $item->product->bundleItems->isNotEmpty())
+                                        <div class="mt-2 space-y-1">
+                                            <p class="text-xs font-semibold text-gray-700">Includes:</p>
+                                            @foreach($item->product->bundleItems as $bundleComponent)
+                                                <p class="text-xs text-gray-600">
+                                                    - {{ $bundleComponent->componentProduct->name ?? 'Item' }}
+                                                    (x{{ (int) $bundleComponent->quantity * (int) $item->quantity }})
+                                                </p>
+                                            @endforeach
+                                        </div>
+                                    @endif
+
                                     <div class="flex items-center gap-3 mt-3">
                                         <span class="inline-block px-3 py-1 bg-[#fef2f2] text-[#800000] text-xs font-semibold rounded-lg">Qty: {{ $item->quantity }}</span>
                                         <span class="inline-block px-3 py-1 bg-[#fef2f2] text-[#800000] text-xs font-semibold rounded-lg">₱{{ number_format($item->price, 2) }} each</span>

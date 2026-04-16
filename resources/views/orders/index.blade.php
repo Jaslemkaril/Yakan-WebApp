@@ -158,7 +158,7 @@
                                 <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                                     @foreach($order->orderItems->take(2) as $item)
                                         <span style="display: inline-block; padding: 0.375rem 0.75rem; border-radius: 0.5rem; background-color: white; color: #800000; font-size: 0.75rem; font-weight: 600; border: 1px solid #d4a5a5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">
-                                            {{ substr($item->product->name ?? 'Product', 0, 20) }}{{ strlen($item->product->name ?? 'Product') > 20 ? '...' : '' }}
+                                            {{ substr($item->product->name ?? 'Product', 0, 20) }}{{ strlen($item->product->name ?? 'Product') > 20 ? '...' : '' }}{{ ($item->product && $item->product->is_bundle) ? ' (Bundle)' : '' }}
                                         </span>
                                     @endforeach
                                     @if($order->orderItems->count() > 2)

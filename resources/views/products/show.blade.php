@@ -73,6 +73,12 @@
                 @endif
                 
                 <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">{{ $product->name }}</h1>
+
+                @if($product->is_bundle)
+                    <span class="inline-block px-3 py-1 text-xs font-semibold rounded-full mb-4" style="background-color: rgba(128, 0, 0, 0.1); color: #800000;">
+                        Product Bundle
+                    </span>
+                @endif
                 
                 <!-- Rating -->
                 <div class="flex items-center gap-4 mb-4">
@@ -199,6 +205,20 @@
                     @endif
                 </div>
             </div>
+
+            @if($product->is_bundle && $product->bundleItems->isNotEmpty())
+                <div class="bg-white border border-gray-200 rounded-xl p-4">
+                    <h3 class="text-sm font-semibold text-gray-900 mb-3">Included in this bundle</h3>
+                    <ul class="space-y-2">
+                        @foreach($product->bundleItems as $bundleItem)
+                            <li class="flex items-center justify-between text-sm text-gray-700">
+                                <span>{{ $bundleItem->componentProduct->name ?? 'Item' }}</span>
+                                <span class="font-semibold" style="color: #800000;">x{{ (int) $bundleItem->quantity }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
             <!-- Quantity Selection -->
             <div class="flex items-center gap-4">
