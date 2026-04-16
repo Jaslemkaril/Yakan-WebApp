@@ -34,18 +34,77 @@ export default function ProductDetailScreen({ route, navigation }) {
   const [isFavorite, setIsFavorite] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
 
   const currentProduct = productData || product;
   const variantOptions = Array.isArray(currentProduct?.variants)
     ? currentProduct.variants.filter(v => v && v.is_active !== false)
     : [];
   const selectedVariant = variantOptions.find(v => Number(v.id) === Number(selectedVariantId)) || null;
-  const effectivePrice = selectedVariant ? parseFloat(selectedVariant.price || 0) : parseFloat(currentProduct?.price || 0);
-  const effectiveOriginalPrice = selectedVariant
-    ? parseFloat(selectedVariant.original_price ?? selectedVariant.price ?? 0)
+  const fallbackVariant = variantOptions.find(v => Number(v?.stock || 0) > 0) || variantOptions[0] || null;
+  const activeVariant = selectedVariant || fallbackVariant;
+  const effectivePrice = activeVariant ? parseFloat(activeVariant.price || 0) : parseFloat(currentProduct?.price || 0);
+  const effectiveOriginalPrice = activeVariant
+    ? parseFloat(activeVariant.original_price ?? activeVariant.price ?? 0)
     : parseFloat(currentProduct?.original_price ?? currentProduct?.originalPrice ?? currentProduct?.price ?? 0);
   const hasActiveDiscount = effectiveOriginalPrice > effectivePrice;
-  const effectiveStock = selectedVariant ? Number(selectedVariant.stock || 0) : Number(currentProduct?.stock || 0);
+  const effectiveStock = activeVariant ? Number(activeVariant.stock || 0) : Number(currentProduct?.stock || 0);
+
+  const resolveImageValue = (value) => {
+    if (!value) {
+      return null;
+    }
+
+    if (typeof value === 'object' && value.uri) {
+      return value;
+    }
+
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:image')) {
+      return { uri: trimmed };
+    }
+
+    const baseUrl = API_CONFIG.API_BASE_URL.replace('/api/v1', '');
+    if (trimmed.startsWith('/uploads') || trimmed.startsWith('/storage')) {
+      return { uri: `${baseUrl}${trimmed}` };
+    }
+
+    if (trimmed.startsWith('uploads/') || trimmed.startsWith('storage/')) {
+      return { uri: `${baseUrl}/${trimmed}` };
+    }
+
+    return { uri: `${baseUrl}/uploads/products/${trimmed}` };
+  };
+
+  const resolvePrimaryProductImage = () => {
+    const directImage = resolveImageValue(currentProduct?.image);
+    if (directImage) {
+      return directImage;
+    }
+
+    const allImages = Array.isArray(currentProduct?.all_images) ? currentProduct.all_images : [];
+    for (const img of allImages) {
+      const candidate = typeof img === 'string' ? img : (img?.path || img?.url || img?.image);
+      const resolved = resolveImageValue(candidate);
+      if (resolved) {
+        return resolved;
+      }
+    }
+
+    return null;
+  };
+
+  const productImageSource = !imageLoadFailed
+    ? resolvePrimaryProductImage() || require('../assets/images/Saputangan.jpg')
+    : require('../assets/images/Saputangan.jpg');
 
   useEffect(() => {
     if (!product?.id) {
@@ -76,12 +135,28 @@ export default function ProductDetailScreen({ route, navigation }) {
     }
 
     if (variantOptions.length > 0) {
-      const defaultVariantId = currentProduct?.default_variant?.id || variantOptions[0]?.id || null;
-      setSelectedVariantId(prev => prev ?? defaultVariantId);
+      const defaultVariantId = currentProduct?.default_variant?.id || null;
+      const preferredVariant = variantOptions.find(v => Number(v.id) === Number(defaultVariantId) && Number(v.stock || 0) > 0)
+        || variantOptions.find(v => Number(v.stock || 0) > 0)
+        || variantOptions.find(v => Number(v.id) === Number(defaultVariantId))
+        || variantOptions[0]
+        || null;
+
+      setSelectedVariantId((prev) => {
+        const stillExists = variantOptions.some(v => Number(v.id) === Number(prev));
+        if (stillExists) {
+          return prev;
+        }
+        return preferredVariant?.id || null;
+      });
     } else {
       setSelectedVariantId(null);
     }
   }, [currentProduct?.id, currentProduct?.default_variant?.id, variantOptions.length]);
+
+  useEffect(() => {
+    setImageLoadFailed(false);
+  }, [currentProduct?.id, currentProduct?.image]);
 
   // Update isFavorite when product changes
   React.useEffect(() => {
@@ -251,23 +326,13 @@ export default function ProductDetailScreen({ route, navigation }) {
         {/* Product Image */}
         <View style={styles.imageContainer}>
           <Image 
-            source={
-              currentProduct.image 
-                ? (typeof currentProduct.image === 'object' && currentProduct.image.uri)
-                  ? currentProduct.image  // Already transformed with {uri: ...}
-                  : { uri: currentProduct.image.startsWith('http')
-                      ? currentProduct.image
-                      : currentProduct.image.startsWith('/uploads') || currentProduct.image.startsWith('/storage')
-                        ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${currentProduct.image}`
-                        : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/uploads/products/${currentProduct.image}`
-                    }
-                : require('../assets/images/Saputangan.jpg')
-            }
+            source={productImageSource}
             style={styles.productImage}
             resizeMode="cover"
             onError={(error) => {
               console.log('[ProductDetail] Image load error:', error);
               console.log('[ProductDetail] Product image:', currentProduct.image);
+              setImageLoadFailed(true);
             }}
           />
         </View>

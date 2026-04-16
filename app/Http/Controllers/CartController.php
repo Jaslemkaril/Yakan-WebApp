@@ -998,9 +998,15 @@ class CartController extends Controller
         }
 
         $totalAmount = $subtotal + max(0, $shippingFee - $discount);
+        $supportsDownpayment = $this->supportsDownpaymentFields();
+        $isRequestedDownpayment = $paymentOption === 'downpayment';
+        $effectiveDownpaymentRate = min(99, max(1, (float) ($requestedDownpaymentRate ?? 50)));
 
-        if ($paymentOption === 'downpayment' && !$this->supportsDownpaymentFields()) {
-            return redirect()->back()->with('error', 'Downpayment option is temporarily unavailable. Please choose full payment for now.');
+        if ($isRequestedDownpayment && !$supportsDownpayment) {
+            \Log::warning('Downpayment requested but orders downpayment columns are unavailable. Using runtime checkout fallback.', [
+                'user_id' => $userId,
+                'rate' => $effectiveDownpaymentRate,
+            ]);
         }
 
         // Create main order (tracking number & history auto-handled in Order model)
@@ -1044,7 +1050,7 @@ class CartController extends Controller
             'customer_notes'    => $request->input('customer_notes'),
         ];
 
-        if ($this->supportsDownpaymentFields()) {
+        if ($supportsDownpayment) {
             $downpaymentPlan = $this->resolveDownpaymentPlan($totalAmount, $paymentOption, $requestedDownpaymentRate);
             $orderPayload = array_merge($orderPayload, $downpaymentPlan);
         }
@@ -1178,7 +1184,14 @@ class CartController extends Controller
         }
 
         $authToken = request()->input('auth_token') ?? session('auth_token');
-        $isDownpaymentOrder = strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment';
+        $isDownpaymentOrder = $supportsDownpayment
+            ? strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment'
+            : $isRequestedDownpayment;
+        $payableNowAmount = $isDownpaymentOrder
+            ? ($supportsDownpayment
+                ? $this->resolvePayableNowAmount($order, $totalAmount)
+                : round($totalAmount * ($effectiveDownpaymentRate / 100), 2))
+            : max(0, round($totalAmount, 2));
 
         $redirectUrl = $this->appendAuthToken(route('payment.failed', $order->id), $authToken);
         $paymentLabel = 'Preparing Payment';
@@ -1190,12 +1203,19 @@ class CartController extends Controller
 
         if ($request->payment_method === 'paymongo') {
             try {
+                $checkoutOptions = [
+                    'success_url' => $this->appendAuthToken(route('payment.paymongo.success', $order->id), $authToken),
+                    'cancel_url'  => $this->appendAuthToken(route('payment.failed', $order->id), $authToken),
+                ];
+
+                if ($isDownpaymentOrder && !$supportsDownpayment) {
+                    $checkoutOptions['amount_override'] = $payableNowAmount;
+                    $checkoutOptions['is_downpayment_override'] = true;
+                }
+
                 $result = app(PayMongoCheckoutService::class)->createCheckout(
                     $order->loadMissing('items.product'),
-                    [
-                        'success_url' => $this->appendAuthToken(route('payment.paymongo.success', $order->id), $authToken),
-                        'cancel_url'  => $this->appendAuthToken(route('payment.failed', $order->id), $authToken),
-                    ]
+                    $checkoutOptions
                 );
                 $redirectUrl = $result['checkout_url'];
                 $paymentLabel = $isDownpaymentOrder ? 'Opening PayMongo Downpayment Checkout' : 'Opening PayMongo Checkout';
@@ -1226,7 +1246,6 @@ class CartController extends Controller
 
         $redirectUrlJs   = json_encode($redirectUrl);
         $orderRef        = htmlspecialchars($order->order_ref ?? '#' . $order->id, ENT_QUOTES, 'UTF-8');
-        $payableNowAmount = $this->resolvePayableNowAmount($order, $totalAmount);
         $totalFormatted  = '₱' . number_format($payableNowAmount, 2);
 
         return response(<<<HTML

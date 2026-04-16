@@ -27,6 +27,7 @@ const ProductsScreen = ({ navigation }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState(['All']);
+  const [failedProductImages, setFailedProductImages] = useState({});
   const { isLoggedIn, addToWishlist, removeFromWishlist, isInWishlist } = useCart();
   const { theme } = useTheme();
   const styles = getStyles(theme);
@@ -57,6 +58,44 @@ const ProductsScreen = ({ navigation }) => {
     }
 
     return [];
+  };
+
+  const resolveImageSource = (imageValue, productId) => {
+    if (failedProductImages[productId]) {
+      return require('../assets/images/Saputangan.jpg');
+    }
+
+    if (!imageValue) {
+      return require('../assets/images/Saputangan.jpg');
+    }
+
+    if (typeof imageValue === 'object' && imageValue.uri) {
+      return imageValue;
+    }
+
+    if (typeof imageValue !== 'string') {
+      return require('../assets/images/Saputangan.jpg');
+    }
+
+    const trimmed = imageValue.trim();
+    if (!trimmed) {
+      return require('../assets/images/Saputangan.jpg');
+    }
+
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:image')) {
+      return { uri: trimmed };
+    }
+
+    const baseUrl = API_CONFIG.API_BASE_URL.replace('/api/v1', '');
+    if (trimmed.startsWith('/uploads') || trimmed.startsWith('/storage')) {
+      return { uri: `${baseUrl}${trimmed}` };
+    }
+
+    if (trimmed.startsWith('uploads/') || trimmed.startsWith('storage/')) {
+      return { uri: `${baseUrl}/${trimmed}` };
+    }
+
+    return { uri: `${baseUrl}/uploads/products/${trimmed}` };
   };
 
   const fetchProducts = async () => {
@@ -109,6 +148,7 @@ const ProductsScreen = ({ navigation }) => {
       });
       
       setProducts(transformedProducts);
+      setFailedProductImages({});
       const uniqueCategories = ['All', ...new Set(transformedProducts.map(p => p.category))];
       setCategories(uniqueCategories);
       if (!uniqueCategories.includes(selectedCategory)) {
@@ -254,27 +294,16 @@ const ProductsScreen = ({ navigation }) => {
               >
                 <View style={styles.productImageContainer}>
                   <Image 
-                    source={
-                      product.image 
-                        ? { uri: product.image.startsWith('http') 
-                            ? product.image 
-                            : product.image.startsWith('/uploads') || product.image.startsWith('/storage')
-                              ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${product.image}`
-                              : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/uploads/products/${product.image}` 
-                        }
-                        : require('../assets/images/Saputangan.jpg')
-                    }
+                    source={resolveImageSource(product.image, product.id)}
                     style={styles.productImage}
                     resizeMode="cover"
                     onError={() => {
                       console.log('[ProductsScreen] Image load error for:', product.name);
                       console.log('[ProductsScreen] Image path:', product.image);
-                      const attemptedUrl = product.image?.startsWith('http') 
-                        ? product.image 
-                        : product.image?.startsWith('/uploads') || product.image?.startsWith('/storage')
-                          ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${product.image}`
-                          : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/uploads/products/${product.image}`;
+                      const resolvedImage = resolveImageSource(product.image, product.id);
+                      const attemptedUrl = resolvedImage && resolvedImage.uri ? resolvedImage.uri : String(resolvedImage || 'fallback');
                       console.log('[ProductsScreen] Attempted URL:', attemptedUrl);
+                      setFailedProductImages(prev => ({ ...prev, [product.id]: true }));
                     }}
                   />
                   <TouchableOpacity

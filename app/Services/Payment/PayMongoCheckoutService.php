@@ -27,7 +27,17 @@ class PayMongoCheckoutService
         }
 
         $totalAmount = (float) ($order->total_amount ?? $order->total ?? 0);
+        $amountOverride = isset($options['amount_override']) ? (float) $options['amount_override'] : null;
+        $isDownpaymentOverride = array_key_exists('is_downpayment_override', $options)
+            ? (bool) $options['is_downpayment_override']
+            : null;
+
         $amount = $this->resolveCheckoutAmount($order);
+        if (!is_null($amountOverride) && $amountOverride > 0) {
+            $cap = $totalAmount > 0 ? $totalAmount : $amountOverride;
+            $amount = max(0, min($cap, $amountOverride));
+        }
+
         if ($amount <= 0) {
             throw new \RuntimeException('Order amount must be greater than zero.');
         }
@@ -64,8 +74,11 @@ class PayMongoCheckoutService
         // If line items don't add up (e.g. discounts), use a single total item
         $lineItemsTotal = collect($lineItems)->sum(fn($i) => $i['amount'] * $i['quantity']);
         $orderTotal     = (int) round($amount * 100);
+        $isDownpayment = is_bool($isDownpaymentOverride)
+            ? $isDownpaymentOverride
+            : $this->isDownpaymentOrder($order);
+
         if ($lineItemsTotal !== $orderTotal) {
-            $isDownpayment = $this->isDownpaymentOrder($order);
             $lineItemName = $isDownpayment ? 'Yakan Order Downpayment' : 'Yakan Order';
             $lineItemDescription = $isDownpayment
                 ? 'Downpayment for order ' . ($order->order_ref ?? $order->id)
@@ -80,7 +93,7 @@ class PayMongoCheckoutService
             ]];
         }
 
-        $paymentDescription = $this->isDownpaymentOrder($order)
+        $paymentDescription = $isDownpayment
             ? 'Downpayment for order ' . ($order->order_ref ?? $order->id)
             : 'Order ' . ($order->order_ref ?? $order->id);
 
@@ -108,6 +121,7 @@ class PayMongoCheckoutService
         Log::info('PayMongo checkout session creating', [
             'order_id'    => $order->id,
             'total_amount' => $totalAmount,
+            'payable_amount' => $amount,
             'total_cents' => $orderTotal,
         ]);
 
