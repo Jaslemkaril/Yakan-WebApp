@@ -247,7 +247,7 @@ class ProductController extends Controller
     public function show($id): JsonResponse
     {
         $productId = (int) $id;
-        $cacheKey = "product:{$productId}";
+        $cacheKey = "product:v2:{$productId}";
         
         $product = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 7200), function () use ($productId) {
             $productModel = Product::query()->findOrFail($productId);
