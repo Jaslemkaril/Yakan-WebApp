@@ -470,7 +470,10 @@ class OrderController extends Controller
 
         $validated = $request->validate([
             'cancel_reason' => 'required|string|max:255',
+            'cancel_notes' => 'nullable|string|max:500',
         ]);
+
+        $cancelNotes = trim((string) ($validated['cancel_notes'] ?? ''));
 
         $currentStatus = strtolower((string) $order->status);
         $cancellableStatuses = ['pending', 'pending_confirmation', 'confirmed', 'processing'];
@@ -572,6 +575,14 @@ class OrderController extends Controller
             $existingAdminNotes = $existingAdminNotes !== ''
                 ? ($existingAdminNotes . "\n" . $requestReasonLine)
                 : $requestReasonLine;
+        }
+        if ($cancelNotes !== '') {
+            $requestNoteLine = 'Customer cancellation note: ' . $cancelNotes;
+            if (!str_contains($existingAdminNotes, $requestNoteLine)) {
+                $existingAdminNotes = $existingAdminNotes !== ''
+                    ? ($existingAdminNotes . "\n" . $requestNoteLine)
+                    : $requestNoteLine;
+            }
         }
         if (!str_contains($existingAdminNotes, $paymentNote)) {
             $existingAdminNotes = $existingAdminNotes !== ''

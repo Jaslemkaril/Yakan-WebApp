@@ -6,6 +6,11 @@
         @php
             $orderStatusLower = strtolower((string) ($order->status ?? ''));
             $canCancelOrder = in_array($orderStatusLower, ['pending', 'pending_confirmation', 'confirmed', 'processing'], true);
+            $isCancellationRequested = $orderStatusLower === 'cancellation_requested';
+            $displayOrderStatus = match ($orderStatusLower) {
+                'cancellation_requested' => 'Cancellation Pending',
+                default => ucfirst(str_replace('_', ' ', (string) ($order->status ?? 'pending'))),
+            };
             $showCancelForm = $errors->has('cancel_reason') || !empty(old('cancel_reason'));
 
             $cancellationReason = null;
@@ -59,7 +64,7 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Order Status</p>
-                        <p class="text-3xl font-bold text-gray-900">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</p>
+                        <p class="text-3xl font-bold text-gray-900">{{ $displayOrderStatus }}</p>
                     </div>
                     <div class="w-14 h-14 bg-[#800000] rounded-lg flex items-center justify-center">
                         <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -175,27 +180,66 @@
         <!-- Customer Action Buttons -->
         @if($canCancelOrder)
         <div id="cancel-order-card" class="mb-8 bg-white rounded-xl shadow-md p-6 border border-gray-200 {{ $showCancelForm ? '' : 'hidden' }}">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">Cancel Order</h3>
-            <form method="POST" action="{{ route('orders.cancel', $order) }}" onsubmit="return confirm('Are you sure you want to cancel this order?')">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Request Cancellation</h3>
+            <form id="cancel-order-form" method="POST" action="{{ route('orders.cancel', $order) }}">
                 @csrf
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Reason for Cancellation <span class="text-red-600">*</span></label>
-                    <select name="cancel_reason" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent">
-                        <option value="">-- Select a reason --</option>
-                        <option value="Changed my mind" {{ old('cancel_reason') === 'Changed my mind' ? 'selected' : '' }}>Changed my mind</option>
-                        <option value="Found a better price elsewhere" {{ old('cancel_reason') === 'Found a better price elsewhere' ? 'selected' : '' }}>Found a better price elsewhere</option>
-                        <option value="Ordered by mistake" {{ old('cancel_reason') === 'Ordered by mistake' ? 'selected' : '' }}>Ordered by mistake</option>
-                        <option value="Delivery takes too long" {{ old('cancel_reason') === 'Delivery takes too long' ? 'selected' : '' }}>Delivery takes too long</option>
-                        <option value="Duplicate order" {{ old('cancel_reason') === 'Duplicate order' ? 'selected' : '' }}>Duplicate order</option>
-                        <option value="Want to change items" {{ old('cancel_reason') === 'Want to change items' ? 'selected' : '' }}>Want to change items</option>
-                        <option value="Financial reasons" {{ old('cancel_reason') === 'Financial reasons' ? 'selected' : '' }}>Financial reasons</option>
-                        <option value="Other" {{ old('cancel_reason') === 'Other' ? 'selected' : '' }}>Other</option>
-                    </select>
+                <input type="hidden" name="cancel_reason" id="cancel_reason_input" value="{{ old('cancel_reason') }}">
+
+                <div id="cancel-step-1">
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Why do you want to cancel?</p>
+                    <div id="cancel-reason-chips" class="flex flex-wrap gap-2 mb-4">
+                        @php
+                            $cancelReasons = [
+                                'Changed my mind',
+                                'Wrong item ordered',
+                                'Found it cheaper',
+                                'Duplicate order',
+                                'Taking too long',
+                                'Want to change items',
+                            ];
+                        @endphp
+                        @foreach($cancelReasons as $reason)
+                            @php $selected = old('cancel_reason') === $reason; @endphp
+                            <button
+                                type="button"
+                                class="cancel-reason-chip px-4 py-2 rounded-full border text-sm font-medium transition-all {{ $selected ? 'bg-[#800000] text-white border-[#800000]' : 'bg-white text-gray-700 border-gray-300 hover:border-[#800000] hover:text-[#800000]' }}"
+                                data-value="{{ $reason }}"
+                            >
+                                {{ $reason }}
+                            </button>
+                        @endforeach
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Additional notes (optional)</label>
+                        <textarea id="cancel_notes" name="cancel_notes" rows="4" maxlength="500" placeholder="Tell us more..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent resize-none">{{ old('cancel_notes') }}</textarea>
+                    </div>
+
+                    <div class="flex justify-end gap-2">
+                        <button type="button" id="cancel-next-btn" class="px-6 py-3 bg-[#800000] text-white font-semibold rounded-lg hover:bg-[#600000] transition-all">Next</button>
+                    </div>
                 </div>
-                <button type="submit" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    Cancel Order
-                </button>
+
+                <div id="cancel-step-2" class="hidden">
+                    <h4 class="text-xl font-bold text-gray-900 mb-2">Cancel this order?</h4>
+                    <p class="text-sm text-gray-600 mb-4">Your cancellation request will be reviewed by admin before final approval.</p>
+
+                    <div class="border border-gray-200 rounded-xl p-4 mb-4 space-y-2">
+                        @php
+                            $firstItem = $order->orderItems->first();
+                            $refundTarget = strtolower((string) ($order->payment_method ?? '')) === 'gcash' ? 'GCash' : ucfirst(str_replace('_', ' ', (string) ($order->payment_method ?? 'Original payment method')));
+                        @endphp
+                        <div class="flex justify-between text-sm"><span class="text-gray-600">Order</span><span class="font-semibold text-gray-900">#{{ $order->order_ref }}</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-gray-600">Item</span><span class="font-semibold text-gray-900">{{ $firstItem?->product?->name ?? 'Order items' }}</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-gray-600">Refund amount</span><span class="font-semibold text-[#0b57d0]">₱{{ number_format((float) ($order->total_amount ?? $order->total ?? 0), 2) }}</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-gray-600">Refund to</span><span class="font-semibold text-gray-900">{{ $refundTarget }}</span></div>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-2">
+                        <button type="button" id="cancel-back-btn" class="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all">Go back</button>
+                        <button type="submit" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all">Yes, request cancellation</button>
+                    </div>
+                </div>
             </form>
         </div>
         @endif
@@ -999,6 +1043,77 @@ document.addEventListener('DOMContentLoaded', function() {
             cancelOrderCard.classList.toggle('hidden');
             if (!cancelOrderCard.classList.contains('hidden')) {
                 cancelOrderCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    }
+
+    const cancelStep1 = document.getElementById('cancel-step-1');
+    const cancelStep2 = document.getElementById('cancel-step-2');
+    const cancelNextBtn = document.getElementById('cancel-next-btn');
+    const cancelBackBtn = document.getElementById('cancel-back-btn');
+    const cancelReasonInput = document.getElementById('cancel_reason_input');
+    const cancelReasonChips = document.querySelectorAll('.cancel-reason-chip');
+    const cancelForm = document.getElementById('cancel-order-form');
+
+    function setCancelReason(value) {
+        if (!cancelReasonInput) {
+            return;
+        }
+
+        cancelReasonInput.value = value;
+        cancelReasonChips.forEach(function(chip) {
+            const isSelected = chip.getAttribute('data-value') === value;
+            chip.classList.toggle('bg-[#800000]', isSelected);
+            chip.classList.toggle('text-white', isSelected);
+            chip.classList.toggle('border-[#800000]', isSelected);
+            chip.classList.toggle('bg-white', !isSelected);
+            chip.classList.toggle('text-gray-700', !isSelected);
+            chip.classList.toggle('border-gray-300', !isSelected);
+        });
+    }
+
+    cancelReasonChips.forEach(function(chip) {
+        chip.addEventListener('click', function() {
+            setCancelReason(chip.getAttribute('data-value') || '');
+        });
+    });
+
+    if (cancelNextBtn && cancelStep1 && cancelStep2) {
+        cancelNextBtn.addEventListener('click', function() {
+            const reason = (cancelReasonInput?.value || '').trim();
+            if (!reason) {
+                alert('Please select a cancellation reason first.');
+                return;
+            }
+
+            cancelStep1.classList.add('hidden');
+            cancelStep2.classList.remove('hidden');
+        });
+    }
+
+    if (cancelBackBtn && cancelStep1 && cancelStep2) {
+        cancelBackBtn.addEventListener('click', function() {
+            cancelStep2.classList.add('hidden');
+            cancelStep1.classList.remove('hidden');
+        });
+    }
+
+    if (cancelForm) {
+        cancelForm.addEventListener('submit', function(e) {
+            const reason = (cancelReasonInput?.value || '').trim();
+            if (!reason) {
+                e.preventDefault();
+                alert('Please select a cancellation reason first.');
+                if (cancelStep2 && cancelStep1) {
+                    cancelStep2.classList.add('hidden');
+                    cancelStep1.classList.remove('hidden');
+                }
+                return;
+            }
+
+            const confirmed = confirm('Submit cancellation request for admin review?');
+            if (!confirmed) {
+                e.preventDefault();
             }
         });
     }
