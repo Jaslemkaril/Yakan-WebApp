@@ -90,6 +90,8 @@ class ProductController extends Controller
      */
     public function create()
     {
+        $this->ensureProductDiscountColumnsExist();
+
         $bundleFeatureEnabled = $this->bundleFeatureEnabled();
         $categories = \App\Models\Category::orderBy('name')->get();
         $bundleComponents = $bundleFeatureEnabled
@@ -105,6 +107,8 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
+        $this->ensureProductDiscountColumnsExist();
+
         // Validate input
         $request->validate([
             'name' => 'required|string|max:255',
@@ -300,6 +304,8 @@ class ProductController extends Controller
      */
     public function edit(string $id)
     {
+        $this->ensureProductDiscountColumnsExist();
+
         $bundleFeatureEnabled = $this->bundleFeatureEnabled();
 
         $productQuery = Product::with('category', 'variants');
@@ -362,6 +368,8 @@ class ProductController extends Controller
      */
     public function update(Request $request, string $id)
     {
+        $this->ensureProductDiscountColumnsExist();
+
         $product = Product::findOrFail($id);
 
         // Validate input (stock is managed via Stock In button, not this form)
@@ -802,6 +810,37 @@ class ProductController extends Controller
         }
 
         return Schema::hasTable('product_variants');
+    }
+
+    /**
+     * Ensure product discount columns exist in deployments where migrations lag behind.
+     */
+    private function ensureProductDiscountColumnsExist(): bool
+    {
+        if (Schema::hasColumns('products', ['discount_type', 'discount_value', 'discount_starts_at', 'discount_ends_at'])) {
+            return true;
+        }
+
+        try {
+            Schema::table('products', function (\Illuminate\Database\Schema\Blueprint $table) {
+                if (!Schema::hasColumn('products', 'discount_type')) {
+                    $table->string('discount_type', 20)->nullable()->after('price');
+                }
+                if (!Schema::hasColumn('products', 'discount_value')) {
+                    $table->decimal('discount_value', 10, 2)->nullable()->after('discount_type');
+                }
+                if (!Schema::hasColumn('products', 'discount_starts_at')) {
+                    $table->timestamp('discount_starts_at')->nullable()->after('discount_value');
+                }
+                if (!Schema::hasColumn('products', 'discount_ends_at')) {
+                    $table->timestamp('discount_ends_at')->nullable()->after('discount_starts_at');
+                }
+            });
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return Schema::hasColumns('products', ['discount_type', 'discount_value', 'discount_starts_at', 'discount_ends_at']);
     }
 
     private function bundleFeatureEnabled(): bool

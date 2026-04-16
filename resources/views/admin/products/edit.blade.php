@@ -365,7 +365,7 @@ use Illuminate\Support\Facades\Storage;
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Discount Type</label>
-                    <select name="discount_type" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                    <select id="discountTypeInput" name="discount_type" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#800000]">
                         <option value="">No Discount</option>
                         <option value="percent" {{ old('discount_type', $product->discount_type) === 'percent' ? 'selected' : '' }}>Percent (%)</option>
                         <option value="fixed" {{ old('discount_type', $product->discount_type) === 'fixed' ? 'selected' : '' }}>Fixed Amount (₱)</option>
@@ -378,6 +378,7 @@ use Illuminate\Support\Facades\Storage;
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Discount Value</label>
                     <input
+                        id="discountValueInput"
                         type="number"
                         name="discount_value"
                         value="{{ old('discount_value', $product->discount_value) }}"
@@ -386,11 +387,14 @@ use Illuminate\Support\Facades\Storage;
                         placeholder="0.00"
                         class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#800000]"
                     >
+                    <p id="discountValueHelp" class="text-xs text-gray-500 mt-1">Select a discount type to activate this field.</p>
                     @error('discount_value')
                         <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
                     @enderror
                 </div>
             </div>
+
+            <p id="discountPreview" class="hidden text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2"></p>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
@@ -904,6 +908,92 @@ use Illuminate\Support\Facades\Storage;
                 isBundleCheckbox.addEventListener('change', toggleBundleBuilder);
                 toggleBundleBuilder();
             }
+
+            const basePriceInput = document.querySelector('input[name="price"]');
+            const discountTypeInput = document.getElementById('discountTypeInput');
+            const discountValueInput = document.getElementById('discountValueInput');
+            const discountValueHelp = document.getElementById('discountValueHelp');
+            const discountPreview = document.getElementById('discountPreview');
+
+            function formatPeso(value) {
+                return '₱' + Number(value).toLocaleString('en-PH', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                });
+            }
+
+            function refreshDiscountPreview() {
+                if (!basePriceInput || !discountTypeInput || !discountValueInput || !discountPreview) {
+                    return;
+                }
+
+                const base = parseFloat(basePriceInput.value) || 0;
+                const type = discountTypeInput.value;
+                const rawValue = parseFloat(discountValueInput.value) || 0;
+
+                if (!type || rawValue <= 0 || base <= 0) {
+                    discountPreview.textContent = '';
+                    discountPreview.classList.add('hidden');
+                    return;
+                }
+
+                let discountAmount = 0;
+                if (type === 'percent') {
+                    const percent = Math.min(100, Math.max(0, rawValue));
+                    discountAmount = base * (percent / 100);
+                } else {
+                    discountAmount = Math.min(base, Math.max(0, rawValue));
+                }
+
+                const discounted = Math.max(0, base - discountAmount);
+                discountPreview.textContent = `Preview: ${formatPeso(base)} -> ${formatPeso(discounted)} (${formatPeso(discountAmount)} off)`;
+                discountPreview.classList.remove('hidden');
+            }
+
+            function refreshDiscountControlState() {
+                if (!discountTypeInput || !discountValueInput) {
+                    return;
+                }
+
+                const type = discountTypeInput.value;
+                if (type === 'percent') {
+                    discountValueInput.max = '100';
+                    discountValueInput.placeholder = '0 - 100';
+                    if ((parseFloat(discountValueInput.value) || 0) > 100) {
+                        discountValueInput.value = '100';
+                    }
+                    if (discountValueHelp) {
+                        discountValueHelp.textContent = 'Percent discount must be between 0 and 100.';
+                    }
+                } else if (type === 'fixed') {
+                    discountValueInput.removeAttribute('max');
+                    discountValueInput.placeholder = '0.00';
+                    if (discountValueHelp) {
+                        discountValueHelp.textContent = 'Fixed discount in pesos. Values above base price are capped automatically.';
+                    }
+                } else {
+                    discountValueInput.removeAttribute('max');
+                    if (discountValueHelp) {
+                        discountValueHelp.textContent = 'Select a discount type to activate this field.';
+                    }
+                }
+
+                refreshDiscountPreview();
+            }
+
+            if (discountTypeInput) {
+                discountTypeInput.addEventListener('change', refreshDiscountControlState);
+            }
+
+            if (discountValueInput) {
+                discountValueInput.addEventListener('input', refreshDiscountPreview);
+            }
+
+            if (basePriceInput) {
+                basePriceInput.addEventListener('input', refreshDiscountPreview);
+            }
+
+            refreshDiscountControlState();
         })();
         </script>
 
