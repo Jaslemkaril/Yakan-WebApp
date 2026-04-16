@@ -9,16 +9,25 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class WelcomeController extends Controller
 {
     public function index()
     {
+        $hasProductsTable = Schema::hasTable('products');
+        $hasCategoriesTable = Schema::hasTable('categories');
+        $hasReviewsTable = Schema::hasTable('reviews');
+        $hasUsersTable = Schema::hasTable('users');
+        $hasWishlistsTable = Schema::hasTable('wishlists') && Schema::hasTable('wishlist_items');
+
         // Check if database has data (only seed once in production)
         // This helps with Railway deployments where database might be ephemeral
-        $hasActiveProducts = Product::where('status', 'active')->exists();
+        $hasActiveProducts = $hasProductsTable
+            ? Product::where('status', 'active')->exists()
+            : false;
 
-        if (!$hasActiveProducts && config('app.env') === 'production') {
+        if ($hasProductsTable && !$hasActiveProducts && config('app.env') === 'production') {
             // Only auto-seed in production on Railway (ephemeral filesystem)
             try {
                 Artisan::call('db:seed', ['--force' => true]);
@@ -31,31 +40,39 @@ class WelcomeController extends Controller
         }
 
         // Latest 8 active products
-        $latestProducts = Product::where('status', 'active')
-            ->latest()
-            ->take(8)
-            ->get();
+        $latestProducts = $hasProductsTable
+            ? Product::where('status', 'active')
+                ->latest()
+                ->take(8)
+                ->get()
+            : collect();
 
         // Featured products (example: you could use a 'featured' flag)
-        $featuredProducts = Product::with('category')
-            ->where('status', 'active')
-            ->latest()
-            ->take(8)
-            ->get();
+        $featuredProducts = $hasProductsTable
+            ? Product::with('category')
+                ->where('status', 'active')
+                ->latest()
+                ->take(8)
+                ->get()
+            : collect();
 
         // Fetch all categories with their top 3 active products
-        $categories = Category::with(['products' => function ($query) {
-            $query->where('status', 'active')
-                ->latest()
-                ->take(3);
-        }])->get();
+        $categories = ($hasCategoriesTable && $hasProductsTable)
+            ? Category::with(['products' => function ($query) {
+                $query->where('status', 'active')
+                    ->latest()
+                    ->take(3);
+            }])->get()
+            : collect();
 
         // Total number of active products
-        $totalProducts = Product::where('status', 'active')->count();
+        $totalProducts = $hasProductsTable
+            ? Product::where('status', 'active')->count()
+            : 0;
 
         // Preload wishlist product ids so homepage hearts reflect saved state.
         $wishlistProductIds = [];
-        if (Auth::check()) {
+        if (Auth::check() && $hasWishlistsTable && $hasProductsTable) {
             $wishlist = Auth::user()->wishlists()->default()->first();
             if ($wishlist) {
                 $wishlistProductIds = $wishlist->items()
@@ -68,15 +85,20 @@ class WelcomeController extends Controller
         }
 
         // Real approved reviews for testimonials section
-        $testimonials = Review::with(['user', 'product'])
-            ->where('is_approved', true)
-            ->whereNotNull('comment')
-            ->whereHas('user')
-            ->whereHas('product')
-            ->orderByDesc('rating')
-            ->orderByDesc('created_at')
-            ->take(6)
-            ->get();
+        $testimonials = ($hasReviewsTable && $hasUsersTable)
+            ? Review::with(['user', 'product', 'customOrder.product'])
+                ->where('is_approved', true)
+                ->whereNotNull('comment')
+                ->whereHas('user')
+                ->where(function ($query) {
+                    $query->whereHas('product')
+                        ->orWhereHas('customOrder');
+                })
+                ->orderByDesc('rating')
+                ->orderByDesc('created_at')
+                ->take(6)
+                ->get()
+            : collect();
 
         // Pass all variables to the view
         return view('welcome', compact(
