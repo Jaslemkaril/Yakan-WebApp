@@ -184,6 +184,11 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($e instanceof \Illuminate\Session\TokenMismatchException) {
                 return redirect()->back()->with('error', 'Session expired. Please try again.');
             }
+            // Let Laravel handle validation exceptions normally so form errors
+            // are shown inline instead of being rendered as a global app error page.
+            if ($e instanceof \Illuminate\Validation\ValidationException) {
+                return null;
+            }
             if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
                 if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
                     return response()->json(['success' => false, 'message' => 'The requested item was not found.'], 404);
