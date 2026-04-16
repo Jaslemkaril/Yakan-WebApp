@@ -168,10 +168,7 @@
                 </svg>
                 <div>
                     <p class="text-sm font-bold text-amber-800">Cancellation Requested</p>
-                    @if(!empty($cancellationReason))
-                        <p class="text-sm text-amber-800 mt-1"><span class="font-semibold">Requested reason:</span> {{ $cancellationReason }}</p>
-                    @endif
-                    <p class="text-sm text-amber-800 mt-1">Your request is pending admin approval. The order is not cancelled yet.</p>
+                    <p class="text-sm text-amber-800 mt-1">Your request was submitted and is pending admin approval.</p>
                 </div>
             </div>
         </div>
@@ -337,6 +334,13 @@
             @if(isset($refundRequest) && $refundRequest)
                 @php
                     $refundCurrentStatus = $refundRequest->workflow_status ?: $refundRequest->status;
+                    $rawRequestDetails = trim((string) ($refundRequest->comment ?? $refundRequest->details ?? ''));
+                    $cleanCancellationDetails = preg_replace('/^Customer cancelled order before fulfillment:\s*/i', '', $rawRequestDetails) ?? $rawRequestDetails;
+                    $cleanCancellationDetails = preg_replace('/^Auto-generated cancellation refund request\.\s*Reason:\s*/i', '', $cleanCancellationDetails) ?? $cleanCancellationDetails;
+                    $displayCancellationReason = trim((string) ($refundRequest->reason ?? ''));
+                    if ($isCancellationFlowRequest && in_array(strtolower($displayCancellationReason), ['order cancellation', 'cancellation'], true) && $cleanCancellationDetails !== '') {
+                        $displayCancellationReason = $cleanCancellationDetails;
+                    }
                     $refundStatusMap = [
                         'pending_review' => ['label' => 'Pending Review', 'class' => 'bg-yellow-100 text-yellow-800'],
                         'under_review' => ['label' => 'Under Review', 'class' => 'bg-blue-100 text-blue-800'],
@@ -358,10 +362,11 @@
                         <span class="text-xs text-gray-500">Requested {{ optional($refundRequest->requested_at)->format('M d, Y h:i A') ?? $refundRequest->created_at->format('M d, Y h:i A') }}</span>
                     </div>
 
-                    <p class="text-sm text-gray-700"><span class="font-semibold">Reason:</span> {{ $refundRequest->reason }}</p>
+                    <p class="text-sm text-gray-700"><span class="font-semibold">Reason:</span> {{ $isCancellationFlowRequest ? ($displayCancellationReason !== '' ? $displayCancellationReason : 'Cancellation request') : $refundRequest->reason }}</p>
                     @if($isCancellationFlowRequest)
-                        <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Request Type:</span> Order Cancellation</p>
-                        <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Details:</span> {{ $refundRequest->comment ?? $refundRequest->details }}</p>
+                        @if(!empty($refundRequest->payout_status))
+                            <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Refund Processing:</span> {{ ucfirst(str_replace('_', ' ', $refundRequest->payout_status)) }}</p>
+                        @endif
                     @else
                         <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Refund Type:</span> {{ ucfirst(str_replace('_', ' ', $refundRequest->refund_type ?? 'full')) }}</p>
                         <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Comment:</span> {{ $refundRequest->comment ?? $refundRequest->details }}</p>
@@ -372,7 +377,7 @@
                     @if(!is_null($refundRequest->refund_amount))
                         <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Approved Refund:</span> PHP {{ number_format((float) $refundRequest->refund_amount, 2) }}</p>
                     @endif
-                    @if(!empty($refundRequest->payout_status))
+                    @if(!$isCancellationFlowRequest && !empty($refundRequest->payout_status))
                         <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Payout Status:</span> {{ ucfirst(str_replace('_', ' ', $refundRequest->payout_status)) }}</p>
                     @endif
                     @if(!empty($refundRequest->reviewed_at))
