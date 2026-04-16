@@ -898,7 +898,7 @@
                                             'refundRequest' => $latestRefundRequest->id,
                                             'index' => $loop->index,
                                             'auth_token' => $adminAuthToken,
-                                        ]));
+                                        ], fn ($value) => $value !== null && $value !== ''));
                                         $adminExt = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
                                         $adminIsImageEvidence = in_array($adminExt, ['jpg', 'jpeg', 'png', 'webp'], true);
                                         $adminIsVideoEvidence = in_array($adminExt, ['mp4', 'mov', 'webm'], true);
