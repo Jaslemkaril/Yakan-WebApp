@@ -289,16 +289,6 @@
                         <p class="text-xs text-gray-500 mt-2">Last reviewed: {{ \Carbon\Carbon::parse($refundRequest->reviewed_at)->format('M d, Y h:i A') }}</p>
                     @endif
 
-                    @if(!empty($refundRequest->recommended_decision))
-                        <div class="mt-3 rounded-md border border-blue-200 bg-blue-50 p-3">
-                            <p class="text-xs font-semibold text-blue-700 uppercase tracking-wider mb-1">System Recommendation</p>
-                            <p class="text-sm text-blue-800">{{ strtoupper(str_replace('_', ' ', $refundRequest->recommended_decision)) }}</p>
-                            @if(!is_null($refundRequest->recommended_refund_amount))
-                                <p class="text-sm text-blue-700 mt-1">Suggested amount: PHP {{ number_format((float) $refundRequest->recommended_refund_amount, 2) }}</p>
-                            @endif
-                        </div>
-                    @endif
-
                     @if(!empty($refundRequest->return_tracking_number))
                         <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Return Tracking:</span> {{ $refundRequest->return_tracking_number }}</p>
                     @endif

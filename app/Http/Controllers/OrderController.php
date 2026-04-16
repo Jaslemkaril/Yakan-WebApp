@@ -737,11 +737,9 @@ class OrderController extends Controller
         $refundRequest->return_required = (bool) ($recommendation['return_required'] ?? false);
         $refundRequest->save();
 
-        $recommendationLabel = str_replace('_', ' ', (string) ($refundRequest->recommended_decision ?? 'REJECT'));
-
         return redirect()->back()->with(
             'success',
-            'Refund request submitted. System recommendation: ' . strtoupper($recommendationLabel) . '. Awaiting admin review.'
+            'Refund request submitted successfully. Awaiting admin review.'
         );
     }
 
