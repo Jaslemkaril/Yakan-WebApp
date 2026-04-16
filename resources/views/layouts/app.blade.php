@@ -1397,8 +1397,10 @@
                             // Navigate to checkout with product_id+quantity as URL params (avoids session dependency)
                             const authToken = localStorage.getItem('yakan_auth_token');
                             const productId = data.product_id || form.action.split('/cart/add/').pop().split('?')[0].split('/')[0];
+                            const variantId = data.variant_id || form.querySelector('input[name="variant_id"]')?.value || '';
                             const quantity = data.quantity || form.querySelector('input[name="quantity"]')?.value || '1';
                             let checkoutUrl = '/cart/checkout?buy_now=1&product_id=' + productId + '&quantity=' + quantity;
+                            if (variantId) checkoutUrl += '&variant_id=' + encodeURIComponent(variantId);
                             if (authToken) checkoutUrl += '&auth_token=' + encodeURIComponent(authToken);
                             window.location.href = checkoutUrl;
                         } else {

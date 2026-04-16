@@ -16,6 +16,7 @@ use Illuminate\Support\Str;
 use App\Services\CloudinaryService;
 use App\Services\Payment\MayaCheckoutService;
 use App\Services\Payment\PayMongoCheckoutService;
+use Illuminate\Support\Facades\Schema;
 
 class CartController extends Controller
 {
@@ -837,6 +838,8 @@ class CartController extends Controller
     {
         $request->validate([
             'payment_method'      => 'required|in:paymongo',
+            'payment_option'      => 'nullable|in:full,downpayment',
+            'downpayment_rate'    => 'nullable|numeric|min:1|max:99',
             'delivery_type'       => 'required|in:delivery,pickup',
             'address_id'          => 'required_if:delivery_type,delivery|exists:user_addresses,id',
             'customer_notes'      => 'nullable|string|max:500',
@@ -845,6 +848,12 @@ class CartController extends Controller
 
         // Map form values to database enum values for compatibility
         $paymentMethod = $this->normalizeCheckoutPaymentMethod((string) $request->input('payment_method'));
+        $paymentOption = strtolower((string) $request->input('payment_option', 'full')) === 'downpayment'
+            ? 'downpayment'
+            : 'full';
+        $requestedDownpaymentRate = $paymentOption === 'downpayment'
+            ? (float) $request->input('downpayment_rate', 50)
+            : null;
         $deliveryType = $request->input('delivery_type') === 'delivery' ? 'deliver' : $request->input('delivery_type');
         $status = 'pending_confirmation'; // Map 'pending' to 'pending_confirmation'
 
@@ -990,6 +999,10 @@ class CartController extends Controller
 
         $totalAmount = $subtotal + max(0, $shippingFee - $discount);
 
+        if ($paymentOption === 'downpayment' && !$this->supportsDownpaymentFields()) {
+            return redirect()->back()->with('error', 'Downpayment option is temporarily unavailable. Please choose full payment for now.');
+        }
+
         // Create main order (tracking number & history auto-handled in Order model)
         // Initialize tracking details
         $trackingNumber = 'YAK-' . strtoupper(Str::random(10));
@@ -1002,7 +1015,7 @@ class CartController extends Controller
 
         $user = Auth::user();
         
-        $order = Order::create([
+        $orderPayload = [
             'order_ref'         => Order::generateOrderRef(),
             'user_id'           => $userId,
             'customer_name'     => $user->name,
@@ -1029,7 +1042,14 @@ class CartController extends Controller
             'shipping_province' => $request->input('delivery_type') === 'delivery' ? $userAddress->province : 'Store Pickup',
             'user_address_id'   => $userAddressId,
             'customer_notes'    => $request->input('customer_notes'),
-        ]);
+        ];
+
+        if ($this->supportsDownpaymentFields()) {
+            $downpaymentPlan = $this->resolveDownpaymentPlan($totalAmount, $paymentOption, $requestedDownpaymentRate);
+            $orderPayload = array_merge($orderPayload, $downpaymentPlan);
+        }
+
+        $order = Order::create($orderPayload);
 
         // Add order items
         foreach ($cartItems as $item) {
@@ -1151,6 +1171,7 @@ class CartController extends Controller
         }
 
         $authToken = request()->input('auth_token') ?? session('auth_token');
+        $isDownpaymentOrder = strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment';
 
         $redirectUrl = $this->appendAuthToken(route('payment.failed', $order->id), $authToken);
         $paymentLabel = 'Preparing Payment';
@@ -1170,7 +1191,7 @@ class CartController extends Controller
                     ]
                 );
                 $redirectUrl = $result['checkout_url'];
-                $paymentLabel = 'Opening PayMongo Checkout';
+                $paymentLabel = $isDownpaymentOrder ? 'Opening PayMongo Downpayment Checkout' : 'Opening PayMongo Checkout';
             } catch (\Throwable $e) {
                 \Log::error('PayMongo checkout failed.', [
                     'order_id' => $order->id,
@@ -1198,7 +1219,8 @@ class CartController extends Controller
 
         $redirectUrlJs   = json_encode($redirectUrl);
         $orderRef        = htmlspecialchars($order->order_ref ?? '#' . $order->id, ENT_QUOTES, 'UTF-8');
-        $totalFormatted  = '₱' . number_format($totalAmount, 2);
+        $payableNowAmount = $this->resolvePayableNowAmount($order, $totalAmount);
+        $totalFormatted  = '₱' . number_format($payableNowAmount, 2);
 
         return response(<<<HTML
 <!DOCTYPE html>
@@ -1265,6 +1287,50 @@ class CartController extends Controller
 </html>
 HTML
         );
+    }
+
+    private function supportsDownpaymentFields(): bool
+    {
+        return Schema::hasColumn('orders', 'payment_option')
+            && Schema::hasColumn('orders', 'downpayment_rate')
+            && Schema::hasColumn('orders', 'downpayment_amount')
+            && Schema::hasColumn('orders', 'remaining_balance');
+    }
+
+    private function resolveDownpaymentPlan(float $orderTotal, string $paymentOption, ?float $requestedRate = null): array
+    {
+        $normalizedOption = strtolower($paymentOption) === 'downpayment' ? 'downpayment' : 'full';
+        $rate = $normalizedOption === 'downpayment'
+            ? min(99, max(1, (float) ($requestedRate ?? 50)))
+            : 100.0;
+
+        $orderTotal = max(0, round($orderTotal, 2));
+        $downpaymentAmount = round($orderTotal * ($rate / 100), 2);
+        $remainingBalance = max(0, round($orderTotal - $downpaymentAmount, 2));
+
+        return [
+            'payment_option' => $normalizedOption,
+            'downpayment_rate' => $rate,
+            'downpayment_amount' => $downpaymentAmount,
+            'remaining_balance' => $remainingBalance,
+        ];
+    }
+
+    private function resolvePayableNowAmount(Order $order, float $fallbackTotal): float
+    {
+        $isDownpayment = strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment';
+
+        if (!$isDownpayment) {
+            return max(0, round($fallbackTotal, 2));
+        }
+
+        $downpayment = (float) ($order->downpayment_amount ?? 0);
+        if ($downpayment <= 0) {
+            $rate = (float) ($order->downpayment_rate ?? 50);
+            $downpayment = round(max(0, $fallbackTotal) * ($rate / 100), 2);
+        }
+
+        return max(0, min(max(0, round($fallbackTotal, 2)), $downpayment));
     }
 
     private function normalizeCheckoutPaymentMethod(string $requestedMethod): string

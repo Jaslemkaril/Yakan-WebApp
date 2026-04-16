@@ -78,6 +78,7 @@
     <input type="hidden" name="coupon_code" id="coupon-code-input" value="{{ $appliedCoupon->code ?? '' }}" />
     <input type="hidden" name="discount_amount" id="discount-amount-input" value="{{ $discount ?? 0 }}" />
     <input type="hidden" name="coupon_applies_to" id="coupon-applies-to-input" value="{{ !empty($appliedCoupon) ? $appliedCoupon->getAppliesTo() : '' }}" />
+    <input type="hidden" name="downpayment_rate" id="downpaymentRateInput" value="50" />
     
     {{-- Pass selected cart items through form to survive session loss on Railway --}}
     @if(session()->has('selected_cart_items'))
@@ -387,6 +388,27 @@
                             </div>
                         </div>
 
+                        <div class="mt-6 border-t border-gray-200 pt-5">
+                            <h3 class="text-sm font-bold text-gray-900 mb-3">Payment Plan</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <label class="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-all">
+                                    <input type="radio" name="payment_option" value="full" checked form="checkout-form" class="mt-0.5 w-5 h-5" style="accent-color: #800000;" onclick="updatePaymentPlanSummary()">
+                                    <span>
+                                        <span class="block font-semibold text-gray-900">Full Payment</span>
+                                        <span class="block text-xs text-gray-600">Pay 100% now at checkout.</span>
+                                    </span>
+                                </label>
+
+                                <label class="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-all">
+                                    <input type="radio" name="payment_option" value="downpayment" form="checkout-form" class="mt-0.5 w-5 h-5" style="accent-color: #800000;" onclick="updatePaymentPlanSummary()">
+                                    <span>
+                                        <span class="block font-semibold text-gray-900">50% Downpayment</span>
+                                        <span class="block text-xs text-gray-600">Pay 50% now and settle the remaining 50% before release/shipping.</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
                         <script>
                         function showPaymentDetails(type) {
                             const paymongoWrap = document.getElementById('paymongo-option-wrap');
@@ -587,6 +609,18 @@
                                 </div>
                                 <p class="text-xs text-gray-600 text-right">Inclusive of shipping</p>
                             </div>
+
+                            <div id="paymentPlanSummary" class="rounded-xl p-4 border border-gray-200 bg-gray-50 mt-3">
+                                <div class="flex justify-between items-center">
+                                    <span id="payNowLabel" class="text-sm font-semibold text-gray-700">Pay Now</span>
+                                    <span id="payNowDisplay" class="text-xl font-bold" style="color: #800000;">₱{{ number_format($finalTotal, 2) }}</span>
+                                </div>
+                                <div id="remainingBalanceRow" class="hidden mt-2 pt-2 border-t border-gray-200 flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Remaining Balance</span>
+                                    <span id="remainingBalanceDisplay" class="text-sm font-semibold text-gray-800">₱0.00</span>
+                                </div>
+                                <p id="paymentPlanHint" class="text-xs text-gray-500 mt-2">Full payment is selected.</p>
+                            </div>
                         </div>
 
                         <!-- Place Order Button -->
@@ -672,6 +706,55 @@ function injectAuthAndSubmit(form) {
     const overlay = document.getElementById('checkout-loading-overlay');
     if (overlay) { overlay.style.display = 'flex'; }
     form.submit();
+}
+
+function parsePesoAmount(text) {
+    const cleaned = String(text || '').replace(/[^0-9.-]/g, '');
+    const parsed = parseFloat(cleaned);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function updatePaymentPlanSummary() {
+    const totalEl = document.getElementById('finalTotalDisplay');
+    const payNowLabel = document.getElementById('payNowLabel');
+    const payNowDisplay = document.getElementById('payNowDisplay');
+    const remainingRow = document.getElementById('remainingBalanceRow');
+    const remainingDisplay = document.getElementById('remainingBalanceDisplay');
+    const paymentPlanHint = document.getElementById('paymentPlanHint');
+    const selectedOption = document.querySelector('input[name="payment_option"]:checked')?.value || 'full';
+    const downpaymentRateInput = document.getElementById('downpaymentRateInput');
+
+    if (!totalEl || !payNowDisplay) {
+        return;
+    }
+
+    const totalAmount = parsePesoAmount(totalEl.textContent);
+    const isDownpayment = selectedOption === 'downpayment';
+    const payNow = isDownpayment ? (totalAmount * 0.5) : totalAmount;
+    const remaining = Math.max(0, totalAmount - payNow);
+
+    if (payNowLabel) {
+        payNowLabel.textContent = isDownpayment ? 'Pay Now (50%)' : 'Pay Now';
+    }
+    payNowDisplay.textContent = '₱' + payNow.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    if (remainingDisplay) {
+        remainingDisplay.textContent = '₱' + remaining.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    if (remainingRow) {
+        remainingRow.classList.toggle('hidden', !isDownpayment);
+    }
+
+    if (paymentPlanHint) {
+        paymentPlanHint.textContent = isDownpayment
+            ? 'You will pay 50% now. The remaining balance must be settled before release/shipping.'
+            : 'Full payment is selected.';
+    }
+
+    if (downpaymentRateInput) {
+        downpaymentRateInput.value = isDownpayment ? '50' : '';
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -772,6 +855,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (itemCountEl && data.total_items) {
             itemCountEl.textContent = `Subtotal (${data.total_items} item${data.total_items !== 1 ? 's' : ''})`;
         }
+
+        updatePaymentPlanSummary();
     }
 
     // Handle minus button clicks
@@ -880,6 +965,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             const discount = Math.min(rawDiscount, activeFee);
             if (totalEl) totalEl.textContent = '₱' + (subtotal + activeFee - discount).toFixed(2);
+            updatePaymentPlanSummary();
             
             // Update visual styling for selected option
             const deliveryLabel = document.getElementById('delivery-radio-label');
@@ -902,6 +988,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const checkoutForm = document.getElementById('checkout-form');
     const paymentSection = document.getElementById('payment-method-section');
     const placeOrderButton = document.getElementById('place-order-button');
+
+    document.querySelectorAll('input[name="payment_option"]').forEach(function(radio) {
+        radio.addEventListener('change', updatePaymentPlanSummary);
+    });
+
+    const finalTotalDisplayEl = document.getElementById('finalTotalDisplay');
+    if (finalTotalDisplayEl) {
+        const totalObserver = new MutationObserver(function() {
+            updatePaymentPlanSummary();
+        });
+        totalObserver.observe(finalTotalDisplayEl, { childList: true, characterData: true, subtree: true });
+    }
+
+    updatePaymentPlanSummary();
 
     // Handle Place Order button click
     if (placeOrderButton) {
@@ -1032,6 +1132,7 @@ function selectAddress(addressId, fullName, phoneNumber, formattedAddress, city,
     
     const finalTotalDisplay = document.getElementById('finalTotalDisplay');
     finalTotalDisplay.innerHTML = '₱' + finalTotal.toFixed(2);
+    updatePaymentPlanSummary();
     
     // Update displayed address
     const addressDisplay = document.querySelector('#delivery-address-section .bg-gray-50');
@@ -2175,6 +2276,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isNaN(subtotal)) return;
         const newTotal = Math.max(0, subtotal + shippingFee - discount);
         if (finalDisplay) finalDisplay.textContent = '₱' + newTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        updatePaymentPlanSummary();
     }
 
     async function removeCoupon() {
