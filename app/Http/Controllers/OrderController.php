@@ -83,6 +83,11 @@ class OrderController extends Controller
                 continue;
             }
 
+            $refundReasonText = strtolower((string) ($latestRefundRequest->reason ?? ''));
+            $refundCommentText = strtolower((string) ($latestRefundRequest->comment ?? $latestRefundRequest->details ?? ''));
+            $isCancellationRefundFlow = str_contains($refundReasonText, 'cancel')
+                || str_contains($refundCommentText, 'cancel');
+
             $refundStatus = strtolower((string) ($latestRefundRequest->status ?? ''));
             $workflowStatus = strtolower((string) ($latestRefundRequest->workflow_status ?? ''));
             $payoutStatus = strtolower((string) ($latestRefundRequest->payout_status ?? ''));
@@ -96,7 +101,7 @@ class OrderController extends Controller
             }
 
             // Expose effective values to views to avoid stale badges.
-            $order->setAttribute('effective_status', 'refunded');
+            $order->setAttribute('effective_status', $isCancellationRefundFlow ? 'cancelled' : 'refunded');
             $order->setAttribute('effective_payment_status', 'refunded');
         }
     }

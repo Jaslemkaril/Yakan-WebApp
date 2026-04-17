@@ -306,9 +306,9 @@ class OrderController extends Controller
             }
             $latestRefundRequest->save();
 
-            $newStatus = 'refunded';
+            $newStatus = 'cancelled';
             $newPaymentStatus = 'refunded';
-            $approvalLine = 'Cancellation request approved and refund initiated.';
+            $approvalLine = 'Cancellation request approved. Refund has been processed.';
         }
 
         $order->status = $newStatus;
@@ -329,7 +329,7 @@ class OrderController extends Controller
         }
 
         $order->admin_notes = trim($existingAdminNotes);
-        $order->appendTrackingEvent($newStatus === 'refunded' ? 'Cancellation Approved (Refunded)' : 'Cancellation Approved');
+        $order->appendTrackingEvent($newPaymentStatus === 'refunded' ? 'Cancellation Approved (Refunded)' : 'Cancellation Approved');
         $order->save();
 
         return redirect()->back()->with('success', $approvalLine);
@@ -976,9 +976,13 @@ class OrderController extends Controller
 
         $refundRequest->save();
 
-        $order->status = 'refunded';
+        $reasonText = strtolower((string) ($refundRequest->reason ?? ''));
+        $commentText = strtolower((string) ($refundRequest->comment ?? $refundRequest->details ?? ''));
+        $isCancellationRefundFlow = str_contains($reasonText, 'cancel') || str_contains($commentText, 'cancel');
+
+        $order->status = $isCancellationRefundFlow ? 'cancelled' : 'refunded';
         $order->payment_status = 'refunded';
-        $order->appendTrackingEvent('Refunded');
+        $order->appendTrackingEvent($isCancellationRefundFlow ? 'Cancellation Refund Processed' : 'Refunded');
         $order->save();
 
         $this->notifyRefundDecision($refundRequest, 'approved');

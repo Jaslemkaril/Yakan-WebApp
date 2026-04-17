@@ -4,12 +4,15 @@
 <div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-6xl mx-auto">
         @php
-            $orderStatusLower = strtolower((string) ($order->status ?? ''));
+            $orderStatusLower = strtolower((string) ($order->effective_status ?? $order->status ?? ''));
+            $paymentStatusLower = strtolower((string) ($order->effective_payment_status ?? $order->payment_status ?? 'pending'));
             $canCancelOrder = in_array($orderStatusLower, ['pending', 'pending_confirmation', 'confirmed', 'processing'], true);
             $isCancellationRequested = $orderStatusLower === 'cancellation_requested';
             $displayOrderStatus = match ($orderStatusLower) {
                 'cancellation_requested' => 'Cancellation Pending',
-                default => ucfirst(str_replace('_', ' ', (string) ($order->status ?? 'pending'))),
+                'cancelled' => 'Cancelled',
+                'refunded' => 'Refunded',
+                default => ucfirst(str_replace('_', ' ', (string) ($order->effective_status ?? $order->status ?? 'pending'))),
             };
             $showCancelForm = $errors->has('cancel_reason') || !empty(old('cancel_reason'));
 
@@ -82,9 +85,10 @@
                         @php
                             $hasBankReceipt = !empty($order->bank_receipt) && $order->payment_method === 'bank_transfer';
                             $hasProof = $hasBankReceipt || (!empty($order->payment_proof_path) && $order->payment_method === 'bank_transfer');
-                            $effectivePaymentStatus = ($hasProof && $order->payment_status === 'pending')
+                            $effectivePaymentStatusSeed = strtolower((string) ($order->effective_payment_status ?? $order->payment_status));
+                            $effectivePaymentStatus = ($hasProof && $effectivePaymentStatusSeed === 'pending')
                                 ? 'verification_pending'
-                                : $order->payment_status;
+                                : $effectivePaymentStatusSeed;
                             $totalAmountForPayment = (float) ($order->total_amount ?? $order->total ?? 0);
                             $remainingBalance = max(0, (float) ($order->remaining_balance ?? 0));
                             $isDownpaymentOrder = strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment';
@@ -130,6 +134,7 @@
                                     : (($isDownpaymentOrder && $remainingBalance <= 0) ? 'Fully Paid ✓' : 'Paid ✓'),
                                 'verification_pending' => 'Awaiting Verification',
                                 'pending' => 'Pending',
+                                'refunded' => 'Refunded',
                                 'failed' => 'Failed',
                             ][$effectivePaymentStatus] ?? ucfirst(str_replace('_', ' ', $effectivePaymentStatus));
                         @endphp
@@ -253,7 +258,7 @@
         </div>
         @endif
 
-        @if($order->status === 'delivered')
+        @if($orderStatusLower === 'delivered')
         <div class="mb-8" id="confirm-receipt-card">
             <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-md border-2 border-green-300 overflow-hidden">
                 <div class="p-6">
@@ -278,7 +283,7 @@
         </div>
         @endif
 
-        @if($order->status === 'completed')
+        @if($orderStatusLower === 'completed')
         <div class="mb-8">
             <div class="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl shadow-md border-2 border-emerald-400 p-6 flex items-center gap-4">
                 <div class="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
@@ -292,7 +297,7 @@
         </div>
         @endif
 
-        @if(($order->status ?? '') === 'completed' || !empty($refundRequest))
+        @if($orderStatusLower === 'completed' || !empty($refundRequest))
         @php
             $isCancellationFlowRequest = false;
             if (!empty($refundRequest)) {
@@ -354,6 +359,15 @@
                         'approved' => ['label' => 'Approved', 'class' => 'bg-indigo-100 text-indigo-800'],
                     ];
                     $refundChip = $refundStatusMap[$refundCurrentStatus] ?? ['label' => ucfirst(str_replace('_', ' ', $refundCurrentStatus)), 'class' => 'bg-gray-100 text-gray-800'];
+                    if ($isCancellationFlowRequest) {
+                        if (in_array($refundCurrentStatus, ['processed', 'approved', 'pending_payout'], true)) {
+                            $refundChip = ['label' => 'Cancellation Approved', 'class' => 'bg-green-100 text-green-800'];
+                        } elseif ($refundCurrentStatus === 'rejected') {
+                            $refundChip = ['label' => 'Cancellation Rejected', 'class' => 'bg-red-100 text-red-800'];
+                        } elseif (in_array($refundCurrentStatus, ['pending_review', 'under_review', 'requested'], true)) {
+                            $refundChip = ['label' => 'Cancellation Pending', 'class' => 'bg-yellow-100 text-yellow-800'];
+                        }
+                    }
                 @endphp
 
                 <div class="rounded-lg border border-gray-200 p-4 bg-gray-50">
@@ -364,18 +378,19 @@
 
                     <p class="text-sm text-gray-700"><span class="font-semibold">Reason:</span> {{ $isCancellationFlowRequest ? ($displayCancellationReason !== '' ? $displayCancellationReason : 'Cancellation request') : $refundRequest->reason }}</p>
                     @if($isCancellationFlowRequest)
+                        <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Cancellation Status:</span> {{ $refundChip['label'] }}</p>
                         @if(!empty($refundRequest->payout_status))
-                            <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Refund Processing:</span> {{ ucfirst(str_replace('_', ' ', $refundRequest->payout_status)) }}</p>
+                            <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Payment Refund:</span> {{ ucfirst(str_replace('_', ' ', $refundRequest->payout_status)) }}</p>
                         @endif
                     @else
                         <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Refund Type:</span> {{ ucfirst(str_replace('_', ' ', $refundRequest->refund_type ?? 'full')) }}</p>
                         <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Comment:</span> {{ $refundRequest->comment ?? $refundRequest->details }}</p>
                     @endif
-                    @if(!empty($refundRequest->final_decision))
+                    @if(!$isCancellationFlowRequest && !empty($refundRequest->final_decision))
                         <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Final Decision:</span> {{ strtoupper(str_replace('_', ' ', $refundRequest->final_decision)) }}</p>
                     @endif
                     @if(!is_null($refundRequest->refund_amount))
-                        <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Approved Refund:</span> PHP {{ number_format((float) $refundRequest->refund_amount, 2) }}</p>
+                        <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">{{ $isCancellationFlowRequest ? 'Refund Amount:' : 'Approved Refund:' }}</span> PHP {{ number_format((float) $refundRequest->refund_amount, 2) }}</p>
                     @endif
                     @if(!$isCancellationFlowRequest && !empty($refundRequest->payout_status))
                         <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Payout Status:</span> {{ ucfirst(str_replace('_', ' ', $refundRequest->payout_status)) }}</p>
@@ -509,7 +524,7 @@
                     </button>
                 </form>
                 </div>
-            @elseif(($order->status ?? '') === 'completed' && !empty($isRefundWarrantyExpired) && !isset($refundRequest))
+            @elseif($orderStatusLower === 'completed' && !empty($isRefundWarrantyExpired) && !isset($refundRequest))
                 <div class="rounded-lg border border-red-200 bg-red-50 p-4">
                     <p class="text-sm font-semibold text-red-700">Refund window expired</p>
                     <p class="text-sm text-red-700 mt-1">Refund requests are only allowed within {{ $refundWarrantyDays ?? 7 }} days after order completion.</p>
@@ -622,7 +637,7 @@
                                     <p class="text-lg font-bold" style="color:#800000;">
                                         {{ \Carbon\Carbon::parse($order->estimated_delivery_date)->format('F d, Y') }}
                                     </p>
-                                    @if(!in_array($order->status, ['delivered','completed','cancelled','cancellation_requested']))
+                                    @if(!in_array($orderStatusLower, ['delivered','completed','cancelled','cancellation_requested'], true))
                                         <p class="text-xs text-gray-500 mt-1">
                                             {{ \Carbon\Carbon::parse($order->estimated_delivery_date)->isPast() ? 'Expected soon' : \Carbon\Carbon::parse($order->estimated_delivery_date)->diffForHumans() }}
                                         </p>
@@ -665,6 +680,7 @@
                                         : [($isDownpaymentOrder && $remainingBalance <= 0) ? '✓ Fully Paid' : '✓ Paid', 'bg-green-100 text-green-700'],
                                     'verification_pending' => ['⏳ Verification Pending', 'bg-yellow-100 text-yellow-800'],
                                     'pending' => ['⏳ Pending', 'bg-yellow-100 text-yellow-800'],
+                                    'refunded' => ['💸 Refunded', 'bg-green-100 text-green-700'],
                                     default => ['✕ Failed', 'bg-red-100 text-red-700'],
                                 };
                             @endphp
@@ -755,7 +771,7 @@
 
                     <!-- Actions -->
                     <div class="space-y-3">
-                        @if($order->payment_status === 'pending' && $order->payment_method === 'gcash')
+                        @if($paymentStatusLower === 'pending' && $order->payment_method === 'gcash')
                             <a href="{{ route('payment.online', $order->id) }}" class="block w-full text-center px-4 py-3 bg-[#800000] text-white font-semibold rounded-lg hover:bg-[#600000] transition-all duration-300 shadow-md">
                                 💳 Complete Payment
                             </a>
@@ -800,7 +816,7 @@
             </div>
         </div>
         {{-- ===== REVIEW SECTION ===== --}}
-        @if(in_array($order->status, ['delivered', 'completed']) && auth()->check())
+        @if(in_array($orderStatusLower, ['delivered', 'completed'], true) && auth()->check())
         <div class="mt-10" id="review-section">
             <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                 <div class="w-10 h-10 bg-[#800000] rounded-lg flex items-center justify-center">
