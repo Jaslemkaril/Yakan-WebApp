@@ -200,7 +200,6 @@ export default function PaymentScreen({ navigation, route }) {
     try {
       let backendId = orderData.backendOrderId || orderData.id || null;
       let checkoutOrderRef = orderData?.orderRef || null;
-      let hasVerifiedOrderRef = false;
       let verifiedCheckoutReference = null;
 
       // Recover backend ID when checkout did not return it immediately.
@@ -230,7 +229,6 @@ export default function PaymentScreen({ navigation, route }) {
             if (matchedOrder?.id) {
               backendId = matchedOrder.id;
               checkoutOrderRef = matchedOrder?.order_ref || matchedOrder?.tracking_number || matchedOrder?.order_number || checkoutOrderRef;
-              hasVerifiedOrderRef = Boolean(checkoutOrderRef);
             }
           }
         } catch (recoveryErr) {
@@ -249,7 +247,6 @@ export default function PaymentScreen({ navigation, route }) {
 
           if (verifiedOrderRef) {
             checkoutOrderRef = verifiedOrderRef;
-            hasVerifiedOrderRef = true;
           }
           if (resolvedCheckoutReference) {
             verifiedCheckoutReference = resolvedCheckoutReference;
@@ -278,7 +275,6 @@ export default function PaymentScreen({ navigation, route }) {
               if (matchedByRef?.id) {
                 backendId = matchedByRef.id;
                 checkoutOrderRef = matchedByRef?.order_ref || matchedByRef?.tracking_number || matchedByRef?.order_number || checkoutOrderRef;
-                hasVerifiedOrderRef = Boolean(checkoutOrderRef);
               }
             }
           }
@@ -287,9 +283,9 @@ export default function PaymentScreen({ navigation, route }) {
         }
       }
 
-      const hasCheckoutIdentity = Boolean(backendId || orderData?.checkoutReference || checkoutOrderRef);
-      if (!hasCheckoutIdentity) {
-        Alert.alert('Missing Order', 'This payment cannot continue because order identity is missing. Please place the order again.');
+      // Keep mobile aligned with website checkout: use canonical backend order ID.
+      if (!backendId) {
+        Alert.alert('Order Not Ready', 'We are still syncing your order. Please return to checkout and try payment again.');
         setIsProcessing(false);
         return;
       }
@@ -349,7 +345,6 @@ export default function PaymentScreen({ navigation, route }) {
                   finalOrderData.backendOrderId = recentByTotal.id;
                   finalOrderData.id = recentByTotal.id;
                   checkoutOrderRef = recentByTotal?.order_ref || recentByTotal?.tracking_number || recentByTotal?.order_number || checkoutOrderRef;
-                  hasVerifiedOrderRef = Boolean(checkoutOrderRef);
                   finalOrderData.orderRef = checkoutOrderRef;
                   finalOrderData.checkoutReference = recentByTotal?.payment_reference || finalOrderData.checkoutReference;
                 }
@@ -365,10 +360,6 @@ export default function PaymentScreen({ navigation, route }) {
             {
               paymentOption,
               downpaymentRate,
-              // Website flow keeps checkout identity minimal: when order ID is known,
-              // avoid sending extra identifiers that can conflict.
-              orderRef: backendId ? undefined : (hasVerifiedOrderRef ? checkoutOrderRef : undefined),
-              checkoutReference: backendId ? undefined : (finalOrderData?.checkoutReference || orderData?.checkoutReference || null),
               amountDueNow: finalTotal,
               totalAmount: fullOrderTotal,
               deliveryType: isPickupOrder ? 'pickup' : 'deliver',

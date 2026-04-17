@@ -571,21 +571,28 @@ class ApiService {
   async createPaymongoCheckout(orderId, urls = {}, paymentMeta = {}) {
     const isDownpayment = (paymentMeta.paymentOption || '').toLowerCase() === 'downpayment';
 
-    return this.request('POST', API_CONFIG.ENDPOINTS.PAYMENT.PAYMONGO_CHECKOUT, {
+    const payload = {
       order_id: orderId,
-      checkout_reference: paymentMeta.checkoutReference,
       success_url: urls.successUrl,
       cancel_url: urls.cancelUrl,
       payment_option: paymentMeta.paymentOption,
       // Only send downpayment rate for partial-payment flows.
       downpayment_rate: isDownpayment ? paymentMeta.downpaymentRate : undefined,
-      order_ref: paymentMeta.orderRef,
       amount_due_now: paymentMeta.amountDueNow,
       total_amount: paymentMeta.totalAmount,
       delivery_type: paymentMeta.deliveryType,
       amount_override: paymentMeta.amountOverride,
       is_downpayment_override: paymentMeta.isDownpaymentOverride,
-    });
+    };
+
+    // Mirror website behavior: once we have backend order_id,
+    // do not send extra identity fields that can conflict.
+    if (!orderId) {
+      payload.checkout_reference = paymentMeta.checkoutReference;
+      payload.order_ref = paymentMeta.orderRef;
+    }
+
+    return this.request('POST', API_CONFIG.ENDPOINTS.PAYMENT.PAYMONGO_CHECKOUT, payload);
   }
 
   /**
