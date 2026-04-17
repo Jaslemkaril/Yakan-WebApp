@@ -34,11 +34,83 @@ class OrderController extends Controller
     {
         $relations = ['orderItems.product', 'user'];
 
+        if (Schema::hasTable('order_refund_requests')) {
+            $relations[] = 'refundRequests';
+        }
+
         if (Schema::hasTable('product_bundle_items')) {
             $relations = ['orderItems.product.bundleItems.componentProduct', 'user'];
+
+            if (Schema::hasTable('order_refund_requests')) {
+                $relations[] = 'refundRequests';
+            }
         }
 
         return $relations;
+    }
+
+    /**
+     * Keep user-facing order statuses consistent with processed refund records.
+     */
+    private function applyRefundConsistencyToOrders($orders): void
+    {
+        if (!Schema::hasTable('order_refund_requests')) {
+            return;
+        }
+
+        $collection = method_exists($orders, 'getCollection')
+            ? $orders->getCollection()
+            : collect($orders);
+
+        if ($collection->isEmpty()) {
+            return;
+        }
+
+        $collection->loadMissing('refundRequests');
+
+        foreach ($collection as $order) {
+            if (!$order instanceof Order) {
+                continue;
+            }
+
+            $latestRefundRequest = $order->refundRequests
+                ->sortByDesc('created_at')
+                ->first();
+
+            if (!$latestRefundRequest) {
+                continue;
+            }
+
+            $refundStatus = strtolower((string) ($latestRefundRequest->status ?? ''));
+            $workflowStatus = strtolower((string) ($latestRefundRequest->workflow_status ?? ''));
+            $payoutStatus = strtolower((string) ($latestRefundRequest->payout_status ?? ''));
+
+            $isRefundProcessed = in_array($refundStatus, ['processed'], true)
+                || in_array($workflowStatus, ['processed'], true)
+                || in_array($payoutStatus, ['completed'], true);
+
+            if (!$isRefundProcessed) {
+                continue;
+            }
+
+            // Expose effective values to views to avoid stale badges.
+            $order->setAttribute('effective_status', 'refunded');
+            $order->setAttribute('effective_payment_status', 'refunded');
+
+            $currentOrderStatus = strtolower((string) ($order->status ?? ''));
+            $currentPaymentStatus = strtolower((string) ($order->payment_status ?? ''));
+
+            if ($currentOrderStatus === 'refunded' && $currentPaymentStatus === 'refunded') {
+                continue;
+            }
+
+            $order->status = 'refunded';
+            $order->payment_status = 'refunded';
+            if (!$order->cancelled_at) {
+                $order->cancelled_at = now();
+            }
+            $order->save();
+        }
     }
 
     /**
@@ -189,6 +261,9 @@ class OrderController extends Controller
             $limit = $request->query('limit', 20);
             $orders = $query->orderByDesc('created_at')->paginate($limit);
 
+            // Keep list state in sync with processed refund outcomes.
+            $this->applyRefundConsistencyToOrders($orders);
+
             // Return JSON for API callers, Blade view for web
             if ($request->wantsJson() || $request->is('api/*')) {
                 return response()->json([
@@ -238,6 +313,10 @@ class OrderController extends Controller
                 }
                 abort(404);
             }
+
+            $this->applyRefundConsistencyToOrders(collect([$order]));
+            $order->refresh();
+            $order->loadMissing($this->orderRelationsForUserViews());
 
             // Return JSON for API callers, Blade view for web
             if ($request->wantsJson() || $request->is('api/*')) {

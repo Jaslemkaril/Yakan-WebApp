@@ -51,6 +51,10 @@
             <!-- Orders List -->
             <div style="display: flex; flex-direction: column; gap: 1.5rem;">
                 @foreach($orders as $order)
+                    @php
+                        $displayOrderStatus = strtolower((string) ($order->effective_status ?? $order->status ?? 'pending'));
+                        $displayPaymentStatus = strtolower((string) ($order->effective_payment_status ?? $order->payment_status ?? 'pending'));
+                    @endphp
                     <div style="background: white; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; overflow: hidden; transition: all 0.3s;">
                         <div style="padding: 1.5rem;">
                             <!-- Order Header -->
@@ -58,7 +62,7 @@
                                 <div>
                                     <h3 style="font-size: 1.125rem; font-weight: bold; color: #111827;">{{ $order->order_ref }}</h3>
                                     <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">{{ $order->created_at->format('M d, Y') }}</p>
-                                    @if($order->estimated_delivery_date && !in_array($order->status, ['delivered','completed','cancelled','cancellation_requested']))
+                                    @if($order->estimated_delivery_date && !in_array($displayOrderStatus, ['delivered','completed','cancelled','cancellation_requested','refunded'], true))
                                         <p style="font-size: 0.8rem; color: #800000; margin-top: 0.25rem; font-weight: 600;">
                                             📦 Est. Delivery: {{ \Carbon\Carbon::parse($order->estimated_delivery_date)->format('M d, Y') }}
                                         </p>
@@ -66,18 +70,20 @@
                                 </div>
                                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end;">
                                     <span style="display: inline-flex; align-items: center; padding: 0.375rem 0.75rem; background: linear-gradient(135deg, #f5e6e6 0%, #e8cccc 100%); color: #800000; font-size: 0.75rem; font-weight: bold; border-radius: 9999px; border: 1px solid #d4a5a5;">
-                                        @if($order->status === 'completed')
+                                        @if($displayOrderStatus === 'completed')
                                             ✅ Completed
-                                        @elseif($order->status === 'delivered')
+                                        @elseif($displayOrderStatus === 'delivered')
                                             ✅ Delivered
-                                        @elseif($order->status === 'shipped')
+                                        @elseif($displayOrderStatus === 'shipped')
                                             🚚 Shipped
-                                        @elseif($order->status === 'processing' || $order->status === 'confirmed')
+                                        @elseif($displayOrderStatus === 'processing' || $displayOrderStatus === 'confirmed')
                                             ⚙️ Processing
-                                        @elseif($order->status === 'cancellation_requested')
+                                        @elseif($displayOrderStatus === 'cancellation_requested')
                                             ⚠️ Cancellation Requested
-                                        @elseif($order->status === 'cancelled')
+                                        @elseif($displayOrderStatus === 'cancelled')
                                             ❌ Cancelled
+                                        @elseif($displayOrderStatus === 'refunded')
+                                            💸 Refunded
                                         @else
                                             ⏳ Pending
                                         @endif
@@ -106,7 +112,7 @@
                                             }
                                         }
 
-                                        $isPartialPaymentBadge = ($order->payment_status === 'paid' || $order->payment_status === 'verified')
+                                        $isPartialPaymentBadge = ($displayPaymentStatus === 'paid' || $displayPaymentStatus === 'verified')
                                             && (
                                                 (strtolower((string) ($order->payment_option ?? 'full')) === 'downpayment' && (float) ($order->remaining_balance ?? 0) > 0)
                                                 || $legacyPartialFromNotes
@@ -115,10 +121,12 @@
                                     <span style="display: inline-flex; align-items: center; padding: 0.375rem 0.75rem; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); color: #166534; font-size: 0.75rem; font-weight: bold; border-radius: 9999px; border: 1px solid #86efac;">
                                         @if($isPartialPaymentBadge)
                                             ◐ Partial Payment
-                                        @elseif($order->payment_status === 'paid' || $order->payment_status === 'verified')
+                                        @elseif($displayPaymentStatus === 'paid' || $displayPaymentStatus === 'verified')
                                             💚 Paid
-                                        @elseif($order->payment_status === 'pending')
+                                        @elseif($displayPaymentStatus === 'pending')
                                             ⏳ Pending
+                                        @elseif($displayPaymentStatus === 'refunded')
+                                            💸 Refunded
                                         @else
                                             ❌ Failed
                                         @endif
@@ -126,9 +134,9 @@
                                 </div>
                             </div>
 
-                            @if(in_array($order->status, ['cancelled', 'cancellation_requested'], true) && !empty($cancellationReason))
+                            @if(in_array($displayOrderStatus, ['cancelled', 'cancellation_requested', 'refunded'], true) && !empty($cancellationReason))
                                 <div style="margin-top: -0.5rem; margin-bottom: 1rem; padding: 0.625rem 0.875rem; border-radius: 0.75rem; border: 1px solid #fecaca; background: #fef2f2; color: #991b1b; font-size: 0.8rem;">
-                                    <strong>{{ $order->status === 'cancellation_requested' ? 'Requested cancellation reason:' : 'Cancellation reason:' }}</strong> {{ $cancellationReason }}
+                                    <strong>{{ $displayOrderStatus === 'cancellation_requested' ? 'Requested cancellation reason:' : 'Cancellation reason:' }}</strong> {{ $cancellationReason }}
                                 </div>
                             @endif
 
