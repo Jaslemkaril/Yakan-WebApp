@@ -477,25 +477,32 @@
                 <form id="refund-request-form" method="POST" action="{{ route('orders.refund-request', $order) }}" enctype="multipart/form-data" class="space-y-4">
                     @csrf
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Reason <span class="text-red-600">*</span></label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Issue Type <span class="text-red-600">*</span></label>
                         <select id="refund-reason-select" name="reason" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent">
                             <option value="">-- Select reason --</option>
-                            <option value="Item not as described">Item not as described</option>
-                            <option value="Damaged item">Damaged item</option>
-                            <option value="Wrong item received">Wrong item received</option>
-                            <option value="Incomplete order">Incomplete order</option>
-                            <option value="Changed my mind">Changed my mind</option>
-                            <option value="Other">Other</option>
+                            <option value="Item not as described" {{ old('reason') === 'Item not as described' ? 'selected' : '' }}>Item not as described</option>
+                            <option value="Item not received" {{ old('reason') === 'Item not received' ? 'selected' : '' }}>Item not received</option>
+                            <option value="Damaged item" {{ old('reason') === 'Damaged item' ? 'selected' : '' }}>Damaged or defective item</option>
+                            <option value="Wrong item received" {{ old('reason') === 'Wrong item received' ? 'selected' : '' }}>Wrong item received</option>
+                            <option value="Incomplete order" {{ old('reason') === 'Incomplete order' ? 'selected' : '' }}>Incomplete order</option>
+                            <option value="Changed my mind" {{ old('reason') === 'Changed my mind' ? 'selected' : '' }}>Changed my mind</option>
+                            <option value="Other" {{ old('reason') === 'Other' ? 'selected' : '' }}>Other</option>
                         </select>
                     </div>
 
+                    <div id="refund-specific-reason-wrap" class="hidden">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Specific reason</label>
+                        <div id="refund-specific-reason-chips" class="flex flex-wrap gap-2"></div>
+                        <input type="hidden" id="refund-specific-reason" name="specific_reason" value="{{ old('specific_reason') }}">
+                    </div>
+
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Refund Type <span class="text-red-600">*</span></label>
-                        <select name="refund_type" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent">
-                            <option value="full">Full Refund</option>
-                            <option value="partial">Partial Refund</option>
-                            <option value="change_of_mind">Change Of Mind</option>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Refund Scope <span class="text-red-600">*</span></label>
+                        <select id="refund-scope-select" name="refund_type" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent">
+                            <option value="full" {{ old('refund_type', 'full') === 'full' ? 'selected' : '' }}>Full Refund</option>
+                            <option value="partial" {{ old('refund_type') === 'partial' ? 'selected' : '' }}>Partial Refund</option>
                         </select>
+                        <p class="text-xs text-gray-500 mt-1">Use Partial Refund for minor/partial issue. Change-of-mind stays under Issue Type.</p>
                     </div>
 
                     <div id="refund-reason-guidance" class="hidden rounded-lg border border-amber-200 bg-amber-50 p-3">
@@ -505,8 +512,8 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Comment <span class="text-red-600">*</span></label>
-                        <textarea id="refund-details-input" name="comment" rows="4" maxlength="2000" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent" placeholder="Please explain what happened and what refund support you need."></textarea>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Additional details <span class="text-red-600">*</span></label>
+                        <textarea id="refund-details-input" name="comment" rows="4" maxlength="2000" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent" placeholder="Please explain what happened and what refund support you need.">{{ old('comment') }}</textarea>
                     </div>
 
                     <div>
@@ -1017,6 +1024,9 @@ function applyRefundReasonGuidance(reason) {
     const evidence = document.getElementById('refund-guidance-evidence');
     const detailsInput = document.getElementById('refund-details-input');
     const evidenceHelp = document.getElementById('refund-evidence-help');
+    const specificWrap = document.getElementById('refund-specific-reason-wrap');
+    const specificChips = document.getElementById('refund-specific-reason-chips');
+    const specificInput = document.getElementById('refund-specific-reason');
 
     const map = {
         'Item not as described': {
@@ -1024,47 +1034,104 @@ function applyRefundReasonGuidance(reason) {
             details: 'Explain what you expected based on product listing and what actually arrived.',
             evidence: 'Upload clear photos of the delivered item showing differences from the listing.',
             placeholder: 'Describe expected item vs actual received item. Include color/size/material differences.',
-            help: 'Required: photos of actual delivered item. Accepted: JPG, PNG, WEBP, PDF, MP4, MOV, WEBM (max 20MB each).'
+            help: 'Required: photos of actual delivered item. Accepted: JPG, PNG, WEBP, PDF, MP4, MOV, WEBM (max 20MB each).',
+            specificReasons: ['Wrong size', 'Wrong color', 'Wrong material', 'Counterfeit or fake', 'Missing inclusions']
+        },
+        'Item not received': {
+            title: 'Proof of non-receipt',
+            details: 'Confirm the order was marked delivered but was not actually received.',
+            evidence: 'Upload delivery tracking screenshot and any supporting proof (front door, guard log, etc).',
+            placeholder: 'Explain delivery timeline and why item was not received.',
+            help: 'Required: delivery/tracking proof and supporting photos/documents. Max 20MB each.',
+            specificReasons: ['Marked delivered but not received', 'Parcel lost in transit', 'Delivered to wrong address']
         },
         'Damaged item': {
             title: 'Damage proof required',
             details: 'Describe where the item is damaged and how severe it is.',
             evidence: 'Upload damage photos plus at least one opening/unboxing video.',
             placeholder: 'Describe exact damage location and condition on arrival.',
-            help: 'Required: damage photos and at least one video (MP4/MOV/WEBM). Max 20MB each.'
+            help: 'Required: damage photos and at least one video (MP4/MOV/WEBM). Max 20MB each.',
+            specificReasons: ['Broken on arrival', 'Torn or dented packaging', 'Defective item', 'Does not function']
         },
         'Wrong item received': {
             title: 'Show expected vs actual item',
             details: 'State what item you ordered and what item you received.',
             evidence: 'Upload screenshot of ordered product and photo of the actual delivered product.',
             placeholder: 'Write ordered product details and actual delivered product details.',
-            help: 'Required: screenshot of ordered item and photo/video of actual item. Max 20MB each.'
+            help: 'Required: screenshot of ordered item and photo/video of actual item. Max 20MB each.',
+            specificReasons: ['Different product', 'Wrong variant', 'Wrong quantity']
         },
         'Incomplete order': {
             title: 'Show missing parts/items',
             details: 'Specify which item/quantity/parts are missing from your order.',
             evidence: 'Upload screenshot of order items and photo/video of everything received.',
             placeholder: 'List missing items or quantities and compare against your order receipt.',
-            help: 'Required: order screenshot + proof of received package contents. Max 20MB each.'
+            help: 'Required: order screenshot + proof of received package contents. Max 20MB each.',
+            specificReasons: ['Missing item', 'Missing quantity', 'Missing accessory']
         },
         'Changed my mind': {
             title: 'Change-of-mind return policy',
             details: 'Explain why you changed your mind and confirm if item is still unopened or in good condition.',
             evidence: 'Upload photos/videos of the current item condition. Return shipment may be required before payout.',
             placeholder: 'State why you want to return the item and describe its current condition.',
-            help: 'Required: condition photos or videos. Accepted: JPG, PNG, WEBP, PDF, MP4, MOV, WEBM (max 20MB each).'
+            help: 'Required: condition photos or videos. Accepted: JPG, PNG, WEBP, PDF, MP4, MOV, WEBM (max 20MB each).',
+            specificReasons: ['No longer needed', 'Ordered by mistake', 'Found better option']
         },
         'Other': {
             title: 'Provide complete explanation',
             details: 'Explain the issue in detail so the team can evaluate your request quickly.',
             evidence: 'Upload supporting photos/videos/documents relevant to your concern.',
             placeholder: 'Explain your issue clearly and include key details.',
-            help: 'Required: supporting proof files. Accepted: JPG, PNG, WEBP, PDF, MP4, MOV, WEBM (max 20MB each).'
+            help: 'Required: supporting proof files. Accepted: JPG, PNG, WEBP, PDF, MP4, MOV, WEBM (max 20MB each).',
+            specificReasons: []
         }
     };
 
+    function renderSpecificReasonChoices(options) {
+        if (!specificWrap || !specificChips || !specificInput) {
+            return;
+        }
+
+        const existingValue = (specificInput.value || '').trim();
+        specificChips.innerHTML = '';
+        specificInput.value = '';
+
+        if (!Array.isArray(options) || options.length === 0) {
+            specificWrap.classList.add('hidden');
+            return;
+        }
+
+        specificWrap.classList.remove('hidden');
+
+        options.forEach(function(option) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'px-3 py-1.5 rounded-full border border-gray-300 text-sm text-gray-700 hover:border-[#800000] hover:text-[#800000] transition-colors';
+            btn.textContent = option;
+            btn.addEventListener('click', function() {
+                Array.from(specificChips.querySelectorAll('button')).forEach(function(chip) {
+                    chip.className = 'px-3 py-1.5 rounded-full border border-gray-300 text-sm text-gray-700 hover:border-[#800000] hover:text-[#800000] transition-colors';
+                });
+                btn.className = 'px-3 py-1.5 rounded-full border border-[#800000] bg-[#fff5f5] text-sm text-[#800000] font-semibold';
+                specificInput.value = option;
+            });
+            specificChips.appendChild(btn);
+
+            if (existingValue !== '' && existingValue === option) {
+                btn.className = 'px-3 py-1.5 rounded-full border border-[#800000] bg-[#fff5f5] text-sm text-[#800000] font-semibold';
+                specificInput.value = option;
+            }
+        });
+    }
+
     if (!reason || !map[reason]) {
         guidanceBox.classList.add('hidden');
+        if (specificWrap) {
+            specificWrap.classList.add('hidden');
+        }
+        if (specificInput) {
+            specificInput.value = '';
+        }
         detailsInput.placeholder = 'Please explain what happened and what refund support you need.';
         evidenceHelp.textContent = 'Required. Accepted: JPG, PNG, WEBP, PDF, MP4, MOV, WEBM (max 20MB each)';
         return;
@@ -1077,6 +1144,7 @@ function applyRefundReasonGuidance(reason) {
     evidence.textContent = cfg.evidence;
     detailsInput.placeholder = cfg.placeholder;
     evidenceHelp.textContent = cfg.help;
+    renderSpecificReasonChoices(cfg.specificReasons || []);
 }
 
 function hasRefundVideoEvidence(files) {

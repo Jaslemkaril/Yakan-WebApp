@@ -791,13 +791,20 @@ class OrderController extends Controller
         $validated = $request->validate([
             'reason' => 'required|string|max:150',
             'refund_type' => 'nullable|in:full,partial,change_of_mind',
+            'specific_reason' => 'nullable|string|max:120',
             'comment' => 'nullable|string|max:2000',
             'details' => 'nullable|string|max:2000',
             'evidence' => 'required|array|min:1|max:5',
             'evidence.*' => 'required|file|mimes:jpg,jpeg,png,webp,pdf,mp4,mov,webm|max:20480',
         ]);
 
-        $comment = trim((string) ($validated['comment'] ?? $validated['details'] ?? ''));
+        $baseComment = trim((string) ($validated['comment'] ?? $validated['details'] ?? ''));
+        $specificReason = trim((string) ($validated['specific_reason'] ?? ''));
+        $comment = $baseComment;
+        if ($specificReason !== '') {
+            $comment = 'Specific reason: ' . $specificReason . "\n" . $baseComment;
+        }
+
         if ($comment === '') {
             return redirect()->back()
                 ->withInput()
@@ -1198,6 +1205,7 @@ class OrderController extends Controller
 
         $fullRefundReasons = [
             'item not as described',
+            'item not received',
             'damaged item',
             'wrong item received',
             'incomplete order',
