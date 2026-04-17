@@ -337,7 +337,8 @@ export default function PaymentScreen({ navigation, route }) {
         }
       }
 
-      if (!backendId) {
+      const fallbackOrderRef = checkoutOrderRef || orderData?.orderRef || null;
+      if (!backendId && !fallbackOrderRef) {
         Alert.alert('Order Not Ready', 'We are still syncing your order. Please return to checkout and try payment again.');
         setIsProcessing(false);
         return;
@@ -354,6 +355,7 @@ export default function PaymentScreen({ navigation, route }) {
         paymentOption,
         downpaymentRate,
         paymentMethod: selectedPaymentMethod,
+        orderRef: fallbackOrderRef || orderData?.orderRef || null,
         paymentReference: referenceNumber,
         checkoutReference: verifiedCheckoutReference || orderData?.checkoutReference || null,
         status: isPaymongo ? 'pending_payment' : 'payment_verified', // align with timeline stage
@@ -376,6 +378,8 @@ export default function PaymentScreen({ navigation, route }) {
           const basePaymongoMeta = {
             paymentOption,
             deliveryType: isPickupOrder ? 'pickup' : 'deliver',
+            // If backend ID is missing, use order_ref fallback only.
+            orderRef: backendId ? undefined : fallbackOrderRef,
           };
 
           const downpaymentMeta = paymentOption === 'downpayment'

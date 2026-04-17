@@ -591,8 +591,16 @@ class ApiService {
     // Mirror website behavior: once we have backend order_id,
     // do not send extra identity fields that can conflict.
     if (!orderId) {
-      payload.checkout_reference = paymentMeta.checkoutReference;
-      payload.order_ref = paymentMeta.orderRef;
+      const trimmedOrderRef = typeof paymentMeta.orderRef === 'string'
+        ? paymentMeta.orderRef.trim()
+        : '';
+
+      if (trimmedOrderRef) {
+        payload.order_ref = trimmedOrderRef;
+      } else if (paymentMeta.checkoutReference) {
+        // Last-resort fallback only when order_ref is unavailable.
+        payload.checkout_reference = paymentMeta.checkoutReference;
+      }
     }
 
     return this.request('POST', API_CONFIG.ENDPOINTS.PAYMENT.PAYMONGO_CHECKOUT, payload);
