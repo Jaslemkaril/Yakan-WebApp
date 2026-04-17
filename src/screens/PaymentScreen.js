@@ -289,7 +289,7 @@ export default function PaymentScreen({ navigation, route }) {
         const desiredOrderRef = String(checkoutOrderRef || orderData?.orderRef || '').trim();
         const targetTotal = Number(fullOrderTotal || 0);
 
-        for (let attempt = 0; attempt < 3 && (!backendId || !checkoutOrderRef); attempt += 1) {
+        for (let attempt = 0; attempt < 10 && (!backendId || !checkoutOrderRef); attempt += 1) {
           try {
             const ordersResponse = await ApiService.getOrders({ limit: 100 });
             if (ordersResponse.success) {
@@ -347,8 +347,8 @@ export default function PaymentScreen({ navigation, route }) {
             // Continue retrying below.
           }
 
-          if ((!backendId || !checkoutOrderRef) && attempt < 2) {
-            await new Promise(resolve => setTimeout(resolve, 700));
+          if ((!backendId || !checkoutOrderRef) && attempt < 9) {
+            await new Promise(resolve => setTimeout(resolve, 1200));
           }
         }
       }
@@ -356,7 +356,7 @@ export default function PaymentScreen({ navigation, route }) {
       const fallbackOrderRef = checkoutOrderRef || orderData?.orderRef || null;
       const fallbackCheckoutReference = verifiedCheckoutReference || orderData?.checkoutReference || null;
       const hasAnyCheckoutIdentity = Boolean(backendId || fallbackOrderRef || fallbackCheckoutReference);
-      const hasPaymongoIdentity = Boolean(backendId || fallbackOrderRef);
+      const hasPaymongoIdentity = Boolean(backendId || fallbackOrderRef || fallbackCheckoutReference);
 
       if (!hasAnyCheckoutIdentity) {
         Alert.alert('Missing Order', 'This payment cannot continue because order identity is missing. Please place the order again.');
@@ -365,15 +365,8 @@ export default function PaymentScreen({ navigation, route }) {
       }
 
       if (isPaymongo && !hasPaymongoIdentity) {
+        Alert.alert('Missing Order', 'This payment cannot continue because order identity is missing. Please place the order again.');
         setIsProcessing(false);
-        Alert.alert(
-          'Order Not Ready',
-          'We are still syncing your order. Please open My Orders and continue payment there.',
-          [
-            { text: 'My Orders', onPress: () => navigation.navigate('Orders') },
-            { text: 'OK', style: 'cancel' },
-          ]
-        );
         return;
       }
 
@@ -411,8 +404,9 @@ export default function PaymentScreen({ navigation, route }) {
           const basePaymongoMeta = {
             paymentOption,
             deliveryType: isPickupOrder ? 'pickup' : 'deliver',
-            // Identity precedence for mobile checkout: order_id -> order_ref.
-            orderRef: backendId ? undefined : fallbackOrderRef,
+            // Identity precedence for mobile checkout: order_id -> checkout_reference -> order_ref.
+            checkoutReference: backendId ? undefined : fallbackCheckoutReference,
+            orderRef: (backendId || fallbackCheckoutReference) ? undefined : fallbackOrderRef,
           };
 
           const downpaymentMeta = paymentOption === 'downpayment'

@@ -591,11 +591,16 @@ class ApiService {
     // Mirror website behavior: once we have backend order_id,
     // do not send extra identity fields that can conflict.
     if (!orderId) {
+      const trimmedCheckoutReference = typeof paymentMeta.checkoutReference === 'string'
+        ? paymentMeta.checkoutReference.trim()
+        : '';
       const trimmedOrderRef = typeof paymentMeta.orderRef === 'string'
         ? paymentMeta.orderRef.trim()
         : '';
 
-      if (trimmedOrderRef) {
+      if (trimmedCheckoutReference) {
+        payload.checkout_reference = trimmedCheckoutReference;
+      } else if (trimmedOrderRef) {
         payload.order_ref = trimmedOrderRef;
       }
     }

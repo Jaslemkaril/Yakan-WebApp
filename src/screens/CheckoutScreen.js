@@ -748,7 +748,7 @@ const CheckoutScreen = ({ navigation }) => {
           return matchedByCheckoutReference || matchedByNotesReference || matchedByServerRef || matchedByRecentSignature || matchedRecentPaymongoPending || null;
         };
 
-        for (let attempt = 0; attempt < 4 && (!backendOrderId || !orderRef); attempt += 1) {
+        for (let attempt = 0; attempt < 10 && (!backendOrderId || !orderRef); attempt += 1) {
           try {
             const matchedOrder = await resolveOrderIdentity();
             if (matchedOrder) {
@@ -770,26 +770,15 @@ const CheckoutScreen = ({ navigation }) => {
             console.log('[Checkout] Could not resolve order identity from orders list:', lookupError?.message || lookupError);
           }
 
-          if ((!backendOrderId || !orderRef) && attempt < 3) {
-            await new Promise(resolve => setTimeout(resolve, 700));
+          if ((!backendOrderId || !orderRef) && attempt < 9) {
+            await new Promise(resolve => setTimeout(resolve, 1200));
           }
         }
       }
 
-      if (!backendOrderId && !orderRef) {
-        // Order was created successfully; clear checkout state to avoid duplicate submissions.
-        await clearCart();
-        setCheckoutItems([]);
-
-        Alert.alert(
-          'Order Sync In Progress',
-          'Your order was created, but payment details are still syncing. Please open My Orders and continue payment there.',
-          [
-            { text: 'My Orders', onPress: () => navigation.navigate('Orders') },
-            { text: 'OK', style: 'cancel' },
-          ]
-        );
-        return;
+      const identitySyncPending = !backendOrderId && !orderRef;
+      if (identitySyncPending) {
+        console.log('[Checkout] Order identity still syncing; proceeding with checkout reference fallback.');
       }
 
       // Align with website flow: cart is cleared as soon as order is created.
@@ -801,6 +790,7 @@ const CheckoutScreen = ({ navigation }) => {
         checkoutReference,
         backendOrderId,
         id: backendOrderId,
+        identitySyncPending,
         date: new Date().toISOString(),
         items: itemsToCheckout,
         deliveryOption,
