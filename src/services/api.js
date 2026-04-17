@@ -569,12 +569,15 @@ class ApiService {
    * Create PayMongo checkout session for an order
    */
   async createPaymongoCheckout(orderId, urls = {}, paymentMeta = {}) {
+    const isDownpayment = (paymentMeta.paymentOption || '').toLowerCase() === 'downpayment';
+
     return this.request('POST', API_CONFIG.ENDPOINTS.PAYMENT.PAYMONGO_CHECKOUT, {
       order_id: orderId,
       success_url: urls.successUrl,
       cancel_url: urls.cancelUrl,
       payment_option: paymentMeta.paymentOption,
-      downpayment_rate: paymentMeta.downpaymentRate,
+      // Only send downpayment rate for partial-payment flows.
+      downpayment_rate: isDownpayment ? paymentMeta.downpaymentRate : undefined,
       amount_due_now: paymentMeta.amountDueNow,
       total_amount: paymentMeta.totalAmount,
       delivery_type: paymentMeta.deliveryType,

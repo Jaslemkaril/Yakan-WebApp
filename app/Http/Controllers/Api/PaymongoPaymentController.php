@@ -18,7 +18,7 @@ class PaymongoPaymentController extends Controller
             'success_url' => 'nullable|url',
             'cancel_url'  => 'nullable|url',
             'payment_option' => 'nullable|string|in:full,downpayment',
-            'downpayment_rate' => 'nullable|numeric|min:1|max:99',
+            'downpayment_rate' => 'nullable|numeric|min:1|max:100',
             'amount_due_now' => 'nullable|numeric|min:0',
             'total_amount' => 'nullable|numeric|min:0',
             'delivery_type' => 'nullable|string|in:pickup,deliver,delivery',
