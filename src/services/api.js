@@ -568,11 +568,16 @@ class ApiService {
   /**
    * Create PayMongo checkout session for an order
    */
-  async createPaymongoCheckout(orderId, urls = {}) {
+  async createPaymongoCheckout(orderId, urls = {}, paymentMeta = {}) {
     return this.request('POST', API_CONFIG.ENDPOINTS.PAYMENT.PAYMONGO_CHECKOUT, {
       order_id: orderId,
       success_url: urls.successUrl,
       cancel_url: urls.cancelUrl,
+      payment_option: paymentMeta.paymentOption,
+      downpayment_rate: paymentMeta.downpaymentRate,
+      amount_due_now: paymentMeta.amountDueNow,
+      total_amount: paymentMeta.totalAmount,
+      delivery_type: paymentMeta.deliveryType,
     });
   }
 

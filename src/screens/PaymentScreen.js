@@ -235,7 +235,17 @@ export default function PaymentScreen({ navigation, route }) {
       // For PayMongo: open checkout in browser and detect redirect back to app
       if (isPaymongo && backendId) {
         try {
-          const paymongoCheckout = await ApiService.createPaymongoCheckout(backendId);
+          const paymongoCheckout = await ApiService.createPaymongoCheckout(
+            backendId,
+            {},
+            {
+              paymentOption,
+              downpaymentRate,
+              amountDueNow: finalTotal,
+              totalAmount: fullOrderTotal,
+              deliveryType: isPickupOrder ? 'pickup' : 'deliver',
+            }
+          );
           const checkoutUrl = paymongoCheckout?.data?.data?.checkout_url
             ?? paymongoCheckout?.data?.checkout_url
             ?? paymongoCheckout?.checkout_url;
