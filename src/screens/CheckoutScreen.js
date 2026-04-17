@@ -510,17 +510,33 @@ const CheckoutScreen = ({ navigation }) => {
     }
 
     const selectedAddr = savedAddresses.find(addr => addr.id === selectedAddressId);
+    const fallbackSavedAddress = selectedAddr || savedAddresses.find(addr => addr.isDefault) || savedAddresses[0] || null;
+    const resolvedUserName =
+      userInfo?.name
+      || [userInfo?.first_name, userInfo?.last_name].filter(Boolean).join(' ').trim()
+      || '';
+    const resolvedUserPhone = [
+      userInfo?.phone,
+      userInfo?.phone_number,
+      userInfo?.mobile,
+      userInfo?.mobile_number,
+      userInfo?.contact_number,
+    ]
+      .map(value => (typeof value === 'number' ? String(value) : value))
+      .find(value => typeof value === 'string' && value.trim())
+      || '';
+
     const pickupAddress = {
-      fullName: userInfo?.name || userInfo?.first_name || 'Pickup Customer',
-      phoneNumber: userInfo?.phone || '',
+      fullName: resolvedUserName || fallbackSavedAddress?.fullName || 'Pickup Customer',
+      phoneNumber: resolvedUserPhone || fallbackSavedAddress?.phoneNumber || '',
       ...PICKUP_STORE_ADDRESS,
     };
 
     const resolvedShippingAddress = deliveryOption === 'pickup'
       ? pickupAddress
       : {
-          fullName: selectedAddr?.fullName || '',
-          phoneNumber: selectedAddr?.phoneNumber || '',
+          fullName: selectedAddr?.fullName || resolvedUserName || '',
+          phoneNumber: selectedAddr?.phoneNumber || resolvedUserPhone || '',
           street: selectedAddr?.street || '',
           barangay: selectedAddr?.barangay || '',
           city: selectedAddr?.city || '',
