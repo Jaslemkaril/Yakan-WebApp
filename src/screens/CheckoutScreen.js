@@ -618,14 +618,16 @@ const CheckoutScreen = ({ navigation }) => {
         || createdOrder?.backendOrderId
         || null;
 
-      let orderRef =
+      const serverOrderRef =
         createdOrder?.order_ref
         || createdOrder?.tracking_number
         || createdOrder?.order_number
         || createdOrder?.orderRef
-        || generateOrderRef();
+        || null;
 
-      if (!backendOrderId) {
+      let orderRef = serverOrderRef || generateOrderRef();
+
+      if (!backendOrderId && serverOrderRef) {
         try {
           const ordersResponse = await ApiService.getOrders();
           if (ordersResponse.success) {
@@ -637,12 +639,7 @@ const CheckoutScreen = ({ navigation }) => {
             const orders = Array.isArray(ordersPayload) ? ordersPayload : [];
 
             const matchedOrder =
-              orders.find(order => String(order?.order_ref || order?.tracking_number || order?.order_number || '') === String(orderRef || ''))
-              || orders.find(order => {
-                const orderTotalFromApi = Number(order?.total_amount ?? order?.total ?? 0);
-                return Math.abs(orderTotalFromApi - Number(actualTotal || 0)) < 0.01;
-              })
-              || orders[0]
+              orders.find(order => String(order?.order_ref || order?.tracking_number || order?.order_number || '') === String(serverOrderRef))
               || null;
 
             if (matchedOrder) {

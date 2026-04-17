@@ -198,7 +198,45 @@ export default function PaymentScreen({ navigation, route }) {
     setIsProcessing(true);
 
     try {
-      const backendId = orderData.backendOrderId || orderData.id || null;
+      let backendId = orderData.backendOrderId || orderData.id || null;
+
+      // Defensive guard: if checkout handed us a stale backend ID, resolve by order reference.
+      if (backendId && orderData?.orderRef) {
+        try {
+          const verifyOrderResponse = await ApiService.getOrder(backendId);
+          const verifiedOrder = verifyOrderResponse?.data?.data || verifyOrderResponse?.data || null;
+          const verifiedOrderRef = verifiedOrder?.order_ref || verifiedOrder?.tracking_number || verifiedOrder?.order_number || null;
+          const verifiedOrderTotal = Number(verifiedOrder?.total_amount ?? verifiedOrder?.total ?? 0);
+
+          const localOrderRef = String(orderData.orderRef || '');
+          const localOrderTotal = Number(fullOrderTotal || 0);
+
+          const refMismatch = verifiedOrderRef && localOrderRef && String(verifiedOrderRef) !== localOrderRef;
+          const totalMismatch = verifiedOrderTotal > 0 && localOrderTotal > 0 && Math.abs(verifiedOrderTotal - localOrderTotal) > 0.01;
+
+          if (refMismatch || totalMismatch) {
+            const ordersResponse = await ApiService.getOrders();
+            if (ordersResponse.success) {
+              const ordersPayload =
+                ordersResponse.data?.data?.data
+                || ordersResponse.data?.data
+                || ordersResponse.data
+                || [];
+              const orders = Array.isArray(ordersPayload) ? ordersPayload : [];
+              const matchedByRef = orders.find(order => {
+                const candidateRef = order?.order_ref || order?.tracking_number || order?.order_number || '';
+                return String(candidateRef) === localOrderRef;
+              });
+
+              if (matchedByRef?.id) {
+                backendId = matchedByRef.id;
+              }
+            }
+          }
+        } catch (verifyError) {
+          // Keep original backendId if verification lookup fails.
+        }
+      }
 
       if (!backendId) {
         Alert.alert('Missing Order', 'This payment cannot continue because the backend order ID is missing. Please place the order again.');
