@@ -96,27 +96,29 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 0.45rem 0.9rem;
+        padding: 0.58rem 1.18rem;
         border-radius: 9999px;
-        border: 1px solid #d1d5db;
+        border: 1.5px solid #bfc4cd;
         background-color: #ffffff;
-        color: #374151;
-        font-size: 0.875rem;
+        color: #1f2937;
+        font-size: 0.93rem;
         font-weight: 600;
         line-height: 1;
+        box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.55);
         transition: all 0.2s ease;
     }
 
     .status-chip-filter:hover {
-        border-color: #800000;
-        color: #800000;
-        background-color: #fff5f5;
+        border-color: #9ca3af;
+        color: #111827;
+        background-color: #f8fafc;
     }
 
     .status-chip-filter.active {
-        border-color: #800000;
-        background-color: #800000;
-        color: #ffffff;
+        border-color: #7f1d1d;
+        background-color: #fff7f7;
+        color: #7f1d1d;
+        box-shadow: 0 0 0 1px rgba(127, 29, 29, 0.12);
     }
     
     /* Responsive */
