@@ -576,14 +576,17 @@ class ApiService {
       success_url: urls.successUrl,
       cancel_url: urls.cancelUrl,
       payment_option: paymentMeta.paymentOption,
-      // Only send downpayment rate for partial-payment flows.
-      downpayment_rate: isDownpayment ? paymentMeta.downpaymentRate : undefined,
-      amount_due_now: paymentMeta.amountDueNow,
-      total_amount: paymentMeta.totalAmount,
       delivery_type: paymentMeta.deliveryType,
-      amount_override: paymentMeta.amountOverride,
-      is_downpayment_override: paymentMeta.isDownpaymentOverride,
     };
+
+    // Keep full-payment payload minimal, matching website checkout behavior.
+    if (isDownpayment) {
+      payload.downpayment_rate = paymentMeta.downpaymentRate;
+      payload.amount_due_now = paymentMeta.amountDueNow;
+      payload.total_amount = paymentMeta.totalAmount;
+      payload.amount_override = paymentMeta.amountOverride;
+      payload.is_downpayment_override = paymentMeta.isDownpaymentOverride;
+    }
 
     // Mirror website behavior: once we have backend order_id,
     // do not send extra identity fields that can conflict.

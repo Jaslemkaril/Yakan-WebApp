@@ -373,21 +373,52 @@ export default function PaymentScreen({ navigation, route }) {
       // For PayMongo: open checkout in browser and detect redirect back to app
       if (isPaymongo) {
         try {
-          const paymongoCheckout = await ApiService.createPaymongoCheckout(
+          const basePaymongoMeta = {
+            paymentOption,
+            deliveryType: isPickupOrder ? 'pickup' : 'deliver',
+          };
+
+          const downpaymentMeta = paymentOption === 'downpayment'
+            ? {
+                downpaymentRate,
+                amountDueNow: finalTotal,
+                totalAmount: fullOrderTotal,
+                amountOverride: finalTotal,
+                isDownpaymentOverride: true,
+              }
+            : {};
+
+          let paymongoCheckout = await ApiService.createPaymongoCheckout(
             backendId,
             {},
             {
-              paymentOption,
-              downpaymentRate,
-              // Mirror website flow: send canonical order_id identity only.
-              checkoutReference: undefined,
-              amountDueNow: finalTotal,
-              totalAmount: fullOrderTotal,
-              deliveryType: isPickupOrder ? 'pickup' : 'deliver',
-              amountOverride: finalTotal,
-              isDownpaymentOverride: paymentOption === 'downpayment',
+              ...basePaymongoMeta,
+              ...downpaymentMeta,
             }
           );
+
+          // Retry once with the leanest possible payload for transient upstream 502s.
+          const firstAttemptFailed = !paymongoCheckout?.success;
+          const firstAttemptBody = JSON.stringify(paymongoCheckout?.data || {});
+          const isTransientUpstreamFailure =
+            paymongoCheckout?.status === 500
+            || firstAttemptBody.includes('"code":502')
+            || firstAttemptBody.toLowerCase().includes('application failed to respond');
+
+          if (firstAttemptFailed && isTransientUpstreamFailure) {
+            paymongoCheckout = await ApiService.createPaymongoCheckout(
+              backendId,
+              {},
+              basePaymongoMeta
+            );
+          }
+
+          if (!paymongoCheckout?.success) {
+            const backendMessage = paymongoCheckout?.error
+              || paymongoCheckout?.data?.message
+              || 'Could not create PayMongo checkout.';
+            throw new Error(backendMessage);
+          }
 
           const checkoutPayload = paymongoCheckout?.data?.data || paymongoCheckout?.data || {};
           if (checkoutPayload?.order_id) {
