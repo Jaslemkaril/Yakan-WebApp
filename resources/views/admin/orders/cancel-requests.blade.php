@@ -232,43 +232,43 @@
 </div>
 
 <div id="cancelRequestModal" class="fixed inset-0 bg-black/55 z-50 hidden items-center justify-center p-4">
-    <div class="w-full max-w-3xl max-h-[90vh] overflow-y-auto custom-scrollbar bg-white rounded-2xl shadow-xl border border-gray-200">
-        <div class="p-5 border-b border-gray-200 flex items-center justify-between">
+    <div class="w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar bg-white rounded-2xl shadow-xl border border-gray-200">
+        <div class="p-4 border-b border-gray-200 flex items-center justify-between">
             <div>
-                <h2 id="modalOrderTitle" class="text-2xl font-bold text-gray-900">Order #</h2>
+                <h2 id="modalOrderTitle" class="text-xl font-bold text-gray-900">Order #</h2>
                 <div id="modalStatusBadgeWrap" class="mt-2"></div>
             </div>
             <button id="closeCancelRequestModal" type="button" class="w-11 h-11 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-100 text-xl" aria-label="Close modal">×</button>
         </div>
 
-        <div class="p-5 space-y-4">
+        <div class="p-4 space-y-3">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
                     <p class="text-sm text-gray-500">Customer</p>
-                    <p id="modalCustomer" class="text-2xl font-semibold text-gray-900"></p>
+                    <p id="modalCustomer" class="text-lg font-semibold text-gray-900"></p>
                 </div>
                 <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
                     <p class="text-sm text-gray-500">Refund amount</p>
-                    <p id="modalRefundAmount" class="text-2xl font-semibold text-gray-900"></p>
+                    <p id="modalRefundAmount" class="text-lg font-semibold text-gray-900"></p>
                 </div>
                 <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
                     <p class="text-sm text-gray-500">Payment method</p>
-                    <p id="modalPaymentMethod" class="text-2xl font-semibold text-gray-900"></p>
+                    <p id="modalPaymentMethod" class="text-lg font-semibold text-gray-900"></p>
                 </div>
                 <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
                     <p class="text-sm text-gray-500">Order status</p>
-                    <p id="modalOrderStatus" class="text-2xl font-semibold text-gray-900"></p>
+                    <p id="modalOrderStatus" class="text-lg font-semibold text-gray-900"></p>
                 </div>
             </div>
 
             <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
                 <p class="text-sm text-gray-500">Cancellation reason</p>
-                <p id="modalCancelReason" class="text-2xl font-semibold text-gray-900"></p>
+                <p id="modalCancelReason" class="text-lg font-semibold text-gray-900"></p>
             </div>
 
             <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
                 <p class="text-sm text-gray-500">Customer note</p>
-                <p id="modalCustomerNote" class="text-2xl font-semibold text-gray-900"></p>
+                <p id="modalCustomerNote" class="text-lg font-semibold text-gray-900"></p>
             </div>
 
             <form id="modalActionForm" method="POST" class="space-y-3 hidden">
