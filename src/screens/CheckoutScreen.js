@@ -716,11 +716,13 @@ const CheckoutScreen = ({ navigation }) => {
             ? orders.find(order => String(order?.notes || '').includes(`[checkout_ref:${checkoutReference}]`))
             : null;
 
-          const matchedByServerRef = !matchedByCheckoutReference && !matchedByNotesReference && serverOrderRef
+          const useStrictCheckoutReference = Boolean(checkoutReference);
+
+          const matchedByServerRef = !useStrictCheckoutReference && !matchedByCheckoutReference && !matchedByNotesReference && serverOrderRef
             ? orders.find(order => String(order?.order_ref || order?.tracking_number || order?.order_number || '') === String(serverOrderRef))
             : null;
 
-          const matchedByRecentSignature = !matchedByCheckoutReference && !matchedByNotesReference && !matchedByServerRef
+          const matchedByRecentSignature = !useStrictCheckoutReference && !matchedByCheckoutReference && !matchedByNotesReference && !matchedByServerRef
             ? orders.find(order => {
                 const candidateCreatedAt = order?.created_at ? new Date(order.created_at).getTime() : 0;
                 const withinRecentWindow = candidateCreatedAt > 0 && Math.abs(checkoutStartedAt - candidateCreatedAt) <= 10 * 60 * 1000;
@@ -733,7 +735,7 @@ const CheckoutScreen = ({ navigation }) => {
               })
             : null;
 
-          const matchedRecentPaymongoPending = !matchedByCheckoutReference && !matchedByNotesReference && !matchedByServerRef && !matchedByRecentSignature
+          const matchedRecentPaymongoPending = !useStrictCheckoutReference && !matchedByCheckoutReference && !matchedByNotesReference && !matchedByServerRef && !matchedByRecentSignature
             ? orders.find(order => {
                 const candidateCreatedAt = order?.created_at ? new Date(order.created_at).getTime() : 0;
                 const withinRecentWindow = candidateCreatedAt > 0 && Math.abs(checkoutStartedAt - candidateCreatedAt) <= 45 * 60 * 1000;
@@ -748,7 +750,7 @@ const CheckoutScreen = ({ navigation }) => {
           return matchedByCheckoutReference || matchedByNotesReference || matchedByServerRef || matchedByRecentSignature || matchedRecentPaymongoPending || null;
         };
 
-        for (let attempt = 0; attempt < 10 && (!backendOrderId || !orderRef); attempt += 1) {
+        for (let attempt = 0; attempt < 10 && !backendOrderId; attempt += 1) {
           try {
             const matchedOrder = await resolveOrderIdentity();
             if (matchedOrder) {
@@ -770,13 +772,13 @@ const CheckoutScreen = ({ navigation }) => {
             console.log('[Checkout] Could not resolve order identity from orders list:', lookupError?.message || lookupError);
           }
 
-          if ((!backendOrderId || !orderRef) && attempt < 9) {
+          if (!backendOrderId && attempt < 9) {
             await new Promise(resolve => setTimeout(resolve, 1200));
           }
         }
       }
 
-      const identitySyncPending = !backendOrderId && !orderRef;
+      const identitySyncPending = !backendOrderId;
       if (identitySyncPending) {
         console.log('[Checkout] Order identity still syncing; proceeding with checkout reference fallback.');
       }

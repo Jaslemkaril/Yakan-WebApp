@@ -283,13 +283,14 @@ export default function PaymentScreen({ navigation, route }) {
         }
       }
 
-      // Final identity recovery: retry briefly to allow eventual consistency after order creation.
-      if (!backendId || !checkoutOrderRef) {
+      // Final identity recovery: retry for backend order ID before creating PayMongo checkout.
+      if (!backendId) {
         const desiredCheckoutRef = String(verifiedCheckoutReference || orderData?.checkoutReference || '').trim();
         const desiredOrderRef = String(checkoutOrderRef || orderData?.orderRef || '').trim();
         const targetTotal = Number(fullOrderTotal || 0);
+        const useStrictCheckoutReference = desiredCheckoutRef.length > 0;
 
-        for (let attempt = 0; attempt < 10 && (!backendId || !checkoutOrderRef); attempt += 1) {
+        for (let attempt = 0; attempt < 10 && !backendId; attempt += 1) {
           try {
             const ordersResponse = await ApiService.getOrders({ limit: 100 });
             if (ordersResponse.success) {
@@ -309,14 +310,14 @@ export default function PaymentScreen({ navigation, route }) {
                 ? orders.find(order => String(order?.notes || '').includes(`[checkout_ref:${desiredCheckoutRef}]`))
                 : null;
 
-              const matchedByOrderRef = !matchedByPaymentRef && !matchedByNotesRef && desiredOrderRef
+              const matchedByOrderRef = !useStrictCheckoutReference && !matchedByPaymentRef && !matchedByNotesRef && desiredOrderRef
                 ? orders.find(order => {
                     const candidateRef = order?.order_ref || order?.tracking_number || order?.order_number || '';
                     return String(candidateRef) === desiredOrderRef;
                   })
                 : null;
 
-              const matchedByRecentTotal = !matchedByPaymentRef && !matchedByNotesRef && !matchedByOrderRef
+              const matchedByRecentTotal = !useStrictCheckoutReference && !matchedByPaymentRef && !matchedByNotesRef && !matchedByOrderRef
                 ? orders.find(order => {
                     const candidateCreatedAt = order?.created_at ? new Date(order.created_at).getTime() : 0;
                     const recentEnough = candidateCreatedAt > 0 && Math.abs(nowTs - candidateCreatedAt) <= 30 * 60 * 1000;
@@ -325,7 +326,7 @@ export default function PaymentScreen({ navigation, route }) {
                   })
                 : null;
 
-              const matchedRecentPaymongo = !matchedByPaymentRef && !matchedByNotesRef && !matchedByOrderRef && !matchedByRecentTotal
+              const matchedRecentPaymongo = !useStrictCheckoutReference && !matchedByPaymentRef && !matchedByNotesRef && !matchedByOrderRef && !matchedByRecentTotal
                 ? orders.find(order => {
                     const candidateCreatedAt = order?.created_at ? new Date(order.created_at).getTime() : 0;
                     const recentEnough = candidateCreatedAt > 0 && Math.abs(nowTs - candidateCreatedAt) <= 90 * 60 * 1000;
@@ -347,7 +348,7 @@ export default function PaymentScreen({ navigation, route }) {
             // Continue retrying below.
           }
 
-          if ((!backendId || !checkoutOrderRef) && attempt < 9) {
+          if (!backendId && attempt < 9) {
             await new Promise(resolve => setTimeout(resolve, 1200));
           }
         }
@@ -356,7 +357,7 @@ export default function PaymentScreen({ navigation, route }) {
       const fallbackOrderRef = checkoutOrderRef || orderData?.orderRef || null;
       const fallbackCheckoutReference = verifiedCheckoutReference || orderData?.checkoutReference || null;
       const hasAnyCheckoutIdentity = Boolean(backendId || fallbackOrderRef || fallbackCheckoutReference);
-      const hasPaymongoIdentity = Boolean(backendId || fallbackOrderRef || fallbackCheckoutReference);
+      const hasPaymongoIdentity = Boolean(backendId);
 
       if (!hasAnyCheckoutIdentity) {
         Alert.alert('Missing Order', 'This payment cannot continue because order identity is missing. Please place the order again.');
@@ -365,7 +366,7 @@ export default function PaymentScreen({ navigation, route }) {
       }
 
       if (isPaymongo && !hasPaymongoIdentity) {
-        Alert.alert('Missing Order', 'This payment cannot continue because order identity is missing. Please place the order again.');
+        Alert.alert('Order Still Syncing', 'Your order was created, but payment is still syncing. Please wait a few seconds and tap Continue to Payment again.');
         setIsProcessing(false);
         return;
       }
@@ -404,9 +405,6 @@ export default function PaymentScreen({ navigation, route }) {
           const basePaymongoMeta = {
             paymentOption,
             deliveryType: isPickupOrder ? 'pickup' : 'deliver',
-            // Identity precedence for mobile checkout: order_id -> checkout_reference -> order_ref.
-            checkoutReference: backendId ? undefined : fallbackCheckoutReference,
-            orderRef: (backendId || fallbackCheckoutReference) ? undefined : fallbackOrderRef,
           };
 
           const downpaymentMeta = paymentOption === 'downpayment'
