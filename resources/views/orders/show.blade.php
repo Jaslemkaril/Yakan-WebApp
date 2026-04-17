@@ -359,6 +359,29 @@
                         'approved' => ['label' => 'Approved', 'class' => 'bg-indigo-100 text-indigo-800'],
                     ];
                     $refundChip = $refundStatusMap[$refundCurrentStatus] ?? ['label' => ucfirst(str_replace('_', ' ', $refundCurrentStatus)), 'class' => 'bg-gray-100 text-gray-800'];
+                    $refundReference = !empty($refundRequest->refund_reference)
+                        ? (string) $refundRequest->refund_reference
+                        : ('RF-' . str_pad((string) $refundRequest->id, 4, '0', STR_PAD_LEFT));
+                    $commentText = (string) ($refundRequest->comment ?? $refundRequest->details ?? '');
+                    $specificReason = null;
+                    if (preg_match('/Specific reason:\s*(.+)$/mi', $commentText, $specificReasonMatch) === 1) {
+                        $specificReason = trim((string) $specificReasonMatch[1]);
+                    }
+
+                    $reviewStates = ['requested', 'pending_review', 'under_review'];
+                    $returnStates = ['awaiting_return_shipment', 'return_in_transit', 'return_received'];
+                    $releasedStates = ['pending_payout', 'processed'];
+
+                    $isSubmittedDone = true;
+                    $isUnderReviewDone = in_array($refundCurrentStatus, array_merge($reviewStates, $returnStates, $releasedStates, ['approved']), true);
+                    $isUnderReviewActive = in_array($refundCurrentStatus, $reviewStates, true);
+
+                    $isReturnDone = in_array($refundCurrentStatus, ['return_received', 'pending_payout', 'processed'], true);
+                    $isReturnActive = in_array($refundCurrentStatus, ['awaiting_return_shipment', 'return_in_transit'], true);
+
+                    $isReleasedDone = in_array($refundCurrentStatus, ['processed'], true);
+                    $isReleasedActive = in_array($refundCurrentStatus, ['pending_payout'], true);
+
                     if ($isCancellationFlowRequest) {
                         if (in_array($refundCurrentStatus, ['processed', 'approved', 'pending_payout'], true)) {
                             $refundChip = ['label' => 'Cancellation Approved', 'class' => 'bg-green-100 text-green-800'];
@@ -376,6 +399,56 @@
                         <span class="text-xs text-gray-500">Requested {{ optional($refundRequest->requested_at)->format('M d, Y h:i A') ?? $refundRequest->created_at->format('M d, Y h:i A') }}</span>
                     </div>
 
+                    @if(!$isCancellationFlowRequest)
+                        <div class="rounded-xl border border-gray-200 bg-white mb-4 overflow-hidden">
+                            <div class="px-4 py-3 border-b border-gray-200">
+                                <p class="text-xl font-bold text-gray-900">Refund #{{ $refundReference }}</p>
+                            </div>
+                            <div class="px-4 py-5 text-center border-b border-gray-200">
+                                <div class="mx-auto mb-3 w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
+                                    <svg class="w-8 h-8 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </div>
+                                <p class="text-2xl font-bold text-gray-900">{{ $isReleasedDone ? 'Refund released' : ($isUnderReviewActive ? 'Request submitted' : ucfirst(str_replace('_', ' ', $refundCurrentStatus))) }}</p>
+                                <p class="text-sm text-gray-600 mt-1">Your refund request is being processed by our team.</p>
+                            </div>
+                            <div class="px-4 py-4">
+                                <p class="text-sm font-semibold text-gray-600 mb-3">Refund progress</p>
+                                <div class="space-y-4">
+                                    <div class="flex items-start gap-3">
+                                        <span class="mt-1 w-3 h-3 rounded-full {{ $isSubmittedDone ? 'bg-green-700' : 'bg-gray-300' }}"></span>
+                                        <div>
+                                            <p class="font-semibold text-gray-900">Request submitted</p>
+                                            <p class="text-sm text-gray-600">{{ optional($refundRequest->requested_at)->format('M d, h:i A') ?? $refundRequest->created_at->format('M d, h:i A') }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-3">
+                                        <span class="mt-1 w-3 h-3 rounded-full {{ $isUnderReviewDone ? 'bg-blue-700' : 'bg-gray-300' }}"></span>
+                                        <div>
+                                            <p class="font-semibold {{ $isUnderReviewActive ? 'text-blue-700' : 'text-gray-700' }}">Under review</p>
+                                            <p class="text-sm text-gray-600">Being checked by our support team</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-3">
+                                        <span class="mt-1 w-3 h-3 rounded-full {{ $isReturnDone ? 'bg-amber-600' : ($isReturnActive ? 'bg-amber-600' : 'bg-gray-300') }}"></span>
+                                        <div>
+                                            <p class="font-semibold {{ $isReturnActive ? 'text-amber-700' : 'text-gray-700' }}">Return item</p>
+                                            <p class="text-sm text-gray-600">Drop off at nearest hub when requested</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-3">
+                                        <span class="mt-1 w-3 h-3 rounded-full {{ $isReleasedDone ? 'bg-green-700' : ($isReleasedActive ? 'bg-green-700' : 'bg-gray-300') }}"></span>
+                                        <div>
+                                            <p class="font-semibold {{ ($isReleasedDone || $isReleasedActive) ? 'text-green-700' : 'text-gray-700' }}">Refund released</p>
+                                            <p class="text-sm text-gray-600">{{ ucfirst((string) ($order->payment_method ?? 'wallet')) }} @if(!is_null($refundRequest->refund_amount)) - PHP {{ number_format((float) $refundRequest->refund_amount, 2) }} @endif</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
                     <p class="text-sm text-gray-700"><span class="font-semibold">Reason:</span> {{ $isCancellationFlowRequest ? ($displayCancellationReason !== '' ? $displayCancellationReason : 'Cancellation request') : $refundRequest->reason }}</p>
                     @if($isCancellationFlowRequest)
                         <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Cancellation Status:</span> {{ $refundChip['label'] }}</p>
@@ -383,8 +456,10 @@
                             <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Payment Refund:</span> {{ ucfirst(str_replace('_', ' ', $refundRequest->payout_status)) }}</p>
                         @endif
                     @else
-                        <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Refund Type:</span> {{ ucfirst(str_replace('_', ' ', $refundRequest->refund_type ?? 'full')) }}</p>
-                        <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Comment:</span> {{ $refundRequest->comment ?? $refundRequest->details }}</p>
+                        @if(!empty($specificReason))
+                            <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Specific Reason:</span> {{ $specificReason }}</p>
+                        @endif
+                        <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Details:</span> {{ $refundRequest->comment ?? $refundRequest->details }}</p>
                     @endif
                     @if(!$isCancellationFlowRequest && !empty($refundRequest->final_decision))
                         <p class="text-sm text-gray-700 mt-2"><span class="font-semibold">Final Decision:</span> {{ strtoupper(str_replace('_', ' ', $refundRequest->final_decision)) }}</p>

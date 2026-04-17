@@ -914,18 +914,39 @@ class OrderController extends Controller
             abort(403);
         }
 
-        $evidence = is_array($refundRequest->evidence_paths ?? null) ? $refundRequest->evidence_paths : [];
+        $rawEvidence = $refundRequest->evidence_paths;
+        if (is_string($rawEvidence) && $rawEvidence !== '') {
+            $decoded = json_decode($rawEvidence, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $rawEvidence = $decoded;
+            }
+        }
+
+        $evidence = array_values(array_filter(
+            is_array($rawEvidence) ? $rawEvidence : [],
+            static fn ($value) => $value !== null && $value !== ''
+        ));
+
         if (!array_key_exists($index, $evidence)) {
             abort(404);
         }
 
-        $path = (string) $evidence[$index];
+        $path = trim((string) $evidence[$index]);
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             return redirect()->away($path);
         }
 
-        if (Storage::disk('public')->exists($path)) {
-            return Storage::disk('public')->response($path);
+        // Support legacy values like "public/refunds/..." or "/storage/refunds/...".
+        $normalizedPath = ltrim($path, '/');
+        if (str_starts_with($normalizedPath, 'storage/')) {
+            $normalizedPath = substr($normalizedPath, strlen('storage/'));
+        }
+        if (str_starts_with($normalizedPath, 'public/')) {
+            $normalizedPath = substr($normalizedPath, strlen('public/'));
+        }
+
+        if (Storage::disk('public')->exists($normalizedPath)) {
+            return Storage::disk('public')->response($normalizedPath);
         }
 
         abort(404);
