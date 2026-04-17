@@ -473,64 +473,123 @@
                     </div>
                 </button>
 
-                <div id="refund-form-wrap" class="hidden mt-4">
+                @php
+                    $refundHasServerErrors = $errors->has('reason')
+                        || $errors->has('specific_reason')
+                        || $errors->has('comment')
+                        || $errors->has('details')
+                        || $errors->has('evidence')
+                        || $errors->has('evidence.*')
+                        || $errors->has('preferred_resolution');
+                @endphp
+                <div id="refund-form-wrap" class="{{ $refundHasServerErrors || !empty(old('reason')) ? '' : 'hidden ' }}mt-4">
                 <form id="refund-request-form" method="POST" action="{{ route('orders.refund-request', $order) }}" enctype="multipart/form-data" class="space-y-4">
                     @csrf
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Issue Type <span class="text-red-600">*</span></label>
-                        <select id="refund-reason-select" name="reason" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent">
-                            <option value="">-- Select reason --</option>
-                            <option value="Item not as described" {{ old('reason') === 'Item not as described' ? 'selected' : '' }}>Item not as described</option>
-                            <option value="Item not received" {{ old('reason') === 'Item not received' ? 'selected' : '' }}>Item not received</option>
-                            <option value="Damaged item" {{ old('reason') === 'Damaged item' ? 'selected' : '' }}>Damaged or defective item</option>
-                            <option value="Wrong item received" {{ old('reason') === 'Wrong item received' ? 'selected' : '' }}>Wrong item received</option>
-                            <option value="Incomplete order" {{ old('reason') === 'Incomplete order' ? 'selected' : '' }}>Incomplete order</option>
-                            <option value="Changed my mind" {{ old('reason') === 'Changed my mind' ? 'selected' : '' }}>Changed my mind</option>
-                            <option value="Other" {{ old('reason') === 'Other' ? 'selected' : '' }}>Other</option>
-                        </select>
+                    <div class="flex items-center gap-2 text-xs font-semibold">
+                        <span id="refund-progress-1" class="px-3 py-1 rounded-full bg-[#800000] text-white">1. Issue</span>
+                        <span id="refund-progress-2" class="px-3 py-1 rounded-full bg-gray-100 text-gray-600">2. Details & Proof</span>
+                        <span id="refund-progress-3" class="px-3 py-1 rounded-full bg-gray-100 text-gray-600">3. Confirm</span>
                     </div>
 
-                    <div id="refund-specific-reason-wrap" class="hidden">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Specific reason</label>
-                        <div id="refund-specific-reason-chips" class="flex flex-wrap gap-2"></div>
-                        <input type="hidden" id="refund-specific-reason" name="specific_reason" value="{{ old('specific_reason') }}">
+                    <div id="refund-step-error" class="hidden rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"></div>
+
+                    @if($refundHasServerErrors)
+                        <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                            Please review your refund request details and try again.
+                        </div>
+                    @endif
+
+                    <div id="refund-step-1" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Issue Type <span class="text-red-600">*</span></label>
+                            <select id="refund-reason-select" name="reason" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent">
+                                <option value="">-- Select reason --</option>
+                                <option value="Item not as described" {{ old('reason') === 'Item not as described' ? 'selected' : '' }}>Item not as described</option>
+                                <option value="Item not received" {{ old('reason') === 'Item not received' ? 'selected' : '' }}>Item not received</option>
+                                <option value="Damaged item" {{ old('reason') === 'Damaged item' ? 'selected' : '' }}>Damaged or defective item</option>
+                                <option value="Wrong item received" {{ old('reason') === 'Wrong item received' ? 'selected' : '' }}>Wrong item received</option>
+                                <option value="Incomplete order" {{ old('reason') === 'Incomplete order' ? 'selected' : '' }}>Incomplete order</option>
+                                <option value="Changed my mind" {{ old('reason') === 'Changed my mind' ? 'selected' : '' }}>Changed my mind</option>
+                                <option value="Other" {{ old('reason') === 'Other' ? 'selected' : '' }}>Other</option>
+                            </select>
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="button" id="refund-next-1" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-semibold" style="background:#800000;">Next</button>
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Preferred Resolution <span class="text-gray-400">(optional)</span></label>
-                        <select id="preferred-resolution-select" name="preferred_resolution" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent">
-                            <option value="" {{ old('preferred_resolution') === null || old('preferred_resolution') === '' ? 'selected' : '' }}>Let support decide</option>
-                            <option value="refund" {{ old('preferred_resolution') === 'refund' ? 'selected' : '' }}>Refund</option>
-                            <option value="replacement" {{ old('preferred_resolution') === 'replacement' ? 'selected' : '' }}>Replacement</option>
-                            <option value="return_refund" {{ old('preferred_resolution') === 'return_refund' ? 'selected' : '' }}>Return + Refund</option>
-                        </select>
-                        <p class="text-xs text-gray-500 mt-1">Final decision and refund amount are subject to review based on policy and evidence.</p>
+                    <div id="refund-step-2" class="space-y-4 hidden">
+                        <div id="refund-specific-reason-wrap" class="hidden">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Specific reason</label>
+                            <div id="refund-specific-reason-chips" class="flex flex-wrap gap-2"></div>
+                            <input type="hidden" id="refund-specific-reason" name="specific_reason" value="{{ old('specific_reason') }}">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Preferred Resolution <span class="text-gray-400">(optional)</span></label>
+                            <select id="preferred-resolution-select" name="preferred_resolution" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent">
+                                <option value="" {{ old('preferred_resolution') === null || old('preferred_resolution') === '' ? 'selected' : '' }}>Let support decide</option>
+                                <option value="refund" {{ old('preferred_resolution') === 'refund' ? 'selected' : '' }}>Refund</option>
+                                <option value="replacement" {{ old('preferred_resolution') === 'replacement' ? 'selected' : '' }}>Replacement</option>
+                                <option value="return_refund" {{ old('preferred_resolution') === 'return_refund' ? 'selected' : '' }}>Return + Refund</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Final decision and refund amount are subject to review based on policy and evidence.</p>
+                        </div>
+
+                        <div id="refund-reason-guidance" class="hidden rounded-lg border border-amber-200 bg-amber-50 p-3">
+                            <p id="refund-guidance-title" class="text-sm font-semibold text-amber-800"></p>
+                            <p id="refund-guidance-details" class="text-sm text-amber-700 mt-1"></p>
+                            <p id="refund-guidance-evidence" class="text-xs text-amber-700 mt-2"></p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Additional details <span class="text-red-600">*</span></label>
+                            <textarea id="refund-details-input" name="comment" rows="4" maxlength="2000" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent" placeholder="Please explain what happened and what refund support you need.">{{ old('comment') }}</textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Evidence <span class="text-red-600">*</span> (up to 5 files)</label>
+                            <input id="refund-evidence-input" type="file" name="evidence[]" accept="image/*,video/mp4,video/quicktime,video/webm,.pdf,.mp4,.mov,.webm" multiple required class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#800000] file:text-white hover:file:bg-[#600000]">
+                            <p id="refund-evidence-help" class="text-xs text-gray-500 mt-1">Required. Accepted: JPG, PNG, WEBP, PDF, MP4, MOV, WEBM (max 20MB each)</p>
+                            <div id="refund-evidence-preview" class="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2"></div>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <button type="button" id="refund-back-2" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50">Back</button>
+                            <button type="button" id="refund-next-2" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-semibold" style="background:#800000;">Next</button>
+                        </div>
                     </div>
 
-                    <div id="refund-reason-guidance" class="hidden rounded-lg border border-amber-200 bg-amber-50 p-3">
-                        <p id="refund-guidance-title" class="text-sm font-semibold text-amber-800"></p>
-                        <p id="refund-guidance-details" class="text-sm text-amber-700 mt-1"></p>
-                        <p id="refund-guidance-evidence" class="text-xs text-amber-700 mt-2"></p>
+                    <div id="refund-step-3" class="space-y-4 hidden">
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-2">
+                            <p class="text-sm font-bold text-gray-900">Submit refund request?</p>
+                            <p class="text-sm text-gray-600">Our team will review your request within 1-2 business days.</p>
+                            <div class="border-t border-gray-200 pt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                                <p class="text-gray-600">Order</p>
+                                <p class="font-semibold text-gray-900 text-right">#{{ $order->order_ref ?? $order->id }}</p>
+                                <p class="text-gray-600">Issue</p>
+                                <p id="refund-confirm-issue" class="font-semibold text-gray-900 text-right">-</p>
+                                <p class="text-gray-600">Specific reason</p>
+                                <p id="refund-confirm-specific" class="font-semibold text-gray-900 text-right">-</p>
+                                <p class="text-gray-600">Preferred resolution</p>
+                                <p id="refund-confirm-resolution" class="font-semibold text-gray-900 text-right">Let support decide</p>
+                                <p class="text-gray-600">Evidence files</p>
+                                <p id="refund-confirm-evidence-count" class="font-semibold text-gray-900 text-right">0</p>
+                            </div>
+                            <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                                Final refund amount and approval are subject to policy review and evidence verification.
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <button type="button" id="refund-back-3" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50">Back</button>
+                            <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-semibold transition-colors" style="background:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Submit Refund Request
+                            </button>
+                        </div>
                     </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Additional details <span class="text-red-600">*</span></label>
-                        <textarea id="refund-details-input" name="comment" rows="4" maxlength="2000" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent" placeholder="Please explain what happened and what refund support you need.">{{ old('comment') }}</textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Evidence <span class="text-red-600">*</span> (up to 5 files)</label>
-                        <input id="refund-evidence-input" type="file" name="evidence[]" accept="image/*,video/mp4,video/quicktime,video/webm,.pdf,.mp4,.mov,.webm" multiple required class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#800000] file:text-white hover:file:bg-[#600000]">
-                        <p id="refund-evidence-help" class="text-xs text-gray-500 mt-1">Required. Accepted: JPG, PNG, WEBP, PDF, MP4, MOV, WEBM (max 20MB each)</p>
-                        <div id="refund-evidence-preview" class="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2"></div>
-                    </div>
-
-                    <button type="submit" class="inline-flex items-center gap-2 px-5 py-3 rounded-lg text-white font-semibold transition-colors" style="background:#800000;" onmouseover="this.style.backgroundColor='#600000'" onmouseout="this.style.backgroundColor='#800000'">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                        Submit Refund Request
-                    </button>
                 </form>
                 </div>
             @elseif($orderStatusLower === 'completed' && !empty($isRefundWarrantyExpired) && !isset($refundRequest))
@@ -1349,9 +1408,69 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const refundToggle = document.getElementById('refund-toggle');
     const refundFormWrap = document.getElementById('refund-form-wrap');
+    const refundStep1 = document.getElementById('refund-step-1');
+    const refundStep2 = document.getElementById('refund-step-2');
+    const refundStep3 = document.getElementById('refund-step-3');
+    const refundNext1 = document.getElementById('refund-next-1');
+    const refundBack2 = document.getElementById('refund-back-2');
+    const refundNext2 = document.getElementById('refund-next-2');
+    const refundBack3 = document.getElementById('refund-back-3');
+    const refundStepError = document.getElementById('refund-step-error');
+    const refundProgress1 = document.getElementById('refund-progress-1');
+    const refundProgress2 = document.getElementById('refund-progress-2');
+    const refundProgress3 = document.getElementById('refund-progress-3');
+
+    function showRefundStepError(message) {
+        if (!refundStepError) {
+            return;
+        }
+        refundStepError.textContent = message;
+        refundStepError.classList.remove('hidden');
+    }
+
+    function clearRefundStepError() {
+        if (!refundStepError) {
+            return;
+        }
+        refundStepError.textContent = '';
+        refundStepError.classList.add('hidden');
+    }
+
+    function setRefundProgress(activeStep) {
+        const progressItems = [refundProgress1, refundProgress2, refundProgress3];
+        progressItems.forEach(function(item, index) {
+            if (!item) {
+                return;
+            }
+
+            if ((index + 1) === activeStep) {
+                item.className = 'px-3 py-1 rounded-full bg-[#800000] text-white';
+            } else if ((index + 1) < activeStep) {
+                item.className = 'px-3 py-1 rounded-full bg-[#fef2f2] text-[#800000]';
+            } else {
+                item.className = 'px-3 py-1 rounded-full bg-gray-100 text-gray-600';
+            }
+        });
+    }
+
+    function showRefundStep(step) {
+        if (!refundStep1 || !refundStep2 || !refundStep3) {
+            return;
+        }
+
+        refundStep1.classList.toggle('hidden', step !== 1);
+        refundStep2.classList.toggle('hidden', step !== 2);
+        refundStep3.classList.toggle('hidden', step !== 3);
+        setRefundProgress(step);
+        clearRefundStepError();
+    }
+
     if (refundToggle && refundFormWrap) {
         refundToggle.addEventListener('click', function() {
             refundFormWrap.classList.toggle('hidden');
+            if (!refundFormWrap.classList.contains('hidden')) {
+                showRefundStep(1);
+            }
         });
     }
 
@@ -1363,6 +1482,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const refundReasonSelect = document.getElementById('refund-reason-select');
+    const preferredResolutionSelect = document.getElementById('preferred-resolution-select');
+    const refundSpecificReason = document.getElementById('refund-specific-reason');
+    const refundDetailsInput = document.getElementById('refund-details-input');
+    const refundConfirmIssue = document.getElementById('refund-confirm-issue');
+    const refundConfirmSpecific = document.getElementById('refund-confirm-specific');
+    const refundConfirmResolution = document.getElementById('refund-confirm-resolution');
+    const refundConfirmEvidenceCount = document.getElementById('refund-confirm-evidence-count');
+
     if (refundReasonSelect) {
         refundReasonSelect.addEventListener('change', function() {
             applyRefundReasonGuidance(refundReasonSelect.value);
@@ -1370,18 +1497,104 @@ document.addEventListener('DOMContentLoaded', function() {
         applyRefundReasonGuidance(refundReasonSelect.value || '');
     }
 
-    const refundRequestForm = document.getElementById('refund-request-form');
-    if (refundRequestForm) {
-        refundRequestForm.addEventListener('submit', function(e) {
-            if (!refundReasonSelect || !refundEvidenceInput) {
+    if (refundNext1) {
+        refundNext1.addEventListener('click', function() {
+            if (!refundReasonSelect || refundReasonSelect.value === '') {
+                showRefundStepError('Please select an issue type to continue.');
+                refundReasonSelect?.focus();
+                return;
+            }
+            showRefundStep(2);
+        });
+    }
+
+    if (refundBack2) {
+        refundBack2.addEventListener('click', function() {
+            showRefundStep(1);
+        });
+    }
+
+    function getResolutionLabel(value) {
+        const map = {
+            refund: 'Refund',
+            replacement: 'Replacement',
+            return_refund: 'Return + Refund',
+        };
+
+        return map[value] || 'Let support decide';
+    }
+
+    function canProceedRefundStep2() {
+        if (!refundDetailsInput || refundDetailsInput.value.trim() === '') {
+            showRefundStepError('Please add details about the issue.');
+            refundDetailsInput?.focus();
+            return false;
+        }
+
+        if (!refundEvidenceInput || !refundEvidenceInput.files || refundEvidenceInput.files.length === 0) {
+            showRefundStepError('Please upload at least one evidence file.');
+            refundEvidenceInput?.focus();
+            return false;
+        }
+
+        if (refundReasonSelect && refundReasonSelect.value === 'Damaged item' && !hasRefundVideoEvidence(refundEvidenceInput.files)) {
+            showRefundStepError('For damaged items, upload at least one opening/unboxing video together with photos.');
+            return false;
+        }
+
+        return true;
+    }
+
+    if (refundNext2) {
+        refundNext2.addEventListener('click', function() {
+            if (!canProceedRefundStep2()) {
                 return;
             }
 
-            if (refundReasonSelect.value === 'Damaged item' && !hasRefundVideoEvidence(refundEvidenceInput.files)) {
+            if (refundConfirmIssue) {
+                refundConfirmIssue.textContent = refundReasonSelect?.value || '-';
+            }
+            if (refundConfirmSpecific) {
+                refundConfirmSpecific.textContent = (refundSpecificReason?.value || '').trim() || '-';
+            }
+            if (refundConfirmResolution) {
+                refundConfirmResolution.textContent = getResolutionLabel(preferredResolutionSelect?.value || '');
+            }
+            if (refundConfirmEvidenceCount) {
+                refundConfirmEvidenceCount.textContent = String(refundEvidenceInput?.files?.length || 0);
+            }
+
+            showRefundStep(3);
+        });
+    }
+
+    if (refundBack3) {
+        refundBack3.addEventListener('click', function() {
+            showRefundStep(2);
+        });
+    }
+
+    const refundRequestForm = document.getElementById('refund-request-form');
+    if (refundRequestForm) {
+        refundRequestForm.addEventListener('submit', function(e) {
+            if (!refundReasonSelect || !refundEvidenceInput || !refundDetailsInput) {
+                return;
+            }
+
+            if (!canProceedRefundStep2()) {
                 e.preventDefault();
-                alert('For damaged items, please upload at least one opening/unboxing video together with photos.');
+                if (!refundStep3 || refundStep3.classList.contains('hidden')) {
+                    showRefundStep(2);
+                }
             }
         });
+
+        // If page loads with old input/errors, keep refund flow open and move to details step.
+        if (refundFormWrap && !refundFormWrap.classList.contains('hidden')) {
+            showRefundStep(2);
+        } else {
+            showRefundStep(1);
+        }
     }
 });
 </script>
