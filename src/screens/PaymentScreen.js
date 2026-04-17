@@ -338,8 +338,11 @@ export default function PaymentScreen({ navigation, route }) {
       }
 
       const fallbackOrderRef = checkoutOrderRef || orderData?.orderRef || null;
-      if (!backendId && !fallbackOrderRef) {
-        Alert.alert('Order Not Ready', 'We are still syncing your order. Please return to checkout and try payment again.');
+      const fallbackCheckoutReference = verifiedCheckoutReference || orderData?.checkoutReference || null;
+      const hasAnyCheckoutIdentity = Boolean(backendId || fallbackOrderRef || fallbackCheckoutReference);
+
+      if (!hasAnyCheckoutIdentity) {
+        Alert.alert('Missing Order', 'This payment cannot continue because order identity is missing. Please place the order again.');
         setIsProcessing(false);
         return;
       }
@@ -357,7 +360,7 @@ export default function PaymentScreen({ navigation, route }) {
         paymentMethod: selectedPaymentMethod,
         orderRef: fallbackOrderRef || orderData?.orderRef || null,
         paymentReference: referenceNumber,
-        checkoutReference: verifiedCheckoutReference || orderData?.checkoutReference || null,
+        checkoutReference: fallbackCheckoutReference,
         status: isPaymongo ? 'pending_payment' : 'payment_verified', // align with timeline stage
         backendOrderId: backendId || orderData?.backendOrderId || null,
         id: backendId || orderData?.backendOrderId || null, // Also store as 'id' for compatibility
@@ -378,8 +381,9 @@ export default function PaymentScreen({ navigation, route }) {
           const basePaymongoMeta = {
             paymentOption,
             deliveryType: isPickupOrder ? 'pickup' : 'deliver',
-            // If backend ID is missing, use order_ref fallback only.
+            // Identity precedence: order_id -> order_ref -> checkout_reference (last resort).
             orderRef: backendId ? undefined : fallbackOrderRef,
+            checkoutReference: backendId || fallbackOrderRef ? undefined : fallbackCheckoutReference,
           };
 
           const downpaymentMeta = paymentOption === 'downpayment'
