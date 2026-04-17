@@ -91,6 +91,25 @@
     .filter-section {
         @apply bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-200;
     }
+
+    .status-chip-filter {
+        @apply px-4 py-2 rounded-full border text-sm font-semibold transition-all duration-200;
+        border-color: #d1d5db;
+        color: #374151;
+        background-color: #ffffff;
+    }
+
+    .status-chip-filter:hover {
+        border-color: #800000;
+        color: #800000;
+        background-color: #fff5f5;
+    }
+
+    .status-chip-filter.active {
+        border-color: #800000;
+        background-color: #800000;
+        color: #ffffff;
+    }
     
     /* Responsive */
     @media (max-width: 768px) {
@@ -252,15 +271,18 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
-                        <select name="status" onchange="document.getElementById('filterForm').submit()" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000] transition-all duration-300">
-                            <option value="">All Statuses</option>
-                            <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
-                            <option value="processing" {{ request('status') == 'processing' ? 'selected' : '' }}>Processing</option>
-                            <option value="shipped" {{ request('status') == 'shipped' ? 'selected' : '' }}>Shipped</option>
-                            <option value="delivered" {{ request('status') == 'delivered' ? 'selected' : '' }}>Delivered</option>
-                            <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
-                            <option value="refunded" {{ request('status') == 'refunded' ? 'selected' : '' }}>Refunded</option>
-                        </select>
+                        @php $activeStatusFilter = (string) request('status', ''); @endphp
+                        <input type="hidden" name="status" id="statusFilterInput" value="{{ $activeStatusFilter }}">
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" class="status-chip-filter {{ $activeStatusFilter === '' ? 'active' : '' }}" data-status="">All</button>
+                            <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'pending' ? 'active' : '' }}" data-status="pending">Pending</button>
+                            <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'processing' ? 'active' : '' }}" data-status="processing">Processing</button>
+                            <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'shipped' ? 'active' : '' }}" data-status="shipped">Shipped</button>
+                            <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'delivered' ? 'active' : '' }}" data-status="delivered">Delivered</button>
+                            <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'cancellation_requested' ? 'active' : '' }}" data-status="cancellation_requested">Cancel Requested</button>
+                            <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'cancelled' ? 'active' : '' }}" data-status="cancelled">Cancelled</button>
+                            <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'refunded' ? 'active' : '' }}" data-status="refunded">Refunded</button>
+                        </div>
                     </div>
                     
                     <div>
@@ -419,5 +441,23 @@
         url.searchParams.set('per_page', value);
         window.location = url.toString();
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const filterForm = document.getElementById('filterForm');
+        const statusInput = document.getElementById('statusFilterInput');
+        const statusChips = document.querySelectorAll('.status-chip-filter');
+
+        if (!filterForm || !statusInput || statusChips.length === 0) {
+            return;
+        }
+
+        statusChips.forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                const targetStatus = chip.getAttribute('data-status') || '';
+                statusInput.value = targetStatus;
+                filterForm.submit();
+            });
+        });
+    });
 </script>
 @endsection
