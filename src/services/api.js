@@ -597,9 +597,6 @@ class ApiService {
 
       if (trimmedOrderRef) {
         payload.order_ref = trimmedOrderRef;
-      } else if (paymentMeta.checkoutReference) {
-        // Last-resort fallback only when order_ref is unavailable.
-        payload.checkout_reference = paymentMeta.checkoutReference;
       }
     }
 
