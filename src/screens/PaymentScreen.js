@@ -357,7 +357,7 @@ export default function PaymentScreen({ navigation, route }) {
       const fallbackOrderRef = checkoutOrderRef || orderData?.orderRef || null;
       const fallbackCheckoutReference = verifiedCheckoutReference || orderData?.checkoutReference || null;
       const hasAnyCheckoutIdentity = Boolean(backendId || fallbackOrderRef || fallbackCheckoutReference);
-      const hasPaymongoIdentity = Boolean(backendId);
+      const hasPaymongoIdentity = Boolean(backendId || fallbackCheckoutReference || fallbackOrderRef);
 
       if (!hasAnyCheckoutIdentity) {
         Alert.alert('Missing Order', 'This payment cannot continue because order identity is missing. Please place the order again.');
@@ -366,7 +366,7 @@ export default function PaymentScreen({ navigation, route }) {
       }
 
       if (isPaymongo && !hasPaymongoIdentity) {
-        Alert.alert('Order Still Syncing', 'Your order was created, but payment is still syncing. Please wait a few seconds and tap Continue to Payment again.');
+        Alert.alert('Missing Order', 'This payment cannot continue because order identity is missing. Please place the order again.');
         setIsProcessing(false);
         return;
       }
@@ -405,6 +405,8 @@ export default function PaymentScreen({ navigation, route }) {
           const basePaymongoMeta = {
             paymentOption,
             deliveryType: isPickupOrder ? 'pickup' : 'deliver',
+            checkoutReference: backendId ? undefined : (fallbackCheckoutReference || undefined),
+            orderRef: backendId ? undefined : (fallbackOrderRef || undefined),
           };
 
           const downpaymentMeta = paymentOption === 'downpayment'
@@ -425,6 +427,29 @@ export default function PaymentScreen({ navigation, route }) {
               ...downpaymentMeta,
             }
           );
+
+          // If checkout_reference is stale, retry with order_ref only.
+          const firstAttemptMessage = String(
+            paymongoCheckout?.error
+            || paymongoCheckout?.data?.message
+            || ''
+          ).toLowerCase();
+          const isCheckoutReferenceMismatch =
+            firstAttemptMessage.includes('checkout reference mismatch')
+            || firstAttemptMessage.includes('checkout_reference');
+
+          if (!paymongoCheckout?.success && !backendId && isCheckoutReferenceMismatch && fallbackOrderRef) {
+            paymongoCheckout = await ApiService.createPaymongoCheckout(
+              null,
+              {},
+              {
+                ...basePaymongoMeta,
+                ...downpaymentMeta,
+                checkoutReference: undefined,
+                orderRef: fallbackOrderRef,
+              }
+            );
+          }
 
           // Retry once with the leanest possible payload for transient upstream 502s.
           const firstAttemptFailed = !paymongoCheckout?.success;
