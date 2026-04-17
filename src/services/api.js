@@ -578,6 +578,7 @@ class ApiService {
       payment_option: paymentMeta.paymentOption,
       // Only send downpayment rate for partial-payment flows.
       downpayment_rate: isDownpayment ? paymentMeta.downpaymentRate : undefined,
+      order_ref: paymentMeta.orderRef,
       amount_due_now: paymentMeta.amountDueNow,
       total_amount: paymentMeta.totalAmount,
       delivery_type: paymentMeta.deliveryType,

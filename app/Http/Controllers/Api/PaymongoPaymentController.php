@@ -19,6 +19,7 @@ class PaymongoPaymentController extends Controller
             'cancel_url'  => 'nullable|url',
             'payment_option' => 'nullable|string|in:full,downpayment',
             'downpayment_rate' => 'nullable|numeric|min:1|max:100',
+            'order_ref' => 'nullable|string|max:120',
             'amount_due_now' => 'nullable|numeric|min:0',
             'total_amount' => 'nullable|numeric|min:0',
             'delivery_type' => 'nullable|string|in:pickup,deliver,delivery',
@@ -33,6 +34,19 @@ class PaymongoPaymentController extends Controller
                 'success' => false,
                 'message' => 'Unauthorized order access.',
             ], 403);
+        }
+
+        $requestedOrderRef = trim((string) ($validated['order_ref'] ?? ''));
+        if ($requestedOrderRef !== '' && strcasecmp((string) ($order->order_ref ?? ''), $requestedOrderRef) !== 0) {
+            $orderByRef = Order::with(['items.product', 'user'])
+                ->where('user_id', $request->user()->id)
+                ->where('order_ref', $requestedOrderRef)
+                ->latest('id')
+                ->first();
+
+            if ($orderByRef) {
+                $order = $orderByRef;
+            }
         }
 
         try {
@@ -121,6 +135,9 @@ class PaymongoPaymentController extends Controller
 
                     $order->save();
                 }
+            } elseif (!is_null($clientRequestedAmount) && $orderTotal > 0) {
+                $options['amount_override'] = max(0, min($orderTotal, $clientRequestedAmount));
+                $options['is_downpayment_override'] = false;
             }
 
             $result = $service->createCheckout($order, $options);

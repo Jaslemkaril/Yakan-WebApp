@@ -279,6 +279,7 @@ export default function PaymentScreen({ navigation, route }) {
             {
               paymentOption,
               downpaymentRate,
+              orderRef: orderData?.orderRef,
               amountDueNow: finalTotal,
               totalAmount: fullOrderTotal,
               deliveryType: isPickupOrder ? 'pickup' : 'deliver',
