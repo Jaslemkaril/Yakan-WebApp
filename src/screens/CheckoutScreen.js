@@ -608,6 +608,53 @@ const CheckoutScreen = ({ navigation }) => {
       }
 
       const resBody = response.data || {};
+      const normalizeOrderId = (value) => {
+        if (value === null || value === undefined || value === '') return null;
+        const parsed = Number(value);
+        return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : null;
+      };
+
+      const normalizeOrderRef = (value) => {
+        if (typeof value !== 'string') return null;
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+      };
+
+      const extractIdentityDeep = (payload) => {
+        const queue = [payload];
+        const seen = new Set();
+        let foundId = null;
+        let foundRef = null;
+
+        while (queue.length && (!foundId || !foundRef)) {
+          const current = queue.shift();
+          if (!current || typeof current !== 'object') continue;
+          if (seen.has(current)) continue;
+          seen.add(current);
+
+          foundId = foundId
+            || normalizeOrderId(current?.id)
+            || normalizeOrderId(current?.order_id)
+            || normalizeOrderId(current?.orderId)
+            || normalizeOrderId(current?.backendOrderId);
+
+          foundRef = foundRef
+            || normalizeOrderRef(current?.order_ref)
+            || normalizeOrderRef(current?.tracking_number)
+            || normalizeOrderRef(current?.order_number)
+            || normalizeOrderRef(current?.orderRef);
+
+          Object.values(current).forEach((value) => {
+            if (value && typeof value === 'object') queue.push(value);
+          });
+        }
+
+        return {
+          orderId: foundId,
+          orderRef: foundRef,
+        };
+      };
+
       const createdOrder =
         resBody?.data?.data
         || resBody?.data?.order
@@ -644,6 +691,10 @@ const CheckoutScreen = ({ navigation }) => {
         || null;
 
       let orderRef = serverOrderRef || null;
+
+      const deepIdentity = extractIdentityDeep(resBody);
+      backendOrderId = normalizeOrderId(backendOrderId) || deepIdentity.orderId || null;
+      orderRef = normalizeOrderRef(orderRef) || deepIdentity.orderRef || null;
 
       if (!backendOrderId || !orderRef) {
         const resolveOrderIdentity = async () => {
@@ -700,11 +751,13 @@ const CheckoutScreen = ({ navigation }) => {
                 || matchedOrder?.orderId
                 || matchedOrder?.backendOrderId
                 || backendOrderId;
+              backendOrderId = normalizeOrderId(backendOrderId) || backendOrderId;
               orderRef =
                 matchedOrder?.order_ref
                 || matchedOrder?.tracking_number
                 || matchedOrder?.order_number
                 || orderRef;
+              orderRef = normalizeOrderRef(orderRef) || orderRef;
             }
           } catch (lookupError) {
             console.log('[Checkout] Could not resolve order identity from orders list:', lookupError?.message || lookupError);
@@ -717,6 +770,10 @@ const CheckoutScreen = ({ navigation }) => {
       }
 
       if (!backendOrderId && !orderRef) {
+        // Order was created successfully; clear checkout state to avoid duplicate submissions.
+        await clearCart();
+        setCheckoutItems([]);
+
         Alert.alert(
           'Order Sync In Progress',
           'Your order was created, but payment details are still syncing. Please open My Orders and continue payment there.',
