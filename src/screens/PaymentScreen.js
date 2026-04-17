@@ -201,6 +201,40 @@ export default function PaymentScreen({ navigation, route }) {
       let backendId = orderData.backendOrderId || orderData.id || null;
       let checkoutOrderRef = orderData?.orderRef || null;
 
+      // Recover backend ID when checkout did not return it immediately.
+      if (!backendId && (orderData?.checkoutReference || orderData?.orderRef)) {
+        try {
+          const ordersResponse = await ApiService.getOrders();
+          if (ordersResponse.success) {
+            const ordersPayload =
+              ordersResponse.data?.data?.data
+              || ordersResponse.data?.data
+              || ordersResponse.data
+              || [];
+            const orders = Array.isArray(ordersPayload) ? ordersPayload : [];
+
+            const matchedByCheckoutReference = orderData?.checkoutReference
+              ? orders.find(order => String(order?.payment_reference || '') === String(orderData.checkoutReference))
+              : null;
+
+            const matchedByOrderRef = !matchedByCheckoutReference && orderData?.orderRef
+              ? orders.find(order => {
+                  const candidateRef = order?.order_ref || order?.tracking_number || order?.order_number || '';
+                  return String(candidateRef) === String(orderData.orderRef);
+                })
+              : null;
+
+            const matchedOrder = matchedByCheckoutReference || matchedByOrderRef || null;
+            if (matchedOrder?.id) {
+              backendId = matchedOrder.id;
+              checkoutOrderRef = matchedOrder?.order_ref || matchedOrder?.tracking_number || matchedOrder?.order_number || checkoutOrderRef;
+            }
+          }
+        } catch (recoveryErr) {
+          // Keep flow deterministic; validation below will handle unresolved IDs.
+        }
+      }
+
       // Defensive guard: if checkout handed us a stale backend ID, resolve by order reference.
       if (backendId && orderData?.orderRef) {
         try {
@@ -262,6 +296,7 @@ export default function PaymentScreen({ navigation, route }) {
         downpaymentRate,
         paymentMethod: selectedPaymentMethod,
         paymentReference: referenceNumber,
+        checkoutReference: orderData?.checkoutReference || null,
         status: isPaymongo ? 'pending_payment' : 'payment_verified', // align with timeline stage
         backendOrderId: backendId,
         id: backendId, // Also store as 'id' for compatibility
@@ -377,6 +412,7 @@ export default function PaymentScreen({ navigation, route }) {
         downpaymentRate,
         paymentMethod: selectedPaymentMethod,
         paymentReference: referenceNumber,
+        checkoutReference: orderData?.checkoutReference || null,
         backendOrderId: orderData.backendOrderId || orderData.id || null,
         id: orderData.backendOrderId || orderData.id || null,
         status: isPaymongo ? 'pending_payment' : 'payment_verified',

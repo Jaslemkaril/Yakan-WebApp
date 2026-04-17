@@ -549,6 +549,9 @@ const CheckoutScreen = ({ navigation }) => {
       return;
     }
     
+    const checkoutReference = `MOB-${Date.now()}-${Math.floor(Math.random() * 100000).toString().padStart(5, '0')}`;
+    const checkoutStartedAt = Date.now();
+
     const actualShippingFee = deliveryOption === 'pickup' ? 0 : shippingFee;
     const actualTotal = Math.max(0, subtotal + actualShippingFee - discount);
     const actualDownpaymentAmount = effectivePaymentOption === 'downpayment'
@@ -573,6 +576,7 @@ const CheckoutScreen = ({ navigation }) => {
       shipping_street: resolvedShippingAddress.street || '',
       payment_method: 'paymongo',
       payment_status: 'pending',
+      payment_reference: checkoutReference,
       delivery_type: deliveryOption || 'deliver',
       items: itemsToCheckout.map(item => ({
         product_id: item.product_id || item.id,
@@ -591,7 +595,7 @@ const CheckoutScreen = ({ navigation }) => {
       downpayment_rate: effectiveDownpaymentRate,
       downpayment_amount: actualDownpaymentAmount,
       remaining_balance: actualRemainingBalance,
-      notes: 'Order from mobile app',
+      notes: `Order from mobile app [checkout_ref:${checkoutReference}]`,
     };
 
     setIsSubmittingOrder(true);
@@ -639,9 +643,9 @@ const CheckoutScreen = ({ navigation }) => {
         || resBody?.data?.order_number
         || null;
 
-      let orderRef = serverOrderRef || generateOrderRef();
+      let orderRef = serverOrderRef || null;
 
-      if (!backendOrderId && serverOrderRef) {
+      if (!backendOrderId) {
         try {
           const ordersResponse = await ApiService.getOrders();
           if (ordersResponse.success) {
@@ -652,9 +656,25 @@ const CheckoutScreen = ({ navigation }) => {
               || [];
             const orders = Array.isArray(ordersPayload) ? ordersPayload : [];
 
-            const matchedOrder =
-              orders.find(order => String(order?.order_ref || order?.tracking_number || order?.order_number || '') === String(serverOrderRef))
-              || null;
+            const matchedByCheckoutReference = orders.find(order => {
+              return String(order?.payment_reference || '') === String(checkoutReference);
+            });
+
+            const matchedByServerRef = !matchedByCheckoutReference && serverOrderRef
+              ? orders.find(order => String(order?.order_ref || order?.tracking_number || order?.order_number || '') === String(serverOrderRef))
+              : null;
+
+            const matchedByRecentSignature = !matchedByCheckoutReference && !matchedByServerRef
+              ? orders.find(order => {
+                  const candidateCreatedAt = order?.created_at ? new Date(order.created_at).getTime() : 0;
+                  const withinRecentWindow = candidateCreatedAt > 0 && Math.abs(checkoutStartedAt - candidateCreatedAt) <= 5 * 60 * 1000;
+                  const candidateTotal = Number(order?.total_amount ?? order?.total ?? 0);
+                  const totalMatches = candidateTotal > 0 && Math.abs(candidateTotal - actualTotal) <= 0.01;
+                  return withinRecentWindow && totalMatches;
+                })
+              : null;
+
+            const matchedOrder = matchedByCheckoutReference || matchedByServerRef || matchedByRecentSignature || null;
 
             if (matchedOrder) {
               backendOrderId =
@@ -676,11 +696,10 @@ const CheckoutScreen = ({ navigation }) => {
       }
 
       if (!backendOrderId) {
-        Alert.alert('Order Placed', 'Your order was created. Please open My Orders to continue payment.');
-        await clearCart();
-        setCheckoutItems([]);
-        navigation.navigate('Orders');
-        return;
+        console.log('[Checkout] Order created but backend ID not immediately available. Continuing to payment for one more lookup.', {
+          checkoutReference,
+          serverOrderRef,
+        });
       }
 
       // Align with website flow: cart is cleared as soon as order is created.
@@ -688,7 +707,8 @@ const CheckoutScreen = ({ navigation }) => {
       setCheckoutItems([]);
 
       const orderData = {
-        orderRef,
+        orderRef: orderRef || generateOrderRef(),
+        checkoutReference,
         backendOrderId,
         id: backendOrderId,
         date: new Date().toISOString(),
