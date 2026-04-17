@@ -313,11 +313,19 @@ class OrderController extends Controller
                 ]);
             }
 
+            $createdOrderPayload = tap($order->load('items'), function (Order $savedOrder): void {
+                $savedOrder->setAttribute('amount_due_now', $savedOrder->getAmountDueNow());
+            });
+
+            // Backward-compatible top-level fields for older mobile clients
+            // that read create-order response IDs from the first response level.
             return response()->json([
                 'success' => true,
-                'data' => tap($order->load('items'), function (Order $savedOrder): void {
-                    $savedOrder->setAttribute('amount_due_now', $savedOrder->getAmountDueNow());
-                }),
+                'id' => $createdOrderPayload->id,
+                'order_id' => $createdOrderPayload->id,
+                'order_ref' => $createdOrderPayload->order_ref,
+                'tracking_number' => $createdOrderPayload->tracking_number,
+                'data' => $createdOrderPayload,
                 'message' => 'Order created successfully'
             ], 201);
         } catch (ValidationException $e) {
