@@ -73,26 +73,39 @@ class PaymongoPaymentController extends Controller
                 ->first();
         }
 
+        $targetAmount = null;
+        if (!is_null($hintTotalAmount) && $hintTotalAmount > 0) {
+            $targetAmount = $hintTotalAmount;
+        } elseif (!is_null($hintAmountDueNow) && $hintAmountDueNow > 0) {
+            $targetAmount = $hintAmountDueNow;
+        }
+
+        $recentOrders = collect();
         if (!$order) {
-            $targetAmount = null;
-            if (!is_null($hintTotalAmount) && $hintTotalAmount > 0) {
-                $targetAmount = $hintTotalAmount;
-            } elseif (!is_null($hintAmountDueNow) && $hintAmountDueNow > 0) {
-                $targetAmount = $hintAmountDueNow;
-            }
+            $recentOrders = Order::with(['items.product', 'user'])
+                ->where('user_id', $authUserId)
+                ->latest()
+                ->limit(50)
+                ->get();
 
             if (!is_null($targetAmount)) {
-                $recentOrders = Order::with(['items.product', 'user'])
-                    ->where('user_id', $authUserId)
-                    ->where('payment_method', 'paymongo')
-                    ->where('created_at', '>=', now()->subMinutes(20))
-                    ->latest()
-                    ->limit(20)
-                    ->get();
-
+                // Prefer exact total match first.
                 $order = $recentOrders->first(function (Order $candidate) use ($targetAmount) {
                     $candidateTotal = (float) ($candidate->total_amount ?? $candidate->total ?? 0);
                     return $candidateTotal > 0 && abs($candidateTotal - $targetAmount) <= 0.01;
+                });
+            }
+
+            if (!$order) {
+                // Fallback: most recent pending PayMongo order.
+                $order = $recentOrders->first(function (Order $candidate) {
+                    $paymentMethod = strtolower((string) ($candidate->payment_method ?? ''));
+                    $paymentStatus = strtolower((string) ($candidate->payment_status ?? ''));
+                    $orderStatus = strtolower((string) ($candidate->status ?? ''));
+
+                    return $paymentMethod === 'paymongo'
+                        && in_array($paymentStatus, ['pending', 'unpaid', 'pending_payment', ''], true)
+                        && in_array($orderStatus, ['pending', 'pending_confirmation', 'confirmed', 'processing'], true);
                 });
             }
         }
@@ -101,6 +114,17 @@ class PaymongoPaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Order not found for the provided checkout identity.',
+                'data' => [
+                    'user_id' => $authUserId,
+                    'received' => [
+                        'order_id' => $requestedOrderId,
+                        'order_ref' => $requestedOrderRef,
+                        'checkout_reference' => $requestedCheckoutReference,
+                        'total_amount' => $hintTotalAmount,
+                        'amount_due_now' => $hintAmountDueNow,
+                    ],
+                    'recent_orders_checked' => $recentOrders->count(),
+                ],
             ], 404);
         }
 
