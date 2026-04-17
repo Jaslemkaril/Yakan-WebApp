@@ -50,13 +50,6 @@ class PaymongoPaymentController extends Controller
             }
 
             $requestedPaymentOption = strtolower((string) ($validated['payment_option'] ?? $order->payment_option ?? 'full'));
-
-            // Keep business rule aligned with website checkout.
-            if ($deliveryType !== 'pickup' && $isRequestedDownpayment) {
-                $isRequestedDownpayment = false;
-                $requestedPaymentOption = 'full';
-            }
-
             $requestedAmountDueNow = isset($validated['amount_due_now'])
                 ? (float) $validated['amount_due_now']
                 : null;
@@ -67,27 +60,39 @@ class PaymongoPaymentController extends Controller
                 ? (bool) $validated['is_downpayment_override']
                 : null;
 
+            $requestedDownpaymentRate = isset($validated['downpayment_rate'])
+                ? (float) $validated['downpayment_rate']
+                : null;
+
+            $clientRequestedAmount = null;
+            if (!is_null($requestedAmountOverride) && $requestedAmountOverride > 0) {
+                $clientRequestedAmount = $requestedAmountOverride;
+            } elseif (!is_null($requestedAmountDueNow) && $requestedAmountDueNow > 0) {
+                $clientRequestedAmount = $requestedAmountDueNow;
+            }
+
+            if (!is_null($clientRequestedAmount)) {
+                $cap = $orderTotal > 0 ? $orderTotal : $clientRequestedAmount;
+                $clientRequestedAmount = max(0, min($cap, $clientRequestedAmount));
+            }
+
             $isRequestedDownpayment = $requestedPaymentOption === 'downpayment'
-                || (!is_null($requestedAmountDueNow) && $orderTotal > 0 && ($requestedAmountDueNow + 0.01) < $orderTotal);
+                || (!is_null($clientRequestedAmount) && $orderTotal > 0 && ($clientRequestedAmount + 0.01) < $orderTotal);
 
             if (!is_null($explicitDownpaymentOverride)) {
                 $isRequestedDownpayment = $explicitDownpaymentOverride;
             }
 
-            $requestedDownpaymentRate = isset($validated['downpayment_rate'])
-                ? (float) $validated['downpayment_rate']
-                : null;
+            // Keep business rule aligned with website checkout.
+            if ($deliveryType !== 'pickup' && $isRequestedDownpayment) {
+                $isRequestedDownpayment = false;
+                $requestedPaymentOption = 'full';
+            }
 
             $payableNowAmount = $order->getAmountDueNow();
 
-            if (!is_null($requestedAmountDueNow) && $requestedAmountDueNow > 0) {
-                $cap = $orderTotal > 0 ? $orderTotal : $requestedAmountDueNow;
-                $payableNowAmount = max(0, min($cap, $requestedAmountDueNow));
-            }
-
-            if (!is_null($requestedAmountOverride) && $requestedAmountOverride > 0) {
-                $cap = $orderTotal > 0 ? $orderTotal : $requestedAmountOverride;
-                $payableNowAmount = max(0, min($cap, $requestedAmountOverride));
+            if (!is_null($clientRequestedAmount)) {
+                $payableNowAmount = $clientRequestedAmount;
             }
 
             if ($isRequestedDownpayment) {
@@ -97,13 +102,7 @@ class PaymongoPaymentController extends Controller
                     $payableNowAmount = round($orderTotal * ($rate / 100), 2);
                 }
 
-                if ($payableNowAmount <= 0 && $orderTotal > 0) {
-                    $rate = $requestedDownpaymentRate ?? (float) ($order->downpayment_rate ?? 50);
-                    $rate = min(99, max(1, $rate));
-                    $payableNowAmount = round($orderTotal * ($rate / 100), 2);
-                }
-
-                if ($payableNowAmount > 0 && $orderTotal > 0 && ($payableNowAmount + 0.01) < $orderTotal) {
+                if ($deliveryType === 'pickup' && $payableNowAmount > 0 && $orderTotal > 0 && ($payableNowAmount + 0.01) < $orderTotal) {
                     $options['amount_override'] = max(0, min($orderTotal, $payableNowAmount));
                     $options['is_downpayment_override'] = true;
 
