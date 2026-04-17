@@ -199,6 +199,7 @@ export default function PaymentScreen({ navigation, route }) {
 
     try {
       let backendId = orderData.backendOrderId || orderData.id || null;
+      let checkoutOrderRef = orderData?.orderRef || null;
 
       // Defensive guard: if checkout handed us a stale backend ID, resolve by order reference.
       if (backendId && orderData?.orderRef) {
@@ -207,6 +208,10 @@ export default function PaymentScreen({ navigation, route }) {
           const verifiedOrder = verifyOrderResponse?.data?.data || verifyOrderResponse?.data || null;
           const verifiedOrderRef = verifiedOrder?.order_ref || verifiedOrder?.tracking_number || verifiedOrder?.order_number || null;
           const verifiedOrderTotal = Number(verifiedOrder?.total_amount ?? verifiedOrder?.total ?? 0);
+
+          if (verifiedOrderRef) {
+            checkoutOrderRef = verifiedOrderRef;
+          }
 
           const localOrderRef = String(orderData.orderRef || '');
           const localOrderTotal = Number(fullOrderTotal || 0);
@@ -230,6 +235,7 @@ export default function PaymentScreen({ navigation, route }) {
 
               if (matchedByRef?.id) {
                 backendId = matchedByRef.id;
+                checkoutOrderRef = matchedByRef?.order_ref || matchedByRef?.tracking_number || matchedByRef?.order_number || checkoutOrderRef;
               }
             }
           }
@@ -279,7 +285,7 @@ export default function PaymentScreen({ navigation, route }) {
             {
               paymentOption,
               downpaymentRate,
-              orderRef: orderData?.orderRef,
+              orderRef: checkoutOrderRef,
               amountDueNow: finalTotal,
               totalAmount: fullOrderTotal,
               deliveryType: isPickupOrder ? 'pickup' : 'deliver',

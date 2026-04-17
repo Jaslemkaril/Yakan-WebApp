@@ -38,15 +38,13 @@ class PaymongoPaymentController extends Controller
 
         $requestedOrderRef = trim((string) ($validated['order_ref'] ?? ''));
         if ($requestedOrderRef !== '' && strcasecmp((string) ($order->order_ref ?? ''), $requestedOrderRef) !== 0) {
-            $orderByRef = Order::with(['items.product', 'user'])
-                ->where('user_id', $request->user()->id)
-                ->where('order_ref', $requestedOrderRef)
-                ->latest('id')
-                ->first();
-
-            if ($orderByRef) {
-                $order = $orderByRef;
-            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Order identity mismatch. Please refresh checkout and try again.',
+                'errors' => [
+                    'order_ref' => ['Provided order reference does not match the selected order ID.'],
+                ],
+            ], 422);
         }
 
         try {
