@@ -488,6 +488,9 @@
                                 @foreach($refundEvidence as $evidencePath)
                                     @php
                                         $evidenceUrl = route('orders.refund-evidence.view', ['refundRequest' => $refundRequest->id, 'index' => $loop->index]);
+                                        $rawEvidencePath = str_replace('\\', '/', ltrim((string) $evidencePath, '/'));
+                                        $publicEvidencePath = ltrim(str_replace(['public/', 'storage/'], '', $rawEvidencePath), '/');
+                                        $fallbackEvidenceUrl = asset('storage/' . $publicEvidencePath);
                                         $ext = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
                                         $isImageEvidence = in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true);
                                         $isVideoEvidence = in_array($ext, ['mp4', 'mov', 'webm'], true);
@@ -495,7 +498,7 @@
 
                                     @if($isImageEvidence)
                                         <a href="{{ $evidenceUrl }}" target="_blank" class="block rounded-lg overflow-hidden border border-gray-200 bg-white" title="Open full image">
-                                            <img src="{{ $evidenceUrl }}" alt="Refund evidence" class="w-24 h-24 object-cover hover:opacity-90 transition-opacity">
+                                            <img src="{{ $evidenceUrl }}" onerror="this.onerror=null;this.src='{{ $fallbackEvidenceUrl }}';" alt="Refund evidence" class="w-24 h-24 object-cover hover:opacity-90 transition-opacity">
                                         </a>
                                     @elseif($isVideoEvidence)
                                         <a href="{{ $evidenceUrl }}" target="_blank" class="inline-flex items-center px-3 py-2 rounded-lg border border-blue-300 text-sm text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">

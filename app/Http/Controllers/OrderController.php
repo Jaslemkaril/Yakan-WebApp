@@ -931,7 +931,7 @@ class OrderController extends Controller
             abort(404);
         }
 
-        $path = trim((string) $evidence[$index]);
+        $path = str_replace('\\', '/', trim((string) $evidence[$index]));
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             return redirect()->away($path);
         }
@@ -945,8 +945,27 @@ class OrderController extends Controller
             $normalizedPath = substr($normalizedPath, strlen('public/'));
         }
 
-        if (Storage::disk('public')->exists($normalizedPath)) {
-            return Storage::disk('public')->response($normalizedPath);
+        $candidatePaths = array_values(array_unique(array_filter([
+            $normalizedPath,
+            ltrim($path, '/'),
+            'public/' . ltrim($normalizedPath, '/'),
+        ])));
+
+        foreach ($candidatePaths as $candidatePath) {
+            $candidatePath = str_replace('\\', '/', $candidatePath);
+
+            if (Storage::disk('public')->exists($candidatePath)) {
+                return response()->file(Storage::disk('public')->path($candidatePath));
+            }
+
+            if (Storage::disk('local')->exists($candidatePath)) {
+                return response()->file(Storage::disk('local')->path($candidatePath));
+            }
+
+            $publicStoragePath = public_path('storage/' . ltrim(str_replace(['public/', 'storage/'], '', $candidatePath), '/'));
+            if (is_file($publicStoragePath)) {
+                return response()->file($publicStoragePath);
+            }
         }
 
         abort(404);
