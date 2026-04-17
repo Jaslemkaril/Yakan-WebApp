@@ -120,7 +120,8 @@ export default function PaymentScreen({ navigation, route }) {
     0,
     Number(orderData?.total) || (subtotalAmount + shippingAmount - discountAmount)
   );
-  const paymentOption = (orderData?.paymentOption || 'full').toLowerCase() === 'downpayment'
+  const isPickupOrder = (orderData?.deliveryOption || '').toLowerCase() === 'pickup';
+  const paymentOption = isPickupOrder && (orderData?.paymentOption || 'full').toLowerCase() === 'downpayment'
     ? 'downpayment'
     : 'full';
   const downpaymentRate = Number(orderData?.downpaymentRate)

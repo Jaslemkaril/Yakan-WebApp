@@ -95,6 +95,13 @@ const CheckoutScreen = ({ navigation }) => {
     }
   }, [selectedAddressId, deliveryOption]);
 
+  // Downpayment is allowed only for pickup orders.
+  useEffect(() => {
+    if (deliveryOption === 'deliver' && paymentOption !== 'full') {
+      setPaymentOption('full');
+    }
+  }, [deliveryOption, paymentOption]);
+
   const loadAvailableCoupons = async () => {
     try {
       const response = await ApiService.getAvailableCoupons();
@@ -292,12 +299,16 @@ const CheckoutScreen = ({ navigation }) => {
     );
   }
 
+  const supportsDownpayment = deliveryOption === 'pickup';
+  const effectivePaymentOption = supportsDownpayment ? paymentOption : 'full';
+  const effectiveDownpaymentRate = effectivePaymentOption === 'downpayment' ? DOWNPAYMENT_RATE : 100;
+
   const shippingFeeDisplay = deliveryOption === 'pickup' ? 0 : shippingFee;
   const subtotal = itemsToCheckout.reduce((total, item) => total + (item.price * item.quantity), 0);
   const discount = appliedCoupon ? Math.min(parseFloat(appliedCoupon.discount) || 0, shippingFeeDisplay) : 0;
   const orderTotal = Math.max(0, subtotal + shippingFeeDisplay - discount);
-  const downpaymentAmount = paymentOption === 'downpayment'
-    ? Number((orderTotal * (DOWNPAYMENT_RATE / 100)).toFixed(2))
+  const downpaymentAmount = effectivePaymentOption === 'downpayment'
+    ? Number((orderTotal * (effectiveDownpaymentRate / 100)).toFixed(2))
     : orderTotal;
   const remainingBalance = Math.max(0, Number((orderTotal - downpaymentAmount).toFixed(2)));
   const payableNow = downpaymentAmount;
@@ -524,8 +535,8 @@ const CheckoutScreen = ({ navigation }) => {
     
     const actualShippingFee = deliveryOption === 'pickup' ? 0 : shippingFee;
     const actualTotal = Math.max(0, subtotal + actualShippingFee - discount);
-    const actualDownpaymentAmount = paymentOption === 'downpayment'
-      ? Number((actualTotal * (DOWNPAYMENT_RATE / 100)).toFixed(2))
+    const actualDownpaymentAmount = effectivePaymentOption === 'downpayment'
+      ? Number((actualTotal * (effectiveDownpaymentRate / 100)).toFixed(2))
       : actualTotal;
     const actualRemainingBalance = Math.max(0, Number((actualTotal - actualDownpaymentAmount).toFixed(2)));
 
@@ -560,8 +571,8 @@ const CheckoutScreen = ({ navigation }) => {
       coupon_code: appliedCoupon?.code || null,
       total: actualTotal,
       total_amount: actualTotal,
-      payment_option: paymentOption,
-      downpayment_rate: paymentOption === 'downpayment' ? DOWNPAYMENT_RATE : 100,
+      payment_option: effectivePaymentOption,
+      downpayment_rate: effectiveDownpaymentRate,
       downpayment_amount: actualDownpaymentAmount,
       remaining_balance: actualRemainingBalance,
       notes: 'Order from mobile app',
@@ -605,8 +616,8 @@ const CheckoutScreen = ({ navigation }) => {
         total: actualTotal,
         payableNow: actualDownpaymentAmount,
         remainingBalance: actualRemainingBalance,
-        paymentOption,
-        downpaymentRate: paymentOption === 'downpayment' ? DOWNPAYMENT_RATE : 100,
+        paymentOption: effectivePaymentOption,
+        downpaymentRate: effectiveDownpaymentRate,
         status: 'pending_payment',
       };
 
@@ -780,15 +791,21 @@ const CheckoutScreen = ({ navigation }) => {
             <TouchableOpacity
               style={[
                 styles.deliveryOptionCard,
-                paymentOption === 'downpayment' && styles.deliveryOptionCardSelected,
+                effectivePaymentOption === 'downpayment' && styles.deliveryOptionCardSelected,
+                !supportsDownpayment && { opacity: 0.5 },
               ]}
-              onPress={() => setPaymentOption('downpayment')}
+              onPress={() => {
+                if (supportsDownpayment) {
+                  setPaymentOption('downpayment');
+                }
+              }}
+              disabled={!supportsDownpayment}
             >
               <View style={[
                 styles.deliveryRadio,
-                paymentOption === 'downpayment' && styles.deliveryRadioSelected,
+                effectivePaymentOption === 'downpayment' && styles.deliveryRadioSelected,
               ]}>
-                {paymentOption === 'downpayment' && <View style={styles.deliveryRadioInner} />}
+                {effectivePaymentOption === 'downpayment' && <View style={styles.deliveryRadioInner} />}
               </View>
               <View style={styles.deliveryOptionContent}>
                 <Ionicons name="cash-outline" size={28} color="#8B1A1A" style={styles.deliveryOptionIcon} />
@@ -799,6 +816,9 @@ const CheckoutScreen = ({ navigation }) => {
               </View>
             </TouchableOpacity>
           </View>
+          {!supportsDownpayment && (
+            <Text style={styles.noAddressText}>Downpayment is available only when Pick Up is selected.</Text>
+          )}
         </View>
 
         {/* Address Selection Section - Only show when delivery is selected */}
@@ -954,7 +974,7 @@ const CheckoutScreen = ({ navigation }) => {
           <View style={styles.orderItem}>
             <Text style={styles.orderItemText}>Payment Option</Text>
             <Text style={styles.orderItemPrice}>
-              {paymentOption === 'downpayment' ? `Downpayment (${DOWNPAYMENT_RATE}%)` : 'Full Payment'}
+              {effectivePaymentOption === 'downpayment' ? `Downpayment (${effectiveDownpaymentRate}%)` : 'Full Payment'}
             </Text>
           </View>
 
@@ -1023,7 +1043,7 @@ const CheckoutScreen = ({ navigation }) => {
             <Text style={styles.orderItemPrice}>₱{payableNow.toFixed(2)}</Text>
           </View>
 
-          {paymentOption === 'downpayment' && (
+          {effectivePaymentOption === 'downpayment' && (
             <View style={styles.orderItem}>
               <Text style={[styles.orderItemText, { color: '#92400E' }]}>Remaining Balance</Text>
               <Text style={[styles.orderItemPrice, { color: '#92400E' }]}>₱{remainingBalance.toFixed(2)}</Text>
