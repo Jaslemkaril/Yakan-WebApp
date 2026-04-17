@@ -145,7 +145,13 @@ class PaymongoPaymentController extends Controller
             ], 422);
         }
 
-        if ($requestedCheckoutReference !== '' && strcasecmp((string) ($order->payment_reference ?? ''), $requestedCheckoutReference) !== 0) {
+        $notesCheckoutTag = '[checkout_ref:' . $requestedCheckoutReference . ']';
+        $matchesPaymentReference = $requestedCheckoutReference !== ''
+            && strcasecmp((string) ($order->payment_reference ?? ''), $requestedCheckoutReference) === 0;
+        $matchesNotesCheckoutTag = $requestedCheckoutReference !== ''
+            && stripos((string) ($order->notes ?? ''), $notesCheckoutTag) !== false;
+
+        if ($requestedCheckoutReference !== '' && !$matchesPaymentReference && !$matchesNotesCheckoutTag) {
             return response()->json([
                 'success' => false,
                 'message' => 'Checkout reference mismatch. Please return to checkout and try again.',
