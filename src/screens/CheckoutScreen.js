@@ -750,7 +750,10 @@ const CheckoutScreen = ({ navigation }) => {
           return matchedByCheckoutReference || matchedByNotesReference || matchedByServerRef || matchedByRecentSignature || matchedRecentPaymongoPending || null;
         };
 
-        for (let attempt = 0; attempt < 10 && !backendOrderId; attempt += 1) {
+        const maxIdentityAttempts = 4;
+        const identityRetryDelayMs = 600;
+
+        for (let attempt = 0; attempt < maxIdentityAttempts && !backendOrderId; attempt += 1) {
           try {
             const matchedOrder = await resolveOrderIdentity();
             if (matchedOrder) {
@@ -772,8 +775,8 @@ const CheckoutScreen = ({ navigation }) => {
             console.log('[Checkout] Could not resolve order identity from orders list:', lookupError?.message || lookupError);
           }
 
-          if (!backendOrderId && attempt < 9) {
-            await new Promise(resolve => setTimeout(resolve, 1200));
+          if (!backendOrderId && attempt < (maxIdentityAttempts - 1)) {
+            await new Promise(resolve => setTimeout(resolve, identityRetryDelayMs));
           }
         }
       }

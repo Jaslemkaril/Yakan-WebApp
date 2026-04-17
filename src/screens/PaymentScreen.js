@@ -64,6 +64,7 @@ export default function PaymentScreen({ navigation, route }) {
   const [showPaymentInstructions, setShowPaymentInstructions] = useState(false);
   const [referenceNumber, setReferenceNumber] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingMessage, setProcessingMessage] = useState('Preparing secure checkout...');
   const [receiptImage, setReceiptImage] = useState(null);
   const [paymentAccounts, setPaymentAccounts] = useState(DEFAULT_PAYMENT_ACCOUNTS);
 
@@ -195,6 +196,7 @@ export default function PaymentScreen({ navigation, route }) {
   };
 
   const handleConfirmPayment = async () => {
+    setProcessingMessage('Preparing secure checkout...');
     setIsProcessing(true);
 
     try {
@@ -204,8 +206,9 @@ export default function PaymentScreen({ navigation, route }) {
 
       // Recover backend ID when checkout did not return it immediately.
       if (!backendId && (orderData?.checkoutReference || orderData?.orderRef)) {
+        setProcessingMessage('Syncing order details...');
         try {
-          const ordersResponse = await ApiService.getOrders();
+          const ordersResponse = await ApiService.getOrders({ limit: 50 });
           if (ordersResponse.success) {
             const ordersPayload =
               ordersResponse.data?.data?.data
@@ -289,8 +292,10 @@ export default function PaymentScreen({ navigation, route }) {
         const desiredOrderRef = String(checkoutOrderRef || orderData?.orderRef || '').trim();
         const targetTotal = Number(fullOrderTotal || 0);
         const useStrictCheckoutReference = desiredCheckoutRef.length > 0;
+        const maxIdentityAttempts = 4;
+        const identityRetryDelayMs = 600;
 
-        for (let attempt = 0; attempt < 10 && !backendId; attempt += 1) {
+        for (let attempt = 0; attempt < maxIdentityAttempts && !backendId; attempt += 1) {
           try {
             const ordersResponse = await ApiService.getOrders({ limit: 100 });
             if (ordersResponse.success) {
@@ -348,8 +353,8 @@ export default function PaymentScreen({ navigation, route }) {
             // Continue retrying below.
           }
 
-          if (!backendId && attempt < 9) {
-            await new Promise(resolve => setTimeout(resolve, 1200));
+          if (!backendId && attempt < (maxIdentityAttempts - 1)) {
+            await new Promise(resolve => setTimeout(resolve, identityRetryDelayMs));
           }
         }
       }
@@ -402,6 +407,7 @@ export default function PaymentScreen({ navigation, route }) {
       // For PayMongo: open checkout in browser and detect redirect back to app
       if (isPaymongo) {
         try {
+          setProcessingMessage('Opening secure PayMongo checkout...');
           const basePaymongoMeta = {
             paymentOption,
             deliveryType: isPickupOrder ? 'pickup' : 'deliver',
@@ -594,6 +600,20 @@ export default function PaymentScreen({ navigation, route }) {
   const walletLabel = 'Online Payment';
   const walletNumber = '';
   const walletName = '';
+
+  const renderProcessingOverlay = () => {
+    if (!isProcessing) return null;
+
+    return (
+      <View style={styles.processingOverlay}>
+        <View style={styles.processingCard}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.processingTitle}>Preparing Payment</Text>
+          <Text style={styles.processingMessage}>{processingMessage}</Text>
+        </View>
+      </View>
+    );
+  };
 
   // Payment Instructions Screen
   if (showPaymentInstructions && selectedPaymentMethod) {
@@ -991,10 +1011,13 @@ export default function PaymentScreen({ navigation, route }) {
             onPress={() => {
               navigation.navigate('TrackOrders');
             }}
+            disabled={isProcessing}
           >
             <Text style={styles.viewOrderButtonText}>View My Order</Text>
           </TouchableOpacity>
         </View>
+
+        {renderProcessingOverlay()}
       </View>
     );
   }
@@ -1123,16 +1146,22 @@ export default function PaymentScreen({ navigation, route }) {
         <TouchableOpacity
           style={[
             styles.payButton,
-            !selectedPaymentMethod && styles.payButtonDisabled,
+            (!selectedPaymentMethod || isProcessing) && styles.payButtonDisabled,
           ]}
           onPress={handleProceedToInstructions}
-          disabled={!selectedPaymentMethod}
+          disabled={!selectedPaymentMethod || isProcessing}
         >
-          <Text style={styles.payButtonText}>
-            Continue to Payment - ₱{finalTotal.toFixed(2)}
-          </Text>
+          {isProcessing ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <Text style={styles.payButtonText}>
+              Continue to Payment - ₱{finalTotal.toFixed(2)}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
+
+      {renderProcessingOverlay()}
     </View>
   );
 }
@@ -1922,6 +1951,41 @@ const styles = StyleSheet.create({
     marginTop: 6,
     color: colors.textLight,
     fontSize: 12,
+  },
+  processingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.38)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+    paddingHorizontal: 20,
+  },
+  processingCard: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    paddingVertical: 22,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  processingTitle: {
+    marginTop: 12,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  processingMessage: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#4B5563',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 
