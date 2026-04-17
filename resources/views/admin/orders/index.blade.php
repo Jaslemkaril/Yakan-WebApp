@@ -92,35 +92,6 @@
         @apply bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-200;
     }
 
-    .status-chip-filter {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.58rem 1.18rem;
-        border-radius: 9999px;
-        border: 1.5px solid #bfc4cd;
-        background-color: #ffffff;
-        color: #1f2937;
-        font-size: 0.93rem;
-        font-weight: 600;
-        line-height: 1;
-        box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.55);
-        transition: all 0.2s ease;
-    }
-
-    .status-chip-filter:hover {
-        border-color: #9ca3af;
-        color: #111827;
-        background-color: #f8fafc;
-    }
-
-    .status-chip-filter.active {
-        border-color: #7f1d1d;
-        background-color: #fff7f7;
-        color: #7f1d1d;
-        box-shadow: 0 0 0 1px rgba(127, 29, 29, 0.12);
-    }
-    
     /* Responsive */
     @media (max-width: 768px) {
         .stat-card {
@@ -279,20 +250,19 @@
             </div>
             <form id="filterForm" action="{{ route('admin.regular.index') }}" method="GET" class="space-y-4">
                 @php $activeStatusFilter = (string) request('status', ''); @endphp
-                <input type="hidden" name="status" id="statusFilterInput" value="{{ $activeStatusFilter }}">
 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
-                    <div class="flex flex-wrap gap-2">
-                        <button type="button" class="status-chip-filter {{ $activeStatusFilter === '' ? 'active' : '' }}" data-status="">All</button>
-                        <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'pending' ? 'active' : '' }}" data-status="pending">Pending</button>
-                        <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'processing' ? 'active' : '' }}" data-status="processing">Processing</button>
-                        <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'shipped' ? 'active' : '' }}" data-status="shipped">Shipped</button>
-                        <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'delivered' ? 'active' : '' }}" data-status="delivered">Delivered</button>
-                        <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'cancellation_requested' ? 'active' : '' }}" data-status="cancellation_requested">Cancel Requested</button>
-                        <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'cancelled' ? 'active' : '' }}" data-status="cancelled">Cancelled</button>
-                        <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'refunded' ? 'active' : '' }}" data-status="refunded">Refunded</button>
-                    </div>
+                    <select name="status" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000] transition-all duration-300">
+                        <option value="" {{ $activeStatusFilter === '' ? 'selected' : '' }}>All Status</option>
+                        <option value="pending" {{ $activeStatusFilter === 'pending' ? 'selected' : '' }}>Pending</option>
+                        <option value="processing" {{ $activeStatusFilter === 'processing' ? 'selected' : '' }}>Processing</option>
+                        <option value="shipped" {{ $activeStatusFilter === 'shipped' ? 'selected' : '' }}>Shipped</option>
+                        <option value="delivered" {{ $activeStatusFilter === 'delivered' ? 'selected' : '' }}>Delivered</option>
+                        <option value="cancellation_requested" {{ $activeStatusFilter === 'cancellation_requested' ? 'selected' : '' }}>Cancel Requested</option>
+                        <option value="cancelled" {{ $activeStatusFilter === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                        <option value="refunded" {{ $activeStatusFilter === 'refunded' ? 'selected' : '' }}>Refunded</option>
+                    </select>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -452,23 +422,5 @@
         url.searchParams.set('per_page', value);
         window.location = url.toString();
     }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const filterForm = document.getElementById('filterForm');
-        const statusInput = document.getElementById('statusFilterInput');
-        const statusChips = document.querySelectorAll('.status-chip-filter');
-
-        if (!filterForm || !statusInput || statusChips.length === 0) {
-            return;
-        }
-
-        statusChips.forEach(function (chip) {
-            chip.addEventListener('click', function () {
-                const targetStatus = chip.getAttribute('data-status') || '';
-                statusInput.value = targetStatus;
-                filterForm.submit();
-            });
-        });
-    });
 </script>
 @endsection
