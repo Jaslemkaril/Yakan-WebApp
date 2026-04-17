@@ -11,8 +11,6 @@ import {
   TextInput,
   Image,
 } from 'react-native';
-import { useCart } from '../context/CartContext';
-import { useNotification } from '../context/NotificationContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
 import NotificationService from '../services/notificationService';
@@ -45,7 +43,6 @@ const DEFAULT_PAYMENT_ACCOUNTS = {
 
 export default function PaymentScreen({ navigation, route }) {
   const { theme } = useTheme();
-  const { notifyOrderCreated } = useNotification();
   const { orderData } = route.params || {};
   
   if (!orderData) {
@@ -63,7 +60,6 @@ export default function PaymentScreen({ navigation, route }) {
     );
   }
   
-  const { clearCart } = useCart();
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [showPaymentInstructions, setShowPaymentInstructions] = useState(false);
   const [referenceNumber, setReferenceNumber] = useState('');
@@ -201,70 +197,13 @@ export default function PaymentScreen({ navigation, route }) {
     setIsProcessing(true);
 
     try {
-      const apiOrderData = {
-        customer_name: orderData.shippingAddress.fullName,
-        customer_phone: orderData.shippingAddress.phoneNumber,
-        shipping_address: `${orderData.shippingAddress.street}, ${orderData.shippingAddress.barangay || ''}, ${orderData.shippingAddress.city}, ${orderData.shippingAddress.province} ${orderData.shippingAddress.postalCode}`.replace(/,\s*,/g, ',').trim(),
-        delivery_address: `${orderData.shippingAddress.street}, ${orderData.shippingAddress.barangay || ''}, ${orderData.shippingAddress.city}, ${orderData.shippingAddress.province} ${orderData.shippingAddress.postalCode}`.replace(/,\s*,/g, ',').trim(),
-        shipping_city: orderData.shippingAddress.city || '',
-        shipping_province: orderData.shippingAddress.province || '',
-        shipping_zip: orderData.shippingAddress.postalCode || '',
-        shipping_barangay: orderData.shippingAddress.barangay || '',
-        shipping_street: orderData.shippingAddress.street || '',
-        payment_method: selectedPaymentMethod,
-        payment_status: 'pending',
-        payment_reference: referenceNumber || null,
-        delivery_type: orderData.deliveryOption || 'deliver', // 'deliver' or 'pickup'
-        items: orderData.items.map(item => ({
-          product_id: item.product_id || item.id,
-          variant_id: item.variant_id || null,
-          quantity: item.quantity || 1,
-          price: item.price,
-        })),
-        subtotal: subtotalAmount,
-        shipping_fee: shippingAmount,
-        discount: discountAmount,
-        discount_amount: discountAmount,
-        coupon_code: orderData.couponCode || null,
-        total: fullOrderTotal,
-        total_amount: fullOrderTotal,
-        payment_option: paymentOption,
-        downpayment_rate: downpaymentRate,
-        downpayment_amount: payableNowAmount,
-        remaining_balance: remainingBalanceAmount,
-        notes: 'Order from mobile app',
-      };
-
-      console.log('ðŸ”µ Sending order to API:', apiOrderData);
-
-      const response = await ApiService.createOrder(apiOrderData);
-
-      if (!response.success) {
-        setIsProcessing(false);
-        Alert.alert('Order Failed', response.error || 'Could not create order. Please try again.');
-        return;
-      }
-
-      console.log('ðŸ”µ Order created successfully:', response);
-
-      // Extract backend order ID - try all possible response structures
-      const resBody = response.data || {};
-      const backendId = resBody?.data?.id
-        ?? resBody?.id
-        ?? resBody?.order?.id
-        ?? resBody?.data?.order_id
-        ?? null;
-      const orderRef = resBody?.data?.order_ref ?? resBody?.order_ref ?? null;
-      console.log('[Payment] Full response:', JSON.stringify(resBody).substring(0, 400));
-      console.log('[Payment] backendId:', backendId, 'orderRef:', orderRef);
+      const backendId = orderData.backendOrderId || orderData.id || null;
 
       if (!backendId) {
+        Alert.alert('Missing Order', 'This payment cannot continue because the backend order ID is missing. Please place the order again.');
         setIsProcessing(false);
-        Alert.alert('Order Error', 'Order was placed but we could not retrieve the order ID. Please check My Orders for your order status.');
         return;
       }
-
-      console.log('ðŸ”µ Backend order ID:', backendId);
 
       const finalOrderData = {
         ...orderData,
@@ -313,8 +252,6 @@ export default function PaymentScreen({ navigation, route }) {
 
             finalOrderData.status = paid ? 'processing' : 'pending_payment';
             await updateOrderInStorage(finalOrderData);
-            clearCart();
-            notifyOrderCreated(orderData.orderRef);
 
             if (cancelled) {
               Alert.alert(
@@ -348,22 +285,6 @@ export default function PaymentScreen({ navigation, route }) {
       }
 
       await updateOrderInStorage(finalOrderData);
-      
-      // ðŸ”” Notify admin via notification service
-      console.log('ðŸ”” Triggering admin notification for new order:', finalOrderData.orderRef);
-      NotificationService.notifyNewOrder({
-        orderId: backendId || finalOrderData.orderRef,
-        orderRef: finalOrderData.orderRef,
-        customerName: orderData.shippingAddress.fullName,
-        customerPhone: orderData.shippingAddress.phoneNumber,
-        total: fullOrderTotal,
-        amountDueNow: finalTotal,
-        itemCount: orderData.items.length,
-        paymentMethod: selectedPaymentMethod,
-        items: orderData.items,
-        shippingAddress: orderData.shippingAddress,
-        status: isPaymongo ? 'pending_payment' : 'pending_confirmation',
-      });
 
       // Start polling for order status updates
       if (backendId) {
@@ -381,11 +302,9 @@ export default function PaymentScreen({ navigation, route }) {
       }
 
       setIsProcessing(false);
-      clearCart();
-      notifyOrderCreated(orderData.orderRef);
       navigation.navigate('OrderDetails', { orderData: finalOrderData });
     } catch (error) {
-      console.error('ðŸ”´ Error creating order:', error);
+      console.error('[Payment] Error handling payment:', error);
       setIsProcessing(false);
       
       const finalOrderData = {
@@ -400,35 +319,19 @@ export default function PaymentScreen({ navigation, route }) {
         downpaymentRate,
         paymentMethod: selectedPaymentMethod,
         paymentReference: referenceNumber,
+        backendOrderId: orderData.backendOrderId || orderData.id || null,
+        id: orderData.backendOrderId || orderData.id || null,
         status: isPaymongo ? 'pending_payment' : 'payment_verified',
       };
       await updateOrderInStorage(finalOrderData);
       
-      // Still notify admin even if backend sync failed (order saved locally)
-      console.log('ðŸ”” Local order saved, notifying admin');
-      NotificationService.notifyNewOrder({
-        orderId: finalOrderData.orderRef,
-        orderRef: finalOrderData.orderRef,
-        customerName: orderData.shippingAddress.fullName,
-        customerPhone: orderData.shippingAddress.phoneNumber,
-        total: fullOrderTotal,
-        amountDueNow: finalTotal,
-        itemCount: orderData.items.length,
-        paymentMethod: selectedPaymentMethod,
-        items: orderData.items,
-        shippingAddress: orderData.shippingAddress,
-        status: isPaymongo ? 'pending_payment' : 'pending_confirmation',
-        syncStatus: 'pending',
-      });
-      
       Alert.alert(
-        'Order Saved',
-        'Your order has been saved. It will sync when connection is restored.\n\nThe admin will be notified once synced.',
+        'Payment Pending',
+        'Your order already exists, but payment could not be completed right now. You can retry from My Orders.',
         [
           {
             text: 'View Order',
             onPress: () => {
-              clearCart();
               navigation.navigate('OrderDetails', { orderData: finalOrderData });
             },
           },

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Yakan App",
     "slug": "yakanapp",
-    "version": "1.0.6",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -15,11 +15,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.yakan.app",
-      "buildNumber": "1.0.5"
+      "buildNumber": "11"
     },
     "android": {
       "package": "com.yakan.app",
-      "versionCode": 7,
+      "versionCode": 11,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#800000"

@@ -30,7 +30,7 @@ const PICKUP_STORE_ADDRESS = {
 };
 
 const CheckoutScreen = ({ navigation }) => {
-  const { cartItems, checkoutItems, setCheckoutItems, updateQuantity, userInfo } = useCart();
+  const { cartItems, checkoutItems, setCheckoutItems, updateQuantity, userInfo, clearCart } = useCart();
   const { theme } = useTheme();
   const styles = getStyles(theme);
   
@@ -57,6 +57,7 @@ const CheckoutScreen = ({ navigation }) => {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponError, setCouponError] = useState('');
   const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [availableCoupons, setAvailableCoupons] = useState([]);
   
   const [addressForm, setAddressForm] = useState({
@@ -516,7 +517,10 @@ const CheckoutScreen = ({ navigation }) => {
           postalCode: selectedAddr?.postalCode || '',
         };
 
-    const orderRef = generateOrderRef();
+    if (!resolvedShippingAddress.phoneNumber?.trim()) {
+      Alert.alert('Phone Number Required', 'Please provide a contact phone number before placing your order.');
+      return;
+    }
     
     const actualShippingFee = deliveryOption === 'pickup' ? 0 : shippingFee;
     const actualTotal = Math.max(0, subtotal + actualShippingFee - discount);
@@ -524,30 +528,100 @@ const CheckoutScreen = ({ navigation }) => {
       ? Number((actualTotal * (DOWNPAYMENT_RATE / 100)).toFixed(2))
       : actualTotal;
     const actualRemainingBalance = Math.max(0, Number((actualTotal - actualDownpaymentAmount).toFixed(2)));
-    
-    const orderData = {
-      orderRef,
-      date: new Date().toISOString(),
-      items: itemsToCheckout,
-      deliveryOption: deliveryOption,
-      shippingAddress: resolvedShippingAddress,
+
+    const fullAddress = `${resolvedShippingAddress.street}, ${resolvedShippingAddress.barangay || ''}, ${resolvedShippingAddress.city}, ${resolvedShippingAddress.province} ${resolvedShippingAddress.postalCode}`
+      .replace(/,\s*,/g, ',')
+      .trim();
+
+    const apiOrderData = {
+      customer_name: resolvedShippingAddress.fullName,
+      customer_email: userInfo?.email || null,
+      customer_phone: resolvedShippingAddress.phoneNumber,
+      shipping_address: fullAddress,
+      delivery_address: fullAddress,
+      shipping_city: resolvedShippingAddress.city || '',
+      shipping_province: resolvedShippingAddress.province || '',
+      shipping_zip: resolvedShippingAddress.postalCode || '',
+      shipping_barangay: resolvedShippingAddress.barangay || '',
+      shipping_street: resolvedShippingAddress.street || '',
+      payment_method: 'paymongo',
+      payment_status: 'pending',
+      delivery_type: deliveryOption || 'deliver',
+      items: itemsToCheckout.map(item => ({
+        product_id: item.product_id || item.id,
+        variant_id: item.variant_id || null,
+        quantity: item.quantity || 1,
+        price: item.price,
+      })),
       subtotal,
-      shippingFee: actualShippingFee,
-      discount: discount,
-      couponCode: appliedCoupon?.code || null,
+      shipping_fee: actualShippingFee,
+      discount,
+      discount_amount: discount,
+      coupon_code: appliedCoupon?.code || null,
       total: actualTotal,
-      payableNow: actualDownpaymentAmount,
-      remainingBalance: actualRemainingBalance,
-      paymentOption,
-      downpaymentRate: paymentOption === 'downpayment' ? DOWNPAYMENT_RATE : 100,
-      status: 'pending_payment',
+      total_amount: actualTotal,
+      payment_option: paymentOption,
+      downpayment_rate: paymentOption === 'downpayment' ? DOWNPAYMENT_RATE : 100,
+      downpayment_amount: actualDownpaymentAmount,
+      remaining_balance: actualRemainingBalance,
+      notes: 'Order from mobile app',
     };
 
-    // Order is saved locally only after payment is confirmed (in PaymentScreen)
-    navigation.navigate('Payment', { orderData });
+    setIsSubmittingOrder(true);
+    try {
+      const response = await ApiService.createOrder(apiOrderData);
+
+      if (!response.success) {
+        Alert.alert('Order Failed', response.error || 'Could not create order. Please try again.');
+        return;
+      }
+
+      const resBody = response.data || {};
+      const createdOrder = resBody?.data || resBody;
+      const backendOrderId = createdOrder?.id;
+      const orderRef = createdOrder?.order_ref || createdOrder?.tracking_number || generateOrderRef();
+
+      if (!backendOrderId) {
+        Alert.alert('Order Error', 'Order was created but no order ID was returned. Please check My Orders.');
+        return;
+      }
+
+      // Align with website flow: cart is cleared as soon as order is created.
+      await clearCart();
+      setCheckoutItems([]);
+
+      const orderData = {
+        orderRef,
+        backendOrderId,
+        id: backendOrderId,
+        date: new Date().toISOString(),
+        items: itemsToCheckout,
+        deliveryOption,
+        shippingAddress: resolvedShippingAddress,
+        subtotal,
+        shippingFee: actualShippingFee,
+        discount,
+        couponCode: appliedCoupon?.code || null,
+        total: actualTotal,
+        payableNow: actualDownpaymentAmount,
+        remainingBalance: actualRemainingBalance,
+        paymentOption,
+        downpaymentRate: paymentOption === 'downpayment' ? DOWNPAYMENT_RATE : 100,
+        status: 'pending_payment',
+      };
+
+      navigation.navigate('Payment', { orderData });
+    } catch (error) {
+      Alert.alert('Order Failed', 'Could not create your order right now. Please try again.');
+    } finally {
+      setIsSubmittingOrder(false);
+    }
   };
 
-  const isCheckoutDisabled = itemsToCheckout.length === 0 || (deliveryOption === 'deliver' && !selectedAddressId);
+  const isCheckoutDisabled =
+    itemsToCheckout.length === 0 ||
+    (deliveryOption === 'deliver' && !selectedAddressId) ||
+    isSubmittingOrder;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -965,9 +1039,13 @@ const CheckoutScreen = ({ navigation }) => {
           onPress={handlePlaceOrder}
           disabled={isCheckoutDisabled}
         >
-          <Text style={styles.placeOrderText}>
-            Proceed to Payment - ₱{payableNow.toFixed(2)}
-          </Text>
+          {isSubmittingOrder ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.placeOrderText}>
+              Place Order - ₱{payableNow.toFixed(2)}
+            </Text>
+          )}
         </TouchableOpacity>
 
         <View style={{ height: 40 }} />

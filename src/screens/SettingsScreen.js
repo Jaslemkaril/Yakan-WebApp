@@ -14,12 +14,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
+import appConfig from '../../app.json';
 
 export default function SettingsScreen({ navigation }) {
   const [notifications, setNotifications] = useState(true);
   const [emailUpdates, setEmailUpdates] = useState(false);
   const { isDarkMode, toggleDarkMode, theme } = useTheme();
   const { logout } = useCart();
+  const appVersion = appConfig?.expo?.version || '1.0.0';
 
   const handleLogout = () => {
     Alert.alert(
@@ -242,7 +244,7 @@ export default function SettingsScreen({ navigation }) {
           <Text style={[styles.infoAppName, { color: theme.text }]}>TUWAS YAKAN</Text>
           <Text style={[styles.infoTagline, { color: theme.textLight }]}>Weaving through generations</Text>
           <View style={[styles.versionBadge, { backgroundColor: isDarkMode ? '#333' : '#F3F4F6' }]}>
-            <Text style={[styles.versionText, { color: theme.textLight }]}>v1.0.0</Text>
+            <Text style={[styles.versionText, { color: theme.textLight }]}>v{appVersion}</Text>
           </View>
           <Text style={[styles.copyrightText, { color: theme.textLight }]}>
             © 2026 Tuwas Yakan. All rights reserved.
