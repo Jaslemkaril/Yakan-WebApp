@@ -964,8 +964,19 @@ class OrderController extends Controller
         }
 
         if ($selectedDecision === 'RETURN_REQUIRED') {
+            $this->notifyRefundWorkflowUpdate(
+                $refundRequest,
+                'Return Required',
+                'Your refund request is approved for return processing. Please submit your return shipment details to continue.'
+            );
             return redirect()->back()->with('success', 'Refund review saved. Waiting for customer return shipment details.');
         }
+
+        $this->notifyRefundWorkflowUpdate(
+            $refundRequest,
+            'Pending Payout',
+            'Your refund request has been reviewed and is now pending payout processing.'
+        );
 
         return redirect()->back()->with('success', 'Refund decision saved. Request is now pending payout processing.');
     }
@@ -1014,6 +1025,12 @@ class OrderController extends Controller
         }
 
         $refundRequest->save();
+
+        $this->notifyRefundWorkflowUpdate(
+            $refundRequest,
+            'Return Received',
+            'We have received your returned item. Your refund is now pending payout processing.'
+        );
 
         return redirect()->back()->with('success', 'Return marked as received. Refund is now pending payout.');
     }
@@ -1452,6 +1469,52 @@ class OrderController extends Controller
             Log::warning('Failed to send refund decision email', [
                 'refund_request_id' => $refundRequest->id,
                 'recipient' => $recipient,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Notify customer about intermediate refund workflow updates.
+     */
+    private function notifyRefundWorkflowUpdate(OrderRefundRequest $refundRequest, string $statusLabel, string $message): void
+    {
+        $order = $refundRequest->order;
+        if (!$order) {
+            return;
+        }
+
+        $recipient = $refundRequest->user?->email ?: $order->user?->email ?: $order->customer_email;
+        if (!$recipient) {
+            return;
+        }
+
+        $subject = 'Refund Request Update - ' . ($order->order_ref ?? ('#' . $order->id));
+
+        try {
+            TransactionalMailService::sendViewDetailed(
+                $recipient,
+                $subject,
+                'emails.orders.request-status',
+                [
+                    'subject' => $subject,
+                    'customerName' => $refundRequest->user?->name ?: ($order->customer_name ?: 'Customer'),
+                    'introText' => $message,
+                    'orderRef' => $order->order_ref,
+                    'orderId' => $order->id,
+                    'requestType' => 'Refund Request',
+                    'decision' => $statusLabel,
+                    'reason' => $refundRequest->reason,
+                    'adminNote' => $refundRequest->admin_note,
+                    'approvedAmount' => null,
+                    'extraMessage' => null,
+                ]
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send refund workflow update email', [
+                'refund_request_id' => $refundRequest->id,
+                'recipient' => $recipient,
+                'status_label' => $statusLabel,
                 'error' => $e->getMessage(),
             ]);
         }

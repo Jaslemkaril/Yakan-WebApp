@@ -864,6 +864,8 @@ class OrderController extends Controller
         $refundRequest->return_required = (bool) ($recommendation['return_required'] ?? false);
         $refundRequest->save();
 
+        $this->notifyRefundRequestSubmitted($order, $refundRequest);
+
         return redirect()->back()->with(
             'success',
             'Refund request submitted successfully. Awaiting admin review.'
@@ -1341,6 +1343,48 @@ class OrderController extends Controller
         } catch (\Throwable $e) {
             Log::warning('Failed to send cancellation decision email', [
                 'order_id' => $order->id,
+                'recipient' => $recipient,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Email customer when refund request is submitted and pending review.
+     */
+    private function notifyRefundRequestSubmitted(Order $order, OrderRefundRequest $refundRequest): void
+    {
+        $recipient = $order->user?->email ?: $order->customer_email;
+        if (!$recipient) {
+            return;
+        }
+
+        $subject = 'Refund Request Submitted - ' . ($order->order_ref ?? ('#' . $order->id));
+        $reason = trim((string) ($refundRequest->reason ?? 'Refund request'));
+
+        try {
+            TransactionalMailService::sendViewDetailed(
+                $recipient,
+                $subject,
+                'emails.orders.request-status',
+                [
+                    'subject' => $subject,
+                    'customerName' => $order->user?->name ?: ($order->customer_name ?: 'Customer'),
+                    'introText' => 'Your refund request has been submitted and is now pending review.',
+                    'orderRef' => $order->order_ref,
+                    'orderId' => $order->id,
+                    'requestType' => 'Refund Request',
+                    'decision' => 'Pending Review',
+                    'reason' => $reason,
+                    'adminNote' => null,
+                    'approvedAmount' => null,
+                    'extraMessage' => 'We will review your request within 1-2 business days and update you by email.',
+                ]
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Failed to send refund request submitted email', [
+                'order_id' => $order->id,
+                'refund_request_id' => $refundRequest->id,
                 'recipient' => $recipient,
                 'error' => $e->getMessage(),
             ]);
