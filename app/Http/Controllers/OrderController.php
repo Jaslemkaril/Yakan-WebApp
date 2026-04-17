@@ -66,7 +66,9 @@ class OrderController extends Controller
             return;
         }
 
-        $collection->loadMissing('refundRequests');
+        if (method_exists($collection, 'loadMissing')) {
+            $collection->loadMissing('refundRequests');
+        }
 
         foreach ($collection as $order) {
             if (!$order instanceof Order) {
@@ -96,20 +98,6 @@ class OrderController extends Controller
             // Expose effective values to views to avoid stale badges.
             $order->setAttribute('effective_status', 'refunded');
             $order->setAttribute('effective_payment_status', 'refunded');
-
-            $currentOrderStatus = strtolower((string) ($order->status ?? ''));
-            $currentPaymentStatus = strtolower((string) ($order->payment_status ?? ''));
-
-            if ($currentOrderStatus === 'refunded' && $currentPaymentStatus === 'refunded') {
-                continue;
-            }
-
-            $order->status = 'refunded';
-            $order->payment_status = 'refunded';
-            if (!$order->cancelled_at) {
-                $order->cancelled_at = now();
-            }
-            $order->save();
         }
     }
 
@@ -315,8 +303,6 @@ class OrderController extends Controller
             }
 
             $this->applyRefundConsistencyToOrders(collect([$order]));
-            $order->refresh();
-            $order->loadMissing($this->orderRelationsForUserViews());
 
             // Return JSON for API callers, Blade view for web
             if ($request->wantsJson() || $request->is('api/*')) {
