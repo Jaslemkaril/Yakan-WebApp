@@ -584,6 +584,7 @@ Route::get('/admin/dashboard', [App\Http\Controllers\Admin\DashboardController::
 Route::get('/staff/dashboard', [App\Http\Controllers\Staff\DashboardController::class, 'index'])->middleware('admin:order_staff')->name('staff.dashboard');
 Route::get('/staff/orders/cancelled', [App\Http\Controllers\Staff\DashboardController::class, 'cancelledOrders'])->middleware('admin:order_staff')->name('staff.orders.cancelled');
 Route::get('/staff/orders/refunded', [App\Http\Controllers\Staff\DashboardController::class, 'refundedOrders'])->middleware('admin:order_staff')->name('staff.orders.refunded');
+Route::get('/staff/orders/cancel-requests', [App\Http\Controllers\Admin\OrderController::class, 'cancelRequests'])->middleware('admin:order_staff')->name('staff.orders.cancel_requests');
 
 // Regular user login routes
 Route::get('/login', function() {

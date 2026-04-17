@@ -71,9 +71,9 @@ class AdminLoginController extends Controller
             return redirect('/staff/dashboard');
         }
         
-        // Logout any non-admin user
+        // Keep regular user sessions intact; do not force logout when accessing admin login.
         if (Auth::check()) {
-            Auth::logout();
+            return redirect('/dashboard')->with('error', 'Admin access required. Please use an authorized admin account.');
         }
         
         return view('auth.admin-login');
@@ -251,8 +251,9 @@ HTML);
             return redirect('/admin/dashboard');
         }
 
+        // Keep regular user sessions intact; do not force logout when accessing staff login.
         if (Auth::check()) {
-            Auth::logout();
+            return redirect('/dashboard')->with('error', 'Staff access required. Please use an authorized staff account.');
         }
 
         return view('auth.staff-login');
