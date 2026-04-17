@@ -83,12 +83,6 @@ class PaymongoPaymentController extends Controller
                 $isRequestedDownpayment = $explicitDownpaymentOverride;
             }
 
-            // Keep business rule aligned with website checkout.
-            if ($deliveryType !== 'pickup' && $isRequestedDownpayment) {
-                $isRequestedDownpayment = false;
-                $requestedPaymentOption = 'full';
-            }
-
             $payableNowAmount = $order->getAmountDueNow();
 
             if (!is_null($clientRequestedAmount)) {
@@ -102,7 +96,7 @@ class PaymongoPaymentController extends Controller
                     $payableNowAmount = round($orderTotal * ($rate / 100), 2);
                 }
 
-                if ($deliveryType === 'pickup' && $payableNowAmount > 0 && $orderTotal > 0 && ($payableNowAmount + 0.01) < $orderTotal) {
+                if ($payableNowAmount > 0 && $orderTotal > 0 && ($payableNowAmount + 0.01) < $orderTotal) {
                     $options['amount_override'] = max(0, min($orderTotal, $payableNowAmount));
                     $options['is_downpayment_override'] = true;
 
@@ -136,6 +130,8 @@ class PaymongoPaymentController extends Controller
                 'data'    => [
                     'checkout_id'  => $result['checkout_id'],
                     'checkout_url' => $result['checkout_url'],
+                    'amount_override_applied' => $options['amount_override'] ?? null,
+                    'is_downpayment_override_applied' => $options['is_downpayment_override'] ?? false,
                 ],
             ]);
         } catch (\Throwable $e) {
