@@ -283,10 +283,62 @@ export default function PaymentScreen({ navigation, route }) {
         }
       }
 
-      const checkoutIdentityReference = verifiedCheckoutReference || orderData?.checkoutReference || null;
-      const hasCheckoutIdentity = Boolean(backendId || checkoutIdentityReference);
-      if (!hasCheckoutIdentity) {
-        Alert.alert('Missing Order', 'This payment cannot continue because order identity is missing. Please place the order again.');
+      // Final ID recovery: resolve backend order deterministically before PayMongo.
+      if (!backendId) {
+        try {
+          const ordersResponse = await ApiService.getOrders({ limit: 100 });
+          if (ordersResponse.success) {
+            const ordersPayload =
+              ordersResponse.data?.data?.data
+              || ordersResponse.data?.data
+              || ordersResponse.data
+              || [];
+            const orders = Array.isArray(ordersPayload) ? ordersPayload : [];
+
+            const desiredCheckoutRef = String(verifiedCheckoutReference || orderData?.checkoutReference || '').trim();
+            const desiredOrderRef = String(checkoutOrderRef || orderData?.orderRef || '').trim();
+            const targetTotal = Number(fullOrderTotal || 0);
+            const nowTs = Date.now();
+
+            const matchedByPaymentRef = desiredCheckoutRef
+              ? orders.find(order => String(order?.payment_reference || '') === desiredCheckoutRef)
+              : null;
+
+            const matchedByNotesRef = !matchedByPaymentRef && desiredCheckoutRef
+              ? orders.find(order => String(order?.notes || '').includes(`[checkout_ref:${desiredCheckoutRef}]`))
+              : null;
+
+            const matchedByOrderRef = !matchedByPaymentRef && !matchedByNotesRef && desiredOrderRef
+              ? orders.find(order => {
+                  const candidateRef = order?.order_ref || order?.tracking_number || order?.order_number || '';
+                  return String(candidateRef) === desiredOrderRef;
+                })
+              : null;
+
+            const matchedByRecentTotal = !matchedByPaymentRef && !matchedByNotesRef && !matchedByOrderRef
+              ? orders.find(order => {
+                  const candidateCreatedAt = order?.created_at ? new Date(order.created_at).getTime() : 0;
+                  const recentEnough = candidateCreatedAt > 0 && Math.abs(nowTs - candidateCreatedAt) <= 30 * 60 * 1000;
+                  const candidateTotal = Number(order?.total_amount ?? order?.total ?? 0);
+                  return candidateTotal > 0 && targetTotal > 0 && Math.abs(candidateTotal - targetTotal) <= 0.01 && recentEnough;
+                })
+              : null;
+
+            const recoveredOrder = matchedByPaymentRef || matchedByNotesRef || matchedByOrderRef || matchedByRecentTotal || null;
+
+            if (recoveredOrder?.id) {
+              backendId = recoveredOrder.id;
+              checkoutOrderRef = recoveredOrder?.order_ref || recoveredOrder?.tracking_number || recoveredOrder?.order_number || checkoutOrderRef;
+              verifiedCheckoutReference = recoveredOrder?.payment_reference || verifiedCheckoutReference;
+            }
+          }
+        } catch (finalRecoveryError) {
+          // Guard below handles unresolved backend IDs.
+        }
+      }
+
+      if (!backendId) {
+        Alert.alert('Order Not Ready', 'We are still syncing your order. Please return to checkout and try payment again.');
         setIsProcessing(false);
         return;
       }
@@ -303,7 +355,7 @@ export default function PaymentScreen({ navigation, route }) {
         downpaymentRate,
         paymentMethod: selectedPaymentMethod,
         paymentReference: referenceNumber,
-        checkoutReference: checkoutIdentityReference,
+        checkoutReference: verifiedCheckoutReference || orderData?.checkoutReference || null,
         status: isPaymongo ? 'pending_payment' : 'payment_verified', // align with timeline stage
         backendOrderId: backendId || orderData?.backendOrderId || null,
         id: backendId || orderData?.backendOrderId || null, // Also store as 'id' for compatibility
@@ -321,48 +373,14 @@ export default function PaymentScreen({ navigation, route }) {
       // For PayMongo: open checkout in browser and detect redirect back to app
       if (isPaymongo) {
         try {
-          if (!backendId) {
-            try {
-              const ordersResponse = await ApiService.getOrders();
-              if (ordersResponse.success) {
-                const ordersPayload =
-                  ordersResponse.data?.data?.data
-                  || ordersResponse.data?.data
-                  || ordersResponse.data
-                  || [];
-                const orders = Array.isArray(ordersPayload) ? ordersPayload : [];
-                const nowTs = Date.now();
-                const targetTotal = Number(fullOrderTotal || 0);
-
-                const recentByTotal = orders.find(order => {
-                  const candidateTotal = Number(order?.total_amount ?? order?.total ?? 0);
-                  const candidateCreatedAt = order?.created_at ? new Date(order.created_at).getTime() : 0;
-                  const recentEnough = candidateCreatedAt > 0 && Math.abs(nowTs - candidateCreatedAt) <= 20 * 60 * 1000;
-                  return candidateTotal > 0 && Math.abs(candidateTotal - targetTotal) <= 0.01 && recentEnough;
-                });
-
-                if (recentByTotal?.id) {
-                  backendId = recentByTotal.id;
-                  finalOrderData.backendOrderId = recentByTotal.id;
-                  finalOrderData.id = recentByTotal.id;
-                  checkoutOrderRef = recentByTotal?.order_ref || recentByTotal?.tracking_number || recentByTotal?.order_number || checkoutOrderRef;
-                  finalOrderData.orderRef = checkoutOrderRef;
-                  finalOrderData.checkoutReference = recentByTotal?.payment_reference || finalOrderData.checkoutReference;
-                }
-              }
-            } catch (ordersLookupErr) {
-              // Let backend fallback resolver attempt identity matching.
-            }
-          }
-
           const paymongoCheckout = await ApiService.createPaymongoCheckout(
             backendId,
             {},
             {
               paymentOption,
               downpaymentRate,
-              // If backend ID is not yet known, use checkout_reference as the only identity key.
-              checkoutReference: backendId ? undefined : checkoutIdentityReference,
+              // Mirror website flow: send canonical order_id identity only.
+              checkoutReference: undefined,
               amountDueNow: finalTotal,
               totalAmount: fullOrderTotal,
               deliveryType: isPickupOrder ? 'pickup' : 'deliver',
