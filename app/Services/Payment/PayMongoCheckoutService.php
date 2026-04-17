@@ -76,7 +76,7 @@ class PayMongoCheckoutService
         $orderTotal     = (int) round($amount * 100);
         $isDownpayment = is_bool($isDownpaymentOverride)
             ? $isDownpaymentOverride
-            : $this->isDownpaymentOrder($order);
+            : ($this->isDownpaymentOrder($order) || (($totalAmount > 0) && (($amount + 0.01) < $totalAmount)));
 
         if ($lineItemsTotal !== $orderTotal) {
             $lineItemName = $isDownpayment ? 'Yakan Order Downpayment' : 'Yakan Order';
@@ -176,6 +176,26 @@ class PayMongoCheckoutService
         }
 
         if (!$this->isDownpaymentOrder($order)) {
+            $snapshot = $this->extractMobilePaymentPlanSnapshot($order);
+            if (is_array($snapshot)) {
+                $snapshotOption = strtolower((string) ($snapshot['payment_option'] ?? 'full'));
+                $snapshotTotal = (float) ($snapshot['total_amount'] ?? 0);
+                $effectiveTotal = $snapshotTotal > 0 ? $snapshotTotal : $total;
+                $snapshotAmount = (float) ($snapshot['downpayment_amount'] ?? 0);
+
+                if ($snapshotOption === 'downpayment' && $effectiveTotal > 0) {
+                    if ($snapshotAmount <= 0) {
+                        $snapshotRate = (float) ($snapshot['downpayment_rate'] ?? 50);
+                        $snapshotRate = min(99, max(1, $snapshotRate));
+                        $snapshotAmount = round($effectiveTotal * ($snapshotRate / 100), 2);
+                    }
+
+                    if ($snapshotAmount > 0 && ($snapshotAmount + 0.01) < $effectiveTotal) {
+                        return max(0, min($total, $snapshotAmount));
+                    }
+                }
+            }
+
             return $total;
         }
 
@@ -187,6 +207,21 @@ class PayMongoCheckoutService
         }
 
         return max(0, min($total, $downpaymentAmount));
+    }
+
+    private function extractMobilePaymentPlanSnapshot(Order $order): ?array
+    {
+        $notes = (string) ($order->notes ?? '');
+        if ($notes === '') {
+            return null;
+        }
+
+        if (preg_match('/\[MOBILE_PAYMENT_PLAN\]\s*(\{.*?\})/s', $notes, $matches) !== 1) {
+            return null;
+        }
+
+        $decoded = json_decode($matches[1], true);
+        return is_array($decoded) ? $decoded : null;
     }
 
     /**

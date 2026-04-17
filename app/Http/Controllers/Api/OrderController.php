@@ -250,9 +250,34 @@ class OrderController extends Controller
             $discount    = $validated['discount'] ?? 0;
             $orderTotal = max(0, $serverSubtotal + $shippingFee - $discount);
 
+            $deliveryTypeForPlan = strtolower((string) ($validated['delivery_type'] ?? 'deliver'));
+            $paymentOptionForPlan = strtolower((string) $paymentOption) === 'downpayment' ? 'downpayment' : 'full';
+            if ($deliveryTypeForPlan !== 'pickup') {
+                $paymentOptionForPlan = 'full';
+            }
+
+            $resolvedPlan = $this->resolveDownpaymentPlan($orderTotal, $paymentOptionForPlan, $requestedDownpaymentRate);
+
+            // Persist a portable payment-plan snapshot in notes so downstream
+            // checkout (e.g. PayMongo API path) can still resolve payable amount
+            // even when DB downpayment columns are unavailable in some environments.
+            $existingNotes = (string) ($order->notes ?? '');
+            $existingNotes = preg_replace('/\s*\[MOBILE_PAYMENT_PLAN\]\s*\{.*?\}\s*/s', "\n", $existingNotes) ?? $existingNotes;
+            $existingNotes = trim($existingNotes);
+            $paymentPlanSnapshot = [
+                'payment_option' => $resolvedPlan['payment_option'],
+                'downpayment_rate' => $resolvedPlan['downpayment_rate'],
+                'downpayment_amount' => $resolvedPlan['downpayment_amount'],
+                'remaining_balance' => $resolvedPlan['remaining_balance'],
+                'total_amount' => $orderTotal,
+                'delivery_type' => $deliveryTypeForPlan,
+            ];
+            $notesWithPlan = trim($existingNotes . "\n" . '[MOBILE_PAYMENT_PLAN]' . json_encode($paymentPlanSnapshot));
+
             $orderUpdateData = [
                 'subtotal'     => $serverSubtotal,
                 'total_amount' => $orderTotal,
+                'notes' => $notesWithPlan,
             ];
 
             if (Schema::hasColumn('orders', 'total')) {
@@ -260,7 +285,6 @@ class OrderController extends Controller
             }
 
             if ($this->supportsDownpaymentFields()) {
-                $resolvedPlan = $this->resolveDownpaymentPlan($orderTotal, $paymentOption, $requestedDownpaymentRate);
                 $orderUpdateData = array_merge($orderUpdateData, $resolvedPlan);
             }
 
