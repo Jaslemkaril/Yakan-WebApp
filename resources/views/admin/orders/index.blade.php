@@ -93,10 +93,18 @@
     }
 
     .status-chip-filter {
-        @apply px-4 py-2 rounded-full border text-sm font-semibold transition-all duration-200;
-        border-color: #d1d5db;
-        color: #374151;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.45rem 0.9rem;
+        border-radius: 9999px;
+        border: 1px solid #d1d5db;
         background-color: #ffffff;
+        color: #374151;
+        font-size: 0.875rem;
+        font-weight: 600;
+        line-height: 1;
+        transition: all 0.2s ease;
     }
 
     .status-chip-filter:hover {
@@ -268,23 +276,24 @@
                 </h3>
             </div>
             <form id="filterForm" action="{{ route('admin.regular.index') }}" method="GET" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
-                        @php $activeStatusFilter = (string) request('status', ''); @endphp
-                        <input type="hidden" name="status" id="statusFilterInput" value="{{ $activeStatusFilter }}">
-                        <div class="flex flex-wrap gap-2">
-                            <button type="button" class="status-chip-filter {{ $activeStatusFilter === '' ? 'active' : '' }}" data-status="">All</button>
-                            <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'pending' ? 'active' : '' }}" data-status="pending">Pending</button>
-                            <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'processing' ? 'active' : '' }}" data-status="processing">Processing</button>
-                            <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'shipped' ? 'active' : '' }}" data-status="shipped">Shipped</button>
-                            <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'delivered' ? 'active' : '' }}" data-status="delivered">Delivered</button>
-                            <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'cancellation_requested' ? 'active' : '' }}" data-status="cancellation_requested">Cancel Requested</button>
-                            <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'cancelled' ? 'active' : '' }}" data-status="cancelled">Cancelled</button>
-                            <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'refunded' ? 'active' : '' }}" data-status="refunded">Refunded</button>
-                        </div>
+                @php $activeStatusFilter = (string) request('status', ''); @endphp
+                <input type="hidden" name="status" id="statusFilterInput" value="{{ $activeStatusFilter }}">
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" class="status-chip-filter {{ $activeStatusFilter === '' ? 'active' : '' }}" data-status="">All</button>
+                        <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'pending' ? 'active' : '' }}" data-status="pending">Pending</button>
+                        <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'processing' ? 'active' : '' }}" data-status="processing">Processing</button>
+                        <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'shipped' ? 'active' : '' }}" data-status="shipped">Shipped</button>
+                        <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'delivered' ? 'active' : '' }}" data-status="delivered">Delivered</button>
+                        <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'cancellation_requested' ? 'active' : '' }}" data-status="cancellation_requested">Cancel Requested</button>
+                        <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'cancelled' ? 'active' : '' }}" data-status="cancelled">Cancelled</button>
+                        <button type="button" class="status-chip-filter {{ $activeStatusFilter === 'refunded' ? 'active' : '' }}" data-status="refunded">Refunded</button>
                     </div>
-                    
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Search</label>
                         <input type="text" name="search" value="{{ request('search') }}" 
