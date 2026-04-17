@@ -81,10 +81,13 @@ class PaymongoPaymentController extends Controller
         }
 
         $recentOrders = collect();
-        // Only use heuristic fallback when no explicit checkout reference was provided.
-        // If checkout_reference is provided and not found, returning a specific not-found
-        // response is safer than binding to a different pending order.
-        if (!$order && $requestedCheckoutReference === '') {
+        $resolvedViaHeuristic = false;
+        // Use heuristic fallback whenever the order could not be resolved by the
+        // explicit identifiers. This handles the mobile race-condition where the
+        // checkout_reference lookup fails (e.g. payment_reference was already
+        // updated by a previous PayMongo session) but a recent pending order still
+        // exists for the authenticated user.
+        if (!$order) {
             $recentOrders = Order::with(['items.product', 'user'])
                 ->where('user_id', $authUserId)
                 ->latest()
@@ -97,6 +100,10 @@ class PaymongoPaymentController extends Controller
                     $candidateTotal = (float) ($candidate->total_amount ?? $candidate->total ?? 0);
                     return $candidateTotal > 0 && abs($candidateTotal - $targetAmount) <= 0.01;
                 });
+
+                if ($order) {
+                    $resolvedViaHeuristic = true;
+                }
             }
 
             if (!$order) {
@@ -110,6 +117,10 @@ class PaymongoPaymentController extends Controller
                         && in_array($paymentStatus, ['pending', 'unpaid', 'pending_payment', ''], true)
                         && in_array($orderStatus, ['pending', 'pending_confirmation', 'confirmed', 'processing'], true);
                 });
+
+                if ($order) {
+                    $resolvedViaHeuristic = true;
+                }
             }
         }
 
@@ -156,7 +167,31 @@ class PaymongoPaymentController extends Controller
         $matchesNotesCheckoutTag = $requestedCheckoutReference !== ''
             && stripos((string) ($order->notes ?? ''), $notesCheckoutTag) !== false;
 
-        if ($requestedCheckoutReference !== '' && !$matchesPaymentReference && !$matchesNotesCheckoutTag) {
+        $allowHeuristicCheckoutReference = false;
+        if ($requestedCheckoutReference !== '' && !$matchesPaymentReference && !$matchesNotesCheckoutTag && $resolvedViaHeuristic) {
+            $candidateTotal = (float) ($order->total_amount ?? $order->total ?? 0);
+            $candidateMethod = strtolower((string) ($order->payment_method ?? ''));
+            $candidateStatus = strtolower((string) ($order->payment_status ?? ''));
+            $isRecent = $order->created_at ? now()->diffInMinutes($order->created_at) <= 30 : false;
+            $amountMatches = !is_null($targetAmount)
+                && $candidateTotal > 0
+                && abs($candidateTotal - $targetAmount) <= 0.01;
+
+            $allowHeuristicCheckoutReference = $isRecent
+                && $amountMatches
+                && $candidateMethod === 'paymongo'
+                && in_array($candidateStatus, ['pending', 'unpaid', 'pending_payment', ''], true);
+
+            if ($allowHeuristicCheckoutReference) {
+                $existingNotes = (string) ($order->notes ?? '');
+                if (stripos($existingNotes, $notesCheckoutTag) === false) {
+                    $order->notes = trim($existingNotes . "\n" . $notesCheckoutTag);
+                    $order->save();
+                }
+            }
+        }
+
+        if ($requestedCheckoutReference !== '' && !$matchesPaymentReference && !$matchesNotesCheckoutTag && !$allowHeuristicCheckoutReference) {
             return response()->json([
                 'success' => false,
                 'message' => 'Checkout reference mismatch. Please return to checkout and try again.',

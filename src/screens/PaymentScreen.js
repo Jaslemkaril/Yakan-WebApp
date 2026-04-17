@@ -458,6 +458,8 @@ export default function PaymentScreen({ navigation, route }) {
           const basePaymongoMeta = {
             paymentOption,
             deliveryType: isPickupOrder ? 'pickup' : 'deliver',
+            totalAmount: fullOrderTotal,
+            amountDueNow: finalTotal,
             orderRef: backendId ? undefined : (fallbackOrderRef || undefined),
             checkoutReference: backendId
               ? undefined

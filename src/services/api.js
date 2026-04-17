@@ -579,6 +579,16 @@ class ApiService {
       delivery_type: paymentMeta.deliveryType,
     };
 
+    const hintedTotalAmount = Number(paymentMeta.totalAmount);
+    if (Number.isFinite(hintedTotalAmount) && hintedTotalAmount > 0) {
+      payload.total_amount = hintedTotalAmount;
+    }
+
+    const hintedAmountDueNow = Number(paymentMeta.amountDueNow);
+    if (Number.isFinite(hintedAmountDueNow) && hintedAmountDueNow > 0) {
+      payload.amount_due_now = hintedAmountDueNow;
+    }
+
     // Keep full-payment payload minimal, matching website checkout behavior.
     if (isDownpayment) {
       payload.downpayment_rate = paymentMeta.downpaymentRate;
