@@ -716,7 +716,9 @@ const CheckoutScreen = ({ navigation }) => {
             ? orders.find(order => String(order?.notes || '').includes(`[checkout_ref:${checkoutReference}]`))
             : null;
 
-          const useStrictCheckoutReference = Boolean(checkoutReference);
+          // Mobile checkoutReference is a client tag and can differ from backend payment_reference.
+          // Allow server order_ref/amount fallback matching even when checkoutReference exists.
+          const useStrictCheckoutReference = false;
 
           const matchedByServerRef = !useStrictCheckoutReference && !matchedByCheckoutReference && !matchedByNotesReference && serverOrderRef
             ? orders.find(order => String(order?.order_ref || order?.tracking_number || order?.order_number || '') === String(serverOrderRef))

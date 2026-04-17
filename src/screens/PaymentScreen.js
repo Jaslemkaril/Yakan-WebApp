@@ -200,12 +200,24 @@ export default function PaymentScreen({ navigation, route }) {
     setIsProcessing(true);
 
     try {
-      let backendId = orderData.backendOrderId || orderData.id || null;
-      let checkoutOrderRef = orderData?.orderRef || null;
+      const initialOrderRef =
+        orderData?.orderRef
+        || orderData?.order_ref
+        || orderData?.tracking_number
+        || orderData?.order_number
+        || null;
+      const initialCheckoutReference =
+        orderData?.checkoutReference
+        || orderData?.checkout_reference
+        || orderData?.payment_reference
+        || null;
+
+      let backendId = orderData.backendOrderId || orderData.id || orderData?.order_id || null;
+      let checkoutOrderRef = initialOrderRef || null;
       let verifiedCheckoutReference = null;
 
       // Recover backend ID when checkout did not return it immediately.
-      if (!backendId && (orderData?.checkoutReference || orderData?.orderRef)) {
+      if (!backendId && (initialCheckoutReference || initialOrderRef)) {
         setProcessingMessage('Syncing order details...');
         try {
           const ordersResponse = await ApiService.getOrders({ limit: 50 });
@@ -217,14 +229,14 @@ export default function PaymentScreen({ navigation, route }) {
               || [];
             const orders = Array.isArray(ordersPayload) ? ordersPayload : [];
 
-            const matchedByCheckoutReference = orderData?.checkoutReference
-              ? orders.find(order => String(order?.payment_reference || '') === String(orderData.checkoutReference))
+            const matchedByCheckoutReference = initialCheckoutReference
+              ? orders.find(order => String(order?.payment_reference || '') === String(initialCheckoutReference))
               : null;
 
-            const matchedByOrderRef = !matchedByCheckoutReference && orderData?.orderRef
+            const matchedByOrderRef = !matchedByCheckoutReference && initialOrderRef
               ? orders.find(order => {
                   const candidateRef = order?.order_ref || order?.tracking_number || order?.order_number || '';
-                  return String(candidateRef) === String(orderData.orderRef);
+                  return String(candidateRef) === String(initialOrderRef);
                 })
               : null;
 
@@ -240,7 +252,7 @@ export default function PaymentScreen({ navigation, route }) {
       }
 
       // Defensive guard: if checkout handed us a stale backend ID, resolve by order reference.
-      if (backendId && orderData?.orderRef) {
+      if (backendId && initialOrderRef) {
         try {
           const verifyOrderResponse = await ApiService.getOrder(backendId);
           const verifiedOrder = verifyOrderResponse?.data?.data || verifyOrderResponse?.data || null;
@@ -255,7 +267,7 @@ export default function PaymentScreen({ navigation, route }) {
             verifiedCheckoutReference = resolvedCheckoutReference;
           }
 
-          const localOrderRef = String(orderData.orderRef || '');
+          const localOrderRef = String(initialOrderRef || '');
           const localOrderTotal = Number(fullOrderTotal || 0);
 
           const refMismatch = verifiedOrderRef && localOrderRef && String(verifiedOrderRef) !== localOrderRef;
@@ -288,10 +300,12 @@ export default function PaymentScreen({ navigation, route }) {
 
       // Final identity recovery: retry for backend order ID before creating PayMongo checkout.
       if (!backendId) {
-        const desiredCheckoutRef = String(verifiedCheckoutReference || orderData?.checkoutReference || '').trim();
-        const desiredOrderRef = String(checkoutOrderRef || orderData?.orderRef || '').trim();
+        const desiredCheckoutRef = String(verifiedCheckoutReference || initialCheckoutReference || '').trim();
+        const desiredOrderRef = String(checkoutOrderRef || initialOrderRef || '').trim();
         const targetTotal = Number(fullOrderTotal || 0);
-        const useStrictCheckoutReference = desiredCheckoutRef.length > 0;
+        // Mobile checkoutReference is a client tag and may differ from server payment_reference.
+        // Always allow order_ref / total-based fallback matching.
+        const useStrictCheckoutReference = false;
         const maxIdentityAttempts = 4;
         const identityRetryDelayMs = 600;
 
@@ -359,10 +373,10 @@ export default function PaymentScreen({ navigation, route }) {
         }
       }
 
-      const fallbackOrderRef = checkoutOrderRef || orderData?.orderRef || null;
+      const fallbackOrderRef = checkoutOrderRef || initialOrderRef || null;
       // Avoid sending a stale local checkout reference when order_ref is available.
       const fallbackCheckoutReference = verifiedCheckoutReference
-        || (!fallbackOrderRef ? (orderData?.checkoutReference || null) : null);
+        || (!fallbackOrderRef ? (initialCheckoutReference || null) : null);
       const hasAnyCheckoutIdentity = Boolean(backendId || fallbackOrderRef || fallbackCheckoutReference);
       const hasPaymongoIdentity = Boolean(backendId || fallbackCheckoutReference || fallbackOrderRef);
 
@@ -389,12 +403,12 @@ export default function PaymentScreen({ navigation, route }) {
         paymentOption,
         downpaymentRate,
         paymentMethod: selectedPaymentMethod,
-        orderRef: fallbackOrderRef || orderData?.orderRef || null,
+        orderRef: fallbackOrderRef || initialOrderRef || null,
         paymentReference: referenceNumber,
         checkoutReference: fallbackCheckoutReference,
         status: isPaymongo ? 'pending_payment' : 'payment_verified', // align with timeline stage
-        backendOrderId: backendId || orderData?.backendOrderId || null,
-        id: backendId || orderData?.backendOrderId || null, // Also store as 'id' for compatibility
+        backendOrderId: backendId || orderData?.backendOrderId || orderData?.order_id || null,
+        id: backendId || orderData?.backendOrderId || orderData?.order_id || null, // Also store as 'id' for compatibility
       };
 
       // If user attached receipt, upload it after order is created (manual payment methods)
@@ -573,9 +587,9 @@ export default function PaymentScreen({ navigation, route }) {
         downpaymentRate,
         paymentMethod: selectedPaymentMethod,
         paymentReference: referenceNumber,
-        checkoutReference: orderData?.checkoutReference || null,
-        backendOrderId: orderData.backendOrderId || orderData.id || null,
-        id: orderData.backendOrderId || orderData.id || null,
+        checkoutReference: initialCheckoutReference || null,
+        backendOrderId: orderData.backendOrderId || orderData.id || orderData?.order_id || null,
+        id: orderData.backendOrderId || orderData.id || orderData?.order_id || null,
         status: isPaymongo ? 'pending_payment' : 'payment_verified',
       };
       await updateOrderInStorage(finalOrderData);

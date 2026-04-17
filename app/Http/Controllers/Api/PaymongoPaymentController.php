@@ -53,21 +53,21 @@ class PaymongoPaymentController extends Controller
 
         if (!is_null($requestedOrderId)) {
             $order = Order::with(['items.product', 'user'])->find($requestedOrderId);
-        } elseif ($requestedCheckoutReference !== '') {
-            $order = Order::with(['items.product', 'user'])
-                ->where('user_id', $authUserId)
-                ->where(function ($query) use ($requestedCheckoutReference) {
-                    $query->where('payment_reference', $requestedCheckoutReference)
-                        ->orWhere('notes', 'like', '%[checkout_ref:' . $requestedCheckoutReference . ']%');
-                })
-                ->latest()
-                ->first();
         } elseif ($requestedOrderRef !== '') {
             $order = Order::with(['items.product', 'user'])
                 ->where('user_id', $authUserId)
                 ->where(function ($query) use ($requestedOrderRef) {
                     $query->where('order_ref', $requestedOrderRef)
                         ->orWhere('tracking_number', $requestedOrderRef);
+                })
+                ->latest()
+                ->first();
+        } elseif ($requestedCheckoutReference !== '') {
+            $order = Order::with(['items.product', 'user'])
+                ->where('user_id', $authUserId)
+                ->where(function ($query) use ($requestedCheckoutReference) {
+                    $query->where('payment_reference', $requestedCheckoutReference)
+                        ->orWhere('notes', 'like', '%[checkout_ref:' . $requestedCheckoutReference . ']%');
                 })
                 ->latest()
                 ->first();
