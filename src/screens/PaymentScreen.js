@@ -306,7 +306,7 @@ export default function PaymentScreen({ navigation, route }) {
         // Mobile checkoutReference is a client tag and may differ from server payment_reference.
         // Always allow order_ref / total-based fallback matching.
         const useStrictCheckoutReference = false;
-        const maxIdentityAttempts = 4;
+        const maxIdentityAttempts = 6;
         const identityRetryDelayMs = 600;
 
         for (let attempt = 0; attempt < maxIdentityAttempts && !backendId; attempt += 1) {
@@ -370,6 +370,37 @@ export default function PaymentScreen({ navigation, route }) {
           if (!backendId && attempt < (maxIdentityAttempts - 1)) {
             await new Promise(resolve => setTimeout(resolve, identityRetryDelayMs));
           }
+        }
+      }
+
+      // Final strict sync: if we still do not have order_id/order_ref,
+      // resolve only by the exact checkout reference tag from order creation.
+      if (!backendId && !checkoutOrderRef && initialCheckoutReference) {
+        setProcessingMessage('Finalizing order sync...');
+        try {
+          const ordersResponse = await ApiService.getOrders({ limit: 150 });
+          if (ordersResponse.success) {
+            const ordersPayload =
+              ordersResponse.data?.data?.data
+              || ordersResponse.data?.data
+              || ordersResponse.data
+              || [];
+            const orders = Array.isArray(ordersPayload) ? ordersPayload : [];
+            const strictOrder = orders.find(order => {
+              const paymentRef = String(order?.payment_reference || '');
+              const notes = String(order?.notes || '');
+              return paymentRef === String(initialCheckoutReference)
+                || notes.includes(`[checkout_ref:${initialCheckoutReference}]`);
+            });
+
+            if (strictOrder?.id) {
+              backendId = strictOrder.id;
+              checkoutOrderRef = strictOrder?.order_ref || strictOrder?.tracking_number || strictOrder?.order_number || checkoutOrderRef;
+              verifiedCheckoutReference = strictOrder?.payment_reference || verifiedCheckoutReference;
+            }
+          }
+        } catch (strictSyncError) {
+          // Keep fallback validation below deterministic.
         }
       }
 

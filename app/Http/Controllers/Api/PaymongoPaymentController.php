@@ -81,7 +81,10 @@ class PaymongoPaymentController extends Controller
         }
 
         $recentOrders = collect();
-        if (!$order) {
+        // Only use heuristic fallback when no explicit checkout reference was provided.
+        // If checkout_reference is provided and not found, returning a specific not-found
+        // response is safer than binding to a different pending order.
+        if (!$order && $requestedCheckoutReference === '') {
             $recentOrders = Order::with(['items.product', 'user'])
                 ->where('user_id', $authUserId)
                 ->latest()
@@ -113,7 +116,9 @@ class PaymongoPaymentController extends Controller
         if (!$order) {
             return response()->json([
                 'success' => false,
-                'message' => 'Order not found for the provided checkout identity.',
+                'message' => $requestedCheckoutReference !== ''
+                    ? 'Order not found for the provided checkout reference. Please return to checkout and try again.'
+                    : 'Order not found for the provided checkout identity.',
                 'data' => [
                     'user_id' => $authUserId,
                     'received' => [
