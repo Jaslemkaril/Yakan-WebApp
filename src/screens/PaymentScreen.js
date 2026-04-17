@@ -283,9 +283,10 @@ export default function PaymentScreen({ navigation, route }) {
         }
       }
 
-      // Keep mobile aligned with website checkout: use canonical backend order ID.
-      if (!backendId) {
-        Alert.alert('Order Not Ready', 'We are still syncing your order. Please return to checkout and try payment again.');
+      const checkoutIdentityReference = verifiedCheckoutReference || orderData?.checkoutReference || null;
+      const hasCheckoutIdentity = Boolean(backendId || checkoutIdentityReference);
+      if (!hasCheckoutIdentity) {
+        Alert.alert('Missing Order', 'This payment cannot continue because order identity is missing. Please place the order again.');
         setIsProcessing(false);
         return;
       }
@@ -302,7 +303,7 @@ export default function PaymentScreen({ navigation, route }) {
         downpaymentRate,
         paymentMethod: selectedPaymentMethod,
         paymentReference: referenceNumber,
-        checkoutReference: verifiedCheckoutReference || orderData?.checkoutReference || null,
+        checkoutReference: checkoutIdentityReference,
         status: isPaymongo ? 'pending_payment' : 'payment_verified', // align with timeline stage
         backendOrderId: backendId || orderData?.backendOrderId || null,
         id: backendId || orderData?.backendOrderId || null, // Also store as 'id' for compatibility
@@ -360,6 +361,8 @@ export default function PaymentScreen({ navigation, route }) {
             {
               paymentOption,
               downpaymentRate,
+              // If backend ID is not yet known, use checkout_reference as the only identity key.
+              checkoutReference: backendId ? undefined : checkoutIdentityReference,
               amountDueNow: finalTotal,
               totalAmount: fullOrderTotal,
               deliveryType: isPickupOrder ? 'pickup' : 'deliver',
