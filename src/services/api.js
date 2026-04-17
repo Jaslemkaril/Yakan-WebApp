@@ -578,6 +578,8 @@ class ApiService {
       amount_due_now: paymentMeta.amountDueNow,
       total_amount: paymentMeta.totalAmount,
       delivery_type: paymentMeta.deliveryType,
+      amount_override: paymentMeta.amountOverride,
+      is_downpayment_override: paymentMeta.isDownpaymentOverride,
     });
   }
 

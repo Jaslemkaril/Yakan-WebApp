@@ -22,6 +22,8 @@ class PaymongoPaymentController extends Controller
             'amount_due_now' => 'nullable|numeric|min:0',
             'total_amount' => 'nullable|numeric|min:0',
             'delivery_type' => 'nullable|string|in:pickup,deliver,delivery',
+            'amount_override' => 'nullable|numeric|min:0',
+            'is_downpayment_override' => 'nullable|boolean',
         ]);
 
         $order = Order::with(['items.product', 'user'])->findOrFail($validated['order_id']);
@@ -58,9 +60,19 @@ class PaymongoPaymentController extends Controller
             $requestedAmountDueNow = isset($validated['amount_due_now'])
                 ? (float) $validated['amount_due_now']
                 : null;
+            $requestedAmountOverride = isset($validated['amount_override'])
+                ? (float) $validated['amount_override']
+                : null;
+            $explicitDownpaymentOverride = array_key_exists('is_downpayment_override', $validated)
+                ? (bool) $validated['is_downpayment_override']
+                : null;
 
             $isRequestedDownpayment = $requestedPaymentOption === 'downpayment'
                 || (!is_null($requestedAmountDueNow) && $orderTotal > 0 && ($requestedAmountDueNow + 0.01) < $orderTotal);
+
+            if (!is_null($explicitDownpaymentOverride)) {
+                $isRequestedDownpayment = $explicitDownpaymentOverride;
+            }
 
             $requestedDownpaymentRate = isset($validated['downpayment_rate'])
                 ? (float) $validated['downpayment_rate']
@@ -71,6 +83,11 @@ class PaymongoPaymentController extends Controller
             if (!is_null($requestedAmountDueNow) && $requestedAmountDueNow > 0) {
                 $cap = $orderTotal > 0 ? $orderTotal : $requestedAmountDueNow;
                 $payableNowAmount = max(0, min($cap, $requestedAmountDueNow));
+            }
+
+            if (!is_null($requestedAmountOverride) && $requestedAmountOverride > 0) {
+                $cap = $orderTotal > 0 ? $orderTotal : $requestedAmountOverride;
+                $payableNowAmount = max(0, min($cap, $requestedAmountOverride));
             }
 
             if ($isRequestedDownpayment) {

@@ -244,6 +244,8 @@ export default function PaymentScreen({ navigation, route }) {
               amountDueNow: finalTotal,
               totalAmount: fullOrderTotal,
               deliveryType: isPickupOrder ? 'pickup' : 'deliver',
+              amountOverride: finalTotal,
+              isDownpaymentOverride: paymentOption === 'downpayment',
             }
           );
           const checkoutUrl = paymongoCheckout?.data?.data?.checkout_url
