@@ -598,10 +598,11 @@ class ApiService {
         ? paymentMeta.orderRef.trim()
         : '';
 
-      if (trimmedCheckoutReference) {
-        payload.checkout_reference = trimmedCheckoutReference;
-      } else if (trimmedOrderRef) {
+      // order_ref is deterministic from checkout and less prone to stale-reference mismatches.
+      if (trimmedOrderRef) {
         payload.order_ref = trimmedOrderRef;
+      } else if (trimmedCheckoutReference) {
+        payload.checkout_reference = trimmedCheckoutReference;
       }
     }
 

@@ -360,7 +360,9 @@ export default function PaymentScreen({ navigation, route }) {
       }
 
       const fallbackOrderRef = checkoutOrderRef || orderData?.orderRef || null;
-      const fallbackCheckoutReference = verifiedCheckoutReference || orderData?.checkoutReference || null;
+      // Avoid sending a stale local checkout reference when order_ref is available.
+      const fallbackCheckoutReference = verifiedCheckoutReference
+        || (!fallbackOrderRef ? (orderData?.checkoutReference || null) : null);
       const hasAnyCheckoutIdentity = Boolean(backendId || fallbackOrderRef || fallbackCheckoutReference);
       const hasPaymongoIdentity = Boolean(backendId || fallbackCheckoutReference || fallbackOrderRef);
 
@@ -411,8 +413,10 @@ export default function PaymentScreen({ navigation, route }) {
           const basePaymongoMeta = {
             paymentOption,
             deliveryType: isPickupOrder ? 'pickup' : 'deliver',
-            checkoutReference: backendId ? undefined : (fallbackCheckoutReference || undefined),
             orderRef: backendId ? undefined : (fallbackOrderRef || undefined),
+            checkoutReference: backendId
+              ? undefined
+              : (!fallbackOrderRef ? (fallbackCheckoutReference || undefined) : undefined),
           };
 
           const downpaymentMeta = paymentOption === 'downpayment'
