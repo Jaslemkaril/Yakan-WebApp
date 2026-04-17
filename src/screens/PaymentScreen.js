@@ -278,8 +278,9 @@ export default function PaymentScreen({ navigation, route }) {
         }
       }
 
-      if (!backendId) {
-        Alert.alert('Missing Order', 'This payment cannot continue because the backend order ID is missing. Please place the order again.');
+      const hasCheckoutIdentity = Boolean(backendId || orderData?.checkoutReference || checkoutOrderRef);
+      if (!hasCheckoutIdentity) {
+        Alert.alert('Missing Order', 'This payment cannot continue because order identity is missing. Please place the order again.');
         setIsProcessing(false);
         return;
       }
@@ -298,8 +299,8 @@ export default function PaymentScreen({ navigation, route }) {
         paymentReference: referenceNumber,
         checkoutReference: orderData?.checkoutReference || null,
         status: isPaymongo ? 'pending_payment' : 'payment_verified', // align with timeline stage
-        backendOrderId: backendId,
-        id: backendId, // Also store as 'id' for compatibility
+        backendOrderId: backendId || orderData?.backendOrderId || null,
+        id: backendId || orderData?.backendOrderId || null, // Also store as 'id' for compatibility
       };
 
       // If user attached receipt, upload it after order is created (manual payment methods)
@@ -312,7 +313,7 @@ export default function PaymentScreen({ navigation, route }) {
       }
 
       // For PayMongo: open checkout in browser and detect redirect back to app
-      if (isPaymongo && backendId) {
+      if (isPaymongo) {
         try {
           const paymongoCheckout = await ApiService.createPaymongoCheckout(
             backendId,
@@ -321,6 +322,7 @@ export default function PaymentScreen({ navigation, route }) {
               paymentOption,
               downpaymentRate,
               orderRef: checkoutOrderRef,
+              checkoutReference: orderData?.checkoutReference || null,
               amountDueNow: finalTotal,
               totalAmount: fullOrderTotal,
               deliveryType: isPickupOrder ? 'pickup' : 'deliver',
@@ -328,6 +330,18 @@ export default function PaymentScreen({ navigation, route }) {
               isDownpaymentOverride: paymentOption === 'downpayment',
             }
           );
+
+          const checkoutPayload = paymongoCheckout?.data?.data || paymongoCheckout?.data || {};
+          if (checkoutPayload?.order_id) {
+            backendId = checkoutPayload.order_id;
+            finalOrderData.backendOrderId = checkoutPayload.order_id;
+            finalOrderData.id = checkoutPayload.order_id;
+          }
+          if (checkoutPayload?.order_ref) {
+            checkoutOrderRef = checkoutPayload.order_ref;
+            finalOrderData.orderRef = checkoutPayload.order_ref;
+          }
+
           const checkoutUrl = paymongoCheckout?.data?.data?.checkout_url
             ?? paymongoCheckout?.data?.checkout_url
             ?? paymongoCheckout?.checkout_url;
@@ -369,12 +383,6 @@ export default function PaymentScreen({ navigation, route }) {
           );
           return;
         }
-      }
-
-      if (isPaymongo && !backendId) {
-        setIsProcessing(false);
-        Alert.alert('Error', 'Order was created but ID could not be retrieved. Please contact support.');
-        return;
       }
 
       await updateOrderInStorage(finalOrderData);

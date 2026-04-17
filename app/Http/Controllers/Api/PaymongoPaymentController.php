@@ -14,7 +14,8 @@ class PaymongoPaymentController extends Controller
     public function createCheckout(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'order_id'   => 'required|integer|exists:orders,id',
+            'order_id'   => 'nullable|integer|exists:orders,id',
+            'checkout_reference' => 'nullable|string|max:120',
             'success_url' => 'nullable|url',
             'cancel_url'  => 'nullable|url',
             'payment_option' => 'nullable|string|in:full,downpayment',
@@ -27,7 +28,48 @@ class PaymongoPaymentController extends Controller
             'is_downpayment_override' => 'nullable|boolean',
         ]);
 
-        $order = Order::with(['items.product', 'user'])->findOrFail($validated['order_id']);
+        $requestedOrderId = isset($validated['order_id']) ? (int) $validated['order_id'] : null;
+        $requestedOrderRef = trim((string) ($validated['order_ref'] ?? ''));
+        $requestedCheckoutReference = trim((string) ($validated['checkout_reference'] ?? ''));
+
+        if (is_null($requestedOrderId) && $requestedOrderRef === '' && $requestedCheckoutReference === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Missing checkout identity. Provide order_id, order_ref, or checkout_reference.',
+                'errors' => [
+                    'order_id' => ['At least one checkout identifier is required.'],
+                ],
+            ], 422);
+        }
+
+        $authUserId = (int) $request->user()->id;
+        $order = null;
+
+        if (!is_null($requestedOrderId)) {
+            $order = Order::with(['items.product', 'user'])->find($requestedOrderId);
+        } elseif ($requestedCheckoutReference !== '') {
+            $order = Order::with(['items.product', 'user'])
+                ->where('user_id', $authUserId)
+                ->where('payment_reference', $requestedCheckoutReference)
+                ->latest()
+                ->first();
+        } elseif ($requestedOrderRef !== '') {
+            $order = Order::with(['items.product', 'user'])
+                ->where('user_id', $authUserId)
+                ->where(function ($query) use ($requestedOrderRef) {
+                    $query->where('order_ref', $requestedOrderRef)
+                        ->orWhere('tracking_number', $requestedOrderRef);
+                })
+                ->latest()
+                ->first();
+        }
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found for the provided checkout identity.',
+            ], 404);
+        }
 
         if ((int) $order->user_id !== (int) $request->user()->id) {
             return response()->json([
@@ -36,13 +78,22 @@ class PaymongoPaymentController extends Controller
             ], 403);
         }
 
-        $requestedOrderRef = trim((string) ($validated['order_ref'] ?? ''));
         if ($requestedOrderRef !== '' && strcasecmp((string) ($order->order_ref ?? ''), $requestedOrderRef) !== 0) {
             return response()->json([
                 'success' => false,
                 'message' => 'Order identity mismatch. Please refresh checkout and try again.',
                 'errors' => [
                     'order_ref' => ['Provided order reference does not match the selected order ID.'],
+                ],
+            ], 422);
+        }
+
+        if ($requestedCheckoutReference !== '' && strcasecmp((string) ($order->payment_reference ?? ''), $requestedCheckoutReference) !== 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Checkout reference mismatch. Please return to checkout and try again.',
+                'errors' => [
+                    'checkout_reference' => ['Provided checkout reference does not match the selected order.'],
                 ],
             ], 422);
         }
@@ -143,6 +194,9 @@ class PaymongoPaymentController extends Controller
             return response()->json([
                 'success' => true,
                 'data'    => [
+                    'order_id' => $order->id,
+                    'order_ref' => $order->order_ref,
+                    'checkout_reference' => $order->payment_reference,
                     'checkout_id'  => $result['checkout_id'],
                     'checkout_url' => $result['checkout_url'],
                     'amount_override_applied' => $options['amount_override'] ?? null,
@@ -151,7 +205,7 @@ class PaymongoPaymentController extends Controller
             ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('PayMongo API checkout failed', [
-                'order_id' => $order->id,
+                'order_id' => $order?->id,
                 'error'    => $e->getMessage(),
             ]);
 

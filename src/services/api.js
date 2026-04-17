@@ -573,6 +573,7 @@ class ApiService {
 
     return this.request('POST', API_CONFIG.ENDPOINTS.PAYMENT.PAYMONGO_CHECKOUT, {
       order_id: orderId,
+      checkout_reference: paymentMeta.checkoutReference,
       success_url: urls.successUrl,
       cancel_url: urls.cancelUrl,
       payment_option: paymentMeta.paymentOption,
