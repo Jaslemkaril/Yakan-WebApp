@@ -332,6 +332,14 @@ class OrderController extends Controller
         $order->appendTrackingEvent($newPaymentStatus === 'refunded' ? 'Cancellation Approved (Refunded)' : 'Cancellation Approved');
         $order->save();
 
+        $this->notifyCancellationDecision(
+            $order,
+            'approved',
+            null,
+            $adminNote !== '' ? $adminNote : null,
+            $newPaymentStatus === 'refunded' ? 'Refunded' : null
+        );
+
         return redirect()->back()->with('success', $approvalLine);
     }
 
@@ -409,7 +417,76 @@ class OrderController extends Controller
         $order->appendTrackingEvent('Cancellation Rejected');
         $order->save();
 
+        $this->notifyCancellationDecision(
+            $order,
+            'rejected',
+            $rejectionReason,
+            $adminNote !== '' ? $adminNote : null,
+            null
+        );
+
         return redirect()->back()->with('success', 'Cancellation request rejected. Order has been returned to active processing.');
+    }
+
+    /**
+     * Notify customer about cancellation request decision.
+     */
+    private function notifyCancellationDecision(
+        Order $order,
+        string $decision,
+        ?string $rejectionReason = null,
+        ?string $adminNote = null,
+        ?string $paymentRefundStatus = null
+    ): void {
+        $recipient = $order->user?->email ?: ($order->customer_email ?? null);
+        if (!$recipient || !filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+            return;
+        }
+
+        $decisionNormalized = strtolower(trim($decision));
+        $decisionLabel = $decisionNormalized === 'approved' ? 'Approved' : 'Rejected';
+        $orderRef = trim((string) ($order->order_ref ?? ''));
+        if ($orderRef === '') {
+            $orderRef = 'Order #' . $order->id;
+        }
+
+        $subject = 'Cancellation Request ' . $decisionLabel . ' - ' . $orderRef;
+        $introText = $decisionNormalized === 'approved'
+            ? 'Your cancellation request has been approved.'
+            : 'Your cancellation request has been rejected.';
+
+        $extraMessage = null;
+        if ($decisionNormalized === 'approved' && $paymentRefundStatus !== null) {
+            $extraMessage = 'Payment refund status: ' . $paymentRefundStatus . '.';
+        }
+
+        try {
+            TransactionalMailService::sendViewDetailed(
+                $recipient,
+                $subject,
+                'emails.orders.request-status',
+                [
+                    'subject' => $subject,
+                    'customerName' => $order->user?->name ?: ($order->customer_name ?? 'Customer'),
+                    'introText' => $introText,
+                    'orderRef' => $orderRef,
+                    'orderId' => $order->id,
+                    'requestType' => 'Cancellation Request',
+                    'decision' => $decisionLabel,
+                    'reason' => $decisionNormalized === 'approved' ? null : $rejectionReason,
+                    'adminNote' => $adminNote,
+                    'approvedAmount' => null,
+                    'extraMessage' => $extraMessage,
+                ]
+            );
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send cancellation decision email.', [
+                'order_id' => $order->id,
+                'recipient' => $recipient,
+                'decision' => $decisionNormalized,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     /**
