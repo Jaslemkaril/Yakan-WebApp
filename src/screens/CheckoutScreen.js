@@ -607,22 +607,36 @@ const CheckoutScreen = ({ navigation }) => {
       const createdOrder =
         resBody?.data?.data
         || resBody?.data?.order
-        || resBody?.data
         || resBody?.order
+        || resBody?.data
         || resBody;
 
       let backendOrderId =
-        createdOrder?.id
+        resBody?.id
+        || resBody?.order_id
+        || resBody?.orderId
+        || resBody?.backendOrderId
+        || createdOrder?.id
         || createdOrder?.order_id
         || createdOrder?.orderId
         || createdOrder?.backendOrderId
+        || resBody?.data?.id
+        || resBody?.data?.order_id
+        || resBody?.data?.orderId
         || null;
 
       const serverOrderRef =
-        createdOrder?.order_ref
+        resBody?.order_ref
+        || resBody?.tracking_number
+        || resBody?.order_number
+        || resBody?.orderRef
+        || createdOrder?.order_ref
         || createdOrder?.tracking_number
         || createdOrder?.order_number
         || createdOrder?.orderRef
+        || resBody?.data?.order_ref
+        || resBody?.data?.tracking_number
+        || resBody?.data?.order_number
         || null;
 
       let orderRef = serverOrderRef || generateOrderRef();
