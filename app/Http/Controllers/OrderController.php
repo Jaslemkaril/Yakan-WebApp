@@ -791,6 +791,7 @@ class OrderController extends Controller
         $validated = $request->validate([
             'reason' => 'required|string|max:150',
             'refund_type' => 'nullable|in:full,partial,change_of_mind',
+            'preferred_resolution' => 'nullable|in:refund,replacement,return_refund',
             'specific_reason' => 'nullable|string|max:120',
             'comment' => 'nullable|string|max:2000',
             'details' => 'nullable|string|max:2000',
@@ -800,12 +801,17 @@ class OrderController extends Controller
 
         $baseComment = trim((string) ($validated['comment'] ?? $validated['details'] ?? ''));
         $specificReason = trim((string) ($validated['specific_reason'] ?? ''));
+        $preferredResolution = trim((string) ($validated['preferred_resolution'] ?? ''));
         $comment = $baseComment;
         if ($specificReason !== '') {
             $comment = 'Specific reason: ' . $specificReason . "\n" . $baseComment;
         }
+        if ($preferredResolution !== '') {
+            $comment .= ($comment !== '' ? "\n" : '')
+                . 'Preferred resolution: ' . ucfirst(str_replace('_', ' ', $preferredResolution));
+        }
 
-        if ($comment === '') {
+        if ($baseComment === '') {
             return redirect()->back()
                 ->withInput()
                 ->withErrors([
@@ -828,7 +834,8 @@ class OrderController extends Controller
             }
         }
 
-        $refundType = $this->normalizeRefundType($validated['refund_type'] ?? null, $validated['reason']);
+        // Customer no longer sets final refund scope; keep this system-derived for admin review.
+        $refundType = $this->normalizeRefundType(null, $validated['reason']);
 
         // Step 2: create refund request record as pending review.
         $refundRequest = OrderRefundRequest::create([
