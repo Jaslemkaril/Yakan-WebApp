@@ -604,12 +604,71 @@ const CheckoutScreen = ({ navigation }) => {
       }
 
       const resBody = response.data || {};
-      const createdOrder = resBody?.data || resBody;
-      const backendOrderId = createdOrder?.id;
-      const orderRef = createdOrder?.order_ref || createdOrder?.tracking_number || generateOrderRef();
+      const createdOrder =
+        resBody?.data?.data
+        || resBody?.data?.order
+        || resBody?.data
+        || resBody?.order
+        || resBody;
+
+      let backendOrderId =
+        createdOrder?.id
+        || createdOrder?.order_id
+        || createdOrder?.orderId
+        || createdOrder?.backendOrderId
+        || null;
+
+      let orderRef =
+        createdOrder?.order_ref
+        || createdOrder?.tracking_number
+        || createdOrder?.order_number
+        || createdOrder?.orderRef
+        || generateOrderRef();
 
       if (!backendOrderId) {
-        Alert.alert('Order Error', 'Order was created but no order ID was returned. Please check My Orders.');
+        try {
+          const ordersResponse = await ApiService.getOrders();
+          if (ordersResponse.success) {
+            const ordersPayload =
+              ordersResponse.data?.data?.data
+              || ordersResponse.data?.data
+              || ordersResponse.data
+              || [];
+            const orders = Array.isArray(ordersPayload) ? ordersPayload : [];
+
+            const matchedOrder =
+              orders.find(order => String(order?.order_ref || order?.tracking_number || order?.order_number || '') === String(orderRef || ''))
+              || orders.find(order => {
+                const orderTotalFromApi = Number(order?.total_amount ?? order?.total ?? 0);
+                return Math.abs(orderTotalFromApi - Number(actualTotal || 0)) < 0.01;
+              })
+              || orders[0]
+              || null;
+
+            if (matchedOrder) {
+              backendOrderId =
+                matchedOrder?.id
+                || matchedOrder?.order_id
+                || matchedOrder?.orderId
+                || matchedOrder?.backendOrderId
+                || null;
+              orderRef =
+                matchedOrder?.order_ref
+                || matchedOrder?.tracking_number
+                || matchedOrder?.order_number
+                || orderRef;
+            }
+          }
+        } catch (lookupError) {
+          console.log('[Checkout] Could not resolve backend order ID from orders list:', lookupError?.message || lookupError);
+        }
+      }
+
+      if (!backendOrderId) {
+        Alert.alert('Order Placed', 'Your order was created. Please open My Orders to continue payment.');
+        await clearCart();
+        setCheckoutItems([]);
+        navigation.navigate('Orders');
         return;
       }
 
