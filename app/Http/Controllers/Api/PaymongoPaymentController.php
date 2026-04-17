@@ -169,6 +169,7 @@ class PaymongoPaymentController extends Controller
                 $deliveryType = 'deliver';
             }
 
+            $hasExplicitPaymentOption = array_key_exists('payment_option', $validated) && !is_null($validated['payment_option']);
             $requestedPaymentOption = strtolower((string) ($validated['payment_option'] ?? $order->payment_option ?? 'full'));
             $requestedAmountDueNow = isset($validated['amount_due_now'])
                 ? (float) $validated['amount_due_now']
@@ -196,11 +197,22 @@ class PaymongoPaymentController extends Controller
                 $clientRequestedAmount = max(0, min($cap, $clientRequestedAmount));
             }
 
-            $isRequestedDownpayment = $requestedPaymentOption === 'downpayment'
-                || (!is_null($clientRequestedAmount) && $orderTotal > 0 && ($clientRequestedAmount + 0.01) < $orderTotal);
+            $isRequestedDownpayment = $requestedPaymentOption === 'downpayment';
+
+            // Amount-based downpayment inference is only for legacy clients that
+            // do not send an explicit payment_option field.
+            if (!$hasExplicitPaymentOption && !is_null($clientRequestedAmount) && $orderTotal > 0 && ($clientRequestedAmount + 0.01) < $orderTotal) {
+                $isRequestedDownpayment = true;
+            }
 
             if (!is_null($explicitDownpaymentOverride)) {
                 $isRequestedDownpayment = $explicitDownpaymentOverride;
+            }
+
+            // Business rule: downpayment is pickup-only.
+            if ($deliveryType !== 'pickup') {
+                $requestedPaymentOption = 'full';
+                $isRequestedDownpayment = false;
             }
 
             $payableNowAmount = $order->getAmountDueNow();
@@ -241,9 +253,34 @@ class PaymongoPaymentController extends Controller
 
                     $order->save();
                 }
-            } elseif (!is_null($clientRequestedAmount) && $orderTotal > 0) {
-                $options['amount_override'] = max(0, min($orderTotal, $clientRequestedAmount));
-                $options['is_downpayment_override'] = false;
+            } else {
+                // Explicit full-payment checkout should not inherit stale
+                // downpayment snapshots from the order notes or DB fields.
+                if ($orderTotal > 0) {
+                    $options['amount_override'] = $orderTotal;
+                    $options['is_downpayment_override'] = false;
+                } elseif (!is_null($clientRequestedAmount) && $clientRequestedAmount > 0) {
+                    $options['amount_override'] = $clientRequestedAmount;
+                    $options['is_downpayment_override'] = false;
+                }
+
+                if (Schema::hasColumn('orders', 'payment_option')) {
+                    $order->payment_option = 'full';
+                }
+
+                if (Schema::hasColumn('orders', 'downpayment_rate')) {
+                    $order->downpayment_rate = 100;
+                }
+
+                if (Schema::hasColumn('orders', 'downpayment_amount')) {
+                    $order->downpayment_amount = $orderTotal > 0 ? $orderTotal : 0;
+                }
+
+                if (Schema::hasColumn('orders', 'remaining_balance')) {
+                    $order->remaining_balance = 0;
+                }
+
+                $order->save();
             }
 
             $result = $service->createCheckout($order, $options);
