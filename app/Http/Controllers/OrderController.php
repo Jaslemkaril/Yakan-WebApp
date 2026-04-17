@@ -916,61 +916,72 @@ class OrderController extends Controller
             abort(403);
         }
 
-        $rawEvidence = $refundRequest->evidence_paths;
-        if (is_string($rawEvidence) && $rawEvidence !== '') {
-            $decoded = json_decode($rawEvidence, true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                $rawEvidence = $decoded;
+        try {
+            $rawEvidence = $refundRequest->evidence_paths;
+            if (is_string($rawEvidence) && $rawEvidence !== '') {
+                $decoded = json_decode($rawEvidence, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $rawEvidence = $decoded;
+                }
             }
-        }
 
-        $evidence = array_values(array_filter(
-            is_array($rawEvidence) ? $rawEvidence : [],
-            static fn ($value) => $value !== null && $value !== ''
-        ));
+            $evidence = array_values(array_filter(
+                is_array($rawEvidence) ? $rawEvidence : [],
+                static fn ($value) => $value !== null && $value !== ''
+            ));
 
-        if (!array_key_exists($index, $evidence)) {
+            if (!array_key_exists($index, $evidence)) {
+                abort(404);
+            }
+
+            $path = str_replace('\\', '/', trim((string) $evidence[$index], " \t\n\r\0\x0B\"'"));
+            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                // Cloudinary/remote evidence should be opened directly.
+                return redirect()->away($path);
+            }
+
+            $normalizedPath = ltrim($path, '/');
+            if (str_starts_with($normalizedPath, 'storage/')) {
+                $normalizedPath = substr($normalizedPath, strlen('storage/'));
+            }
+            if (str_starts_with($normalizedPath, 'public/')) {
+                $normalizedPath = substr($normalizedPath, strlen('public/'));
+            }
+
+            $candidatePaths = array_values(array_unique(array_filter([
+                $normalizedPath,
+                ltrim($path, '/'),
+                'public/' . ltrim($normalizedPath, '/'),
+            ], static fn ($value) => is_string($value) && $value !== '')));
+
+            foreach ($candidatePaths as $candidatePath) {
+                $candidatePath = str_replace('\\', '/', trim((string) $candidatePath, '/'));
+
+                if (Storage::disk('public')->exists($candidatePath)) {
+                    return Storage::disk('public')->response($candidatePath);
+                }
+
+                if (Storage::disk('local')->exists($candidatePath)) {
+                    return Storage::disk('local')->response($candidatePath);
+                }
+
+                $publicStorageRelative = ltrim(str_replace(['public/', 'storage/'], '', $candidatePath), '/');
+                $publicStoragePath = public_path('storage/' . $publicStorageRelative);
+                if (is_file($publicStoragePath)) {
+                    return redirect()->to(asset('storage/' . $publicStorageRelative));
+                }
+            }
+
+            abort(404);
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to serve refund evidence file for customer.', [
+                'refund_request_id' => $refundRequest->id,
+                'index' => $index,
+                'error' => $exception->getMessage(),
+            ]);
+
             abort(404);
         }
-
-        $path = str_replace('\\', '/', trim((string) $evidence[$index]));
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            return redirect()->away($path);
-        }
-
-        // Support legacy values like "public/refunds/..." or "/storage/refunds/...".
-        $normalizedPath = ltrim($path, '/');
-        if (str_starts_with($normalizedPath, 'storage/')) {
-            $normalizedPath = substr($normalizedPath, strlen('storage/'));
-        }
-        if (str_starts_with($normalizedPath, 'public/')) {
-            $normalizedPath = substr($normalizedPath, strlen('public/'));
-        }
-
-        $candidatePaths = array_values(array_unique(array_filter([
-            $normalizedPath,
-            ltrim($path, '/'),
-            'public/' . ltrim($normalizedPath, '/'),
-        ])));
-
-        foreach ($candidatePaths as $candidatePath) {
-            $candidatePath = str_replace('\\', '/', $candidatePath);
-
-            if (Storage::disk('public')->exists($candidatePath)) {
-                return response()->file(Storage::disk('public')->path($candidatePath));
-            }
-
-            if (Storage::disk('local')->exists($candidatePath)) {
-                return response()->file(Storage::disk('local')->path($candidatePath));
-            }
-
-            $publicStoragePath = public_path('storage/' . ltrim(str_replace(['public/', 'storage/'], '', $candidatePath), '/'));
-            if (is_file($publicStoragePath)) {
-                return response()->file($publicStoragePath);
-            }
-        }
-
-        abort(404);
     }
 
     /**
