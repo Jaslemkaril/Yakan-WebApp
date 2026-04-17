@@ -341,14 +341,16 @@ class OrderController extends Controller
     public function rejectCancellationRequest(Request $request, Order $order)
     {
         $validated = $request->validate([
-            'admin_note' => 'required|string|max:2000',
+            'rejection_reason' => 'required|string|max:2000',
+            'admin_note' => 'nullable|string|max:2000',
         ]);
 
         if (strtolower((string) $order->status) !== 'cancellation_requested') {
             return redirect()->back()->with('error', 'This cancellation request is no longer pending.');
         }
 
-        $adminNote = trim((string) $validated['admin_note']);
+        $rejectionReason = trim((string) ($validated['rejection_reason'] ?? ''));
+        $adminNote = trim((string) ($validated['admin_note'] ?? ''));
         $existingAdminNotes = trim((string) ($order->admin_notes ?? ''));
 
         if (Schema::hasTable('order_refund_requests')) {
@@ -368,7 +370,9 @@ class OrderController extends Controller
                     $latestRefundRequest->payout_status = 'cancelled';
                 }
                 if (Schema::hasColumn('order_refund_requests', 'admin_note')) {
-                    $latestRefundRequest->admin_note = $adminNote;
+                    $latestRefundRequest->admin_note = $adminNote !== ''
+                        ? ('Rejection reason: ' . $rejectionReason . "\nAdmin note: " . $adminNote)
+                        : ('Rejection reason: ' . $rejectionReason);
                 }
                 $latestRefundRequest->reviewed_by = auth()->id();
                 $latestRefundRequest->reviewed_at = now();
@@ -382,7 +386,8 @@ class OrderController extends Controller
         $order->status = $nextStatus;
 
         $rejectionLine = 'Cancellation request rejected.';
-        $rejectionReasonLine = 'Rejection reason: ' . $adminNote;
+        $rejectionReasonLine = 'Rejection reason: ' . $rejectionReason;
+        $adminNoteLine = $adminNote !== '' ? ('Admin note: ' . $adminNote) : null;
 
         if (!Str::contains($existingAdminNotes, $rejectionLine)) {
             $existingAdminNotes = $existingAdminNotes === ''
@@ -393,6 +398,11 @@ class OrderController extends Controller
             $existingAdminNotes = $existingAdminNotes === ''
                 ? $rejectionReasonLine
                 : ($existingAdminNotes . "\n" . $rejectionReasonLine);
+        }
+        if ($adminNoteLine && !Str::contains($existingAdminNotes, $adminNoteLine)) {
+            $existingAdminNotes = $existingAdminNotes === ''
+                ? $adminNoteLine
+                : ($existingAdminNotes . "\n" . $adminNoteLine);
         }
 
         $order->admin_notes = trim($existingAdminNotes);

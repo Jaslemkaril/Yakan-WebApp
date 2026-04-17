@@ -273,8 +273,11 @@
 
             <form id="modalActionForm" method="POST" class="space-y-3 hidden">
                 @csrf
+                <label for="modalRejectionReason" class="block text-sm font-semibold text-gray-700">Rejection reason <span class="text-rose-600">(required for reject)</span></label>
+                <textarea id="modalRejectionReason" name="rejection_reason" rows="2" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000] resize-y" placeholder="e.g. Order already prepared and out for delivery"></textarea>
                 <label for="modalAdminNote" class="block text-sm font-semibold text-gray-700">Admin note (optional)</label>
                 <textarea id="modalAdminNote" name="admin_note" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000] resize-y" placeholder="e.g. Refund initiated via GCash..."></textarea>
+                <div id="modalFormError" class="hidden rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700"></div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <button type="button" id="approveRequestBtn" class="w-full px-4 py-3 bg-[#800000] text-white rounded-lg font-semibold hover:bg-[#600000] transition-colors">Approve & refund</button>
                     <button type="button" id="rejectRequestBtn" class="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-100 transition-colors">Reject request</button>
@@ -305,7 +308,9 @@
         const customerNoteEl = document.getElementById('modalCustomerNote');
         const resolvedMessageEl = document.getElementById('modalResolvedMessage');
         const actionForm = document.getElementById('modalActionForm');
+        const rejectionReasonEl = document.getElementById('modalRejectionReason');
         const adminNoteEl = document.getElementById('modalAdminNote');
+        const formErrorEl = document.getElementById('modalFormError');
         const openOrderBtn = document.getElementById('modalOpenOrderBtn');
         const approveBtn = document.getElementById('approveRequestBtn');
         const rejectBtn = document.getElementById('rejectRequestBtn');
@@ -338,7 +343,11 @@
 
             currentApproveUrl = payload.approve_url || '';
             currentRejectUrl = payload.reject_url || '';
+            rejectionReasonEl.value = '';
             adminNoteEl.value = '';
+            formErrorEl.classList.add('hidden');
+            formErrorEl.textContent = '';
+            rejectionReasonEl.classList.remove('border-rose-500', 'focus:ring-rose-500', 'focus:border-rose-500');
 
             if (payload.status_state === 'pending') {
                 actionForm.classList.remove('hidden');
@@ -362,18 +371,27 @@
         const closeModal = function () {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+            formErrorEl.classList.add('hidden');
+            formErrorEl.textContent = '';
+            rejectionReasonEl.classList.remove('border-rose-500', 'focus:ring-rose-500', 'focus:border-rose-500');
         };
 
-        const submitAction = function (targetUrl, requireNote) {
+        const submitAction = function (targetUrl, requireRejectionReason) {
             if (!targetUrl) {
                 return;
             }
 
+            const rejectionReason = (rejectionReasonEl.value || '').trim();
             const noteValue = (adminNoteEl.value || '').trim();
-            if (requireNote && noteValue.length === 0) {
-                alert('Please add rejection reason.');
+            if (requireRejectionReason && rejectionReason.length === 0) {
+                formErrorEl.classList.remove('hidden');
+                formErrorEl.textContent = 'Rejection reason is required when rejecting a cancellation request.';
+                rejectionReasonEl.classList.add('border-rose-500', 'focus:ring-rose-500', 'focus:border-rose-500');
                 return;
             }
+            formErrorEl.classList.add('hidden');
+            formErrorEl.textContent = '';
+            rejectionReasonEl.classList.remove('border-rose-500', 'focus:ring-rose-500', 'focus:border-rose-500');
 
             const form = document.createElement('form');
             form.method = 'POST';
@@ -390,6 +408,12 @@
             noteInput.name = 'admin_note';
             noteInput.value = noteValue;
             form.appendChild(noteInput);
+
+            const rejectionReasonInput = document.createElement('input');
+            rejectionReasonInput.type = 'hidden';
+            rejectionReasonInput.name = 'rejection_reason';
+            rejectionReasonInput.value = rejectionReason;
+            form.appendChild(rejectionReasonInput);
 
             document.body.appendChild(form);
             form.submit();
