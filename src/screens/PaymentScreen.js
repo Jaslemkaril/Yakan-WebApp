@@ -200,6 +200,7 @@ export default function PaymentScreen({ navigation, route }) {
     try {
       let backendId = orderData.backendOrderId || orderData.id || null;
       let checkoutOrderRef = orderData?.orderRef || null;
+      let hasVerifiedOrderRef = false;
 
       // Recover backend ID when checkout did not return it immediately.
       if (!backendId && (orderData?.checkoutReference || orderData?.orderRef)) {
@@ -228,6 +229,7 @@ export default function PaymentScreen({ navigation, route }) {
             if (matchedOrder?.id) {
               backendId = matchedOrder.id;
               checkoutOrderRef = matchedOrder?.order_ref || matchedOrder?.tracking_number || matchedOrder?.order_number || checkoutOrderRef;
+              hasVerifiedOrderRef = Boolean(checkoutOrderRef);
             }
           }
         } catch (recoveryErr) {
@@ -245,6 +247,7 @@ export default function PaymentScreen({ navigation, route }) {
 
           if (verifiedOrderRef) {
             checkoutOrderRef = verifiedOrderRef;
+            hasVerifiedOrderRef = true;
           }
 
           const localOrderRef = String(orderData.orderRef || '');
@@ -270,6 +273,7 @@ export default function PaymentScreen({ navigation, route }) {
               if (matchedByRef?.id) {
                 backendId = matchedByRef.id;
                 checkoutOrderRef = matchedByRef?.order_ref || matchedByRef?.tracking_number || matchedByRef?.order_number || checkoutOrderRef;
+                hasVerifiedOrderRef = Boolean(checkoutOrderRef);
               }
             }
           }
@@ -340,6 +344,7 @@ export default function PaymentScreen({ navigation, route }) {
                   finalOrderData.backendOrderId = recentByTotal.id;
                   finalOrderData.id = recentByTotal.id;
                   checkoutOrderRef = recentByTotal?.order_ref || recentByTotal?.tracking_number || recentByTotal?.order_number || checkoutOrderRef;
+                  hasVerifiedOrderRef = Boolean(checkoutOrderRef);
                   finalOrderData.orderRef = checkoutOrderRef;
                   finalOrderData.checkoutReference = recentByTotal?.payment_reference || finalOrderData.checkoutReference;
                 }
@@ -355,8 +360,8 @@ export default function PaymentScreen({ navigation, route }) {
             {
               paymentOption,
               downpaymentRate,
-              orderRef: checkoutOrderRef,
-              checkoutReference: orderData?.checkoutReference || null,
+              orderRef: hasVerifiedOrderRef ? checkoutOrderRef : undefined,
+              checkoutReference: finalOrderData?.checkoutReference || orderData?.checkoutReference || null,
               amountDueNow: finalTotal,
               totalAmount: fullOrderTotal,
               deliveryType: isPickupOrder ? 'pickup' : 'deliver',

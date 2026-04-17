@@ -707,7 +707,7 @@ const CheckoutScreen = ({ navigation }) => {
       setCheckoutItems([]);
 
       const orderData = {
-        orderRef: orderRef || generateOrderRef(),
+        orderRef: orderRef || null,
         checkoutReference,
         backendOrderId,
         id: backendOrderId,
