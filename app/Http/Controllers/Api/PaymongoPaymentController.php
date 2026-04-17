@@ -48,7 +48,6 @@ class PaymongoPaymentController extends Controller
             }
 
             $requestedPaymentOption = strtolower((string) ($validated['payment_option'] ?? $order->payment_option ?? 'full'));
-            $isRequestedDownpayment = $requestedPaymentOption === 'downpayment';
 
             // Keep business rule aligned with website checkout.
             if ($deliveryType !== 'pickup' && $isRequestedDownpayment) {
@@ -59,6 +58,9 @@ class PaymongoPaymentController extends Controller
             $requestedAmountDueNow = isset($validated['amount_due_now'])
                 ? (float) $validated['amount_due_now']
                 : null;
+
+            $isRequestedDownpayment = $requestedPaymentOption === 'downpayment'
+                || (!is_null($requestedAmountDueNow) && $orderTotal > 0 && ($requestedAmountDueNow + 0.01) < $orderTotal);
 
             $requestedDownpaymentRate = isset($validated['downpayment_rate'])
                 ? (float) $validated['downpayment_rate']
@@ -78,7 +80,13 @@ class PaymongoPaymentController extends Controller
                     $payableNowAmount = round($orderTotal * ($rate / 100), 2);
                 }
 
-                if ($payableNowAmount > 0 && $orderTotal > 0) {
+                if ($payableNowAmount <= 0 && $orderTotal > 0) {
+                    $rate = $requestedDownpaymentRate ?? (float) ($order->downpayment_rate ?? 50);
+                    $rate = min(99, max(1, $rate));
+                    $payableNowAmount = round($orderTotal * ($rate / 100), 2);
+                }
+
+                if ($payableNowAmount > 0 && $orderTotal > 0 && ($payableNowAmount + 0.01) < $orderTotal) {
                     $options['amount_override'] = max(0, min($orderTotal, $payableNowAmount));
                     $options['is_downpayment_override'] = true;
 
