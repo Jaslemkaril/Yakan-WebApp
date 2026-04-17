@@ -315,6 +315,40 @@ export default function PaymentScreen({ navigation, route }) {
       // For PayMongo: open checkout in browser and detect redirect back to app
       if (isPaymongo) {
         try {
+          if (!backendId) {
+            try {
+              const ordersResponse = await ApiService.getOrders();
+              if (ordersResponse.success) {
+                const ordersPayload =
+                  ordersResponse.data?.data?.data
+                  || ordersResponse.data?.data
+                  || ordersResponse.data
+                  || [];
+                const orders = Array.isArray(ordersPayload) ? ordersPayload : [];
+                const nowTs = Date.now();
+                const targetTotal = Number(fullOrderTotal || 0);
+
+                const recentByTotal = orders.find(order => {
+                  const candidateTotal = Number(order?.total_amount ?? order?.total ?? 0);
+                  const candidateCreatedAt = order?.created_at ? new Date(order.created_at).getTime() : 0;
+                  const recentEnough = candidateCreatedAt > 0 && Math.abs(nowTs - candidateCreatedAt) <= 20 * 60 * 1000;
+                  return candidateTotal > 0 && Math.abs(candidateTotal - targetTotal) <= 0.01 && recentEnough;
+                });
+
+                if (recentByTotal?.id) {
+                  backendId = recentByTotal.id;
+                  finalOrderData.backendOrderId = recentByTotal.id;
+                  finalOrderData.id = recentByTotal.id;
+                  checkoutOrderRef = recentByTotal?.order_ref || recentByTotal?.tracking_number || recentByTotal?.order_number || checkoutOrderRef;
+                  finalOrderData.orderRef = checkoutOrderRef;
+                  finalOrderData.checkoutReference = recentByTotal?.payment_reference || finalOrderData.checkoutReference;
+                }
+              }
+            } catch (ordersLookupErr) {
+              // Let backend fallback resolver attempt identity matching.
+            }
+          }
+
           const paymongoCheckout = await ApiService.createPaymongoCheckout(
             backendId,
             {},

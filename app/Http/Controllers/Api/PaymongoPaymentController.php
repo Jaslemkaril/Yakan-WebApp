@@ -31,6 +31,12 @@ class PaymongoPaymentController extends Controller
         $requestedOrderId = isset($validated['order_id']) ? (int) $validated['order_id'] : null;
         $requestedOrderRef = trim((string) ($validated['order_ref'] ?? ''));
         $requestedCheckoutReference = trim((string) ($validated['checkout_reference'] ?? ''));
+        $hintTotalAmount = isset($validated['total_amount'])
+            ? (float) $validated['total_amount']
+            : null;
+        $hintAmountDueNow = isset($validated['amount_due_now'])
+            ? (float) $validated['amount_due_now']
+            : null;
 
         if (is_null($requestedOrderId) && $requestedOrderRef === '' && $requestedCheckoutReference === '') {
             return response()->json([
@@ -50,7 +56,10 @@ class PaymongoPaymentController extends Controller
         } elseif ($requestedCheckoutReference !== '') {
             $order = Order::with(['items.product', 'user'])
                 ->where('user_id', $authUserId)
-                ->where('payment_reference', $requestedCheckoutReference)
+                ->where(function ($query) use ($requestedCheckoutReference) {
+                    $query->where('payment_reference', $requestedCheckoutReference)
+                        ->orWhere('notes', 'like', '%[checkout_ref:' . $requestedCheckoutReference . ']%');
+                })
                 ->latest()
                 ->first();
         } elseif ($requestedOrderRef !== '') {
@@ -62,6 +71,30 @@ class PaymongoPaymentController extends Controller
                 })
                 ->latest()
                 ->first();
+        }
+
+        if (!$order) {
+            $targetAmount = null;
+            if (!is_null($hintTotalAmount) && $hintTotalAmount > 0) {
+                $targetAmount = $hintTotalAmount;
+            } elseif (!is_null($hintAmountDueNow) && $hintAmountDueNow > 0) {
+                $targetAmount = $hintAmountDueNow;
+            }
+
+            if (!is_null($targetAmount)) {
+                $recentOrders = Order::with(['items.product', 'user'])
+                    ->where('user_id', $authUserId)
+                    ->where('payment_method', 'paymongo')
+                    ->where('created_at', '>=', now()->subMinutes(20))
+                    ->latest()
+                    ->limit(20)
+                    ->get();
+
+                $order = $recentOrders->first(function (Order $candidate) use ($targetAmount) {
+                    $candidateTotal = (float) ($candidate->total_amount ?? $candidate->total ?? 0);
+                    return $candidateTotal > 0 && abs($candidateTotal - $targetAmount) <= 0.01;
+                });
+            }
         }
 
         if (!$order) {
