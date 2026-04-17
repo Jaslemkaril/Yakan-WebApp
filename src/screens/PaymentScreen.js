@@ -201,6 +201,7 @@ export default function PaymentScreen({ navigation, route }) {
       let backendId = orderData.backendOrderId || orderData.id || null;
       let checkoutOrderRef = orderData?.orderRef || null;
       let hasVerifiedOrderRef = false;
+      let verifiedCheckoutReference = null;
 
       // Recover backend ID when checkout did not return it immediately.
       if (!backendId && (orderData?.checkoutReference || orderData?.orderRef)) {
@@ -243,11 +244,15 @@ export default function PaymentScreen({ navigation, route }) {
           const verifyOrderResponse = await ApiService.getOrder(backendId);
           const verifiedOrder = verifyOrderResponse?.data?.data || verifyOrderResponse?.data || null;
           const verifiedOrderRef = verifiedOrder?.order_ref || verifiedOrder?.tracking_number || verifiedOrder?.order_number || null;
+          const resolvedCheckoutReference = verifiedOrder?.payment_reference || null;
           const verifiedOrderTotal = Number(verifiedOrder?.total_amount ?? verifiedOrder?.total ?? 0);
 
           if (verifiedOrderRef) {
             checkoutOrderRef = verifiedOrderRef;
             hasVerifiedOrderRef = true;
+          }
+          if (resolvedCheckoutReference) {
+            verifiedCheckoutReference = resolvedCheckoutReference;
           }
 
           const localOrderRef = String(orderData.orderRef || '');
@@ -301,7 +306,7 @@ export default function PaymentScreen({ navigation, route }) {
         downpaymentRate,
         paymentMethod: selectedPaymentMethod,
         paymentReference: referenceNumber,
-        checkoutReference: orderData?.checkoutReference || null,
+        checkoutReference: verifiedCheckoutReference || orderData?.checkoutReference || null,
         status: isPaymongo ? 'pending_payment' : 'payment_verified', // align with timeline stage
         backendOrderId: backendId || orderData?.backendOrderId || null,
         id: backendId || orderData?.backendOrderId || null, // Also store as 'id' for compatibility
@@ -360,8 +365,10 @@ export default function PaymentScreen({ navigation, route }) {
             {
               paymentOption,
               downpaymentRate,
-              orderRef: hasVerifiedOrderRef ? checkoutOrderRef : undefined,
-              checkoutReference: finalOrderData?.checkoutReference || orderData?.checkoutReference || null,
+              // Website flow keeps checkout identity minimal: when order ID is known,
+              // avoid sending extra identifiers that can conflict.
+              orderRef: backendId ? undefined : (hasVerifiedOrderRef ? checkoutOrderRef : undefined),
+              checkoutReference: backendId ? undefined : (finalOrderData?.checkoutReference || orderData?.checkoutReference || null),
               amountDueNow: finalTotal,
               totalAmount: fullOrderTotal,
               deliveryType: isPickupOrder ? 'pickup' : 'deliver',
