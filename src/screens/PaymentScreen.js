@@ -365,8 +365,15 @@ export default function PaymentScreen({ navigation, route }) {
       }
 
       if (isPaymongo && !hasPaymongoIdentity) {
-        Alert.alert('Order Not Ready', 'We are still syncing your order. Please return to checkout and try payment again.');
         setIsProcessing(false);
+        Alert.alert(
+          'Order Not Ready',
+          'We are still syncing your order. Please open My Orders and continue payment there.',
+          [
+            { text: 'My Orders', onPress: () => navigation.navigate('Orders') },
+            { text: 'OK', style: 'cancel' },
+          ]
+        );
         return;
       }
 

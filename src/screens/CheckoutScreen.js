@@ -645,61 +645,87 @@ const CheckoutScreen = ({ navigation }) => {
 
       let orderRef = serverOrderRef || null;
 
-      if (!backendOrderId) {
-        try {
-          const ordersResponse = await ApiService.getOrders();
-          if (ordersResponse.success) {
-            const ordersPayload =
-              ordersResponse.data?.data?.data
-              || ordersResponse.data?.data
-              || ordersResponse.data
-              || [];
-            const orders = Array.isArray(ordersPayload) ? ordersPayload : [];
+      if (!backendOrderId || !orderRef) {
+        const resolveOrderIdentity = async () => {
+          const ordersResponse = await ApiService.getOrders({ limit: 100 });
+          if (!ordersResponse.success) return null;
 
-            const matchedByCheckoutReference = orders.find(order => {
-              return String(order?.payment_reference || '') === String(checkoutReference);
-            });
+          const ordersPayload =
+            ordersResponse.data?.data?.data
+            || ordersResponse.data?.data
+            || ordersResponse.data
+            || [];
+          const orders = Array.isArray(ordersPayload) ? ordersPayload : [];
 
-            const matchedByServerRef = !matchedByCheckoutReference && serverOrderRef
-              ? orders.find(order => String(order?.order_ref || order?.tracking_number || order?.order_number || '') === String(serverOrderRef))
-              : null;
+          const matchedByCheckoutReference = checkoutReference
+            ? orders.find(order => String(order?.payment_reference || '') === String(checkoutReference))
+            : null;
 
-            const matchedByRecentSignature = !matchedByCheckoutReference && !matchedByServerRef
-              ? orders.find(order => {
-                  const candidateCreatedAt = order?.created_at ? new Date(order.created_at).getTime() : 0;
-                  const withinRecentWindow = candidateCreatedAt > 0 && Math.abs(checkoutStartedAt - candidateCreatedAt) <= 5 * 60 * 1000;
-                  const candidateTotal = Number(order?.total_amount ?? order?.total ?? 0);
-                  const totalMatches = candidateTotal > 0 && Math.abs(candidateTotal - actualTotal) <= 0.01;
-                  return withinRecentWindow && totalMatches;
-                })
-              : null;
+          const matchedByServerRef = !matchedByCheckoutReference && serverOrderRef
+            ? orders.find(order => String(order?.order_ref || order?.tracking_number || order?.order_number || '') === String(serverOrderRef))
+            : null;
 
-            const matchedOrder = matchedByCheckoutReference || matchedByServerRef || matchedByRecentSignature || null;
+          const matchedByRecentSignature = !matchedByCheckoutReference && !matchedByServerRef
+            ? orders.find(order => {
+                const candidateCreatedAt = order?.created_at ? new Date(order.created_at).getTime() : 0;
+                const withinRecentWindow = candidateCreatedAt > 0 && Math.abs(checkoutStartedAt - candidateCreatedAt) <= 10 * 60 * 1000;
+                const candidateTotal = Number(order?.total_amount ?? order?.total ?? 0);
+                const totalMatches = candidateTotal > 0 && Math.abs(candidateTotal - actualTotal) <= 0.01;
+                return withinRecentWindow && totalMatches;
+              })
+            : null;
 
+          const matchedRecentPaymongoPending = !matchedByCheckoutReference && !matchedByServerRef && !matchedByRecentSignature
+            ? orders.find(order => {
+                const candidateCreatedAt = order?.created_at ? new Date(order.created_at).getTime() : 0;
+                const withinRecentWindow = candidateCreatedAt > 0 && Math.abs(checkoutStartedAt - candidateCreatedAt) <= 45 * 60 * 1000;
+                const paymentMethod = String(order?.payment_method || '').toLowerCase();
+                const paymentStatus = String(order?.payment_status || '').toLowerCase();
+                return withinRecentWindow
+                  && paymentMethod === 'paymongo'
+                  && ['pending', 'unpaid', 'pending_payment', ''].includes(paymentStatus);
+              })
+            : null;
+
+          return matchedByCheckoutReference || matchedByServerRef || matchedByRecentSignature || matchedRecentPaymongoPending || null;
+        };
+
+        for (let attempt = 0; attempt < 4 && (!backendOrderId || !orderRef); attempt += 1) {
+          try {
+            const matchedOrder = await resolveOrderIdentity();
             if (matchedOrder) {
               backendOrderId =
                 matchedOrder?.id
                 || matchedOrder?.order_id
                 || matchedOrder?.orderId
                 || matchedOrder?.backendOrderId
-                || null;
+                || backendOrderId;
               orderRef =
                 matchedOrder?.order_ref
                 || matchedOrder?.tracking_number
                 || matchedOrder?.order_number
                 || orderRef;
             }
+          } catch (lookupError) {
+            console.log('[Checkout] Could not resolve order identity from orders list:', lookupError?.message || lookupError);
           }
-        } catch (lookupError) {
-          console.log('[Checkout] Could not resolve backend order ID from orders list:', lookupError?.message || lookupError);
+
+          if ((!backendOrderId || !orderRef) && attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 700));
+          }
         }
       }
 
-      if (!backendOrderId) {
-        console.log('[Checkout] Order created but backend ID not immediately available. Continuing to payment for one more lookup.', {
-          checkoutReference,
-          serverOrderRef,
-        });
+      if (!backendOrderId && !orderRef) {
+        Alert.alert(
+          'Order Sync In Progress',
+          'Your order was created, but payment details are still syncing. Please open My Orders and continue payment there.',
+          [
+            { text: 'My Orders', onPress: () => navigation.navigate('Orders') },
+            { text: 'OK', style: 'cancel' },
+          ]
+        );
+        return;
       }
 
       // Align with website flow: cart is cleared as soon as order is created.
