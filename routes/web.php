@@ -1193,6 +1193,7 @@ Route::middleware(['admin:admin,order_staff'])->prefix('admin')->name('admin.')-
     // Orders (Regular Orders)
     Route::prefix('orders')->group(function () {
         Route::get('/', [AdminOrderController::class, 'index'])->name('regular.index');
+        Route::get('/cancel-requests', [AdminOrderController::class, 'cancelRequests'])->name('orders.cancel_requests.index');
         Route::get('/create', [AdminOrderController::class, 'create'])->name('orders.create');
         Route::post('/', [AdminOrderController::class, 'store'])->name('orders.store');
         Route::get('/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
@@ -1205,6 +1206,8 @@ Route::middleware(['admin:admin,order_staff'])->prefix('admin')->name('admin.')-
         Route::post('/bulk-update', [AdminOrderController::class, 'bulkUpdate'])->name('orders.bulkUpdate');
         Route::post('/{order}/settle-balance', [AdminOrderController::class, 'settleRemainingBalance'])->name('orders.settle-balance');
         Route::post('/{order}/refund', [AdminOrderController::class, 'refund'])->name('orders.refund');
+        Route::post('/{order}/cancel-requests/approve', [AdminOrderController::class, 'approveCancellationRequest'])->name('orders.cancel_requests.approve');
+        Route::post('/{order}/cancel-requests/reject', [AdminOrderController::class, 'rejectCancellationRequest'])->name('orders.cancel_requests.reject');
         Route::post('/refund-requests/{refundRequest}/approve', [AdminOrderController::class, 'approveRefundRequest'])->name('orders.refund_requests.approve');
         Route::post('/refund-requests/{refundRequest}/reject', [AdminOrderController::class, 'rejectRefundRequest'])->name('orders.refund_requests.reject');
         Route::post('/refund-requests/{refundRequest}/return-received', [AdminOrderController::class, 'markRefundReturnReceived'])->name('orders.refund_requests.return_received');

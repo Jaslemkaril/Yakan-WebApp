@@ -117,6 +117,10 @@
                     <p class="text-gray-600">Manage and track all customer orders</p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3">
+                    <a href="{{ route('admin.orders.cancel_requests.index') }}" class="px-6 py-3 bg-[#800000] text-white rounded-lg hover:bg-[#600000] transition-all duration-300 shadow font-semibold flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
+                        Cancel Requests
+                    </a>
                     <button onclick="location.reload()" class="px-6 py-3 bg-white text-gray-700 rounded-lg hover:bg-gray-100 transition-all duration-300 shadow border border-gray-200 font-semibold flex items-center justify-center">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A9.001 9.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                         Refresh

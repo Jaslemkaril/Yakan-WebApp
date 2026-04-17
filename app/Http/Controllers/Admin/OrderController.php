@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class OrderController extends Controller
 {
@@ -113,6 +114,292 @@ class OrderController extends Controller
         }
 
         return view('admin.orders.show', compact('order', 'latestRefundRequest'));
+    }
+
+    /**
+     * Dedicated cancellation request dashboard.
+     */
+    public function cancelRequests(Request $request)
+    {
+        $statusFilter = strtolower((string) $request->query('status', 'all'));
+        if (!in_array($statusFilter, ['all', 'pending', 'approved', 'rejected'], true)) {
+            $statusFilter = 'all';
+        }
+
+        $hasRefundTable = Schema::hasTable('order_refund_requests');
+        $hasRefundCommentColumn = $hasRefundTable && Schema::hasColumn('order_refund_requests', 'comment');
+        $hasRefundWorkflowColumn = $hasRefundTable && Schema::hasColumn('order_refund_requests', 'workflow_status');
+
+        $baseQuery = Order::query()
+            ->where(function ($query) use ($hasRefundTable, $hasRefundCommentColumn) {
+                $query->where('status', 'cancellation_requested')
+                    ->orWhere('admin_notes', 'like', '%cancel%')
+                    ->orWhere('notes', 'like', '%cancel%');
+
+                if ($hasRefundTable) {
+                    $query->orWhereHas('refundRequests', function ($refundQuery) use ($hasRefundCommentColumn) {
+                        $refundQuery->where('reason', 'like', '%cancel%')
+                            ->orWhere('details', 'like', '%cancel%');
+
+                        if ($hasRefundCommentColumn) {
+                            $refundQuery->orWhere('comment', 'like', '%cancel%');
+                        }
+                    });
+                }
+            });
+
+        $totalRequests = (clone $baseQuery)->count();
+        $pendingRequests = (clone $baseQuery)
+            ->where('status', 'cancellation_requested')
+            ->count();
+        $resolvedToday = (clone $baseQuery)
+            ->where('status', '!=', 'cancellation_requested')
+            ->whereDate('updated_at', today())
+            ->count();
+
+        $ordersQuery = Order::with(['user', 'refundRequests' => function ($query) {
+            $query->latest();
+        }])->where(function ($query) use ($hasRefundTable, $hasRefundCommentColumn) {
+            $query->where('status', 'cancellation_requested')
+                ->orWhere('admin_notes', 'like', '%cancel%')
+                ->orWhere('notes', 'like', '%cancel%');
+
+            if ($hasRefundTable) {
+                $query->orWhereHas('refundRequests', function ($refundQuery) use ($hasRefundCommentColumn) {
+                    $refundQuery->where('reason', 'like', '%cancel%')
+                        ->orWhere('details', 'like', '%cancel%');
+
+                    if ($hasRefundCommentColumn) {
+                        $refundQuery->orWhere('comment', 'like', '%cancel%');
+                    }
+                });
+            }
+        });
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->query('search'));
+            $ordersQuery->where(function ($query) use ($search) {
+                $query->where('order_ref', 'like', "%{$search}%")
+                    ->orWhere('customer_name', 'like', "%{$search}%")
+                    ->orWhere('customer_email', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        if ($statusFilter === 'pending') {
+            $ordersQuery->where('status', 'cancellation_requested');
+        } elseif ($statusFilter === 'approved') {
+            $ordersQuery->where(function ($query) use ($hasRefundTable, $hasRefundWorkflowColumn) {
+                $query->where(function ($innerQuery) {
+                    $innerQuery->whereIn('status', ['cancelled', 'refunded'])
+                        ->where(function ($notesQuery) {
+                            $notesQuery->where('admin_notes', 'like', '%approved%')
+                                ->orWhere('notes', 'like', '%approved%');
+                        });
+                });
+
+                if ($hasRefundTable) {
+                    $query->orWhereHas('refundRequests', function ($refundQuery) use ($hasRefundWorkflowColumn) {
+                        $refundQuery->whereIn('status', ['approved', 'processed']);
+
+                        if ($hasRefundWorkflowColumn) {
+                            $refundQuery->orWhereIn('workflow_status', ['pending_payout', 'approved', 'processed']);
+                        }
+                    });
+                }
+            });
+        } elseif ($statusFilter === 'rejected') {
+            $ordersQuery->where(function ($query) use ($hasRefundTable, $hasRefundWorkflowColumn) {
+                $query->where('admin_notes', 'like', '%rejected%')
+                    ->orWhere('notes', 'like', '%rejected%');
+
+                if ($hasRefundTable) {
+                    $query->orWhereHas('refundRequests', function ($refundQuery) use ($hasRefundWorkflowColumn) {
+                        $refundQuery->where('status', 'rejected');
+
+                        if ($hasRefundWorkflowColumn) {
+                            $refundQuery->orWhere('workflow_status', 'rejected');
+                        }
+                    });
+                }
+            });
+        }
+
+        $orders = $ordersQuery
+            ->orderByDesc('updated_at')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('admin.orders.cancel-requests', compact(
+            'orders',
+            'statusFilter',
+            'totalRequests',
+            'pendingRequests',
+            'resolvedToday'
+        ));
+    }
+
+    /**
+     * Approve cancellation request from dedicated cancellation dashboard.
+     */
+    public function approveCancellationRequest(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'admin_note' => 'nullable|string|max:2000',
+        ]);
+
+        if (strtolower((string) $order->status) !== 'cancellation_requested') {
+            return redirect()->back()->with('error', 'This cancellation request is no longer pending.');
+        }
+
+        $adminNote = trim((string) ($validated['admin_note'] ?? ''));
+        $existingAdminNotes = trim((string) ($order->admin_notes ?? ''));
+
+        $latestRefundRequest = null;
+        if (Schema::hasTable('order_refund_requests')) {
+            $latestRefundRequest = OrderRefundRequest::where('order_id', $order->id)
+                ->latest()
+                ->first();
+        }
+
+        $newStatus = 'cancelled';
+        $newPaymentStatus = $order->payment_status;
+        $approvalLine = 'Cancellation request approved.';
+
+        if ($latestRefundRequest) {
+            $this->ensureRefundWorkflowColumnsExist();
+            $this->ensureRefundedPaymentStatusSupported();
+
+            $approvedAmount = (float) ($order->total_amount ?? $order->total ?? 0);
+            $latestRefundRequest->status = 'processed';
+
+            if (Schema::hasColumn('order_refund_requests', 'workflow_status')) {
+                $latestRefundRequest->workflow_status = 'processed';
+            }
+            if (Schema::hasColumn('order_refund_requests', 'final_decision')) {
+                $latestRefundRequest->final_decision = 'FULL_REFUND';
+            }
+            if (Schema::hasColumn('order_refund_requests', 'refund_amount')) {
+                $latestRefundRequest->refund_amount = $approvedAmount;
+            }
+            if (Schema::hasColumn('order_refund_requests', 'approved_amount')) {
+                $latestRefundRequest->approved_amount = $approvedAmount;
+            }
+            if (Schema::hasColumn('order_refund_requests', 'payout_status')) {
+                $latestRefundRequest->payout_status = 'completed';
+            }
+            if (Schema::hasColumn('order_refund_requests', 'refund_channel')) {
+                $latestRefundRequest->refund_channel = 'manual';
+            }
+            if (Schema::hasColumn('order_refund_requests', 'refund_reference')) {
+                $latestRefundRequest->refund_reference = 'CNCL-' . now()->format('YmdHis') . '-' . $order->id;
+            }
+
+            $latestRefundRequest->reviewed_by = auth()->id();
+            $latestRefundRequest->reviewed_at = now();
+            $latestRefundRequest->processed_at = now();
+            if ($adminNote !== '' && Schema::hasColumn('order_refund_requests', 'admin_note')) {
+                $latestRefundRequest->admin_note = $adminNote;
+            }
+            $latestRefundRequest->save();
+
+            $newStatus = 'refunded';
+            $newPaymentStatus = 'refunded';
+            $approvalLine = 'Cancellation request approved and refund initiated.';
+        }
+
+        $order->status = $newStatus;
+        $order->payment_status = $newPaymentStatus;
+        $order->cancelled_at = now();
+
+        $noteLines = [$approvalLine];
+        if ($adminNote !== '') {
+            $noteLines[] = 'Admin note: ' . $adminNote;
+        }
+
+        foreach ($noteLines as $noteLine) {
+            if (!Str::contains($existingAdminNotes, $noteLine)) {
+                $existingAdminNotes = $existingAdminNotes === ''
+                    ? $noteLine
+                    : ($existingAdminNotes . "\n" . $noteLine);
+            }
+        }
+
+        $order->admin_notes = trim($existingAdminNotes);
+        $order->appendTrackingEvent($newStatus === 'refunded' ? 'Cancellation Approved (Refunded)' : 'Cancellation Approved');
+        $order->save();
+
+        return redirect()->back()->with('success', $approvalLine);
+    }
+
+    /**
+     * Reject cancellation request from dedicated cancellation dashboard.
+     */
+    public function rejectCancellationRequest(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'admin_note' => 'required|string|max:2000',
+        ]);
+
+        if (strtolower((string) $order->status) !== 'cancellation_requested') {
+            return redirect()->back()->with('error', 'This cancellation request is no longer pending.');
+        }
+
+        $adminNote = trim((string) $validated['admin_note']);
+        $existingAdminNotes = trim((string) ($order->admin_notes ?? ''));
+
+        if (Schema::hasTable('order_refund_requests')) {
+            $latestRefundRequest = OrderRefundRequest::where('order_id', $order->id)
+                ->latest()
+                ->first();
+
+            if ($latestRefundRequest) {
+                $latestRefundRequest->status = 'rejected';
+                if (Schema::hasColumn('order_refund_requests', 'workflow_status')) {
+                    $latestRefundRequest->workflow_status = 'rejected';
+                }
+                if (Schema::hasColumn('order_refund_requests', 'final_decision')) {
+                    $latestRefundRequest->final_decision = 'REJECT';
+                }
+                if (Schema::hasColumn('order_refund_requests', 'payout_status')) {
+                    $latestRefundRequest->payout_status = 'cancelled';
+                }
+                if (Schema::hasColumn('order_refund_requests', 'admin_note')) {
+                    $latestRefundRequest->admin_note = $adminNote;
+                }
+                $latestRefundRequest->reviewed_by = auth()->id();
+                $latestRefundRequest->reviewed_at = now();
+                $latestRefundRequest->save();
+            }
+        }
+
+        $nextStatus = in_array(strtolower((string) $order->payment_status), ['pending', 'failed'], true)
+            ? 'pending'
+            : 'processing';
+        $order->status = $nextStatus;
+
+        $rejectionLine = 'Cancellation request rejected.';
+        $rejectionReasonLine = 'Rejection reason: ' . $adminNote;
+
+        if (!Str::contains($existingAdminNotes, $rejectionLine)) {
+            $existingAdminNotes = $existingAdminNotes === ''
+                ? $rejectionLine
+                : ($existingAdminNotes . "\n" . $rejectionLine);
+        }
+        if (!Str::contains($existingAdminNotes, $rejectionReasonLine)) {
+            $existingAdminNotes = $existingAdminNotes === ''
+                ? $rejectionReasonLine
+                : ($existingAdminNotes . "\n" . $rejectionReasonLine);
+        }
+
+        $order->admin_notes = trim($existingAdminNotes);
+        $order->appendTrackingEvent('Cancellation Rejected');
+        $order->save();
+
+        return redirect()->back()->with('success', 'Cancellation request rejected. Order has been returned to active processing.');
     }
 
     /**
