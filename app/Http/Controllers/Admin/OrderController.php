@@ -458,6 +458,9 @@ class OrderController extends Controller
         $extraMessage = null;
         if ($decisionNormalized === 'approved' && $paymentRefundStatus !== null) {
             $extraMessage = 'Payment refund status: ' . $paymentRefundStatus . '.';
+        } elseif ($decisionNormalized === 'rejected') {
+            $currentStatus = ucfirst(str_replace('_', ' ', strtolower((string) ($order->status ?? 'processing'))));
+            $extraMessage = 'Your order remains active and will continue processing based on its current fulfillment stage. Current order status: ' . $currentStatus . '. If you have questions, please reply to this email or contact support.';
         }
 
         try {
