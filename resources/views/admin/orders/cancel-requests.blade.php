@@ -231,59 +231,59 @@
     </div>
 </div>
 
-<div id="cancelRequestModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
-    <div class="w-full max-w-3xl bg-white rounded-2xl shadow-xl border border-gray-200">
-        <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+<div id="cancelRequestModal" class="fixed inset-0 bg-black/55 z-50 hidden items-center justify-center p-4">
+    <div class="w-full max-w-3xl max-h-[90vh] overflow-y-auto custom-scrollbar bg-white rounded-2xl shadow-xl border border-gray-200">
+        <div class="p-5 border-b border-gray-200 flex items-center justify-between">
             <div>
-                <h2 id="modalOrderTitle" class="text-3xl font-bold text-gray-900">Order #</h2>
+                <h2 id="modalOrderTitle" class="text-2xl font-bold text-gray-900">Order #</h2>
                 <div id="modalStatusBadgeWrap" class="mt-2"></div>
             </div>
-            <button id="closeCancelRequestModal" type="button" class="w-11 h-11 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-100 text-xl">x</button>
+            <button id="closeCancelRequestModal" type="button" class="w-11 h-11 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-100 text-xl" aria-label="Close modal">×</button>
         </div>
 
-        <div class="p-6 space-y-4">
+        <div class="p-5 space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div class="bg-gray-100 rounded-xl p-3">
+                <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
                     <p class="text-sm text-gray-500">Customer</p>
-                    <p id="modalCustomer" class="text-xl font-semibold text-gray-900"></p>
+                    <p id="modalCustomer" class="text-2xl font-semibold text-gray-900"></p>
                 </div>
-                <div class="bg-gray-100 rounded-xl p-3">
+                <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
                     <p class="text-sm text-gray-500">Refund amount</p>
-                    <p id="modalRefundAmount" class="text-xl font-semibold text-gray-900"></p>
+                    <p id="modalRefundAmount" class="text-2xl font-semibold text-gray-900"></p>
                 </div>
-                <div class="bg-gray-100 rounded-xl p-3">
+                <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
                     <p class="text-sm text-gray-500">Payment method</p>
-                    <p id="modalPaymentMethod" class="text-xl font-semibold text-gray-900"></p>
+                    <p id="modalPaymentMethod" class="text-2xl font-semibold text-gray-900"></p>
                 </div>
-                <div class="bg-gray-100 rounded-xl p-3">
+                <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
                     <p class="text-sm text-gray-500">Order status</p>
-                    <p id="modalOrderStatus" class="text-xl font-semibold text-gray-900"></p>
+                    <p id="modalOrderStatus" class="text-2xl font-semibold text-gray-900"></p>
                 </div>
             </div>
 
-            <div class="bg-gray-100 rounded-xl p-3">
+            <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
                 <p class="text-sm text-gray-500">Cancellation reason</p>
-                <p id="modalCancelReason" class="text-xl font-semibold text-gray-900"></p>
+                <p id="modalCancelReason" class="text-2xl font-semibold text-gray-900"></p>
             </div>
 
-            <div class="bg-gray-100 rounded-xl p-3">
+            <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
                 <p class="text-sm text-gray-500">Customer note</p>
-                <p id="modalCustomerNote" class="text-xl font-semibold text-gray-900"></p>
+                <p id="modalCustomerNote" class="text-2xl font-semibold text-gray-900"></p>
             </div>
 
             <form id="modalActionForm" method="POST" class="space-y-3 hidden">
                 @csrf
                 <label for="modalAdminNote" class="block text-sm font-semibold text-gray-700">Admin note (optional)</label>
-                <textarea id="modalAdminNote" name="admin_note" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000]" placeholder="e.g. Refund initiated via GCash..."></textarea>
+                <textarea id="modalAdminNote" name="admin_note" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000] resize-y" placeholder="e.g. Refund initiated via GCash..."></textarea>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <button type="button" id="approveRequestBtn" class="w-full px-4 py-3 border border-gray-300 rounded-lg font-semibold hover:bg-gray-100">Approve & refund</button>
-                    <button type="button" id="rejectRequestBtn" class="w-full px-4 py-3 border border-gray-300 rounded-lg font-semibold hover:bg-gray-100">Reject request</button>
+                    <button type="button" id="approveRequestBtn" class="w-full px-4 py-3 bg-[#800000] text-white rounded-lg font-semibold hover:bg-[#600000] transition-colors">Approve & refund</button>
+                    <button type="button" id="rejectRequestBtn" class="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-100 transition-colors">Reject request</button>
                 </div>
             </form>
 
-            <div id="modalResolvedMessage" class="text-center text-gray-700 text-2xl font-medium hidden"></div>
+            <div id="modalResolvedMessage" class="text-center rounded-xl px-4 py-4 font-medium hidden"></div>
 
-            <div class="flex justify-between gap-3 pt-2">
+            <div class="flex justify-end gap-3 pt-1">
                 <a id="modalOpenOrderBtn" href="#" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold">Open order details</a>
             </div>
         </div>
@@ -346,10 +346,12 @@
             } else if (payload.status_state === 'approved') {
                 actionForm.classList.add('hidden');
                 resolvedMessageEl.classList.remove('hidden');
+                resolvedMessageEl.className = 'text-center rounded-xl px-4 py-4 font-medium bg-green-50 text-green-700 border border-green-100';
                 resolvedMessageEl.textContent = 'This request was approved and refund was initiated.';
             } else {
                 actionForm.classList.add('hidden');
                 resolvedMessageEl.classList.remove('hidden');
+                resolvedMessageEl.className = 'text-center rounded-xl px-4 py-4 font-medium bg-rose-50 text-rose-700 border border-rose-100';
                 resolvedMessageEl.textContent = 'This request was rejected.';
             }
 
