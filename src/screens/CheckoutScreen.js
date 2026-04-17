@@ -712,21 +712,28 @@ const CheckoutScreen = ({ navigation }) => {
             ? orders.find(order => String(order?.payment_reference || '') === String(checkoutReference))
             : null;
 
-          const matchedByServerRef = !matchedByCheckoutReference && serverOrderRef
+          const matchedByNotesReference = !matchedByCheckoutReference && checkoutReference
+            ? orders.find(order => String(order?.notes || '').includes(`[checkout_ref:${checkoutReference}]`))
+            : null;
+
+          const matchedByServerRef = !matchedByCheckoutReference && !matchedByNotesReference && serverOrderRef
             ? orders.find(order => String(order?.order_ref || order?.tracking_number || order?.order_number || '') === String(serverOrderRef))
             : null;
 
-          const matchedByRecentSignature = !matchedByCheckoutReference && !matchedByServerRef
+          const matchedByRecentSignature = !matchedByCheckoutReference && !matchedByNotesReference && !matchedByServerRef
             ? orders.find(order => {
                 const candidateCreatedAt = order?.created_at ? new Date(order.created_at).getTime() : 0;
                 const withinRecentWindow = candidateCreatedAt > 0 && Math.abs(checkoutStartedAt - candidateCreatedAt) <= 10 * 60 * 1000;
                 const candidateTotal = Number(order?.total_amount ?? order?.total ?? 0);
                 const totalMatches = candidateTotal > 0 && Math.abs(candidateTotal - actualTotal) <= 0.01;
-                return withinRecentWindow && totalMatches;
+                const paymentMethod = String(order?.payment_method || '').toLowerCase();
+                const paymentStatus = String(order?.payment_status || '').toLowerCase();
+                const isPendingPaymongo = paymentMethod === 'paymongo' && ['pending', 'unpaid', 'pending_payment', ''].includes(paymentStatus);
+                return withinRecentWindow && totalMatches && isPendingPaymongo;
               })
             : null;
 
-          const matchedRecentPaymongoPending = !matchedByCheckoutReference && !matchedByServerRef && !matchedByRecentSignature
+          const matchedRecentPaymongoPending = !matchedByCheckoutReference && !matchedByNotesReference && !matchedByServerRef && !matchedByRecentSignature
             ? orders.find(order => {
                 const candidateCreatedAt = order?.created_at ? new Date(order.created_at).getTime() : 0;
                 const withinRecentWindow = candidateCreatedAt > 0 && Math.abs(checkoutStartedAt - candidateCreatedAt) <= 45 * 60 * 1000;
@@ -738,7 +745,7 @@ const CheckoutScreen = ({ navigation }) => {
               })
             : null;
 
-          return matchedByCheckoutReference || matchedByServerRef || matchedByRecentSignature || matchedRecentPaymongoPending || null;
+          return matchedByCheckoutReference || matchedByNotesReference || matchedByServerRef || matchedByRecentSignature || matchedRecentPaymongoPending || null;
         };
 
         for (let attempt = 0; attempt < 4 && (!backendOrderId || !orderRef); attempt += 1) {
