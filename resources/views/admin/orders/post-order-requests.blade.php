@@ -5,28 +5,61 @@
 @push('styles')
 <style>
     .post-order-stat-card {
-        @apply rounded-xl p-5 shadow-md hover:shadow-lg transition-all duration-300 bg-white border border-gray-200;
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
+        transition: box-shadow 0.2s ease;
         border-left: 4px solid #800000;
     }
 
+    .post-order-stat-card:hover {
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+    }
+
     .post-order-filter-section {
-        @apply bg-white rounded-xl shadow-lg p-6 border border-gray-200;
+        background: #ffffff;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
     }
 
     .post-order-table-wrap {
-        @apply bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden;
+        background: #ffffff;
+        border-radius: 0.75rem;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+        overflow: hidden;
     }
 
     .post-order-filter-chip {
-        @apply px-4 py-2 rounded-lg border text-sm font-semibold transition-all duration-200;
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid #d1d5db;
+        font-size: 0.875rem;
+        font-weight: 600;
+        line-height: 1.25rem;
+        transition: all 0.2s ease;
     }
 
     .post-order-filter-chip-active {
-        @apply bg-[#800000] text-white border-[#800000];
+        background: #800000;
+        color: #ffffff;
+        border-color: #800000;
     }
 
     .post-order-filter-chip-idle {
-        @apply bg-white text-gray-700 border-gray-300 hover:bg-gray-50;
+        background: #ffffff;
+        color: #374151;
+        border-color: #d1d5db;
+    }
+
+    .post-order-filter-chip-idle:hover {
+        background: #f9fafb;
     }
 </style>
 @endpush
@@ -49,15 +82,15 @@
                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Cancel</span>
             </div>
             <div class="grid grid-cols-3 gap-3 text-center">
-                <div class="bg-gray-50 rounded-lg py-2">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg py-2">
                     <div class="text-xl font-bold text-amber-600">{{ $stats['cancel']['pending'] ?? 0 }}</div>
                     <div class="text-xs text-gray-500">Pending</div>
                 </div>
-                <div class="bg-gray-50 rounded-lg py-2">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg py-2">
                     <div class="text-xl font-bold text-green-600">{{ $stats['cancel']['approved'] ?? 0 }}</div>
                     <div class="text-xs text-gray-500">Approved</div>
                 </div>
-                <div class="bg-gray-50 rounded-lg py-2">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg py-2">
                     <div class="text-xl font-bold text-red-600">{{ $stats['cancel']['rejected'] ?? 0 }}</div>
                     <div class="text-xs text-gray-500">Rejected</div>
                 </div>
@@ -70,15 +103,15 @@
                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Refund</span>
             </div>
             <div class="grid grid-cols-3 gap-3 text-center">
-                <div class="bg-gray-50 rounded-lg py-2">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg py-2">
                     <div class="text-xl font-bold text-blue-600">{{ $stats['refund']['under_review'] ?? 0 }}</div>
                     <div class="text-xs text-gray-500">Under review</div>
                 </div>
-                <div class="bg-gray-50 rounded-lg py-2">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg py-2">
                     <div class="text-xl font-bold text-green-600">{{ $stats['refund']['refunded'] ?? 0 }}</div>
                     <div class="text-xs text-gray-500">Refunded</div>
                 </div>
-                <div class="bg-gray-50 rounded-lg py-2">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg py-2">
                     <div class="text-xl font-bold text-red-600">{{ $stats['refund']['rejected'] ?? 0 }}</div>
                     <div class="text-xs text-gray-500">Rejected</div>
                 </div>
