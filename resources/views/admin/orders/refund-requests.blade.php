@@ -5,11 +5,20 @@
 @push('styles')
 <style>
     .refund-stat-card {
-        @apply rounded-xl p-4 bg-white border border-gray-200 shadow-sm;
+        @apply rounded-xl p-5 shadow-md hover:shadow-lg transition-all duration-300 bg-white border border-gray-200;
+        border-left: 4px solid #800000;
+    }
+
+    .refund-filter-section {
+        @apply bg-white rounded-xl shadow-lg p-6 border border-gray-200;
+    }
+
+    .refund-table-wrap {
+        @apply bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden;
     }
 
     .refund-filter-chip {
-        @apply px-4 py-2 rounded-lg border text-sm font-semibold transition-colors duration-200;
+        @apply px-4 py-2 rounded-lg border text-sm font-semibold transition-all duration-200;
     }
 
     .refund-filter-chip-active {
@@ -21,7 +30,7 @@
     }
 
     .refund-status-badge {
-        @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold;
+        @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
     }
 
     .refund-status-under-review {
@@ -43,6 +52,22 @@
     .refund-timeline-dot {
         @apply w-2.5 h-2.5 rounded-full mt-1;
     }
+
+    .refund-action-btn {
+        @apply w-full px-4 py-3 border rounded-xl font-semibold transition-all duration-200;
+    }
+
+    .refund-action-btn-primary {
+        @apply bg-[#800000] text-white border-[#800000] hover:bg-[#600000];
+    }
+
+    .refund-action-btn-neutral {
+        @apply bg-white text-gray-800 border-gray-300 hover:bg-gray-100;
+    }
+
+    .refund-action-btn-danger {
+        @apply bg-white text-rose-700 border-rose-300 hover:bg-rose-50;
+    }
 </style>
 @endpush
 
@@ -59,31 +84,38 @@
                 <h1 class="text-4xl font-bold text-gray-900 mb-2">Refund Requests</h1>
                 <p class="text-gray-600">Review and resolve customer refund cases.</p>
             </div>
-            <a href="{{ route('admin.regular.index') }}" class="px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-100 border border-gray-300 font-semibold text-sm w-fit">
-                Back to Orders
-            </a>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div class="refund-stat-card">
-                <p class="text-2xl font-bold text-blue-700">{{ $stats['under_review'] ?? 0 }}</p>
-                <p class="text-sm text-gray-600">Under review</p>
-            </div>
-            <div class="refund-stat-card">
-                <p class="text-2xl font-bold text-amber-700">{{ $stats['awaiting_return'] ?? 0 }}</p>
-                <p class="text-sm text-gray-600">Awaiting return</p>
-            </div>
-            <div class="refund-stat-card">
-                <p class="text-2xl font-bold text-green-700">{{ $stats['refunded'] ?? 0 }}</p>
-                <p class="text-sm text-gray-600">Refunded</p>
-            </div>
-            <div class="refund-stat-card">
-                <p class="text-2xl font-bold text-rose-700">{{ $stats['rejected'] ?? 0 }}</p>
-                <p class="text-sm text-gray-600">Rejected</p>
+            <div class="flex items-center gap-3">
+                <span class="text-sm text-gray-500">{{ now()->format('M d, Y') }}</span>
+                <a href="{{ route('admin.regular.index') }}" class="px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-100 border border-gray-300 font-semibold text-sm">
+                    Back to Orders
+                </a>
             </div>
         </div>
 
-        <form method="GET" class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="refund-stat-card">
+                <p class="text-gray-600 text-xs font-bold uppercase tracking-wider mb-1">Under Review</p>
+                <p class="text-3xl font-bold text-blue-700">{{ $stats['under_review'] ?? 0 }}</p>
+                <p class="text-xs text-gray-500 mt-1">Needs admin decision</p>
+            </div>
+            <div class="refund-stat-card">
+                <p class="text-gray-600 text-xs font-bold uppercase tracking-wider mb-1">Awaiting Return</p>
+                <p class="text-3xl font-bold text-amber-700">{{ $stats['awaiting_return'] ?? 0 }}</p>
+                <p class="text-xs text-gray-500 mt-1">Waiting item shipment</p>
+            </div>
+            <div class="refund-stat-card">
+                <p class="text-gray-600 text-xs font-bold uppercase tracking-wider mb-1">Refunded</p>
+                <p class="text-3xl font-bold text-green-700">{{ $stats['refunded'] ?? 0 }}</p>
+                <p class="text-xs text-gray-500 mt-1">Successfully paid out</p>
+            </div>
+            <div class="refund-stat-card">
+                <p class="text-gray-600 text-xs font-bold uppercase tracking-wider mb-1">Rejected</p>
+                <p class="text-3xl font-bold text-rose-700">{{ $stats['rejected'] ?? 0 }}</p>
+                <p class="text-xs text-gray-500 mt-1">Closed without refund</p>
+            </div>
+        </div>
+
+        <form method="GET" class="refund-filter-section space-y-4">
             <div class="flex flex-wrap gap-2">
                 @php
                     $filters = [
@@ -100,15 +132,15 @@
                     </button>
                 @endforeach
             </div>
-            <div class="flex gap-2">
+            <div class="flex flex-col sm:flex-row gap-3">
                 <input type="hidden" name="status" value="{{ $activeFilter }}">
-                <input type="text" name="search" value="{{ $searchValue }}" placeholder="Search..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000]">
-                <button type="submit" class="px-4 py-2 bg-[#800000] text-white rounded-lg font-semibold hover:bg-[#600000]">Search</button>
-                <a href="{{ route('admin.orders.refund_requests.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300">Reset</a>
+                <input type="text" name="search" value="{{ $searchValue }}" placeholder="Search refund ID, order or customer..." class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000]">
+                <button type="submit" class="px-5 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] font-semibold">Search</button>
+                <a href="{{ route('admin.orders.refund_requests.index') }}" class="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold text-center">Reset</a>
             </div>
         </form>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="refund-table-wrap">
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead class="bg-gray-100 border-b border-gray-200">
@@ -121,7 +153,7 @@
                             <th class="px-4 py-3 text-left text-gray-600 font-semibold">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
+                    <tbody class="divide-y divide-gray-100 bg-white">
                         @forelse($refundRequests as $refundRequest)
                             @php
                                 $order = $refundRequest->order;
@@ -198,13 +230,13 @@
                                 ];
                             @endphp
                             <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-4 py-3 font-semibold text-gray-900">#{{ $refundRef }}</td>
+                                <td class="px-4 py-3 font-semibold text-[#800000]">#{{ $refundRef }}</td>
                                 <td class="px-4 py-3 text-gray-800">{{ $customerName }}</td>
                                 <td class="px-4 py-3 text-gray-700">{{ ucfirst(str_replace('_', ' ', (string) ($refundRequest->reason ?? 'Refund'))) }}</td>
                                 <td class="px-4 py-3 text-gray-900 font-semibold">₱{{ number_format($displayAmount, 2) }}</td>
                                 <td class="px-4 py-3"><span class="refund-status-badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
                                 <td class="px-4 py-3">
-                                    <button type="button" class="refund-review-btn px-4 py-2 border border-gray-300 rounded-xl font-semibold hover:bg-gray-100" data-refund='@json($modalPayload)'>
+                                    <button type="button" class="refund-review-btn px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-100" data-refund='@json($modalPayload)'>
                                         Review
                                         <span class="ml-1">↗</span>
                                     </button>
@@ -229,7 +261,7 @@
 </div>
 
 <div id="refundReviewModal" class="fixed inset-0 bg-black/55 z-50 hidden items-center justify-center p-4">
-    <div class="w-full max-w-5xl max-h-[92vh] overflow-y-auto bg-white rounded-2xl shadow-xl border border-gray-200">
+    <div class="w-full max-w-5xl max-h-[92vh] overflow-y-auto custom-scrollbar bg-white rounded-2xl shadow-xl border border-gray-200">
         <div class="grid grid-cols-1 lg:grid-cols-3">
             <div class="lg:col-span-2 p-5 border-r border-gray-200">
                 <div class="flex items-start justify-between mb-3">
@@ -270,16 +302,16 @@
                     <h3 class="text-sm font-semibold text-gray-800">Choose an action</h3>
                     <p class="text-xs text-gray-600">Review the customer's claim and photo proof before deciding.</p>
 
-                    <button type="button" id="modalApproveReleaseBtn" class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white hover:bg-gray-100 font-semibold">Approve & release refund</button>
-                    <button type="button" id="modalRequestReturnBtn" class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white hover:bg-gray-100 font-semibold">Request item return</button>
-                    <button type="button" id="modalRejectBtn" class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white hover:bg-gray-100 font-semibold">Reject request</button>
+                    <button type="button" id="modalApproveReleaseBtn" class="refund-action-btn refund-action-btn-primary">Approve & release refund</button>
+                    <button type="button" id="modalRequestReturnBtn" class="refund-action-btn refund-action-btn-neutral">Request item return</button>
+                    <button type="button" id="modalRejectBtn" class="refund-action-btn refund-action-btn-danger">Reject request</button>
 
                     <div id="modalAwaitingHint" class="hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
                         Waiting for customer to return the item. Once received and inspected, release the refund.
                     </div>
 
-                    <button type="button" id="modalAwaitingReleaseBtn" class="hidden w-full px-4 py-3 border border-gray-300 rounded-xl bg-white hover:bg-gray-100 font-semibold">Release refund</button>
-                    <button type="button" id="modalRejectNotReturnedBtn" class="hidden w-full px-4 py-3 border border-gray-300 rounded-xl bg-white hover:bg-gray-100 font-semibold">Reject (item not returned)</button>
+                    <button type="button" id="modalAwaitingReleaseBtn" class="hidden refund-action-btn refund-action-btn-primary">Release refund</button>
+                    <button type="button" id="modalRejectNotReturnedBtn" class="hidden refund-action-btn refund-action-btn-danger">Reject (item not returned)</button>
 
                     <div class="border-t border-gray-200 pt-3">
                         <label for="modalAdminNote" class="text-sm font-semibold text-gray-700">Admin note</label>
