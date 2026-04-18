@@ -833,7 +833,7 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
                                             </svg>
                                         </div>
-                                        <div class="user-bundle-items-list" id="user-bundle-list-{{ $item->id }}">
+                                        <div class="user-bundle-items-list" id="user-bundle-list-{{ $item->id }}" style="display: none;">
                                             @foreach($item->product->bundleItems as $bundleComponent)
                                                 @if($bundleComponent->componentProduct)
                                                     <div class="user-bundle-item-card">
@@ -1956,8 +1956,17 @@ function toggleUserBundleItems(itemId) {
     const icon = document.getElementById('user-bundle-icon-' + itemId);
     
     if (list && icon) {
-        list.classList.toggle('expanded');
-        icon.classList.toggle('expanded');
+        const isExpanded = list.classList.contains('expanded');
+        
+        if (isExpanded) {
+            list.classList.remove('expanded');
+            icon.classList.remove('expanded');
+            list.style.display = 'none';
+        } else {
+            list.style.display = 'block';
+            list.classList.add('expanded');
+            icon.classList.add('expanded');
+        }
     }
 }
 
