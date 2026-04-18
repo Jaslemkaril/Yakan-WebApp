@@ -2389,6 +2389,61 @@ class OrderController extends Controller
     }
 
     /**
+     * Decrement stock for bundle component products
+     */
+    private function decrementBundleComponentStock(\App\Models\Product $bundleProduct, int $bundleQuantity): void
+    {
+        $bundleProduct->loadMissing([
+            'bundleItems.componentProduct.inventory',
+            'bundleItems.componentProduct.variants',
+        ]);
+
+        foreach ($bundleProduct->bundleItems as $bundleItem) {
+            $component = $bundleItem->componentProduct;
+            if (!$component) {
+                throw new \RuntimeException('A bundle component product is missing.');
+            }
+
+            $deductQty = max(1, (int) $bundleItem->quantity) * max(1, $bundleQuantity);
+            $activeVariants = $component->relationLoaded('variants')
+                ? $component->variants->where('is_active', true)->sortBy('id')->values()
+                : $component->variants()->where('is_active', true)->orderBy('id')->get();
+
+            if ($activeVariants->isNotEmpty()) {
+                $remaining = $deductQty;
+
+                foreach ($activeVariants as $componentVariant) {
+                    if ($remaining <= 0) {
+                        break;
+                    }
+
+                    $variantStock = max(0, (int) $componentVariant->stock);
+                    if ($variantStock <= 0) {
+                        continue;
+                    }
+
+                    $deductFromVariant = min($variantStock, $remaining);
+                    $componentVariant->decrement('stock', $deductFromVariant);
+                    $remaining -= $deductFromVariant;
+                }
+
+                if ($remaining > 0) {
+                    throw new \RuntimeException('Insufficient component variant stock for bundle order.');
+                }
+            }
+
+            $componentInventory = \App\Models\Inventory::where('product_id', $component->id)->first();
+            if ($componentInventory) {
+                $componentInventory->decrement('quantity', $deductQty);
+            }
+
+            if ((int) $component->stock >= $deductQty) {
+                $component->decrement('stock', $deductQty);
+            }
+        }
+    }
+
+    /**
      * Store a newly created order
      */
     public function store(Request $request)
@@ -2417,10 +2472,15 @@ class OrderController extends Controller
         foreach ($validated['items'] as $item) {
             $product = \App\Models\Product::find($item['product_id']);
             
+            // Check if product is a bundle
+            $isBundle = Schema::hasTable('product_bundle_items')
+                && $product->bundleItems()->exists();
+            
             // Check stock availability
-            if ($product->stock < $item['quantity']) {
+            $availableStock = $isBundle ? $product->available_stock : $product->stock;
+            if ($availableStock < $item['quantity']) {
                 return redirect()->back()
-                    ->with('error', "Insufficient stock for {$product->name}. Available: {$product->stock}, Requested: {$item['quantity']}")
+                    ->with('error', "Insufficient stock for {$product->name}. Available: {$availableStock}, Requested: {$item['quantity']}")
                     ->withInput();
             }
 
@@ -2436,8 +2496,14 @@ class OrderController extends Controller
             ]);
 
             // Update product stock
-            $product->stock -= $item['quantity'];
-            $product->save();
+            if ($isBundle) {
+                // Deduct stock from bundle component products
+                $this->decrementBundleComponentStock($product, $item['quantity']);
+            } else {
+                // Deduct stock from regular product
+                $product->stock -= $item['quantity'];
+                $product->save();
+            }
         }
 
         // Update order total

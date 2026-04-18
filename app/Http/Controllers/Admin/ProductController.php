@@ -217,7 +217,7 @@ class ProductController extends Controller
         $colors = $request->available_colors ? json_decode($request->available_colors, true) : null;
 
         $resolvedPrice = (float) $request->price;
-        $resolvedStock = $isBundle ? 9999 : (int) ($request->stock ?? 0);
+        $resolvedStock = $isBundle ? 0 : (int) ($request->stock ?? 0);
 
         if (!empty($variantRows)) {
             $resolvedPrice = (float) collect($variantRows)->min('price');

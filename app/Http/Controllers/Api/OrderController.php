@@ -93,6 +93,61 @@ class OrderController extends Controller
         \Log::info($event, $payload);
     }
 
+    /**
+     * Decrement stock for bundle component products
+     */
+    private function decrementBundleComponentStock(Product $bundleProduct, int $bundleQuantity): void
+    {
+        $bundleProduct->loadMissing([
+            'bundleItems.componentProduct.inventory',
+            'bundleItems.componentProduct.variants',
+        ]);
+
+        foreach ($bundleProduct->bundleItems as $bundleItem) {
+            $component = $bundleItem->componentProduct;
+            if (!$component) {
+                throw new \RuntimeException('A bundle component product is missing.');
+            }
+
+            $deductQty = max(1, (int) $bundleItem->quantity) * max(1, $bundleQuantity);
+            $activeVariants = $component->relationLoaded('variants')
+                ? $component->variants->where('is_active', true)->sortBy('id')->values()
+                : $component->variants()->where('is_active', true)->orderBy('id')->get();
+
+            if ($activeVariants->isNotEmpty()) {
+                $remaining = $deductQty;
+
+                foreach ($activeVariants as $componentVariant) {
+                    if ($remaining <= 0) {
+                        break;
+                    }
+
+                    $variantStock = max(0, (int) $componentVariant->stock);
+                    if ($variantStock <= 0) {
+                        continue;
+                    }
+
+                    $deductFromVariant = min($variantStock, $remaining);
+                    $componentVariant->decrement('stock', $deductFromVariant);
+                    $remaining -= $deductFromVariant;
+                }
+
+                if ($remaining > 0) {
+                    throw new \RuntimeException('Insufficient component variant stock for bundle order.');
+                }
+            }
+
+            $componentInventory = \App\Models\Inventory::where('product_id', $component->id)->first();
+            if ($componentInventory) {
+                $componentInventory->decrement('quantity', $deductQty);
+            }
+
+            if ((int) $component->stock >= $deductQty) {
+                $component->decrement('stock', $deductQty);
+            }
+        }
+    }
+
     public function store(Request $request)
     {
         $userId = optional($request->user())->id;
@@ -301,14 +356,24 @@ class OrderController extends Controller
                     'price' => $unitPrice,
                 ]);
 
-                if ($variant) {
-                    $variant->decrement('stock', $quantity);
-                } elseif ($product->inventory) {
-                    $product->inventory->decrement('quantity', $quantity);
-                }
+                // Check if product is a bundle
+                $isBundle = \Illuminate\Support\Facades\Schema::hasTable('product_bundle_items')
+                    && $product->bundleItems()->exists();
 
-                // Keep aggregate product stock in sync for legacy list views.
-                $product->decrement('stock', $quantity);
+                if ($isBundle) {
+                    // Deduct stock from bundle component products
+                    $this->decrementBundleComponentStock($product, $quantity);
+                } else {
+                    // Deduct stock from regular product
+                    if ($variant) {
+                        $variant->decrement('stock', $quantity);
+                    } elseif ($product->inventory) {
+                        $product->inventory->decrement('quantity', $quantity);
+                    }
+
+                    // Keep aggregate product stock in sync for legacy list views.
+                    $product->decrement('stock', $quantity);
+                }
             }
 
             $shippingFee = $validated['shipping_fee'] ?? 0;

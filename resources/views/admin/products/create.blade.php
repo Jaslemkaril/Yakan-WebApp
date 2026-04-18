@@ -50,7 +50,6 @@
         {{-- BUNDLE CREATION UI --}}
         <input type="hidden" name="is_bundle" value="1">
         <input type="hidden" name="status" value="active">
-        <input type="hidden" name="stock" value="9999">
         
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {{-- Left Column - Bundle Configuration --}}

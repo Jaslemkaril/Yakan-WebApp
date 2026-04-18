@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CulturalHeritage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class CulturalHeritageController extends Controller
 {
@@ -12,6 +13,13 @@ class CulturalHeritageController extends Controller
      */
     public function index(Request $request)
     {
+        if (!Schema::hasTable('cultural_heritage')) {
+            return view('cultural-heritage.index', [
+                'heritages' => collect(),
+                'featured' => null,
+            ]);
+        }
+
         $query = CulturalHeritage::where('is_published', true)->orderBy('order', 'asc');
 
         // Filter by category if specified
@@ -39,6 +47,11 @@ class CulturalHeritageController extends Controller
      */
     public function show($slug)
     {
+        if (!Schema::hasTable('cultural_heritage')) {
+            return redirect()->route('cultural-heritage.index')
+                ->with('error', 'Cultural heritage content is not available in this local setup yet.');
+        }
+
         $heritage = CulturalHeritage::where('slug', $slug)
                                    ->where('is_published', true)
                                    ->firstOrFail();
