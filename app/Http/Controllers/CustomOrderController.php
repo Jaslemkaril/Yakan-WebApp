@@ -5043,13 +5043,21 @@ class CustomOrderController extends Controller
                     $result = $cloudinary->upload($tempPath, 'custom-refunds/order-' . $order->id);
                     if ($result && isset($result['url'])) {
                         $evidencePaths[] = $result['url'];
+                        \Log::info('Cloudinary upload success (custom)', ['url' => $result['url'], 'order' => $order->id]);
+                    } else {
+                        \Log::error('Cloudinary upload failed (custom)', ['order' => $order->id, 'file' => $file->getClientOriginalName()]);
+                        // Store to local as fallback if Cloudinary fails
+                        $evidencePaths[] = $file->store('custom-refunds/order-' . $order->id, 'public');
                     }
                 } else {
+                    \Log::warning('Cloudinary not enabled, using local storage (custom)', ['order' => $order->id]);
                     // Fallback to local storage if Cloudinary not configured
                     $evidencePaths[] = $file->store('custom-refunds/order-' . $order->id, 'public');
                 }
             }
         }
+
+        \Log::info('Evidence paths saved (custom)', ['order' => $order->id, 'paths' => $evidencePaths, 'count' => count($evidencePaths)]);
 
         CustomOrderRefundRequest::create([
             'custom_order_id' => $order->id,

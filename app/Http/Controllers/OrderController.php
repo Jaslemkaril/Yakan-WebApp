@@ -837,13 +837,21 @@ class OrderController extends Controller
                     $result = $cloudinary->upload($tempPath, 'refunds/order-' . $order->id);
                     if ($result && isset($result['url'])) {
                         $evidencePaths[] = $result['url'];
+                        \Log::info('Cloudinary upload success', ['url' => $result['url'], 'order' => $order->id]);
+                    } else {
+                        \Log::error('Cloudinary upload failed', ['order' => $order->id, 'file' => $file->getClientOriginalName()]);
+                        // Store to local as fallback if Cloudinary fails
+                        $evidencePaths[] = $file->store('refunds/order-' . $order->id, 'public');
                     }
                 } else {
+                    \Log::warning('Cloudinary not enabled, using local storage', ['order' => $order->id]);
                     // Fallback to local storage if Cloudinary not configured
                     $evidencePaths[] = $file->store('refunds/order-' . $order->id, 'public');
                 }
             }
         }
+
+        \Log::info('Evidence paths saved', ['order' => $order->id, 'paths' => $evidencePaths, 'count' => count($evidencePaths)]);
 
         // Customer no longer sets final refund scope; keep this system-derived for admin review.
         $refundType = $this->normalizeRefundType(null, $validated['reason']);
