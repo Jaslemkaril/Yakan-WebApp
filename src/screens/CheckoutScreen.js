@@ -792,6 +792,32 @@ const CheckoutScreen = ({ navigation }) => {
       await clearCart();
       setCheckoutItems([]);
 
+      // Prefer server-authoritative totals over client-computed ones so the
+      // PaymentScreen and PayMongo checkout amount match what the backend
+      // actually persisted (e.g. after product discounts were applied).
+      const toNumber = (value) => {
+        if (value === null || value === undefined || value === '') return null;
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      };
+      const serverSubtotal = toNumber(createdOrder?.subtotal);
+      const serverTotal = toNumber(createdOrder?.total_amount) ?? toNumber(createdOrder?.total);
+      const serverShippingFee = toNumber(createdOrder?.shipping_fee);
+      const serverDiscount = toNumber(createdOrder?.discount);
+      const serverPayableNow = toNumber(createdOrder?.amount_due_now)
+        ?? toNumber(createdOrder?.downpayment_amount);
+      const serverRemainingBalance = toNumber(createdOrder?.remaining_balance);
+
+      const finalSubtotal = serverSubtotal ?? subtotal;
+      const finalShippingFee = serverShippingFee ?? actualShippingFee;
+      const finalDiscount = serverDiscount ?? discount;
+      const finalTotal = serverTotal ?? actualTotal;
+      const finalPayableNow = (effectivePaymentOption === 'downpayment' && serverPayableNow !== null)
+        ? serverPayableNow
+        : (serverTotal ?? actualDownpaymentAmount);
+      const finalRemainingBalance = serverRemainingBalance
+        ?? Math.max(0, Number(((finalTotal ?? 0) - (finalPayableNow ?? 0)).toFixed(2)));
+
       const orderData = {
         orderRef: orderRef || null,
         checkoutReference,
@@ -802,13 +828,13 @@ const CheckoutScreen = ({ navigation }) => {
         items: itemsToCheckout,
         deliveryOption,
         shippingAddress: resolvedShippingAddress,
-        subtotal,
-        shippingFee: actualShippingFee,
-        discount,
+        subtotal: finalSubtotal,
+        shippingFee: finalShippingFee,
+        discount: finalDiscount,
         couponCode: appliedCoupon?.code || null,
-        total: actualTotal,
-        payableNow: actualDownpaymentAmount,
-        remainingBalance: actualRemainingBalance,
+        total: finalTotal,
+        payableNow: finalPayableNow,
+        remainingBalance: finalRemainingBalance,
         paymentOption: effectivePaymentOption,
         downpaymentRate: effectiveDownpaymentRate,
         status: 'pending_payment',
