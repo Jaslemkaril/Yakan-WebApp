@@ -292,7 +292,7 @@
                     <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-xs text-gray-500">Refund to</p><p id="modalRefundTo" class="text-base font-semibold text-gray-900"></p></div>
                 </div>
 
-                <div class="bg-gray-50 rounded-xl p-3 border border-gray-100 mb-3">
+                <div id="modalCustomerNoteWrap" class="bg-gray-50 rounded-xl p-3 border border-gray-100 mb-3">
                     <p class="text-xs text-gray-500">Customer note</p>
                     <p id="modalCustomerNote" class="text-base font-semibold text-gray-900"></p>
                 </div>
@@ -326,7 +326,7 @@
                     <button type="button" id="modalAwaitingReleaseBtn" class="hidden w-full min-h-[42px] px-4 py-2 border border-gray-400 rounded-lg bg-white text-gray-800 hover:bg-gray-100 font-semibold leading-tight text-[15px]">Release refund</button>
                     <button type="button" id="modalRejectNotReturnedBtn" class="hidden w-full min-h-[42px] px-4 py-2 border border-gray-400 rounded-lg bg-white text-gray-800 hover:bg-gray-100 font-semibold leading-tight text-[15px]">Reject (item not returned)</button>
 
-                    <div class="border-t border-gray-200 pt-3">
+                    <div id="modalAdminNoteSection" class="border-t border-gray-200 pt-3">
                         <label for="modalAdminNote" class="text-sm font-semibold text-gray-700">Admin note</label>
                         <textarea id="modalAdminNote" rows="3" class="refund-input mt-2" placeholder="e.g. Photo verified, refund approved..."></textarea>
                         <p id="modalActionError" class="hidden mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700"></p>
@@ -358,12 +358,14 @@
         const amountEl = document.getElementById('modalAmount');
         const refundToEl = document.getElementById('modalRefundTo');
         const customerNoteEl = document.getElementById('modalCustomerNote');
+        const customerNoteWrapEl = document.getElementById('modalCustomerNoteWrap');
         const evidenceWrapEl = document.getElementById('modalEvidenceWrap');
         const timelineEl = document.getElementById('modalTimeline');
 
         const actionSection = document.getElementById('modalActionSection');
         const actionError = document.getElementById('modalActionError');
         const adminNoteEl = document.getElementById('modalAdminNote');
+        const adminNoteSectionEl = document.getElementById('modalAdminNoteSection');
         const readonlyMessageEl = document.getElementById('modalReadonlyMessage');
         const openOrderBtn = document.getElementById('modalOpenOrderBtn');
 
@@ -380,6 +382,7 @@
             actionError.classList.add('hidden');
             actionError.textContent = '';
             adminNoteEl.value = payload?.admin_note || '';
+            adminNoteSectionEl.classList.remove('hidden');
             readonlyMessageEl.classList.add('hidden');
             readonlyMessageEl.textContent = '';
 
@@ -410,14 +413,14 @@
             const items = [];
             if (state === 'under_review') {
                 items.push(['Request submitted', 'Received and queued', 'done']);
-                items.push(['Under review', 'Admin is checking', 'active']);
-                items.push(['Decision', 'Approve, return or reject', 'pending']);
+                items.push(['Under review', '', 'done']);
+                items.push(['Approved', '', 'pending']);
                 items.push(['Refund released', 'Credited to payment', 'pending']);
             } else if (state === 'awaiting_return') {
                 items.push(['Request submitted', 'Received and queued', 'done']);
-                items.push(['Under review', 'Checked by admin', 'done']);
-                items.push(['Awaiting return', 'Customer shipping item back', 'active']);
-                items.push(['Refund released', 'After item inspection', 'pending']);
+                items.push(['Under review', '', 'done']);
+                items.push(['Approved', '', 'done']);
+                items.push(['Refund released', 'Waiting item return and inspection', 'pending']);
             } else if (state === 'refunded') {
                 items.push(['Request submitted', '', 'done']);
                 items.push(['Under review', '', 'done']);
@@ -430,11 +433,11 @@
             }
 
             timelineEl.innerHTML = items.map(function (item) {
-                const color = item[2] === 'done' ? 'bg-green-700' : (item[2] === 'active' ? 'bg-blue-700' : 'bg-gray-300');
-                const titleClass = item[2] === 'active' ? 'text-blue-700 font-semibold' : 'text-gray-800 font-semibold';
+                const color = item[2] === 'done' ? 'bg-[#2f6b1f]' : 'bg-gray-300';
+                const titleClass = item[2] === 'done' ? 'text-gray-900 font-semibold' : 'text-gray-500 font-semibold';
                 return '<div class="flex items-start gap-2">'
                     + '<span class="refund-timeline-dot ' + color + '"></span>'
-                    + '<div><p class="' + titleClass + '">' + item[0] + '</p>' + (item[1] ? '<p class="text-xs text-gray-600">' + item[1] + '</p>' : '') + '</div>'
+                    + '<div><p class="' + titleClass + '">' + item[0] + '</p>' + (item[1] ? '<p class="text-xs text-gray-600 leading-tight">' + item[1] + '</p>' : '') + '</div>'
                     + '</div>';
             }).join('');
         }
@@ -502,7 +505,16 @@
             reasonEl.textContent = payload.reason || 'N/A';
             amountEl.textContent = '₱' + (payload.amount || '0.00');
             refundToEl.textContent = payload.refund_to || 'N/A';
-            customerNoteEl.textContent = payload.customer_note || 'No customer note in request.';
+            const reasonText = String(payload.reason || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            const customerNoteText = String(payload.customer_note || '').replace(/\s+/g, ' ').trim();
+            const customerNoteNormalized = customerNoteText.toLowerCase();
+            if (customerNoteText !== '' && customerNoteNormalized !== reasonText) {
+                customerNoteWrapEl.classList.remove('hidden');
+                customerNoteEl.textContent = customerNoteText;
+            } else {
+                customerNoteWrapEl.classList.add('hidden');
+                customerNoteEl.textContent = '';
+            }
             openOrderBtn.href = payload.order_show_url || '#';
 
             renderEvidence(payload.evidence || []);
@@ -523,6 +535,7 @@
                     btn.classList.add('hidden');
                 });
                 awaitingHint.classList.add('hidden');
+                adminNoteSectionEl.classList.add('hidden');
                 readonlyMessageEl.classList.remove('hidden');
                 readonlyMessageEl.textContent = '✓ Refund released to customer.';
             }
@@ -532,6 +545,7 @@
                     btn.classList.add('hidden');
                 });
                 awaitingHint.classList.add('hidden');
+                adminNoteSectionEl.classList.add('hidden');
                 readonlyMessageEl.classList.remove('hidden');
                 readonlyMessageEl.textContent = '✕ Request rejected.';
             }
