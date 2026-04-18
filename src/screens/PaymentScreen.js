@@ -417,6 +417,32 @@ export default function PaymentScreen({ navigation, route }) {
         return;
       }
 
+      // If we only have a local checkout_reference (never confirmed by the
+      // server in a resync) and no real backendId/order_ref, the order was
+      // never actually persisted. Forcing the PayMongo call here would match
+      // a wrong/stale order via the backend heuristic. Send the user back to
+      // re-create the order properly.
+      if (isPaymongo && !backendId && !fallbackOrderRef && fallbackCheckoutReference) {
+        setIsProcessing(false);
+        Alert.alert(
+          'Order Not Found',
+          'We could not find a saved order for this payment. Please return to checkout and place your order again.',
+          [
+            {
+              text: 'Return to Checkout',
+              onPress: () => {
+                try {
+                  navigation.navigate('Checkout');
+                } catch (navError) {
+                  navigation.goBack();
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
+
       if (isPaymongo && !hasPaymongoIdentity) {
         Alert.alert('Missing Order', 'This payment cannot continue because order identity is missing. Please place the order again.');
         setIsProcessing(false);
