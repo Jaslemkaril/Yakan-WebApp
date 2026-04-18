@@ -251,7 +251,7 @@
             </div>
 
             <div class="bg-gray-50 rounded-xl p-3 border border-gray-100"><p class="text-sm text-gray-500">Cancellation reason</p><p id="poCancelReason" class="text-lg font-semibold text-gray-900"></p></div>
-            <div class="bg-gray-50 rounded-xl p-3 border border-gray-100"><p class="text-sm text-gray-500">Customer note</p><p id="poCancelCustomerNote" class="text-lg font-semibold text-gray-900"></p></div>
+            <div id="poCancelCustomerNoteWrap" class="bg-gray-50 rounded-xl p-3 border border-gray-100"><p class="text-sm text-gray-500">Customer note</p><p id="poCancelCustomerNote" class="text-lg font-semibold text-gray-900"></p></div>
 
             <div id="poCancelActionForm" class="space-y-3 hidden">
                 <label for="poCancelRejectionReason" class="block text-sm font-semibold text-gray-700">Rejection reason <span class="text-rose-600">(required for reject)</span></label>
@@ -391,7 +391,17 @@
             document.getElementById('poCancelPaymentMethod').textContent = currentCancelPayload.payment_method || 'N/A';
             document.getElementById('poCancelOrderStatus').textContent = currentCancelPayload.order_status || 'N/A';
             document.getElementById('poCancelReason').textContent = currentCancelPayload.cancel_reason || 'N/A';
-            document.getElementById('poCancelCustomerNote').textContent = currentCancelPayload.customer_note || 'No customer note provided.';
+            
+            // Show customer note only if not empty
+            const customerNote = currentCancelPayload.customer_note || '';
+            const customerNoteWrap = document.getElementById('poCancelCustomerNoteWrap');
+            if (customerNote.trim() !== '') {
+                document.getElementById('poCancelCustomerNote').textContent = customerNote;
+                customerNoteWrap.classList.remove('hidden');
+            } else {
+                customerNoteWrap.classList.add('hidden');
+            }
+            
             document.getElementById('poCancelOpenOrderBtn').href = currentCancelPayload.order_show_url || '#';
             cancelRejectionReason.value = '';
             cancelAdminNote.value = currentCancelPayload.admin_note || '';

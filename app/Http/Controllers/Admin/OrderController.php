@@ -284,7 +284,7 @@ class OrderController extends Controller
                         default => 'pending',
                     };
 
-                    $reason = trim((string) ($refundRequest->details ?: $refundRequest->reason ?: 'Customer requested cancellation'));
+                    $reason = trim((string) ($refundRequest->reason ?: $refundRequest->details ?: 'Customer requested cancellation'));
                     $reasonShort = Str::limit($reason, 45, '...');
 
                     $modalPayload = [
@@ -294,7 +294,7 @@ class OrderController extends Controller
                         'payment_method' => ucfirst(str_replace('_', ' ', (string) ($order->payment_method ?? 'N/A'))),
                         'order_status' => ucfirst(str_replace('_', ' ', (string) ($order->status ?? 'N/A'))),
                         'cancel_reason' => $reason,
-                        'customer_note' => 'No customer note provided.',
+                        'customer_note' => trim((string) ($refundRequest->details ?: '')),
                         'status_state' => $normalizedStatus,
                         'order_show_url' => route('admin.custom-orders.show', $order),
                         'approve_url' => route('admin.custom-orders.refund_requests.approve', $refundRequest),

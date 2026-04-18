@@ -4928,7 +4928,7 @@ class CustomOrderController extends Controller
                 'user_id' => Auth::id(),
                 'request_type' => 'return',
                 'reason' => $resolvedCancelReason,
-                'details' => $cancelNotes ?: 'Customer requested order cancellation',
+                'details' => $cancelNotes,
                 'status' => 'requested',
                 'requested_at' => now(),
             ];
