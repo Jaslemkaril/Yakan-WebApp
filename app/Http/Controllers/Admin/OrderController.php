@@ -392,6 +392,9 @@ class OrderController extends Controller
                         default => Str::headline($normalizedStatus),
                     };
 
+                    // Calculate order amount: use ?: so 0/"0.00" values are skipped
+                    $orderAmount = (float) ($refundRequest->refund_amount ?: $refundRequest->approved_amount ?: $refundRequest->recommended_refund_amount ?: $order->total_amount ?: $order->total ?: (($order->subtotal ?? 0) + ($order->shipping_fee ?? 0)));
+
                     $modalPayload = [
                         'refund_id' => (string) ($refundRequest->refund_reference ?: ('RF-' . str_pad((string) $refundRequest->id, 4, '0', STR_PAD_LEFT))),
                         'refund_request_id' => $refundRequest->id,
@@ -402,7 +405,7 @@ class OrderController extends Controller
                         'order_show_url' => route('admin.orders.show', $order),
                         'refund_type' => ucfirst(str_replace('_', ' ', (string) ($refundRequest->reason ?? 'Refund'))),
                         'reason' => trim((string) ($refundRequest->comment ?? $refundRequest->details ?? '')),
-                        'amount' => number_format((float) ($refundRequest->refund_amount ?? $refundRequest->approved_amount ?? $refundRequest->recommended_refund_amount ?? $order->total_amount ?? $order->total ?? ((($order->subtotal ?? 0) + ($order->shipping_fee ?? 0)) ?: null) ?? 0), 2),
+                        'amount' => number_format($orderAmount, 2),
                         'refund_to' => ucfirst(str_replace('_', ' ', (string) ($order->payment_method ?? 'GCash'))),
                         'customer_note' => trim((string) ($refundRequest->comment ?? $refundRequest->details ?? '')),
                         'requested_at' => optional($refundRequest->requested_at)->format('M d, h:i A') ?? $refundRequest->created_at->format('M d, h:i A'),
@@ -422,7 +425,7 @@ class OrderController extends Controller
                         'customer' => (string) ($refundRequest->user?->name ?: $order->customer_name ?: $order->user?->name ?: 'N/A'),
                         'type' => 'refund',
                         'order_type' => 'normal',
-                        'amount' => (float) ($refundRequest->refund_amount ?? $refundRequest->approved_amount ?? $refundRequest->recommended_refund_amount ?? $order->total_amount ?? $order->total ?? ((($order->subtotal ?? 0) + ($order->shipping_fee ?? 0)) ?: null) ?? 0),
+                        'amount' => $orderAmount,
                         'status_key' => $normalizedStatus,
                         'status_label' => $statusLabel,
                         'view_url' => route('admin.orders.show', $order),
