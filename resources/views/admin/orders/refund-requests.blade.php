@@ -50,7 +50,7 @@
     }
 
     .refund-timeline-dot {
-        @apply w-2.5 h-2.5 rounded-full mt-1;
+        @apply inline-block w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0;
     }
 
     .refund-input {
@@ -433,10 +433,10 @@
             }
 
             timelineEl.innerHTML = items.map(function (item) {
-                const color = item[2] === 'done' ? 'bg-[#2f6b1f]' : 'bg-gray-300';
+                const dotColor = item[2] === 'done' ? '#2f6b1f' : '#d1d5db';
                 const titleClass = item[2] === 'done' ? 'text-gray-900 font-semibold' : 'text-gray-500 font-semibold';
                 return '<div class="flex items-start gap-2">'
-                    + '<span class="refund-timeline-dot ' + color + '"></span>'
+                    + '<span class="refund-timeline-dot" style="background-color:' + dotColor + ';"></span>'
                     + '<div><p class="' + titleClass + '">' + item[0] + '</p>' + (item[1] ? '<p class="text-xs text-gray-600 leading-tight">' + item[1] + '</p>' : '') + '</div>'
                     + '</div>';
             }).join('');
