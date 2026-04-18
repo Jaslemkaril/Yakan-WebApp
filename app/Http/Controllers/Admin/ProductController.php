@@ -107,11 +107,14 @@ class ProductController extends Controller
     {
         $this->ensureProductDiscountColumnsExist();
 
+        // Check if this is a bundle
+        $isSubmittingBundle = $request->boolean('is_bundle');
+
         // Validate input
         $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric',
-            'stock' => 'required|integer|min:0',
+            'stock' => $isSubmittingBundle ? 'nullable|integer|min:0' : 'required|integer|min:0',
             'discount_type' => 'nullable|in:percent,fixed',
             'discount_value' => 'nullable|numeric|min:0',
             'discount_starts_at' => 'nullable|date',
@@ -121,7 +124,7 @@ class ProductController extends Controller
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'image_colors' => 'nullable|array',
             'image_colors.*' => 'nullable|string',
-            'status' => 'required|in:active,inactive',
+            'status' => $isSubmittingBundle ? 'nullable|in:active,inactive' : 'required|in:active,inactive',
             'category_id' => 'nullable|exists:categories,id',
             'available_sizes' => 'nullable|json',
             'available_colors' => 'nullable|json',
@@ -129,6 +132,7 @@ class ProductController extends Controller
             'bundle_items' => 'nullable|array',
             'bundle_items.*.product_id' => 'nullable|integer|exists:products,id',
             'bundle_items.*.quantity' => 'nullable|integer|min:1',
+            'bundle_items_json' => 'nullable|string',
             'variant_rows' => 'nullable|array',
             'variant_rows.*.sku' => 'nullable|string|max:100',
             'variant_rows.*.size' => 'nullable|string|max:50',
@@ -140,8 +144,20 @@ class ProductController extends Controller
 
         $bundleFeatureEnabled = $this->bundleFeatureEnabled();
         $isBundle = $bundleFeatureEnabled && $request->boolean('is_bundle');
+        
+        // Handle bundle_items_json from new bundle UI
+        $bundleItemsInput = [];
+        if ($request->has('bundle_items_json') && $request->bundle_items_json) {
+            $decoded = json_decode($request->bundle_items_json, true);
+            if (is_array($decoded)) {
+                $bundleItemsInput = $decoded;
+            }
+        } elseif ($request->has('bundle_items')) {
+            $bundleItemsInput = $request->input('bundle_items', []);
+        }
+        
         $bundleItems = $bundleFeatureEnabled
-            ? $this->sanitizeBundleItems($request->input('bundle_items', []))
+            ? $this->sanitizeBundleItems($bundleItemsInput)
             : [];
         $this->validateBundleItems($bundleItems, $isBundle);
 
@@ -201,7 +217,7 @@ class ProductController extends Controller
         $colors = $request->available_colors ? json_decode($request->available_colors, true) : null;
 
         $resolvedPrice = (float) $request->price;
-        $resolvedStock = (int) $request->stock;
+        $resolvedStock = $isBundle ? 9999 : (int) ($request->stock ?? 0);
 
         if (!empty($variantRows)) {
             $resolvedPrice = (float) collect($variantRows)->min('price');
@@ -239,7 +255,7 @@ class ProductController extends Controller
             'stock' => $resolvedStock,
             'description' => $request->description,
             'image' => $imagePath,
-            'status' => $request->status,
+            'status' => $request->status ?? 'active',
             'category_id' => $request->category_id,
             'available_sizes' => $sizes,
             'available_colors' => $colors,
@@ -600,13 +616,17 @@ class ProductController extends Controller
     {
         return collect($rawItems)
             ->filter(function ($item) {
-                return is_array($item)
-                    && !empty($item['product_id'])
-                    && !empty($item['quantity']);
+                if (!is_array($item) || empty($item['quantity'])) {
+                    return false;
+                }
+                // Support both old format (product_id) and new format (id)
+                return !empty($item['product_id']) || !empty($item['id']);
             })
             ->map(function ($item) {
+                // New bundle UI uses 'id' field, old UI uses 'product_id'
+                $productId = $item['product_id'] ?? $item['id'] ?? null;
                 return [
-                    'product_id' => (int) $item['product_id'],
+                    'product_id' => (int) $productId,
                     'quantity' => (int) $item['quantity'],
                 ];
             })
