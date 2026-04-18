@@ -22,8 +22,8 @@
         background: #ffffff;
         border-radius: 0.75rem;
         padding: 1.5rem;
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+        border: 2px solid #e5e7eb;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
     }
 
     .post-order-table-wrap {
@@ -37,29 +37,33 @@
     .post-order-filter-chip {
         display: inline-flex;
         align-items: center;
-        padding: 0.5rem 1rem;
+        padding: 0.625rem 1.25rem;
         border-radius: 0.5rem;
-        border: 1px solid #d1d5db;
+        border: 2px solid #d1d5db;
         font-size: 0.875rem;
         font-weight: 600;
         line-height: 1.25rem;
         transition: all 0.2s ease;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
     }
 
     .post-order-filter-chip-active {
         background: #800000;
         color: #ffffff;
         border-color: #800000;
+        box-shadow: 0 2px 6px 0 rgba(128, 0, 0, 0.3);
     }
 
     .post-order-filter-chip-idle {
         background: #ffffff;
         color: #374151;
-        border-color: #d1d5db;
+        border-color: #9ca3af;
     }
 
     .post-order-filter-chip-idle:hover {
-        background: #f9fafb;
+        background: #f3f4f6;
+        border-color: #6b7280;
+        box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.15);
     }
 </style>
 @endpush
@@ -120,7 +124,7 @@
     </div>
 
     <div class="post-order-filter-section space-y-3">
-        <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-3">
             <a href="{{ request()->fullUrlWithQuery(['type' => 'all', 'page' => null]) }}" class="post-order-filter-chip {{ $typeFilter === 'all' ? 'post-order-filter-chip-active' : 'post-order-filter-chip-idle' }}">All</a>
             <a href="{{ request()->fullUrlWithQuery(['type' => 'cancel', 'page' => null]) }}" class="post-order-filter-chip {{ $typeFilter === 'cancel' ? 'post-order-filter-chip-active' : 'post-order-filter-chip-idle' }}">Cancel requests</a>
             <a href="{{ request()->fullUrlWithQuery(['type' => 'refund', 'page' => null]) }}" class="post-order-filter-chip {{ $typeFilter === 'refund' ? 'post-order-filter-chip-active' : 'post-order-filter-chip-idle' }}">Refund requests</a>
