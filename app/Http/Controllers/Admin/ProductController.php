@@ -386,6 +386,9 @@ class ProductController extends Controller
 
         $product = Product::findOrFail($id);
 
+        // Check if this is a bundle
+        $isSubmittingBundle = $request->boolean('is_bundle');
+
         // Validate input (stock is managed via Stock In button, not this form)
         $request->validate([
             'name' => 'required|string|max:255',
@@ -399,7 +402,7 @@ class ProductController extends Controller
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'image_colors' => 'nullable|array',
             'image_colors.*' => 'nullable|string',
-            'status' => 'required|in:active,inactive',
+            'status' => $isSubmittingBundle ? 'nullable|in:active,inactive' : 'required|in:active,inactive',
             'category_id' => 'nullable|exists:categories,id',
             'available_sizes' => 'nullable|json',
             'available_colors' => 'nullable|json',
@@ -408,6 +411,8 @@ class ProductController extends Controller
             'bundle_items' => 'nullable|array',
             'bundle_items.*.product_id' => 'nullable|integer|exists:products,id',
             'bundle_items.*.quantity' => 'nullable|integer|min:1',
+            'bundle_items_json' => 'nullable|string',
+            'keep_existing_image' => 'nullable|boolean',
             'variant_rows' => 'nullable|array',
             'variant_rows.*.sku' => 'nullable|string|max:100',
             'variant_rows.*.size' => 'nullable|string|max:50',
@@ -419,8 +424,20 @@ class ProductController extends Controller
 
         $bundleFeatureEnabled = $this->bundleFeatureEnabled();
         $isBundle = $bundleFeatureEnabled && $request->boolean('is_bundle');
+        
+        // Handle bundle_items_json from new bundle UI
+        $bundleItemsInput = [];
+        if ($request->has('bundle_items_json') && $request->bundle_items_json) {
+            $decoded = json_decode($request->bundle_items_json, true);
+            if (is_array($decoded)) {
+                $bundleItemsInput = $decoded;
+            }
+        } elseif ($request->has('bundle_items')) {
+            $bundleItemsInput = $request->input('bundle_items', []);
+        }
+        
         $bundleItems = $bundleFeatureEnabled
-            ? $this->sanitizeBundleItems($request->input('bundle_items', []))
+            ? $this->sanitizeBundleItems($bundleItemsInput)
             : [];
         $this->validateBundleItems($bundleItems, $isBundle, $product->id);
 
@@ -436,6 +453,13 @@ class ProductController extends Controller
         
         $imagesToDelete = $request->delete_images ? json_decode($request->delete_images, true) : [];
         $cloudinary = new CloudinaryService();
+        
+        // For bundles using new UI: handle keep_existing_image flag
+        if ($isBundle && !$request->boolean('keep_existing_image') && !$request->hasFile('images')) {
+            // User removed the existing bundle photo
+            $imagePath = null;
+            $allImages = [];
+        }
         
         if (!empty($imagesToDelete)) {
             // Remove deleted images from array and delete files
@@ -560,7 +584,7 @@ class ProductController extends Controller
             'price' => $resolvedPrice,
             'stock' => $resolvedStock,
             'description' => $request->description,
-            'status' => $request->status,
+            'status' => $request->status ?? $product->status,
             'category_id' => $request->category_id,
             'image' => $imagePath,
             'available_sizes' => $sizes,
