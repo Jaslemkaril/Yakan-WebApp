@@ -1,5 +1,87 @@
 @extends('layouts.app')
 
+@push('styles')
+<style>
+    /* Bundle Styles for User Order Details */
+    .user-bundle-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #800000 0%, #600000 100%);
+        color: white;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 700;
+        margin-left: 6px;
+        vertical-align: middle;
+        box-shadow: 0 2px 4px rgba(128, 0, 0, 0.2);
+    }
+
+    .user-bundle-toggle {
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        border: 2px solid #800000;
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #800000;
+    }
+
+    .user-bundle-toggle:hover {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        border-color: #600000;
+        transform: translateX(2px);
+        box-shadow: 0 2px 6px rgba(128, 0, 0, 0.15);
+    }
+
+    .user-bundle-toggle-icon {
+        transition: transform 0.3s ease;
+        color: #800000;
+    }
+
+    .user-bundle-toggle-icon.expanded {
+        transform: rotate(180deg);
+    }
+
+    .user-bundle-items-list {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+        opacity: 0;
+        margin-top: 0;
+    }
+
+    .user-bundle-items-list.expanded {
+        max-height: 500px;
+        opacity: 1;
+        margin-top: 10px;
+    }
+
+    .user-bundle-item-card {
+        background: white;
+        border-radius: 6px;
+        padding: 8px 10px;
+        margin-bottom: 6px;
+        border: 1px solid #fee2e2;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.2s ease;
+    }
+
+    .user-bundle-item-card:hover {
+        background: #fef2f2;
+        border-color: #fecaca;
+        box-shadow: 0 2px 4px rgba(128, 0, 0, 0.1);
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-6xl mx-auto">
@@ -733,17 +815,35 @@
 
                                 <!-- Product Details -->
                                 <div class="flex-1">
-                                    <h3 class="font-bold text-gray-900">{{ $item->product->name ?? 'Product' }}</h3>
+                                    <h3 class="font-bold text-gray-900">
+                                        {{ $item->product->name ?? 'Product' }}
+                                        @if($item->product && $item->product->is_bundle)
+                                            <span class="user-bundle-badge">Bundle</span>
+                                        @endif
+                                    </h3>
                                     <p class="text-sm text-gray-600 mt-1">SKU: <span class="font-medium">{{ $item->product->sku ?? 'N/A' }}</span></p>
 
                                     @if($item->product && $item->product->is_bundle && $item->product->bundleItems->isNotEmpty())
-                                        <div class="mt-2 space-y-1">
-                                            <p class="text-xs font-semibold text-gray-700">Includes:</p>
+                                        <div class="user-bundle-toggle" onclick="toggleUserBundleItems({{ $item->id }})">
+                                            <span>📦</span>
+                                            <span>{{ $item->product->bundleItems->count() }} items · Tap to see details</span>
+                                            <svg class="user-bundle-toggle-icon" id="user-bundle-icon-{{ $item->id }}" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                                            </svg>
+                                        </div>
+                                        <div class="user-bundle-items-list" id="user-bundle-list-{{ $item->id }}">
                                             @foreach($item->product->bundleItems as $bundleComponent)
-                                                <p class="text-xs text-gray-600">
-                                                    - {{ $bundleComponent->componentProduct->name ?? 'Item' }}
-                                                    (x{{ (int) $bundleComponent->quantity * (int) $item->quantity }})
-                                                </p>
+                                                @if($bundleComponent->componentProduct)
+                                                    <div class="user-bundle-item-card">
+                                                        <img src="{{ $bundleComponent->componentProduct->image_src }}" 
+                                                             alt="{{ $bundleComponent->componentProduct->name }}" 
+                                                             class="w-10 h-10 object-cover rounded border border-gray-300">
+                                                        <div class="flex-1 text-sm">
+                                                            <div class="font-semibold text-gray-900">{{ $bundleComponent->componentProduct->name }}</div>
+                                                            <div class="text-gray-600 text-xs">Qty: {{ (int) $bundleComponent->quantity * (int) $item->quantity }}</div>
+                                                        </div>
+                                                    </div>
+                                                @endif
                                             @endforeach
                                         </div>
                                     @endif
@@ -1849,6 +1949,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
 @push('scripts')
 <script>
+function toggleUserBundleItems(itemId) {
+    const list = document.getElementById('user-bundle-list-' + itemId);
+    const icon = document.getElementById('user-bundle-icon-' + itemId);
+    
+    if (list && icon) {
+        list.classList.toggle('expanded');
+        icon.classList.toggle('expanded');
+    }
+}
+
 async function confirmOrderReceived(orderId, csrf) {
     const btn = document.getElementById('confirm-received-btn');
     if (!btn) return;
