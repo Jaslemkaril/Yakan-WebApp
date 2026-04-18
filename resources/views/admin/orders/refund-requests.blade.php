@@ -54,7 +54,7 @@
     }
 
     .refund-action-btn {
-        @apply w-full px-4 py-3 border rounded-xl font-semibold transition-all duration-200;
+        @apply w-full px-4 py-3 border rounded-lg font-semibold transition-colors duration-200;
     }
 
     .refund-action-btn-primary {
@@ -67,6 +67,10 @@
 
     .refund-action-btn-danger {
         @apply bg-white text-rose-700 border-rose-300 hover:bg-rose-50;
+    }
+
+    .refund-input {
+        @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000] resize-y;
     }
 </style>
 @endpush
@@ -215,6 +219,7 @@
                                     'status_label' => $statusLabel,
                                     'customer' => $customerName,
                                     'order_ref' => $order->order_ref ?? ('#' . $order->id),
+                                    'order_show_url' => route('admin.orders.show', $order),
                                     'refund_type' => ucfirst(str_replace('_', ' ', (string) ($refundRequest->reason ?? 'Refund'))),
                                     'reason' => trim((string) ($refundRequest->comment ?? $refundRequest->details ?? '')),
                                     'amount' => number_format($displayAmount, 2),
@@ -263,32 +268,32 @@
 <div id="refundReviewModal" class="fixed inset-0 bg-black/55 z-50 hidden items-center justify-center p-4">
     <div class="w-full max-w-5xl max-h-[92vh] overflow-y-auto custom-scrollbar bg-white rounded-2xl shadow-xl border border-gray-200">
         <div class="grid grid-cols-1 lg:grid-cols-3">
-            <div class="lg:col-span-2 p-5 border-r border-gray-200">
-                <div class="flex items-start justify-between mb-3">
+            <div class="lg:col-span-2 p-4 border-r border-gray-200">
+                <div class="flex items-start justify-between mb-4">
                     <div>
                         <h2 id="modalRefundId" class="text-2xl font-bold text-gray-900">Refund #</h2>
                         <span id="modalStatusBadge" class="refund-status-badge mt-2"></span>
                     </div>
-                    <button id="closeRefundReviewModal" type="button" class="w-10 h-10 border border-gray-300 rounded-xl text-xl text-gray-700 hover:bg-gray-100">×</button>
+                    <button id="closeRefundReviewModal" type="button" class="w-11 h-11 border border-gray-300 rounded-xl text-xl text-gray-700 hover:bg-gray-100" aria-label="Close modal">×</button>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
-                    <div class="bg-gray-50 border border-gray-100 rounded-lg p-3"><p class="text-xs text-gray-500">Customer</p><p id="modalCustomer" class="font-semibold text-gray-900"></p></div>
-                    <div class="bg-gray-50 border border-gray-100 rounded-lg p-3"><p class="text-xs text-gray-500">Order</p><p id="modalOrder" class="font-semibold text-gray-900"></p></div>
-                    <div class="bg-gray-50 border border-gray-100 rounded-lg p-3"><p class="text-xs text-gray-500">Refund type</p><p id="modalRefundType" class="font-semibold text-gray-900"></p></div>
-                    <div class="bg-gray-50 border border-gray-100 rounded-lg p-3"><p class="text-xs text-gray-500">Reason</p><p id="modalReason" class="font-semibold text-gray-900"></p></div>
-                    <div class="bg-gray-50 border border-gray-100 rounded-lg p-3"><p class="text-xs text-gray-500">Amount</p><p id="modalAmount" class="font-semibold text-blue-700"></p></div>
-                    <div class="bg-gray-50 border border-gray-100 rounded-lg p-3"><p class="text-xs text-gray-500">Refund to</p><p id="modalRefundTo" class="font-semibold text-gray-900"></p></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-sm text-gray-500">Customer</p><p id="modalCustomer" class="text-lg font-semibold text-gray-900"></p></div>
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-sm text-gray-500">Order</p><p id="modalOrder" class="text-lg font-semibold text-gray-900"></p></div>
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-sm text-gray-500">Refund type</p><p id="modalRefundType" class="text-lg font-semibold text-gray-900"></p></div>
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-sm text-gray-500">Reason</p><p id="modalReason" class="text-lg font-semibold text-gray-900"></p></div>
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-sm text-gray-500">Amount</p><p id="modalAmount" class="text-lg font-semibold text-[#800000]"></p></div>
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-sm text-gray-500">Refund to</p><p id="modalRefundTo" class="text-lg font-semibold text-gray-900"></p></div>
                 </div>
 
-                <div class="mb-3">
-                    <p class="text-xs text-gray-500">Customer note</p>
-                    <p id="modalCustomerNote" class="text-sm text-gray-800"></p>
+                <div class="bg-gray-50 rounded-xl p-3 border border-gray-100 mb-3">
+                    <p class="text-sm text-gray-500">Customer note</p>
+                    <p id="modalCustomerNote" class="text-lg font-semibold text-gray-900"></p>
                 </div>
 
                 <div class="mb-4">
-                    <p class="text-xs text-gray-500 mb-1">Photo proof</p>
-                    <div id="modalEvidenceWrap" class="min-h-[72px] rounded-lg border border-gray-200 p-2 bg-gray-50 text-center text-gray-500 text-sm"></div>
+                    <p class="text-sm text-gray-500 mb-1">Photo proof</p>
+                    <div id="modalEvidenceWrap" class="min-h-[72px] rounded-xl border border-gray-200 p-3 bg-gray-50 text-center text-gray-500 text-sm"></div>
                 </div>
 
                 <div class="border-t border-gray-200 pt-3">
@@ -297,7 +302,7 @@
                 </div>
             </div>
 
-            <div class="p-5 bg-gray-50">
+            <div class="p-4 bg-gray-50">
                 <div id="modalActionSection" class="space-y-3">
                     <h3 class="text-sm font-semibold text-gray-800">Choose an action</h3>
                     <p class="text-xs text-gray-600">Review the customer's claim and photo proof before deciding.</p>
@@ -315,11 +320,15 @@
 
                     <div class="border-t border-gray-200 pt-3">
                         <label for="modalAdminNote" class="text-sm font-semibold text-gray-700">Admin note</label>
-                        <textarea id="modalAdminNote" rows="3" class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="e.g. Photo verified, refund approved..."></textarea>
-                        <p id="modalActionError" class="hidden mt-2 text-xs text-red-700"></p>
+                        <textarea id="modalAdminNote" rows="3" class="refund-input mt-2" placeholder="e.g. Photo verified, refund approved..."></textarea>
+                        <p id="modalActionError" class="hidden mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700"></p>
                     </div>
 
                     <div id="modalReadonlyMessage" class="hidden rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-700 text-center"></div>
+
+                    <div class="flex justify-end pt-1">
+                        <a id="modalOpenOrderBtn" href="#" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold">Open order details</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -348,6 +357,7 @@
         const actionError = document.getElementById('modalActionError');
         const adminNoteEl = document.getElementById('modalAdminNote');
         const readonlyMessageEl = document.getElementById('modalReadonlyMessage');
+        const openOrderBtn = document.getElementById('modalOpenOrderBtn');
 
         const approveReleaseBtn = document.getElementById('modalApproveReleaseBtn');
         const requestReturnBtn = document.getElementById('modalRequestReturnBtn');
@@ -423,7 +433,7 @@
 
         function renderEvidence(evidence) {
             if (!Array.isArray(evidence) || evidence.length === 0) {
-                evidenceWrapEl.textContent = 'No photo in demo';
+                evidenceWrapEl.textContent = 'No photo provided.';
                 return;
             }
 
@@ -445,12 +455,14 @@
             if (requireNote && note === '') {
                 actionError.classList.remove('hidden');
                 actionError.textContent = 'Admin note is required for this action.';
+                adminNoteEl.classList.add('border-rose-500', 'focus:ring-rose-500', 'focus:border-rose-500');
                 adminNoteEl.focus();
                 return;
             }
 
             actionError.classList.add('hidden');
             actionError.textContent = '';
+            adminNoteEl.classList.remove('border-rose-500', 'focus:ring-rose-500', 'focus:border-rose-500');
 
             const form = document.createElement('form');
             form.method = 'POST';
@@ -483,6 +495,7 @@
             amountEl.textContent = '₱' + (payload.amount || '0.00');
             refundToEl.textContent = payload.refund_to || 'N/A';
             customerNoteEl.textContent = payload.customer_note || 'No customer note in request.';
+            openOrderBtn.href = payload.order_show_url || '#';
 
             renderEvidence(payload.evidence || []);
             renderTimeline(payload.status_state || 'under_review');
@@ -522,6 +535,9 @@
         function closeModal() {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+            actionError.classList.add('hidden');
+            actionError.textContent = '';
+            adminNoteEl.classList.remove('border-rose-500', 'focus:ring-rose-500', 'focus:border-rose-500');
         }
 
         reviewButtons.forEach(function (button) {
