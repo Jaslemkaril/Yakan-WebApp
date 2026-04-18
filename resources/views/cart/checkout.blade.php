@@ -353,9 +353,12 @@
                                     $baseUnitPrice = (float) ($variant?->price ?? $item->product->price);
                                     $unitPrice = (float) $item->product->getDiscountedPrice($baseUnitPrice);
                                     $lineSubtotal = (int) $item->quantity * $unitPrice;
-                                    $maxStock = $variant
-                                        ? (int) ($variant->stock ?? 0)
-                                        : (int) ($item->product->inventory?->quantity ?? $item->product->stock ?? 0);
+                                    // For bundles, use available_stock (dynamic calculation), otherwise use variant/product stock
+                                    $maxStock = $item->product->is_bundle
+                                        ? (int) $item->product->available_stock
+                                        : ($variant
+                                            ? (int) ($variant->stock ?? 0)
+                                            : (int) ($item->product->inventory?->quantity ?? $item->product->stock ?? 0));
                                 @endphp
                                 
                                 <div class="flex items-start gap-4 py-4 border-b border-gray-100 last:border-0 cart-item-card">
