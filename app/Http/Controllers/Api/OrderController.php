@@ -70,14 +70,23 @@ class OrderController extends Controller
     private function diagLog(string $event, array $payload = [], ?int $userId = null): void
     {
         try {
-            if (\Illuminate\Support\Facades\Schema::hasTable('diagnostic_events')) {
-                \Illuminate\Support\Facades\DB::table('diagnostic_events')->insert([
-                    'event' => $event,
-                    'payload' => json_encode($payload),
-                    'user_id' => $userId,
-                    'created_at' => now(),
-                ]);
+            if (!\Illuminate\Support\Facades\Schema::hasTable('diagnostic_events')) {
+                \Illuminate\Support\Facades\Schema::create('diagnostic_events', function ($table) {
+                    $table->id();
+                    $table->string('event', 100);
+                    $table->text('payload')->nullable();
+                    $table->unsignedBigInteger('user_id')->nullable();
+                    $table->timestamp('created_at')->useCurrent();
+                    $table->index('event');
+                    $table->index('created_at');
+                });
             }
+            \Illuminate\Support\Facades\DB::table('diagnostic_events')->insert([
+                'event' => $event,
+                'payload' => json_encode($payload),
+                'user_id' => $userId,
+                'created_at' => now(),
+            ]);
         } catch (\Throwable $e) {
             // ignore — diagnostics must never break the main flow
         }
