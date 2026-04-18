@@ -282,6 +282,72 @@
         font-size: 24px;
     }
     
+    /* Bundle Toggle Styles */
+    .bundle-toggle {
+        background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+        border: 2px solid #fb923c;
+        border-radius: 10px;
+        padding: 10px 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+
+    .bundle-toggle:hover {
+        background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+        transform: translateX(4px);
+        box-shadow: 0 4px 12px rgba(251, 146, 60, 0.2);
+    }
+
+    .bundle-toggle-text {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #c2410c;
+    }
+
+    .bundle-toggle-icon {
+        transition: transform 0.3s ease;
+        color: #ea580c;
+    }
+
+    .bundle-toggle-icon.expanded {
+        transform: rotate(180deg);
+    }
+
+    .bundle-items-list {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+        opacity: 0;
+    }
+
+    .bundle-items-list.expanded {
+        max-height: 500px;
+        opacity: 1;
+        margin-bottom: 12px;
+    }
+
+    .bundle-item-card {
+        background: white;
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 8px;
+        border: 1px solid #fed7aa;
+        transition: all 0.2s ease;
+    }
+
+    .bundle-item-card:hover {
+        background: #fffbeb;
+        border-color: #fb923c;
+        transform: translateX(4px);
+    }
+
     /* Modal animations */
     @keyframes fadeIn {
         from {
@@ -400,18 +466,28 @@
                                             <p class="text-gray-600 text-sm mb-4 line-clamp-2">{{ $product->description ?? 'Premium quality product' }}</p>
 
                                             @if($product->is_bundle && $product->bundleItems->count() > 0)
-                                                <div class="mb-4 p-3 bg-orange-50 border-l-4 border-orange-400 rounded">
-                                                    <p class="text-xs font-bold text-orange-800 mb-2">📦 Included in this bundle:</p>
-                                                    <div class="space-y-2">
+                                                <div class="mb-4">
+                                                    <div class="bundle-toggle" onclick="toggleBundleItems({{ $item->id }})">
+                                                        <div class="bundle-toggle-text">
+                                                            <span>📦</span>
+                                                            <span>{{ $product->bundleItems->count() }} items · Tap to see details</span>
+                                                        </div>
+                                                        <svg class="bundle-toggle-icon" id="bundle-icon-{{ $item->id }}" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                                                        </svg>
+                                                    </div>
+                                                    <div class="bundle-items-list" id="bundle-list-{{ $item->id }}">
                                                         @foreach($product->bundleItems as $bundleItem)
                                                             @if($bundleItem->componentProduct)
-                                                                <div class="flex items-center gap-2">
-                                                                    <img src="{{ $bundleItem->componentProduct->image_src }}" 
-                                                                         alt="{{ $bundleItem->componentProduct->name }}" 
-                                                                         class="w-10 h-10 object-cover rounded border border-orange-200">
-                                                                    <div class="flex-1">
-                                                                        <p class="text-xs font-medium text-gray-900">{{ $bundleItem->componentProduct->name }}</p>
-                                                                        <p class="text-xs text-gray-600">Qty: {{ $bundleItem->quantity }}</p>
+                                                                <div class="bundle-item-card">
+                                                                    <div class="flex items-center gap-3">
+                                                                        <img src="{{ $bundleItem->componentProduct->image_src }}" 
+                                                                             alt="{{ $bundleItem->componentProduct->name }}" 
+                                                                             class="w-10 h-10 object-cover rounded border-2 border-orange-200">
+                                                                        <div class="flex-1">
+                                                                            <p class="text-xs font-semibold text-gray-900">{{ $bundleItem->componentProduct->name }}</p>
+                                                                            <p class="text-xs text-gray-600 font-medium">Quantity: {{ $bundleItem->quantity }}</p>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             @endif
@@ -610,6 +686,16 @@
 
     <script>
         let confirmCallback = null;
+
+        function toggleBundleItems(itemId) {
+            const list = document.getElementById('bundle-list-' + itemId);
+            const icon = document.getElementById('bundle-icon-' + itemId);
+            
+            if (list && icon) {
+                list.classList.toggle('expanded');
+                icon.classList.toggle('expanded');
+            }
+        }
 
         function showConfirmationModal(title, message, callback) {
             document.getElementById('modalTitle').textContent = title;
