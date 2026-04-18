@@ -408,19 +408,6 @@ class OrderController extends Controller
                         }
                     }
 
-                    Log::info('Refund amount debug', [
-                        'refund_id' => $refundRequest->id,
-                        'order_id' => $order->id,
-                        'refund_amount' => $refundRequest->refund_amount,
-                        'approved_amount' => $refundRequest->approved_amount,
-                        'recommended' => $refundRequest->recommended_refund_amount,
-                        'total_amount' => $order->total_amount,
-                        'total' => $order->total,
-                        'subtotal' => $order->subtotal,
-                        'shipping_fee' => $order->shipping_fee,
-                        'final_amount' => $orderAmount,
-                    ]);
-
                     $modalPayload = [
                         'refund_id' => (string) ($refundRequest->refund_reference ?: ('RF-' . str_pad((string) $refundRequest->id, 4, '0', STR_PAD_LEFT))),
                         'refund_request_id' => $refundRequest->id,
