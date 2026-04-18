@@ -71,6 +71,60 @@ Route::prefix('v1')->group(function () {
         ]);
     });
 
+    // Latest orders across ALL users — catches the case where the mobile
+    // is placing orders under a different auth user than expected.
+    Route::get('/diagnostic/latest-orders', function () {
+        $orders = \App\Models\Order::with('items.product', 'user')
+            ->latest()
+            ->limit(20)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'count' => $orders->count(),
+            'server_time' => now()->toDateTimeString(),
+            'orders' => $orders->map(fn($o) => [
+                'id' => $o->id,
+                'order_ref' => $o->order_ref,
+                'user_id' => $o->user_id,
+                'user_email' => $o->user?->email,
+                'created_at' => $o->created_at?->toDateTimeString(),
+                'subtotal' => (float) ($o->subtotal ?? 0),
+                'total_amount' => (float) ($o->total_amount ?? 0),
+                'payment_method' => $o->payment_method,
+                'payment_status' => $o->payment_status,
+                'status' => $o->status,
+                'source' => $o->source,
+                'notes_excerpt' => substr((string) ($o->notes ?? ''), 0, 200),
+                'items_count' => $o->items->count(),
+                'items' => $o->items->map(fn($i) => [
+                    'product_id' => $i->product_id,
+                    'product_name' => $i->product?->name,
+                    'price' => (float) $i->price,
+                    'quantity' => $i->quantity,
+                ])->values(),
+            ])->values(),
+        ]);
+    });
+
+    // Log event to DB for diagnostic purposes (written via custom channel elsewhere).
+    Route::get('/diagnostic/events', function (\Illuminate\Http\Request $request) {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('diagnostic_events')) {
+            return response()->json(['success' => false, 'message' => 'diagnostic_events table does not exist']);
+        }
+        $filter = (string) $request->query('filter', '');
+        $q = \Illuminate\Support\Facades\DB::table('diagnostic_events')->latest();
+        if ($filter !== '') {
+            $q->where('event', 'like', '%' . $filter . '%');
+        }
+        $events = $q->limit(100)->get();
+        return response()->json([
+            'success' => true,
+            'count' => $events->count(),
+            'events' => $events,
+        ]);
+    });
+
     Route::get('/diagnostic/recent-orders/{userId}', function ($userId) {
         $orders = \App\Models\Order::with('items.product')
             ->where('user_id', (int) $userId)

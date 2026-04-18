@@ -67,10 +67,28 @@ class OrderController extends Controller
         return (float) $product->getDiscountedPrice($basePrice);
     }
 
+    private function diagLog(string $event, array $payload = [], ?int $userId = null): void
+    {
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('diagnostic_events')) {
+                \Illuminate\Support\Facades\DB::table('diagnostic_events')->insert([
+                    'event' => $event,
+                    'payload' => json_encode($payload),
+                    'user_id' => $userId,
+                    'created_at' => now(),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // ignore — diagnostics must never break the main flow
+        }
+        \Log::info($event, $payload);
+    }
+
     public function store(Request $request)
     {
-        \Log::info('[OrderStore] === REQUEST RECEIVED ===', [
-            'user_id' => optional($request->user())->id,
+        $userId = optional($request->user())->id;
+        $this->diagLog('OrderStore.request_received', [
+            'user_id' => $userId,
             'source' => $request->input('source'),
             'payment_method' => $request->input('payment_method'),
             'item_count' => is_array($request->input('items')) ? count($request->input('items')) : null,
@@ -79,15 +97,15 @@ class OrderController extends Controller
             'client_total_amount' => $request->input('total_amount'),
             'client_shipping_fee' => $request->input('shipping_fee'),
             'notes_excerpt' => substr((string) $request->input('notes'), 0, 120),
-            'user_agent' => substr((string) $request->header('User-Agent'), 0, 200),
-        ]);
+            'items_raw' => $request->input('items'),
+        ], $userId);
 
         try {
             // Get authenticated user (required now)
             $user = $request->user();
             
             if (!$user) {
-                \Log::warning('[OrderStore] Rejected: no authenticated user');
+                $this->diagLog('OrderStore.rejected_unauth', []);
                 return response()->json([
                     'success' => false,
                     'message' => 'Authentication required to create an order'
@@ -355,6 +373,14 @@ class OrderController extends Controller
                 $savedOrder->setAttribute('amount_due_now', $savedOrder->getAmountDueNow());
             });
 
+            $this->diagLog('OrderStore.success', [
+                'order_id' => $createdOrderPayload->id,
+                'order_ref' => $createdOrderPayload->order_ref,
+                'total_amount' => (float) ($createdOrderPayload->total_amount ?? 0),
+                'subtotal' => (float) ($createdOrderPayload->subtotal ?? 0),
+                'item_count' => $createdOrderPayload->items->count(),
+            ], $userId);
+
             // Backward-compatible top-level fields for older mobile clients
             // that read create-order response IDs from the first response level.
             return response()->json([
@@ -370,9 +396,9 @@ class OrderController extends Controller
             if (\DB::transactionLevel() > 0) {
                 \DB::rollBack();
             }
-            \Log::warning('[OrderStore] Validation failed', [
+            $this->diagLog('OrderStore.validation_failed', [
                 'errors' => $e->errors(),
-            ]);
+            ], $userId);
             $flat = collect($e->errors())->flatten()->implode(' ');
             return response()->json([
                 'success' => false,
@@ -383,11 +409,11 @@ class OrderController extends Controller
             if (\DB::transactionLevel() > 0) {
                 \DB::rollBack();
             }
-            \Log::error('[OrderStore] Unexpected error', [
+            $this->diagLog('OrderStore.unexpected_error', [
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-            ]);
+            ], $userId);
             return response()->json([
                 'success' => false,
                 'message' => 'Order could not be created. Please try again.'
