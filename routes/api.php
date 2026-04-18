@@ -38,6 +38,41 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/facebook', [SocialAuthController::class, 'facebookLogin'])->middleware('throttle:5,1');
 
     // ===================== DIAGNOSTIC (Public, temporary) =====================
+    Route::get('/diagnostic/recent-orders/{userId}', function ($userId) {
+        $orders = \App\Models\Order::with('items.product')
+            ->where('user_id', (int) $userId)
+            ->latest()
+            ->limit(20)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'count' => $orders->count(),
+            'orders' => $orders->map(fn($o) => [
+                'id' => $o->id,
+                'order_ref' => $o->order_ref,
+                'created_at' => $o->created_at?->toDateTimeString(),
+                'subtotal' => (float) ($o->subtotal ?? 0),
+                'shipping_fee' => (float) ($o->shipping_fee ?? 0),
+                'discount' => (float) ($o->discount ?? 0),
+                'total_amount' => (float) ($o->total_amount ?? 0),
+                'payment_method' => $o->payment_method,
+                'payment_status' => $o->payment_status,
+                'status' => $o->status,
+                'payment_reference' => $o->payment_reference,
+                'notes' => $o->notes,
+                'items' => $o->items->map(fn($i) => [
+                    'product_id' => $i->product_id,
+                    'product_name' => $i->product?->name,
+                    'variant_id' => $i->variant_id,
+                    'price' => (float) $i->price,
+                    'quantity' => $i->quantity,
+                    'line_total' => (float) $i->price * $i->quantity,
+                ])->values(),
+            ])->values(),
+        ]);
+    });
+
     Route::get('/diagnostic/product-discounts', function () {
         $products = \App\Models\Product::with('variants')->get();
         $result = $products->map(function ($p) {
