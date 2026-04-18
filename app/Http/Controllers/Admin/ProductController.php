@@ -58,8 +58,7 @@ class ProductController extends Controller
                     $query->whereRaw('COALESCE(inventory.quantity, products.stock) > 10');
                     break;
                 case 'low_stock':
-                    $query->whereRaw('COALESCE(inventory.quantity, products.stock) > 0')
-                          ->whereRaw('COALESCE(inventory.quantity, products.stock) <= 10');
+                    $query->whereRaw('COALESCE(inventory.quantity, products.stock) = ?', [\App\Models\Inventory::LOW_STOCK_MIN_ALERT_QUANTITY]);
                     break;
                 case 'out_of_stock':
                     $query->whereRaw('COALESCE(inventory.quantity, products.stock) <= 0');
@@ -75,8 +74,7 @@ class ProductController extends Controller
         $allProductsCount  = Product::count();
         $activeCount       = Product::where('status', 'active')->count();
         $lowStockCount     = Product::leftJoin('inventory', 'inventory.product_id', '=', 'products.id')
-            ->whereRaw('COALESCE(inventory.quantity, products.stock) > 0')
-            ->whereRaw('COALESCE(inventory.quantity, products.stock) <= 10')
+            ->whereRaw('COALESCE(inventory.quantity, products.stock) = ?', [\App\Models\Inventory::LOW_STOCK_MIN_ALERT_QUANTITY])
             ->count('products.id');
         $outOfStockCount   = Product::leftJoin('inventory', 'inventory.product_id', '=', 'products.id')
             ->whereRaw('COALESCE(inventory.quantity, products.stock) <= 0')

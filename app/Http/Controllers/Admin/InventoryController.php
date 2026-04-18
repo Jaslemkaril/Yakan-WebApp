@@ -39,7 +39,7 @@ class InventoryController extends Controller
             ->when($request->status, function ($q) use ($request) {
                 if ($request->status === 'low_stock') {
                     $q->whereHas('inventory', function($inv) {
-                        $inv->whereRaw('quantity <= min_stock_level');
+                        $inv->whereRaw('quantity <= min_stock_level AND quantity >= ?', [Inventory::LOW_STOCK_MIN_ALERT_QUANTITY]);
                     });
                 } elseif ($request->status === 'overstock') {
                     $q->whereHas('inventory', function($inv) {
@@ -54,7 +54,7 @@ class InventoryController extends Controller
 
         $products = $query->paginate(15);
         
-        $lowStockCount = Inventory::whereRaw('quantity <= min_stock_level')->count();
+        $lowStockCount = Inventory::whereRaw('quantity <= min_stock_level AND quantity >= ?', [Inventory::LOW_STOCK_MIN_ALERT_QUANTITY])->count();
         $totalProducts = Product::count();
         $totalValue = Inventory::selectRaw('SUM(quantity * selling_price) as total')->value('total') ?? 0;
 
@@ -146,7 +146,7 @@ class InventoryController extends Controller
             'supplier' => $validated['supplier'],
             'location' => $validated['location'],
             'notes' => $validated['notes'],
-            'low_stock_alert' => $validated['quantity'] <= $validated['min_stock_level'],
+            'low_stock_alert' => $this->shouldTriggerLowStockAlert((int) $validated['quantity'], (int) $validated['min_stock_level']),
         ];
 
         $inventory = Inventory::create($inventoryData);
@@ -191,7 +191,7 @@ class InventoryController extends Controller
             'notes' => 'nullable|string|max:1000',
         ]);
 
-        $validated['low_stock_alert'] = $validated['quantity'] <= $validated['min_stock_level'];
+        $validated['low_stock_alert'] = $this->shouldTriggerLowStockAlert((int) $validated['quantity'], (int) $validated['min_stock_level']);
 
         $inventory->update($validated);
         $inventory->product?->update(['stock' => $inventory->quantity]);
@@ -242,7 +242,7 @@ class InventoryController extends Controller
         }
 
         $inventory->quantity -= $validated['quantity'];
-        $inventory->low_stock_alert = $inventory->quantity <= $inventory->min_stock_level;
+        $inventory->low_stock_alert = $this->shouldTriggerLowStockAlert((int) $inventory->quantity, (int) $inventory->min_stock_level);
         $inventory->save();
         $inventory->product?->update(['stock' => $inventory->quantity]);
 
@@ -386,7 +386,7 @@ class InventoryController extends Controller
     public function lowStockAlerts(): View
     {
         $lowStockItems = Inventory::with('product')
-            ->whereRaw('quantity <= min_stock_level')
+            ->whereRaw('quantity <= min_stock_level AND quantity >= ?', [Inventory::LOW_STOCK_MIN_ALERT_QUANTITY])
             ->orderBy('quantity', 'asc')
             ->get();
 
@@ -402,17 +402,22 @@ class InventoryController extends Controller
         
         $report = [
             'total_products' => $inventories->count(),
-            'low_stock_count' => $inventories->where('low_stock_alert', true)->count(),
+            'low_stock_count' => $inventories->filter(fn ($inv) => $inv->isLowStock())->count(),
             'total_quantity' => $inventories->sum('quantity'),
             'total_value' => $inventories->sum(function ($inv) {
                 return $inv->quantity * ($inv->selling_price ?? $inv->product->price);
             }),
             'top_products' => $inventories->sortByDesc('quantity')->take(10),
             'critical_stock' => $inventories->filter(function ($inv) {
-                return $inv->quantity <= $inv->min_stock_level;
+                return $inv->isLowStock();
             })->sortBy('quantity'),
         ];
 
         return view('admin.inventory.report', compact('report', 'inventories'));
+    }
+
+    private function shouldTriggerLowStockAlert(int $quantity, int $minStockLevel): bool
+    {
+        return $quantity >= Inventory::LOW_STOCK_MIN_ALERT_QUANTITY && $quantity <= $minStockLevel;
     }
 }

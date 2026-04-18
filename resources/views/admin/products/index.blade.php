@@ -172,7 +172,7 @@ use Illuminate\Support\Facades\Storage;
                     </div>
                     
                     <!-- Stock Badge -->
-                    @if($product->available_stock <= 10)
+                    @if($product->available_stock <= 0 || $product->available_stock == 10)
                     <div class="absolute top-2 left-2">
                         <span class="px-2 py-1 text-xs font-semibold rounded-full
                             @if($product->available_stock == 0)

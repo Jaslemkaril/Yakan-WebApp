@@ -138,7 +138,7 @@
                         </div>
                         <div>
                             <span class="font-bold text-gray-600">Low Stock Alert:</span>
-                            <span class="ml-2">{{ $inventory->low_stock_alert ? 'Active' : 'Inactive' }}</span>
+                            <span class="ml-2">{{ $inventory->isLowStock() ? 'Active' : 'Inactive' }}</span>
                         </div>
                         @if($inventory->last_restocked_at)
                             <div class="col-span-2">

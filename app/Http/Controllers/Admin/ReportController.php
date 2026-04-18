@@ -106,7 +106,7 @@ class ReportController extends Controller
             'totalProducts' => $products->count(),
             'activeProducts' => $products->where('is_active', true)->count(),
             'topProducts' => $products->sortByDesc('order_items_count')->take(10),
-            'lowStockProducts' => Inventory::whereRaw('quantity <= min_stock_level')->count(),
+            'lowStockProducts' => Inventory::whereRaw('quantity <= min_stock_level AND quantity >= ?', [Inventory::LOW_STOCK_MIN_ALERT_QUANTITY])->count(),
             'outOfStockProducts' => Inventory::where('quantity', 0)->count(),
         ];
     }
@@ -143,7 +143,7 @@ class ReportController extends Controller
         return [
             'totalItems' => $inventories->sum('quantity'),
             'totalValue' => $totalValue,
-            'lowStockItems' => $inventories->where('low_stock_alert', true)->count(),
+            'lowStockItems' => $inventories->filter(fn ($inv) => $inv->isLowStock())->count(),
             'outOfStockItems' => $inventories->where('quantity', 0)->count(),
             'categories' => $inventories->groupBy(function ($inv) {
                 return $inv->product->category->name ?? 'Uncategorized';
@@ -287,7 +287,7 @@ class ReportController extends Controller
                 ->sum('total'),
             'todayOrders' => Order::whereDate('created_at', today())->count(),
             'activeUsers' => User::whereDate('last_login_at', today())->count(),
-            'lowStockAlerts' => Inventory::whereRaw('quantity <= min_stock_level')->count(),
+            'lowStockAlerts' => Inventory::whereRaw('quantity <= min_stock_level AND quantity >= ?', [Inventory::LOW_STOCK_MIN_ALERT_QUANTITY])->count(),
             'pendingReviews' => Review::where('is_approved', false)->count(),
             'pendingCustomOrders' => CustomOrder::where('status', 'pending')->count(),
         ]);

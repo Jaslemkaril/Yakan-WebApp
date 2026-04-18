@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Inventory extends Model
 {
+    public const LOW_STOCK_MIN_ALERT_QUANTITY = 10;
+
     protected $table = 'inventory';
     
     protected $fillable = [
@@ -46,7 +48,8 @@ class Inventory extends Model
 
     public function isLowStock(): bool
     {
-        return $this->quantity <= $this->min_stock_level;
+        return $this->quantity >= self::LOW_STOCK_MIN_ALERT_QUANTITY
+            && $this->quantity <= $this->min_stock_level;
     }
 
     public function isOverstock(): bool

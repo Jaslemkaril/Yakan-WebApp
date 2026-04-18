@@ -113,7 +113,7 @@ class DashboardController extends Controller
             $outOfStockCount = $outOfStockItems->count();
 
             // Inventory stats
-            $lowStockCount = \App\Models\Inventory::whereRaw('quantity <= min_stock_level AND quantity > 0')->count();
+            $lowStockCount = \App\Models\Inventory::whereRaw('quantity <= min_stock_level AND quantity >= ?', [\App\Models\Inventory::LOW_STOCK_MIN_ALERT_QUANTITY])->count();
             $totalInventoryValue = (int) (\App\Models\Inventory::selectRaw('SUM(quantity * selling_price) as total')->value('total') ?? 0);
             $stockInToday = 0;
             if (\Schema::hasTable('stock_logs')) {

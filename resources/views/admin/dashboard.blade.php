@@ -933,7 +933,7 @@
                                                 <i class="fas fa-times-circle mr-1"></i>Out of Stock
                                             </span>
                                         </div>
-                                    @elseif($product && $product->available_stock < 10)
+                                    @elseif($product && $product->available_stock == 10)
                                         <div class="mt-2">
                                             <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
                                                 <i class="fas fa-exclamation-triangle mr-1"></i>Low Stock

@@ -116,12 +116,12 @@
                         <div class="bg-gray-50 rounded-lg p-4">
                             <div class="text-sm text-gray-600 mb-1">Stock Quantity</div>
                             <div class="flex items-center justify-between">
-                                <div class="text-2xl font-bold {{ $displayStock <= 5 ? 'text-red-600' : 'text-gray-900' }}">
+                                <div class="text-2xl font-bold {{ $displayStock == 0 ? 'text-red-600' : ($displayStock == 10 ? 'text-yellow-600' : 'text-gray-900') }}">
                                     {{ $displayStock }}
                                 </div>
                                 <span class="text-sm text-gray-500">units</span>
                             </div>
-                            @if($displayStock <= 5 && $displayStock > 0)
+                            @if($displayStock == 10)
                                 <div class="mt-2 text-xs text-yellow-600 font-medium">
                                     <i class="fas fa-exclamation-triangle mr-1"></i>Low Stock
                                 </div>
