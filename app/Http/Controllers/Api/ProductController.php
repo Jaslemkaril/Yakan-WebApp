@@ -68,6 +68,14 @@ class ProductController extends Controller
             return (int) $activeVariants->sum('stock');
         }
 
+        // Check if product is a bundle - use dynamic stock calculation
+        $isBundle = Schema::hasTable('product_bundle_items') 
+            && $product->bundleItems()->exists();
+        
+        if ($isBundle) {
+            return (int) $product->available_stock;
+        }
+
         return (int) ($product->inventory?->quantity ?? $product->stock ?? 0);
     }
 
