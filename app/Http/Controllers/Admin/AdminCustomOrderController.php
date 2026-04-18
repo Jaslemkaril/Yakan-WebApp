@@ -497,7 +497,7 @@ class AdminCustomOrderController extends Controller
             return redirect()->back()->with('error', 'This refund/return request can no longer be approved.');
         }
 
-        $refundRequest->status = 'processed';
+        $refundRequest->status = 'approved';
         $refundRequest->admin_note = $validated['admin_note'] ?? $refundRequest->admin_note;
         $refundRequest->reviewed_by = auth()->id();
         $refundRequest->reviewed_at = now();

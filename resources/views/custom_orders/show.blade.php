@@ -300,8 +300,9 @@
     
     // Cancel order flow variables
     $orderStatusLower = strtolower((string) ($order->status ?? ''));
-    $isCancellationRequested = !empty($customRefundRequest) && $customRefundRequest->request_type === 'return';
-    $canCancelOrder = in_array($orderStatusLower, ['pending', 'price_quoted', 'approved', 'processing'], true) && !$isCancellationRequested;
+    $hasCancellationRequest = !empty($customRefundRequest) && $customRefundRequest->request_type === 'return';
+    $isCancellationRequested = $hasCancellationRequest && in_array($customRefundRequest->status, ['requested', 'under_review']);
+    $canCancelOrder = in_array($orderStatusLower, ['pending', 'price_quoted', 'approved', 'processing'], true) && !$hasCancellationRequest;
     $showCancelForm = $errors->has('cancel_reason') || !empty(old('cancel_reason'));
     
     if ($isCancellationRequested) {
@@ -2108,7 +2109,7 @@
             @endif
 
             {{-- Cancellation / Refund Request Section --}}
-            @if($isCancellationRequested && !empty($customRefundRequest))
+            @if($hasCancellationRequest && !empty($customRefundRequest))
             <div class="mt-8 bg-white rounded-xl shadow-md border border-gray-200 p-6">
                 <div class="flex items-center gap-3 mb-4">
                     <div class="w-10 h-10 bg-[#800000] rounded-lg flex items-center justify-center">
@@ -2128,6 +2129,7 @@
                         'requested' => ['label' => 'Cancellation Pending', 'class' => 'bg-yellow-100 text-yellow-800'],
                         'under_review' => ['label' => 'Under Review', 'class' => 'bg-blue-100 text-blue-800'],
                         'approved' => ['label' => 'Approved', 'class' => 'bg-green-100 text-green-800'],
+                        'processed' => ['label' => 'Approved', 'class' => 'bg-green-100 text-green-800'],
                         'rejected' => ['label' => 'Rejected', 'class' => 'bg-red-100 text-red-800'],
                     ];
                     $cancelChip = $cancelStatusMap[$cancelRefundRequest->status] ?? ['label' => ucfirst($cancelRefundRequest->status), 'class' => 'bg-gray-100 text-gray-800'];
@@ -2143,7 +2145,7 @@
                         <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Additional Notes:</span> {{ $cancelRefundRequest->details }}</p>
                     @endif
                     <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Cancellation Status:</span> {{ $cancelChip['label'] }}</p>
-                    <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Payment Refund:</span> {{ $cancelRefundRequest->status === 'approved' ? 'Processed' : 'Pending' }}</p>
+                    <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Payment Refund:</span> {{ in_array($cancelRefundRequest->status, ['approved', 'processed']) ? 'Processed' : 'Pending' }}</p>
 
                     @if(!empty($cancelRefundRequest->admin_note))
                         <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
