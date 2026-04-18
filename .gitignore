@@ -92,4 +92,11 @@ composer.phar
 *.sqlite
 *.sqlite-journal
 
+# Database backups (contain sensitive data)
+*_db_*.sql
+*_db_*.zip
+yakan_db_backup.sql
+yakan_db_railway.sql
+yakan_db_railway.zip
+
 .history/
