@@ -134,7 +134,7 @@ class OrderController extends Controller
                 'shipping_street' => 'nullable|string|max:255',
                 'payment_method' => 'required|string|in:gcash,maya,bank_transfer,cash,online_banking,paymongo',
                 'payment_option' => 'nullable|string|in:full,downpayment',
-                'downpayment_rate' => 'nullable|numeric|min:1|max:99',
+                'downpayment_rate' => 'nullable|numeric|min:1|max:100',
                 'downpayment_amount' => 'nullable|numeric|min:0',
                 'remaining_balance' => 'nullable|numeric|min:0',
                 'payment_status' => 'nullable|string|in:pending,paid,verified,failed',
