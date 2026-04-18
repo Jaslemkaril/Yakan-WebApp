@@ -488,25 +488,29 @@
                                 @foreach($refundEvidence as $evidencePath)
                                     @php
                                         $evidenceUrl = route('orders.refund-evidence.view', ['refundRequest' => $refundRequest->id, 'index' => $loop->index]);
-                                        $rawEvidencePath = str_replace('\\', '/', ltrim((string) $evidencePath, '/'));
-                                        $publicEvidencePath = ltrim(str_replace(['public/', 'storage/'], '', $rawEvidencePath), '/');
-                                        $fallbackEvidenceUrl = asset('storage/' . $publicEvidencePath);
-                                        $previewEvidenceUrl = (str_starts_with((string) $evidencePath, 'http://') || str_starts_with((string) $evidencePath, 'https://'))
-                                            ? (string) $evidencePath
-                                            : $fallbackEvidenceUrl;
+                                        
+                                        // If path is already a full URL (Cloudinary), use it directly
+                                        if (str_starts_with((string) $evidencePath, 'http://') || str_starts_with((string) $evidencePath, 'https://')) {
+                                            $previewEvidenceUrl = (string) $evidencePath;
+                                        } else {
+                                            // For local storage paths, normalize and generate public storage URL
+                                            $cleanPath = ltrim(str_replace(['public/', 'storage/', '\\'], ['', '', '/'], (string) $evidencePath), '/');
+                                            $previewEvidenceUrl = asset('storage/' . $cleanPath);
+                                        }
+                                        
                                         $ext = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
                                         $isImageEvidence = in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true);
                                         $isVideoEvidence = in_array($ext, ['mp4', 'mov', 'webm'], true);
                                     @endphp
 
                                     @if($isImageEvidence)
-                                        <button type="button" class="refund-media-trigger block rounded-lg overflow-hidden border border-gray-200 bg-white" title="Open full image" data-media-type="image" data-media-src="{{ $previewEvidenceUrl }}" data-media-fallback="{{ $evidenceUrl }}">
-                                            <img src="{{ $evidenceUrl }}" onerror="this.onerror=null;this.src='{{ $fallbackEvidenceUrl }}';" alt="Refund evidence" class="w-24 h-24 object-cover hover:opacity-90 transition-opacity">
+                                        <button type="button" class="refund-media-trigger block rounded-lg overflow-hidden border border-gray-200 bg-white" title="Open full image" data-media-type="image" data-media-src="{{ $previewEvidenceUrl }}" data-media-fallback="{{ $previewEvidenceUrl }}">
+                                            <img src="{{ $previewEvidenceUrl }}" onerror="this.onerror=null;this.src='{{ $evidenceUrl }}';" alt="Refund evidence" class="w-24 h-24 object-cover hover:opacity-90 transition-opacity">
                                         </button>
                                     @elseif($isVideoEvidence)
-                                        <button type="button" class="refund-media-trigger relative block w-40 rounded-lg overflow-hidden border border-blue-300 bg-blue-50 hover:bg-blue-100 transition-colors" data-media-type="video" data-media-src="{{ $evidenceUrl }}" data-media-fallback="{{ $previewEvidenceUrl }}" title="Play video evidence">
+                                        <button type="button" class="refund-media-trigger relative block w-40 rounded-lg overflow-hidden border border-blue-300 bg-blue-50 hover:bg-blue-100 transition-colors" data-media-type="video" data-media-src="{{ $previewEvidenceUrl }}" data-media-fallback="{{ $previewEvidenceUrl }}" title="Play video evidence">
                                             <video class="w-full h-24 object-cover bg-black" muted playsinline preload="metadata">
-                                                <source src="{{ $evidenceUrl }}">
+                                                <source src="{{ $previewEvidenceUrl }}">
                                             </video>
                                             <div class="absolute inset-0 flex items-center justify-center bg-black/25">
                                                 <span class="inline-flex items-center px-2 py-1 rounded-md bg-white/90 text-xs font-semibold text-blue-700">Play video</span>

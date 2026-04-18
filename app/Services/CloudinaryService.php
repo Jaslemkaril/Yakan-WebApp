@@ -39,12 +39,22 @@ class CloudinaryService
             return null;
         }
 
+        // Detect if file is video based on extension
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $isVideo = in_array($ext, ['mp4', 'mov', 'webm', 'avi', 'flv', 'mkv'], true);
+        $resourceType = $isVideo ? 'video' : 'image';
+
         $timestamp = time();
         $params = [
             'folder' => 'yakan/' . $folder,
             'timestamp' => $timestamp,
-            'transformation' => 'q_auto,f_auto',
+            'resource_type' => $resourceType,
         ];
+
+        // Only add transformation for images
+        if (!$isVideo) {
+            $params['transformation'] = 'q_auto,f_auto';
+        }
 
         if ($publicId) {
             $params['public_id'] = $publicId;
@@ -59,7 +69,7 @@ class CloudinaryService
             'signature' => $signature,
         ]);
 
-        $url = "https://api.cloudinary.com/v1_1/{$this->cloudName}/image/upload";
+        $url = "https://api.cloudinary.com/v1_1/{$this->cloudName}/{$resourceType}/upload";
 
         $ch = curl_init();
         curl_setopt_array($ch, [
@@ -67,7 +77,7 @@ class CloudinaryService
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $postFields,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 60,
+            CURLOPT_TIMEOUT => 120, // Increased timeout for video uploads
             CURLOPT_SSL_VERIFYPEER => true,
         ]);
 
@@ -81,6 +91,7 @@ class CloudinaryService
                 'error' => $error,
                 'httpCode' => $httpCode,
                 'response' => $response,
+                'resourceType' => $resourceType,
             ]);
             return null;
         }
@@ -97,6 +108,7 @@ class CloudinaryService
             'public_id' => $result['public_id'] ?? null,
             'width' => $result['width'] ?? null,
             'height' => $result['height'] ?? null,
+            'resource_type' => $resourceType,
         ];
     }
 

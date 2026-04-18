@@ -2125,20 +2125,32 @@
                                     @foreach($customRefundEvidence as $evidencePath)
                                         @php
                                             $customEvidenceUrl = route('custom_orders.refund-evidence.view', ['refundRequest' => $customRefundRequest->id, 'index' => $loop->index, 'auth_token' => $authToken]);
-                                            $customRawEvidencePath = str_replace('\\', '/', ltrim((string) $evidencePath, '/'));
-                                            $customPublicEvidencePath = ltrim(str_replace(['public/', 'storage/'], '', $customRawEvidencePath), '/');
-                                            $customFallbackEvidenceUrl = asset('storage/' . $customPublicEvidencePath);
+                                            
+                                            // If path is already a full URL (Cloudinary), use it directly
+                                            if (str_starts_with((string) $evidencePath, 'http://') || str_starts_with((string) $evidencePath, 'https://')) {
+                                                $customPreviewUrl = (string) $evidencePath;
+                                            } else {
+                                                // For local storage paths, normalize and generate public storage URL
+                                                $cleanPath = ltrim(str_replace(['public/', 'storage/', '\\'], ['', '', '/'], (string) $evidencePath), '/');
+                                                $customPreviewUrl = asset('storage/' . $cleanPath);
+                                            }
+                                            
                                             $customExt = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
                                             $customIsImage = in_array($customExt, ['jpg', 'jpeg', 'png', 'webp'], true);
                                             $customIsVideo = in_array($customExt, ['mp4', 'mov', 'webm'], true);
                                         @endphp
                                         @if($customIsImage)
-                                            <a href="{{ $customEvidenceUrl }}" target="_blank" class="block rounded-lg overflow-hidden border border-gray-200 bg-white">
-                                                <img src="{{ $customEvidenceUrl }}" onerror="this.onerror=null;this.src='{{ $customFallbackEvidenceUrl }}';" alt="Refund evidence" class="w-24 h-24 object-cover">
+                                            <a href="{{ $customPreviewUrl }}" target="_blank" class="block rounded-lg overflow-hidden border border-gray-200 bg-white">
+                                                <img src="{{ $customPreviewUrl }}" onerror="this.onerror=null;this.src='{{ $customEvidenceUrl }}';" alt="Refund evidence" class="w-24 h-24 object-cover">
                                             </a>
                                         @elseif($customIsVideo)
-                                            <a href="{{ $customEvidenceUrl }}" target="_blank" class="inline-flex items-center px-3 py-2 rounded-lg border border-blue-300 text-sm text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">
-                                                View Video Evidence
+                                            <a href="{{ $customPreviewUrl }}" target="_blank" class="block rounded-lg overflow-hidden border border-blue-300 bg-blue-50">
+                                                <video class="w-40 h-24 object-cover bg-black" muted playsinline preload="metadata">
+                                                    <source src="{{ $customPreviewUrl }}">
+                                                </video>
+                                                <div class="absolute inset-0 flex items-center justify-center bg-black/25 pointer-events-none">
+                                                    <span class="inline-flex items-center px-2 py-1 rounded-md bg-white/90 text-xs font-semibold text-blue-700">Play video</span>
+                                                </div>
                                             </a>
                                         @else
                                             <a href="{{ $customEvidenceUrl }}" target="_blank" class="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 bg-white hover:bg-gray-100 transition-colors">

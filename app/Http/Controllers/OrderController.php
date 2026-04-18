@@ -19,6 +19,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderRefundRequest;
 use App\Models\Product;
+use App\Services\CloudinaryService;
 use App\Services\TransactionalMailService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -829,8 +830,18 @@ class OrderController extends Controller
 
         $evidencePaths = [];
         if ($request->hasFile('evidence')) {
+            $cloudinary = new CloudinaryService();
             foreach ($request->file('evidence', []) as $file) {
-                $evidencePaths[] = $file->store('refunds/order-' . $order->id, 'public');
+                if ($cloudinary->isEnabled()) {
+                    $tempPath = $file->getRealPath();
+                    $result = $cloudinary->upload($tempPath, 'refunds/order-' . $order->id);
+                    if ($result && isset($result['url'])) {
+                        $evidencePaths[] = $result['url'];
+                    }
+                } else {
+                    // Fallback to local storage if Cloudinary not configured
+                    $evidencePaths[] = $file->store('refunds/order-' . $order->id, 'public');
+                }
             }
         }
 

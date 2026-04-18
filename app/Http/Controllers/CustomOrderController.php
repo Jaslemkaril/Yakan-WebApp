@@ -5036,8 +5036,18 @@ class CustomOrderController extends Controller
 
         $evidencePaths = [];
         if ($request->hasFile('evidence')) {
+            $cloudinary = new CloudinaryService();
             foreach ($request->file('evidence', []) as $file) {
-                $evidencePaths[] = $file->store('custom-refunds/order-' . $order->id, 'public');
+                if ($cloudinary->isEnabled()) {
+                    $tempPath = $file->getRealPath();
+                    $result = $cloudinary->upload($tempPath, 'custom-refunds/order-' . $order->id);
+                    if ($result && isset($result['url'])) {
+                        $evidencePaths[] = $result['url'];
+                    }
+                } else {
+                    // Fallback to local storage if Cloudinary not configured
+                    $evidencePaths[] = $file->store('custom-refunds/order-' . $order->id, 'public');
+                }
             }
         }
 
