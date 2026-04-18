@@ -496,7 +496,7 @@ class OrderController extends Controller
                         'status_state' => $normalizedStatus,
                         'status_label' => $statusLabel,
                         'customer' => (string) ($refundRequest->user?->name ?: $order->customer_name ?: $order->user?->name ?: 'Customer'),
-                        'order_ref' => '#C-' . $order->id,
+                        'order_ref' => $order->display_ref ?? ('#C-' . $order->id),
                         'order_show_url' => route('admin.custom-orders.show', $order),
                         'refund_type' => ucfirst((string) ($refundRequest->request_type ?: 'refund')),
                         'reason' => trim((string) ($refundRequest->reason ?? '')),
