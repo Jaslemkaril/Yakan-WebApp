@@ -491,19 +491,27 @@
                                         $rawEvidencePath = str_replace('\\', '/', ltrim((string) $evidencePath, '/'));
                                         $publicEvidencePath = ltrim(str_replace(['public/', 'storage/'], '', $rawEvidencePath), '/');
                                         $fallbackEvidenceUrl = asset('storage/' . $publicEvidencePath);
+                                        $previewEvidenceUrl = (str_starts_with((string) $evidencePath, 'http://') || str_starts_with((string) $evidencePath, 'https://'))
+                                            ? (string) $evidencePath
+                                            : $fallbackEvidenceUrl;
                                         $ext = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
                                         $isImageEvidence = in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true);
                                         $isVideoEvidence = in_array($ext, ['mp4', 'mov', 'webm'], true);
                                     @endphp
 
                                     @if($isImageEvidence)
-                                        <a href="{{ $evidenceUrl }}" target="_blank" class="block rounded-lg overflow-hidden border border-gray-200 bg-white" title="Open full image">
+                                        <button type="button" class="refund-media-trigger block rounded-lg overflow-hidden border border-gray-200 bg-white" title="Open full image" data-media-type="image" data-media-src="{{ $previewEvidenceUrl }}" data-media-fallback="{{ $evidenceUrl }}">
                                             <img src="{{ $evidenceUrl }}" onerror="this.onerror=null;this.src='{{ $fallbackEvidenceUrl }}';" alt="Refund evidence" class="w-24 h-24 object-cover hover:opacity-90 transition-opacity">
-                                        </a>
+                                        </button>
                                     @elseif($isVideoEvidence)
-                                        <a href="{{ $evidenceUrl }}" target="_blank" class="inline-flex items-center px-3 py-2 rounded-lg border border-blue-300 text-sm text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">
-                                            View Video Evidence
-                                        </a>
+                                        <button type="button" class="refund-media-trigger relative block w-40 rounded-lg overflow-hidden border border-blue-300 bg-blue-50 hover:bg-blue-100 transition-colors" data-media-type="video" data-media-src="{{ $previewEvidenceUrl }}" data-media-fallback="{{ $evidenceUrl }}" title="Play video evidence">
+                                            <video class="w-full h-24 object-cover bg-black" muted playsinline preload="metadata">
+                                                <source src="{{ $previewEvidenceUrl }}">
+                                            </video>
+                                            <div class="absolute inset-0 flex items-center justify-center bg-black/25">
+                                                <span class="inline-flex items-center px-2 py-1 rounded-md bg-white/90 text-xs font-semibold text-blue-700">Play video</span>
+                                            </div>
+                                        </button>
                                     @else
                                         <a href="{{ $evidenceUrl }}" target="_blank" class="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 bg-white hover:bg-gray-100 transition-colors">
                                             View PDF Evidence
@@ -1080,6 +1088,15 @@
     </div>
 </div>
 
+<div id="refundEvidenceModal" class="fixed inset-0 z-[70] hidden items-center justify-center p-4 bg-black/80">
+    <button id="refundEvidenceModalClose" type="button" class="absolute top-4 right-4 w-10 h-10 rounded-full border border-white/40 bg-black/40 text-white text-2xl leading-none hover:bg-black/60" aria-label="Close media preview">×</button>
+    <img id="refundEvidenceModalImage" src="" alt="Evidence preview" class="hidden max-w-[95vw] max-h-[90vh] object-contain rounded-lg border border-white/20 shadow-2xl">
+    <video id="refundEvidenceModalVideo" class="hidden max-w-[95vw] max-h-[90vh] rounded-lg border border-white/20 shadow-2xl bg-black" controls playsinline>
+        <source id="refundEvidenceModalVideoSource" src="">
+        Your browser does not support video playback.
+    </video>
+</div>
+
 <script>
 function setRating(groupId, value) {
     document.getElementById('rating-' + groupId).value = value;
@@ -1294,6 +1311,78 @@ function hasRefundVideoEvidence(files) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    const refundEvidenceModal = document.getElementById('refundEvidenceModal');
+    const refundEvidenceModalClose = document.getElementById('refundEvidenceModalClose');
+    const refundEvidenceModalImage = document.getElementById('refundEvidenceModalImage');
+    const refundEvidenceModalVideo = document.getElementById('refundEvidenceModalVideo');
+    const refundEvidenceModalVideoSource = document.getElementById('refundEvidenceModalVideoSource');
+
+    function closeRefundEvidenceModal() {
+        if (!refundEvidenceModal) {
+            return;
+        }
+        refundEvidenceModal.classList.add('hidden');
+        refundEvidenceModal.classList.remove('flex');
+        document.body.classList.remove('overflow-hidden');
+
+        if (refundEvidenceModalImage) {
+            refundEvidenceModalImage.classList.add('hidden');
+            refundEvidenceModalImage.src = '';
+        }
+
+        if (refundEvidenceModalVideo && refundEvidenceModalVideoSource) {
+            refundEvidenceModalVideo.pause();
+            refundEvidenceModalVideo.classList.add('hidden');
+            refundEvidenceModalVideoSource.src = '';
+            refundEvidenceModalVideo.load();
+        }
+    }
+
+    function openRefundEvidenceModal(type, src, fallbackSrc) {
+        if (!refundEvidenceModal || !src) {
+            return;
+        }
+
+        refundEvidenceModal.classList.remove('hidden');
+        refundEvidenceModal.classList.add('flex');
+        document.body.classList.add('overflow-hidden');
+
+        if (type === 'video' && refundEvidenceModalVideo && refundEvidenceModalVideoSource) {
+            if (refundEvidenceModalImage) {
+                refundEvidenceModalImage.classList.add('hidden');
+                refundEvidenceModalImage.src = '';
+            }
+            refundEvidenceModalVideoSource.src = src;
+            refundEvidenceModalVideo.classList.remove('hidden');
+            refundEvidenceModalVideo.load();
+            const playAttempt = refundEvidenceModalVideo.play();
+            if (playAttempt && typeof playAttempt.catch === 'function') {
+                playAttempt.catch(function() {
+                    // Ignore autoplay restrictions; controls remain available.
+                });
+            }
+            return;
+        }
+
+        if (refundEvidenceModalVideo && refundEvidenceModalVideoSource) {
+            refundEvidenceModalVideo.pause();
+            refundEvidenceModalVideo.classList.add('hidden');
+            refundEvidenceModalVideoSource.src = '';
+            refundEvidenceModalVideo.load();
+        }
+
+        if (refundEvidenceModalImage) {
+            refundEvidenceModalImage.classList.remove('hidden');
+            refundEvidenceModalImage.src = src;
+            refundEvidenceModalImage.onerror = function() {
+                if (fallbackSrc && fallbackSrc !== src) {
+                    refundEvidenceModalImage.onerror = null;
+                    refundEvidenceModalImage.src = fallbackSrc;
+                }
+            };
+        }
+    }
+
     const cancelOrderToggle = document.getElementById('cancel-order-toggle');
     const cancelOrderCard = document.getElementById('cancel-order-card');
     if (cancelOrderToggle && cancelOrderCard) {
@@ -1674,6 +1763,38 @@ document.addEventListener('DOMContentLoaded', function() {
             showRefundStep(1);
         }
     }
+
+    document.addEventListener('click', function(event) {
+        const trigger = event.target.closest('.refund-media-trigger');
+        if (!trigger) {
+            return;
+        }
+
+        event.preventDefault();
+        openRefundEvidenceModal(
+            trigger.getAttribute('data-media-type') || 'image',
+            trigger.getAttribute('data-media-src') || '',
+            trigger.getAttribute('data-media-fallback') || ''
+        );
+    });
+
+    if (refundEvidenceModalClose) {
+        refundEvidenceModalClose.addEventListener('click', closeRefundEvidenceModal);
+    }
+
+    if (refundEvidenceModal) {
+        refundEvidenceModal.addEventListener('click', function(event) {
+            if (event.target === refundEvidenceModal) {
+                closeRefundEvidenceModal();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && refundEvidenceModal && !refundEvidenceModal.classList.contains('hidden')) {
+            closeRefundEvidenceModal();
+        }
+    });
 });
 </script>
 @endsection
