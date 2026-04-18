@@ -300,8 +300,8 @@
     
     // Cancel order flow variables
     $orderStatusLower = strtolower((string) ($order->status ?? ''));
-    $canCancelOrder = in_array($orderStatusLower, ['pending', 'price_quoted', 'approved', 'processing'], true);
     $isCancellationRequested = !empty($customRefundRequest) && $customRefundRequest->request_type === 'return';
+    $canCancelOrder = in_array($orderStatusLower, ['pending', 'price_quoted', 'approved', 'processing'], true) && !$isCancellationRequested;
     $showCancelForm = $errors->has('cancel_reason') || !empty(old('cancel_reason'));
     
     if ($isCancellationRequested) {
