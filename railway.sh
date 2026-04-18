@@ -37,6 +37,10 @@ php artisan migrate --force --no-interaction --path=database/migrations/2026_04_
 php artisan migrate --force --no-interaction --path=database/migrations/2026_04_16_160100_add_variant_id_to_carts_table.php || echo "⚠️ carts.variant_id fallback migration failed."
 php artisan migrate --force --no-interaction --path=database/migrations/2026_04_16_160200_add_variant_columns_to_order_items_table.php || echo "⚠️ order_items.variant columns fallback migration failed."
 
+# Critical fallback: ensure downpayment/partial-payment columns exist so mobile
+# downpayment orders are correctly persisted and surfaced in the admin UI.
+php artisan migrate --force --no-interaction --path=database/migrations/2026_04_16_190000_add_downpayment_fields_to_orders_table.php || echo "⚠️ orders downpayment fields fallback migration failed."
+
 # ── 4b. Ensure Philippine address data is populated (idempotent) ─────────────
 echo "🗺️ Syncing Philippine address data..."
 php artisan db:seed --class=PhilippineSyncSeeder --force 2>/dev/null || echo "⚠️ Address sync failed, continuing..."
