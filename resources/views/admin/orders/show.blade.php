@@ -64,18 +64,19 @@
 
     .admin-bundle-item-card {
         background: #fafafa;
-        border-radius: 4px;
-        padding: 6px 8px;
-        margin-bottom: 4px;
+        border-radius: 6px;
+        padding: 8px 10px;
+        margin-bottom: 6px;
         border: 1px solid #e5e7eb;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
     }
 
     .admin-bundle-item-card:hover {
         background: #f3f4f6;
         border-color: #9ca3af;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 </style>
 @endpush
@@ -513,10 +514,10 @@
                                                     <div class="admin-bundle-item-card">
                                                         <img src="{{ $bundleItem->componentProduct->image_src }}" 
                                                              alt="{{ $bundleItem->componentProduct->name }}" 
-                                                             class="w-6 h-6 object-cover rounded border border-gray-300">
-                                                        <div class="flex-1 text-xs">
+                                                             class="w-10 h-10 object-cover rounded border border-gray-300 shadow-sm">
+                                                        <div class="flex-1 text-sm">
                                                             <div class="font-semibold text-gray-900">{{ $bundleItem->componentProduct->name }}</div>
-                                                            <div class="text-gray-600">Qty: {{ $bundleItem->quantity }}</div>
+                                                            <div class="text-gray-600 text-xs mt-0.5">Qty: {{ $bundleItem->quantity }}</div>
                                                         </div>
                                                     </div>
                                                 @endif
