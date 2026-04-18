@@ -585,6 +585,7 @@ Route::get('/staff/dashboard', [App\Http\Controllers\Staff\DashboardController::
 Route::get('/staff/orders/cancelled', [App\Http\Controllers\Staff\DashboardController::class, 'cancelledOrders'])->middleware('admin:order_staff')->name('staff.orders.cancelled');
 Route::get('/staff/orders/refunded', [App\Http\Controllers\Staff\DashboardController::class, 'refundedOrders'])->middleware('admin:order_staff')->name('staff.orders.refunded');
 Route::get('/staff/orders/cancel-requests', [App\Http\Controllers\Admin\OrderController::class, 'cancelRequests'])->middleware('admin:order_staff')->name('staff.orders.cancel_requests');
+Route::get('/staff/orders/refund-requests', [App\Http\Controllers\Admin\OrderController::class, 'refundRequests'])->middleware('admin:order_staff')->name('staff.orders.refund_requests');
 
 // Regular user login routes
 Route::get('/login', function() {
@@ -1195,6 +1196,7 @@ Route::middleware(['admin:admin,order_staff'])->prefix('admin')->name('admin.')-
     Route::prefix('orders')->group(function () {
         Route::get('/', [AdminOrderController::class, 'index'])->name('regular.index');
         Route::get('/cancel-requests', [AdminOrderController::class, 'cancelRequests'])->name('orders.cancel_requests.index');
+        Route::get('/refund-requests', [AdminOrderController::class, 'refundRequests'])->name('orders.refund_requests.index');
         Route::get('/create', [AdminOrderController::class, 'create'])->name('orders.create');
         Route::post('/', [AdminOrderController::class, 'store'])->name('orders.store');
         Route::get('/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
@@ -1211,6 +1213,9 @@ Route::middleware(['admin:admin,order_staff'])->prefix('admin')->name('admin.')-
         Route::post('/{order}/cancel-requests/reject', [AdminOrderController::class, 'rejectCancellationRequest'])->name('orders.cancel_requests.reject');
         Route::post('/refund-requests/{refundRequest}/approve', [AdminOrderController::class, 'approveRefundRequest'])->name('orders.refund_requests.approve');
         Route::post('/refund-requests/{refundRequest}/reject', [AdminOrderController::class, 'rejectRefundRequest'])->name('orders.refund_requests.reject');
+        Route::post('/refund-requests/{refundRequest}/request-return', [AdminOrderController::class, 'requestRefundItemReturn'])->name('orders.refund_requests.request_return');
+        Route::post('/refund-requests/{refundRequest}/quick-release', [AdminOrderController::class, 'quickReleaseRefund'])->name('orders.refund_requests.quick_release');
+        Route::post('/refund-requests/{refundRequest}/reject-not-returned', [AdminOrderController::class, 'rejectRefundNotReturned'])->name('orders.refund_requests.reject_not_returned');
         Route::post('/refund-requests/{refundRequest}/return-received', [AdminOrderController::class, 'markRefundReturnReceived'])->name('orders.refund_requests.return_received');
         Route::post('/refund-requests/{refundRequest}/execute-payout', [AdminOrderController::class, 'executeRefundPayout'])->name('orders.refund_requests.execute_payout');
         Route::get('/refund-requests/{refundRequest}/evidence/{index}', [AdminOrderController::class, 'viewRefundEvidence'])->whereNumber('index')->name('orders.refund_evidence.view');

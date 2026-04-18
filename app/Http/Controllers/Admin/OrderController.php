@@ -243,6 +243,239 @@ class OrderController extends Controller
     }
 
     /**
+     * Dedicated refund request dashboard.
+     */
+    public function refundRequests(Request $request)
+    {
+        $this->ensureRefundRequestsTableExists();
+        $this->ensureRefundWorkflowColumnsExist();
+
+        if (!Schema::hasTable('order_refund_requests')) {
+            return redirect()->route('admin.regular.index')->with('error', 'Refund requests table is not available yet.');
+        }
+
+        $statusFilter = strtolower((string) $request->query('status', 'all'));
+        if (!in_array($statusFilter, ['all', 'under_review', 'awaiting_return', 'refunded', 'rejected'], true)) {
+            $statusFilter = 'all';
+        }
+
+        $query = OrderRefundRequest::with(['order.user', 'user', 'reviewer'])
+            ->whereHas('order')
+            ->where(function ($builder) {
+                // Keep cancellation requests on their own dashboard.
+                $builder->whereRaw('LOWER(COALESCE(reason, "")) NOT LIKE ?', ['%cancel%'])
+                    ->whereRaw('LOWER(COALESCE(comment, "")) NOT LIKE ?', ['%cancel%'])
+                    ->whereRaw('LOWER(COALESCE(details, "")) NOT LIKE ?', ['%cancel%']);
+            });
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->query('search'));
+            $query->where(function ($builder) use ($search) {
+                $builder->where('reason', 'like', "%{$search}%")
+                    ->orWhere('comment', 'like', "%{$search}%")
+                    ->orWhere('details', 'like', "%{$search}%")
+                    ->orWhere('refund_reference', 'like', "%{$search}%")
+                    ->orWhereHas('order', function ($orderQuery) use ($search) {
+                        $orderQuery->where('order_ref', 'like', "%{$search}%")
+                            ->orWhere('customer_name', 'like', "%{$search}%")
+                            ->orWhere('customer_email', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $underReviewStatuses = ['requested', 'pending_review', 'under_review'];
+        $awaitingReturnStatuses = ['awaiting_return_shipment', 'return_in_transit'];
+        $refundedStatuses = ['pending_payout', 'return_received', 'approved', 'processed'];
+
+        if ($statusFilter === 'under_review') {
+            $query->where(function ($builder) use ($underReviewStatuses) {
+                $builder->whereIn('status', $underReviewStatuses)
+                    ->orWhereIn('workflow_status', $underReviewStatuses);
+            });
+        } elseif ($statusFilter === 'awaiting_return') {
+            $query->where(function ($builder) use ($awaitingReturnStatuses) {
+                $builder->whereIn('status', $awaitingReturnStatuses)
+                    ->orWhereIn('workflow_status', $awaitingReturnStatuses);
+            });
+        } elseif ($statusFilter === 'refunded') {
+            $query->where(function ($builder) use ($refundedStatuses) {
+                $builder->whereIn('status', $refundedStatuses)
+                    ->orWhereIn('workflow_status', $refundedStatuses)
+                    ->orWhere('payout_status', 'completed');
+            });
+        } elseif ($statusFilter === 'rejected') {
+            $query->where(function ($builder) {
+                $builder->where('status', 'rejected')
+                    ->orWhere('workflow_status', 'rejected')
+                    ->orWhere('final_decision', 'REJECT');
+            });
+        }
+
+        $refundRequests = $query->latest()->paginate(15)->withQueryString();
+
+        $baseStatsQuery = OrderRefundRequest::query()
+            ->whereHas('order')
+            ->where(function ($builder) {
+                $builder->whereRaw('LOWER(COALESCE(reason, "")) NOT LIKE ?', ['%cancel%'])
+                    ->whereRaw('LOWER(COALESCE(comment, "")) NOT LIKE ?', ['%cancel%'])
+                    ->whereRaw('LOWER(COALESCE(details, "")) NOT LIKE ?', ['%cancel%']);
+            });
+
+        $stats = [
+            'under_review' => (clone $baseStatsQuery)->where(function ($builder) use ($underReviewStatuses) {
+                $builder->whereIn('status', $underReviewStatuses)
+                    ->orWhereIn('workflow_status', $underReviewStatuses);
+            })->count(),
+            'awaiting_return' => (clone $baseStatsQuery)->where(function ($builder) use ($awaitingReturnStatuses) {
+                $builder->whereIn('status', $awaitingReturnStatuses)
+                    ->orWhereIn('workflow_status', $awaitingReturnStatuses);
+            })->count(),
+            'refunded' => (clone $baseStatsQuery)->where(function ($builder) use ($refundedStatuses) {
+                $builder->whereIn('status', $refundedStatuses)
+                    ->orWhereIn('workflow_status', $refundedStatuses)
+                    ->orWhere('payout_status', 'completed');
+            })->count(),
+            'rejected' => (clone $baseStatsQuery)->where(function ($builder) {
+                $builder->where('status', 'rejected')
+                    ->orWhere('workflow_status', 'rejected')
+                    ->orWhere('final_decision', 'REJECT');
+            })->count(),
+        ];
+
+        return view('admin.orders.refund-requests', compact('refundRequests', 'statusFilter', 'stats'));
+    }
+
+    /**
+     * One-click action: under review -> awaiting return.
+     */
+    public function requestRefundItemReturn(Request $request, OrderRefundRequest $refundRequest)
+    {
+        $validated = $request->validate([
+            'admin_note' => 'nullable|string|max:2000',
+        ]);
+
+        $currentStatus = strtolower((string) ($refundRequest->workflow_status ?: $refundRequest->status));
+        if (!in_array($currentStatus, ['requested', 'pending_review', 'under_review'], true)) {
+            return redirect()->back()->with('error', 'This request is no longer in review state.');
+        }
+
+        $refundRequest->status = 'approved';
+        $refundRequest->workflow_status = 'awaiting_return_shipment';
+        $refundRequest->final_decision = 'RETURN_REQUIRED';
+        $refundRequest->return_required = true;
+        $refundRequest->payout_status = 'pending';
+        $refundRequest->reviewed_by = auth()->id();
+        $refundRequest->reviewed_at = now();
+
+        if (!empty($validated['admin_note'])) {
+            $refundRequest->admin_note = trim((string) $validated['admin_note']);
+        }
+
+        $refundRequest->save();
+
+        $this->notifyRefundWorkflowUpdate(
+            $refundRequest,
+            'Awaiting Return',
+            'Your refund request is approved for return processing. Please return the item so we can continue with refund release.'
+        );
+
+        return redirect()->back()->with('success', 'Return request has been sent to the customer.');
+    }
+
+    /**
+     * One-click action: release refund (under review or awaiting return) with automatic payout record.
+     */
+    public function quickReleaseRefund(Request $request, OrderRefundRequest $refundRequest)
+    {
+        $validated = $request->validate([
+            'admin_note' => 'nullable|string|max:2000',
+        ]);
+
+        $currentStatus = strtolower((string) ($refundRequest->workflow_status ?: $refundRequest->status));
+        if (!in_array($currentStatus, ['requested', 'pending_review', 'under_review', 'awaiting_return_shipment', 'return_in_transit', 'pending_payout', 'return_received', 'approved'], true)) {
+            return redirect()->back()->with('error', 'This request is not eligible for quick release.');
+        }
+
+        $order = $refundRequest->order;
+        if (!$order) {
+            return redirect()->back()->with('error', 'Associated order not found.');
+        }
+
+        $this->ensureRefundedPaymentStatusSupported();
+
+        $orderTotal = (float) ($order->total_amount ?? $order->total ?? 0);
+        $releaseAmount = (float) ($refundRequest->refund_amount ?? $refundRequest->approved_amount ?? $refundRequest->recommended_refund_amount ?? 0);
+        if ($releaseAmount <= 0) {
+            $releaseAmount = $orderTotal;
+        }
+        $releaseAmount = max(0, min($releaseAmount, $orderTotal));
+
+        $refundRequest->status = 'processed';
+        $refundRequest->workflow_status = 'processed';
+        $refundRequest->final_decision = in_array(strtoupper((string) $refundRequest->final_decision), ['PARTIAL_REFUND', 'FULL_REFUND'], true)
+            ? strtoupper((string) $refundRequest->final_decision)
+            : 'FULL_REFUND';
+        $refundRequest->refund_amount = $releaseAmount;
+        $refundRequest->approved_amount = $releaseAmount;
+        $refundRequest->payout_status = 'completed';
+        $refundRequest->refund_channel = $refundRequest->refund_channel ?: 'manual_admin';
+        $refundRequest->refund_reference = $refundRequest->refund_reference ?: ('RF-AUTO-' . now()->format('YmdHis') . '-' . $refundRequest->id);
+        $refundRequest->return_received_at = $refundRequest->return_received_at ?: now();
+        $refundRequest->processed_at = now();
+        $refundRequest->reviewed_by = auth()->id();
+        $refundRequest->reviewed_at = now();
+
+        if (!empty($validated['admin_note'])) {
+            $refundRequest->admin_note = trim((string) $validated['admin_note']);
+        }
+
+        $refundRequest->save();
+
+        $order->status = 'refunded';
+        $order->payment_status = 'refunded';
+        $order->appendTrackingEvent('Refunded');
+        $order->save();
+
+        $this->notifyRefundDecision($refundRequest, 'approved');
+
+        return redirect()->back()->with('success', 'Refund released and recorded successfully.');
+    }
+
+    /**
+     * One-click action: reject awaiting-return request when item is not returned.
+     */
+    public function rejectRefundNotReturned(Request $request, OrderRefundRequest $refundRequest)
+    {
+        $validated = $request->validate([
+            'admin_note' => 'required|string|max:2000',
+        ]);
+
+        $currentStatus = strtolower((string) ($refundRequest->workflow_status ?: $refundRequest->status));
+        if (!in_array($currentStatus, ['awaiting_return_shipment', 'return_in_transit'], true)) {
+            return redirect()->back()->with('error', 'Only awaiting-return requests can be rejected with this action.');
+        }
+
+        $refundRequest->status = 'rejected';
+        $refundRequest->workflow_status = 'rejected';
+        $refundRequest->final_decision = 'REJECT';
+        $refundRequest->refund_amount = 0;
+        $refundRequest->approved_amount = 0;
+        $refundRequest->payout_status = 'not_applicable';
+        $refundRequest->admin_note = trim((string) $validated['admin_note']);
+        $refundRequest->reviewed_by = auth()->id();
+        $refundRequest->reviewed_at = now();
+        $refundRequest->save();
+
+        $this->notifyRefundDecision($refundRequest, 'rejected');
+
+        return redirect()->back()->with('success', 'Refund request rejected due to item not returned.');
+    }
+
+    /**
      * Approve cancellation request from dedicated cancellation dashboard.
      */
     public function approveCancellationRequest(Request $request, Order $order)
