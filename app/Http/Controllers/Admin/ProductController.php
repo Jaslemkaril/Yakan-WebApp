@@ -256,7 +256,7 @@ class ProductController extends Controller
             'description' => $request->description,
             'image' => $imagePath,
             'status' => $request->status ?? 'active',
-            'category_id' => $request->category_id,
+            'category_id' => $isBundle ? null : $request->category_id,
             'available_sizes' => $sizes,
             'available_colors' => $colors,
         ];
@@ -590,7 +590,7 @@ class ProductController extends Controller
             'stock' => $resolvedStock,
             'description' => $request->description,
             'status' => $request->status ?? $product->status,
-            'category_id' => $request->category_id,
+            'category_id' => $isBundle ? null : $request->category_id,
             'image' => $imagePath,
             'available_sizes' => $sizes,
             'available_colors' => $colors,
