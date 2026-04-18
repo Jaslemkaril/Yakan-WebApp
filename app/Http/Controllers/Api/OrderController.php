@@ -225,6 +225,30 @@ class OrderController extends Controller
                 }
 
                 $unitPrice = $this->getEffectivePrice($product, $variant);
+
+                // Diagnostic log: trace how the server computed this item's price
+                // so we can spot unexpected discount applications or variant price
+                // mismatches between mobile display and server calculation.
+                $rawBasePrice = $variant ? (float) $variant->price : (float) $product->price;
+                \Log::info('[OrderStore] Item price resolved', [
+                    'order_id' => $order->id,
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'product_price_column' => (float) $product->price,
+                    'variant_id' => $variant?->id,
+                    'variant_price_column' => $variant ? (float) $variant->price : null,
+                    'base_price_used' => $rawBasePrice,
+                    'has_active_discount' => $product->hasActiveProductDiscount(),
+                    'discount_type' => $product->discount_type,
+                    'discount_value' => $product->discount_value,
+                    'discount_starts_at' => $product->discount_starts_at?->toDateTimeString(),
+                    'discount_ends_at' => $product->discount_ends_at?->toDateTimeString(),
+                    'effective_unit_price' => $unitPrice,
+                    'quantity' => $quantity,
+                    'line_total' => $unitPrice * $quantity,
+                    'client_sent_price' => $item['price'] ?? null,
+                ]);
+
                 $serverSubtotal += $unitPrice * $quantity;
 
                 $order->items()->create([
