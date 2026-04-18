@@ -2,17 +2,48 @@
 
 @section('title', 'Post-Order Requests')
 
+@push('styles')
+<style>
+    .post-order-stat-card {
+        @apply rounded-xl p-5 shadow-md hover:shadow-lg transition-all duration-300 bg-white border border-gray-200;
+        border-left: 4px solid #800000;
+    }
+
+    .post-order-filter-section {
+        @apply bg-white rounded-xl shadow-lg p-6 border border-gray-200;
+    }
+
+    .post-order-table-wrap {
+        @apply bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden;
+    }
+
+    .post-order-filter-chip {
+        @apply px-4 py-2 rounded-lg border text-sm font-semibold transition-all duration-200;
+    }
+
+    .post-order-filter-chip-active {
+        @apply bg-[#800000] text-white border-[#800000];
+    }
+
+    .post-order-filter-chip-idle {
+        @apply bg-white text-gray-700 border-gray-300 hover:bg-gray-50;
+    }
+</style>
+@endpush
+
 @section('content')
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
-    <div class="flex items-center justify-between">
+<div class="min-h-screen bg-gray-50 py-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Post-Order Request</h1>
-            <p class="text-sm text-gray-500">Combined regular and custom cancel/refund requests</p>
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Post-Order Request</h1>
+            <p class="text-gray-600">Combined regular and custom cancel/refund requests</p>
         </div>
+        <span class="text-sm text-gray-500">{{ now()->format('M d, Y') }}</span>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div class="post-order-stat-card">
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-base font-semibold text-gray-800">Cancel requests</h2>
                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Cancel</span>
@@ -33,7 +64,7 @@
             </div>
         </div>
 
-        <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div class="post-order-stat-card">
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-base font-semibold text-gray-800">Refund requests</h2>
                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Refund</span>
@@ -55,11 +86,11 @@
         </div>
     </div>
 
-    <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 space-y-3">
+    <div class="post-order-filter-section space-y-3">
         <div class="flex flex-wrap gap-2">
-            <a href="{{ request()->fullUrlWithQuery(['type' => 'all', 'page' => null]) }}" class="px-4 py-2 rounded-lg text-sm font-medium border {{ $typeFilter === 'all' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' }}">All</a>
-            <a href="{{ request()->fullUrlWithQuery(['type' => 'cancel', 'page' => null]) }}" class="px-4 py-2 rounded-lg text-sm font-medium border {{ $typeFilter === 'cancel' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' }}">Cancel requests</a>
-            <a href="{{ request()->fullUrlWithQuery(['type' => 'refund', 'page' => null]) }}" class="px-4 py-2 rounded-lg text-sm font-medium border {{ $typeFilter === 'refund' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' }}">Refund requests</a>
+            <a href="{{ request()->fullUrlWithQuery(['type' => 'all', 'page' => null]) }}" class="post-order-filter-chip {{ $typeFilter === 'all' ? 'post-order-filter-chip-active' : 'post-order-filter-chip-idle' }}">All</a>
+            <a href="{{ request()->fullUrlWithQuery(['type' => 'cancel', 'page' => null]) }}" class="post-order-filter-chip {{ $typeFilter === 'cancel' ? 'post-order-filter-chip-active' : 'post-order-filter-chip-idle' }}">Cancel requests</a>
+            <a href="{{ request()->fullUrlWithQuery(['type' => 'refund', 'page' => null]) }}" class="post-order-filter-chip {{ $typeFilter === 'refund' ? 'post-order-filter-chip-active' : 'post-order-filter-chip-idle' }}">Refund requests</a>
         </div>
 
         <form method="GET" class="w-full">
@@ -71,12 +102,12 @@
                 name="search"
                 value="{{ $search }}"
                 placeholder="Search order or customer..."
-                class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-gray-900 focus:ring-gray-900"
+                class="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
             >
         </form>
     </div>
 
-    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <div class="post-order-table-wrap">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
@@ -130,7 +161,6 @@
                                         data-request='@json($item['cancel_payload'] ?? [])'
                                     >
                                         View
-                                        <span aria-hidden="true">↗</span>
                                     </button>
                                 @elseif(($item['action_kind'] ?? '') === 'refund_modal')
                                     <button
@@ -139,12 +169,10 @@
                                         data-refund='@json($item['refund_payload'] ?? [])'
                                     >
                                         View
-                                        <span aria-hidden="true">↗</span>
                                     </button>
                                 @else
                                     <a href="{{ $item['view_url'] }}" class="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100">
                                         View
-                                        <span aria-hidden="true">↗</span>
                                     </a>
                                 @endif
                             </td>
@@ -164,6 +192,7 @@
             </div>
         @endif
     </div>
+</div>
 </div>
 
 <div id="postOrderCancelModal" class="fixed inset-0 bg-black/55 z-50 hidden items-center justify-center p-4">
