@@ -1335,66 +1335,84 @@ class OrderController extends Controller
      */
     public function viewRefundEvidence(OrderRefundRequest $refundRequest, int $index)
     {
-        $rawEvidence = $refundRequest->evidence_paths;
-        if (is_string($rawEvidence) && $rawEvidence !== '') {
-            $decoded = json_decode($rawEvidence, true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                $rawEvidence = $decoded;
+        try {
+            $rawEvidence = $refundRequest->evidence_paths;
+            if (is_string($rawEvidence) && $rawEvidence !== '') {
+                $decoded = json_decode($rawEvidence, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $rawEvidence = $decoded;
+                }
             }
-        }
 
-        $evidence = array_values(array_filter(
-            is_array($rawEvidence) ? $rawEvidence : [],
-            static fn ($value) => $value !== null && $value !== ''
-        ));
+            $evidence = array_values(array_filter(
+                is_array($rawEvidence) ? $rawEvidence : [],
+                static fn ($value) => $value !== null && $value !== ''
+            ));
 
-        if (!array_key_exists($index, $evidence)) {
-            Log::warning('Admin refund evidence index not found', [
-                'refund_request_id' => $refundRequest->id,
-                'requested_index' => $index,
-                'available_count' => count($evidence),
-            ]);
+            if (!array_key_exists($index, $evidence)) {
+                Log::warning('Admin refund evidence index not found', [
+                    'refund_request_id' => $refundRequest->id,
+                    'requested_index' => $index,
+                    'available_count' => count($evidence),
+                ]);
 
-            return response('Evidence file not found.', 404);
-        }
+                return response('Evidence file not found.', 404);
+            }
 
-        $path = trim((string) $evidence[$index]);
-        $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            $pathHost = parse_url($path, PHP_URL_HOST);
-            $pathFromUrl = (string) (parse_url($path, PHP_URL_PATH) ?? '');
-
-            if ($pathHost && $appHost && strcasecmp($pathHost, $appHost) !== 0) {
+            $path = str_replace('\\', '/', trim((string) $evidence[$index], " \t\n\r\0\x0B\"'"));
+            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
                 return redirect()->away($path);
             }
 
-            if ($pathFromUrl !== '') {
-                $path = $pathFromUrl;
+            $normalizedPath = ltrim($path, '/');
+            if (str_starts_with($normalizedPath, 'storage/')) {
+                $normalizedPath = substr($normalizedPath, strlen('storage/'));
             }
-        }
-
-        $trimmedPath = ltrim($path, '/');
-        $candidatePaths = array_values(array_unique(array_filter([
-            $trimmedPath,
-            preg_replace('#^storage/#', '', $trimmedPath),
-            preg_replace('#^public/#', '', $trimmedPath),
-            preg_replace('#^public/storage/#', '', $trimmedPath),
-        ], static fn ($value) => is_string($value) && $value !== '')));
-
-        foreach ($candidatePaths as $candidatePath) {
-            if (Storage::disk('public')->exists($candidatePath)) {
-                return Storage::disk('public')->response($candidatePath);
+            if (str_starts_with($normalizedPath, 'public/')) {
+                $normalizedPath = substr($normalizedPath, strlen('public/'));
             }
+
+            $candidatePaths = array_values(array_unique(array_filter([
+                $normalizedPath,
+                ltrim($path, '/'),
+                'public/' . ltrim($normalizedPath, '/'),
+            ], static fn ($value) => is_string($value) && $value !== '')));
+
+            foreach ($candidatePaths as $candidatePath) {
+                $candidatePath = str_replace('\\', '/', trim((string) $candidatePath, '/'));
+
+                if (Storage::disk('public')->exists($candidatePath)) {
+                    return Storage::disk('public')->response($candidatePath);
+                }
+
+                if (Storage::disk('local')->exists($candidatePath)) {
+                    return Storage::disk('local')->response($candidatePath);
+                }
+
+                $publicStorageRelative = ltrim(str_replace(['public/', 'storage/'], '', $candidatePath), '/');
+                $publicStoragePath = public_path('storage/' . $publicStorageRelative);
+                if (is_file($publicStoragePath)) {
+                    return redirect()->to(asset('storage/' . $publicStorageRelative));
+                }
+            }
+
+            Log::warning('Admin refund evidence file missing on storage disk', [
+                'refund_request_id' => $refundRequest->id,
+                'requested_index' => $index,
+                'stored_path' => $path,
+                'candidate_paths' => $candidatePaths,
+            ]);
+
+            return response('Evidence file is unavailable.', 404);
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to serve refund evidence file for admin.', [
+                'refund_request_id' => $refundRequest->id,
+                'index' => $index,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return response('Evidence file is unavailable.', 404);
         }
-
-        Log::warning('Admin refund evidence file missing on storage disk', [
-            'refund_request_id' => $refundRequest->id,
-            'requested_index' => $index,
-            'stored_path' => $path,
-            'candidate_paths' => $candidatePaths,
-        ]);
-
-        return response('Evidence file is unavailable.', 404);
     }
 
     /**
