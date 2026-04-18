@@ -354,10 +354,18 @@
     </div>
 </div>
 
+<div id="refundImagePreviewModal" class="fixed inset-0 bg-black/80 z-[60] hidden items-center justify-center p-4">
+    <button id="closeRefundImagePreviewModal" type="button" class="absolute top-4 right-4 w-10 h-10 rounded-full border border-white/40 bg-black/40 text-white text-2xl leading-none hover:bg-black/60" aria-label="Close image preview">×</button>
+    <img id="refundImagePreviewEl" src="" alt="Refund evidence preview" class="max-w-[95vw] max-h-[90vh] object-contain rounded-lg shadow-2xl border border-white/20">
+</div>
+
 <script>
     (function () {
         const modal = document.getElementById('refundReviewModal');
         const closeBtn = document.getElementById('closeRefundReviewModal');
+        const imagePreviewModal = document.getElementById('refundImagePreviewModal');
+        const closeImagePreviewBtn = document.getElementById('closeRefundImagePreviewModal');
+        const imagePreviewEl = document.getElementById('refundImagePreviewEl');
         const reviewButtons = document.querySelectorAll('.refund-review-btn');
 
         const refundIdEl = document.getElementById('modalRefundId');
@@ -388,6 +396,25 @@
         const rejectNotReturnedBtn = document.getElementById('modalRejectNotReturnedBtn');
 
         let payload = null;
+
+        function openImagePreview(src) {
+            if (!src) {
+                return;
+            }
+            imagePreviewEl.src = src;
+            imagePreviewModal.classList.remove('hidden');
+            imagePreviewModal.classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeImagePreview() {
+            imagePreviewModal.classList.add('hidden');
+            imagePreviewModal.classList.remove('flex');
+            imagePreviewEl.src = '';
+            if (modal.classList.contains('hidden')) {
+                document.body.classList.remove('overflow-hidden');
+            }
+        }
 
         function resetActions() {
             actionError.classList.add('hidden');
@@ -464,7 +491,7 @@
                     const imgSrc = item.preview_url || item.url;
                     const fallbackSrc = item.fallback_url || item.url;
                     const openUrl = item.open_url || item.preview_url || item.url;
-                    return '<a href="' + openUrl + '" target="_blank" class="inline-block mr-2 mb-2">'
+                    return '<a href="#" data-preview-src="' + openUrl + '" class="refund-evidence-image inline-block mr-2 mb-2" title="Click to preview">'
                         + '<img src="' + imgSrc + '" onerror="if(this.dataset.err){this.onerror=null;this.src=\'' + fallbackSrc + '\';return;}this.dataset.err=\'1\';this.src=\'' + item.url + '\';" class="w-20 h-20 object-cover rounded-lg border border-gray-200" alt="Evidence">'
                         + '</a>';
                 }
@@ -568,6 +595,7 @@
 
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+            document.body.classList.add('overflow-hidden');
         }
 
         function closeModal() {
@@ -576,6 +604,8 @@
             actionError.classList.add('hidden');
             actionError.textContent = '';
             adminNoteEl.classList.remove('border-rose-500', 'focus:ring-rose-500', 'focus:border-rose-500');
+            closeImagePreview();
+            document.body.classList.remove('overflow-hidden');
         }
 
         reviewButtons.forEach(function (button) {
@@ -610,6 +640,22 @@
             postTo(payload.reject_not_returned_url, true);
         });
 
+        evidenceWrapEl.addEventListener('click', function (event) {
+            const trigger = event.target.closest('.refund-evidence-image');
+            if (!trigger) {
+                return;
+            }
+            event.preventDefault();
+            openImagePreview(trigger.getAttribute('data-preview-src'));
+        });
+
+        closeImagePreviewBtn.addEventListener('click', closeImagePreview);
+        imagePreviewModal.addEventListener('click', function (event) {
+            if (event.target === imagePreviewModal) {
+                closeImagePreview();
+            }
+        });
+
         closeBtn.addEventListener('click', closeModal);
         modal.addEventListener('click', function (event) {
             if (event.target === modal) {
@@ -618,6 +664,10 @@
         });
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') {
+                if (!imagePreviewModal.classList.contains('hidden')) {
+                    closeImagePreview();
+                    return;
+                }
                 closeModal();
             }
         });
