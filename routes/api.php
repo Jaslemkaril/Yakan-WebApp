@@ -37,6 +37,41 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/google', [SocialAuthController::class, 'googleLogin'])->middleware('throttle:5,1');
     Route::post('/auth/facebook', [SocialAuthController::class, 'facebookLogin'])->middleware('throttle:5,1');
 
+    // ===================== DIAGNOSTIC (Public, temporary) =====================
+    Route::get('/diagnostic/product-discounts', function () {
+        $products = \App\Models\Product::with('variants')->get();
+        $result = $products->map(function ($p) {
+            $basePrice = (float) $p->price;
+            $effective = (float) $p->getDiscountedPrice($basePrice);
+            return [
+                'id' => $p->id,
+                'name' => $p->name,
+                'price_column' => $basePrice,
+                'discount_type' => $p->discount_type,
+                'discount_value' => $p->discount_value ? (float) $p->discount_value : null,
+                'discount_starts_at' => $p->discount_starts_at?->toDateTimeString(),
+                'discount_ends_at' => $p->discount_ends_at?->toDateTimeString(),
+                'has_active_discount' => $p->hasActiveProductDiscount(),
+                'effective_unit_price' => $effective,
+                'server_now' => now()->toDateTimeString(),
+                'variants' => $p->variants->map(fn($v) => [
+                    'id' => $v->id,
+                    'size' => $v->size,
+                    'color' => $v->color,
+                    'price_column' => (float) $v->price,
+                    'effective_price' => (float) $p->getDiscountedPrice((float) $v->price),
+                    'is_active' => (bool) $v->is_active,
+                ])->values(),
+            ];
+        })->values();
+
+        return response()->json([
+            'success' => true,
+            'server_time' => now()->toDateTimeString(),
+            'products' => $result,
+        ]);
+    });
+
     // ===================== PRODUCTS (Public) =====================
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/products/featured', [ProductController::class, 'featured']);
