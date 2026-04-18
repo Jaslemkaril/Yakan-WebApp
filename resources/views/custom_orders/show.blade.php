@@ -3055,6 +3055,7 @@ document.addEventListener('DOMContentLoaded', function () {
         </div>
     </div>
 </div>
+@endif
 
 <script>
 function setCustomRating(value) {
