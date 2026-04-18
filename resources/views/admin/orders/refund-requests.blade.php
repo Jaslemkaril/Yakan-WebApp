@@ -53,22 +53,6 @@
         @apply w-2.5 h-2.5 rounded-full mt-1;
     }
 
-    .refund-action-btn {
-        @apply w-full px-4 py-3 border rounded-lg font-semibold transition-colors duration-200;
-    }
-
-    .refund-action-btn-primary {
-        @apply bg-[#800000] text-white border-[#800000] hover:bg-[#600000];
-    }
-
-    .refund-action-btn-neutral {
-        @apply bg-white text-gray-800 border-gray-300 hover:bg-gray-100;
-    }
-
-    .refund-action-btn-danger {
-        @apply bg-white text-rose-700 border-rose-300 hover:bg-rose-50;
-    }
-
     .refund-input {
         @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000] resize-y;
     }
@@ -288,29 +272,29 @@
 </div>
 
 <div id="refundReviewModal" class="fixed inset-0 bg-black/55 z-50 hidden items-center justify-center p-4">
-    <div class="w-full max-w-5xl max-h-[92vh] overflow-y-auto custom-scrollbar bg-white rounded-2xl shadow-xl border border-gray-200">
+    <div class="w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar bg-white rounded-2xl shadow-xl border border-gray-200">
         <div class="grid grid-cols-1 lg:grid-cols-3">
-            <div class="lg:col-span-2 p-4 border-r border-gray-200">
+            <div class="lg:col-span-2 p-3.5 border-r border-gray-200">
                 <div class="flex items-start justify-between mb-4">
                     <div>
-                        <h2 id="modalRefundId" class="text-2xl font-bold text-gray-900">Refund #</h2>
+                        <h2 id="modalRefundId" class="text-xl font-bold text-gray-900">Refund #</h2>
                         <span id="modalStatusBadge" class="refund-status-badge mt-2"></span>
                     </div>
                     <button id="closeRefundReviewModal" type="button" class="w-11 h-11 border border-gray-300 rounded-xl text-xl text-gray-700 hover:bg-gray-100" aria-label="Close modal">×</button>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-sm text-gray-500">Customer</p><p id="modalCustomer" class="text-lg font-semibold text-gray-900"></p></div>
-                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-sm text-gray-500">Order</p><p id="modalOrder" class="text-lg font-semibold text-gray-900"></p></div>
-                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-sm text-gray-500">Refund type</p><p id="modalRefundType" class="text-lg font-semibold text-gray-900"></p></div>
-                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-sm text-gray-500">Reason</p><p id="modalReason" class="text-lg font-semibold text-gray-900"></p></div>
-                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-sm text-gray-500">Amount</p><p id="modalAmount" class="text-lg font-semibold text-[#800000]"></p></div>
-                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-sm text-gray-500">Refund to</p><p id="modalRefundTo" class="text-lg font-semibold text-gray-900"></p></div>
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-xs text-gray-500">Customer</p><p id="modalCustomer" class="text-base font-semibold text-gray-900"></p></div>
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-xs text-gray-500">Order</p><p id="modalOrder" class="text-base font-semibold text-gray-900"></p></div>
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-xs text-gray-500">Refund type</p><p id="modalRefundType" class="text-base font-semibold text-gray-900"></p></div>
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-xs text-gray-500">Reason</p><p id="modalReason" class="text-base font-semibold text-gray-900"></p></div>
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-xs text-gray-500">Amount</p><p id="modalAmount" class="text-base font-semibold text-[#800000]"></p></div>
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3"><p class="text-xs text-gray-500">Refund to</p><p id="modalRefundTo" class="text-base font-semibold text-gray-900"></p></div>
                 </div>
 
                 <div class="bg-gray-50 rounded-xl p-3 border border-gray-100 mb-3">
-                    <p class="text-sm text-gray-500">Customer note</p>
-                    <p id="modalCustomerNote" class="text-lg font-semibold text-gray-900"></p>
+                    <p class="text-xs text-gray-500">Customer note</p>
+                    <p id="modalCustomerNote" class="text-base font-semibold text-gray-900"></p>
                 </div>
 
                 <div class="mb-4">
@@ -324,21 +308,23 @@
                 </div>
             </div>
 
-            <div class="p-4 bg-gray-50">
+            <div class="p-3.5 bg-gray-50">
                 <div id="modalActionSection" class="space-y-3">
                     <h3 class="text-sm font-semibold text-gray-800">Choose an action</h3>
                     <p class="text-xs text-gray-600">Review the customer's claim and photo proof before deciding.</p>
 
-                    <button type="button" id="modalApproveReleaseBtn" class="refund-action-btn refund-action-btn-primary">Approve & release refund</button>
-                    <button type="button" id="modalRequestReturnBtn" class="refund-action-btn refund-action-btn-neutral">Request item return</button>
-                    <button type="button" id="modalRejectBtn" class="refund-action-btn refund-action-btn-danger">Reject request</button>
+                    <div class="space-y-2">
+                        <button type="button" id="modalApproveReleaseBtn" class="w-full min-h-[42px] px-4 py-2 border border-gray-400 rounded-lg bg-white text-gray-800 hover:bg-gray-100 font-semibold leading-tight text-[15px]">Approve & release refund</button>
+                        <button type="button" id="modalRequestReturnBtn" class="w-full min-h-[42px] px-4 py-2 border border-gray-400 rounded-lg bg-white text-gray-800 hover:bg-gray-100 font-semibold leading-tight text-[15px]">Request item return</button>
+                        <button type="button" id="modalRejectBtn" class="w-full min-h-[42px] px-4 py-2 border border-gray-400 rounded-lg bg-white text-gray-800 hover:bg-gray-100 font-semibold leading-tight text-[15px]">Reject request</button>
+                    </div>
 
                     <div id="modalAwaitingHint" class="hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
                         Waiting for customer to return the item. Once received and inspected, release the refund.
                     </div>
 
-                    <button type="button" id="modalAwaitingReleaseBtn" class="hidden refund-action-btn refund-action-btn-primary">Release refund</button>
-                    <button type="button" id="modalRejectNotReturnedBtn" class="hidden refund-action-btn refund-action-btn-danger">Reject (item not returned)</button>
+                    <button type="button" id="modalAwaitingReleaseBtn" class="hidden w-full min-h-[42px] px-4 py-2 border border-gray-400 rounded-lg bg-white text-gray-800 hover:bg-gray-100 font-semibold leading-tight text-[15px]">Release refund</button>
+                    <button type="button" id="modalRejectNotReturnedBtn" class="hidden w-full min-h-[42px] px-4 py-2 border border-gray-400 rounded-lg bg-white text-gray-800 hover:bg-gray-100 font-semibold leading-tight text-[15px]">Reject (item not returned)</button>
 
                     <div class="border-t border-gray-200 pt-3">
                         <label for="modalAdminNote" class="text-sm font-semibold text-gray-700">Admin note</label>
