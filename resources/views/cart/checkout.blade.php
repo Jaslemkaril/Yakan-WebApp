@@ -54,7 +54,7 @@
     /* Bundle Styles */
     .bundle-badge {
         display: inline-block;
-        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+        background: linear-gradient(135deg, #800000 0%, #600000 100%);
         color: white;
         padding: 4px 12px;
         border-radius: 20px;
@@ -65,8 +65,8 @@
     }
 
     .bundle-toggle {
-        background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-        border: 2px solid #fb923c;
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        border: 2px solid #800000;
         border-radius: 8px;
         padding: 8px 12px;
         cursor: pointer;
@@ -79,9 +79,9 @@
     }
 
     .bundle-toggle:hover {
-        background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
         transform: translateX(4px);
-        box-shadow: 0 4px 12px rgba(251, 146, 60, 0.2);
+        box-shadow: 0 4px 12px rgba(128, 0, 0, 0.2);
     }
 
     .bundle-toggle-text {
@@ -90,12 +90,12 @@
         gap: 6px;
         font-size: 12px;
         font-weight: 600;
-        color: #c2410c;
+        color: #7f1d1d;
     }
 
     .bundle-toggle-icon {
         transition: transform 0.3s ease;
-        color: #ea580c;
+        color: #800000;
     }
 
     .bundle-toggle-icon.expanded {
@@ -120,13 +120,13 @@
         border-radius: 6px;
         padding: 8px;
         margin-bottom: 6px;
-        border: 1px solid #fed7aa;
+        border: 1px solid #fca5a5;
         transition: all 0.2s ease;
     }
 
     .bundle-item-card:hover {
-        background: #fffbeb;
-        border-color: #fb923c;
+        background: #fef2f2;
+        border-color: #800000;
         transform: translateX(4px);
     }
     
@@ -411,7 +411,7 @@
                                                                 <div class="flex items-center gap-2">
                                                                     <img src="{{ $bundleItem->componentProduct->image_src }}" 
                                                                          alt="{{ $bundleItem->componentProduct->name }}" 
-                                                                         class="w-8 h-8 object-cover rounded border border-orange-200">
+                                                                         class="w-8 h-8 object-cover rounded border border-red-200">
                                                                     <div class="flex-1">
                                                                         <p class="text-xs font-semibold text-gray-900">{{ $bundleItem->componentProduct->name }}</p>
                                                                         <p class="text-xs text-gray-600">Qty: {{ $bundleItem->quantity }}</p>

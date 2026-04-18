@@ -284,8 +284,8 @@
     
     /* Bundle Toggle Styles */
     .bundle-toggle {
-        background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-        border: 2px solid #fb923c;
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        border: 2px solid #800000;
         border-radius: 10px;
         padding: 10px 14px;
         cursor: pointer;
@@ -297,9 +297,9 @@
     }
 
     .bundle-toggle:hover {
-        background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
         transform: translateX(4px);
-        box-shadow: 0 4px 12px rgba(251, 146, 60, 0.2);
+        box-shadow: 0 4px 12px rgba(128, 0, 0, 0.2);
     }
 
     .bundle-toggle-text {
@@ -308,12 +308,12 @@
         gap: 8px;
         font-size: 13px;
         font-weight: 600;
-        color: #c2410c;
+        color: #7f1d1d;
     }
 
     .bundle-toggle-icon {
         transition: transform 0.3s ease;
-        color: #ea580c;
+        color: #800000;
     }
 
     .bundle-toggle-icon.expanded {
@@ -338,13 +338,13 @@
         border-radius: 8px;
         padding: 10px;
         margin-bottom: 8px;
-        border: 1px solid #fed7aa;
+        border: 1px solid #fca5a5;
         transition: all 0.2s ease;
     }
 
     .bundle-item-card:hover {
-        background: #fffbeb;
-        border-color: #fb923c;
+        background: #fef2f2;
+        border-color: #800000;
         transform: translateX(4px);
     }
 
@@ -442,7 +442,7 @@
                                                 <div>
                                                     <h3 class="text-lg font-bold text-gray-900 mb-2">{{ $product->name }}</h3>
                                                     @if($product->is_bundle)
-                                                        <span class="inline-block bg-gradient-to-r from-orange-400 to-orange-600 text-white px-3 py-1 rounded-full text-xs font-bold mb-2">
+                                                        <span class="inline-block bg-gradient-to-r from-maroon-600 to-maroon-800 text-white px-3 py-1 rounded-full text-xs font-bold mb-2" style="background: linear-gradient(135deg, #800000 0%, #600000 100%);">
                                                             Bundle
                                                         </span>
                                                     @endif
@@ -483,7 +483,7 @@
                                                                     <div class="flex items-center gap-3">
                                                                         <img src="{{ $bundleItem->componentProduct->image_src }}" 
                                                                              alt="{{ $bundleItem->componentProduct->name }}" 
-                                                                             class="w-10 h-10 object-cover rounded border-2 border-orange-200">
+                                                                             class="w-10 h-10 object-cover rounded border-2 border-red-200">
                                                                         <div class="flex-1">
                                                                             <p class="text-xs font-semibold text-gray-900">{{ $bundleItem->componentProduct->name }}</p>
                                                                             <p class="text-xs text-gray-600 font-medium">Quantity: {{ $bundleItem->quantity }}</p>
