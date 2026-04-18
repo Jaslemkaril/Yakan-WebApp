@@ -193,7 +193,7 @@
                     <input type="hidden" name="bundle_items_json" id="bundleItemsJson" value="[]">
                     
                     <div class="mt-6 space-y-2">
-                        <button type="submit" class="w-full px-4 py-2 bg-[#800000] text-white rounded-lg font-semibold hover:bg-[#600000] transition-colors">
+                        <button id="createProductSubmitBtn" type="submit" class="w-full px-4 py-2 bg-[#800000] text-white rounded-lg font-semibold hover:bg-[#600000] transition-colors">
                             Publish bundle
                         </button>
                         <button type="button" class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
@@ -1010,8 +1010,8 @@
     <div id="addProductLoadingOverlay" class="fixed inset-0 z-[10001] hidden items-center justify-center bg-black/50 px-4">
         <div class="w-full max-w-sm rounded-2xl bg-white shadow-2xl border border-gray-200 p-6 text-center">
             <div class="mx-auto mb-4 h-10 w-10 border-4 border-[#800000]/20 border-t-[#800000] rounded-full animate-spin"></div>
-            <p class="text-lg font-bold text-gray-900">Adding product...</p>
-            <p class="mt-1 text-sm text-gray-600">Please wait while we save your product details.</p>
+            <p id="loadingOverlayTitle" class="text-lg font-bold text-gray-900">Adding product...</p>
+            <p id="loadingOverlayMessage" class="mt-1 text-sm text-gray-600">Please wait while we save your product details.</p>
         </div>
     </div>
 
@@ -1249,6 +1249,10 @@
             return;
         }
 
+        const isBundleForm = {{ $isBundleForm ? 'true' : 'false' }};
+        const loadingOverlayTitle = document.getElementById('loadingOverlayTitle');
+        const loadingOverlayMessage = document.getElementById('loadingOverlayMessage');
+
         form.addEventListener('submit', function (event) {
             if (form.dataset.submitting === '1') {
                 event.preventDefault();
@@ -1258,7 +1262,17 @@
             form.dataset.submitting = '1';
             submitBtn.disabled = true;
             submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Adding Product...';
+            
+            if (isBundleForm) {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Publishing Bundle...';
+                if (loadingOverlayTitle) loadingOverlayTitle.textContent = 'Publishing bundle...';
+                if (loadingOverlayMessage) loadingOverlayMessage.textContent = 'Please wait while we create your bundle.';
+            } else {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Adding Product...';
+                if (loadingOverlayTitle) loadingOverlayTitle.textContent = 'Adding product...';
+                if (loadingOverlayMessage) loadingOverlayMessage.textContent = 'Please wait while we save your product details.';
+            }
+            
             overlay.classList.remove('hidden');
             overlay.classList.add('flex');
         });
