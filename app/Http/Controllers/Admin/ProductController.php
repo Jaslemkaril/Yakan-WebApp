@@ -454,11 +454,16 @@ class ProductController extends Controller
         $imagesToDelete = $request->delete_images ? json_decode($request->delete_images, true) : [];
         $cloudinary = new CloudinaryService();
         
+        // Initialize with existing product image (will be overridden if needed)
+        $imagePath = $product->image;
+        $bundlePhotoRemoved = false;
+        
         // For bundles using new UI: handle keep_existing_image flag
         if ($isBundle && !$request->boolean('keep_existing_image') && !$request->hasFile('images')) {
             // User removed the existing bundle photo
             $imagePath = null;
             $allImages = [];
+            $bundlePhotoRemoved = true;
         }
         
         if (!empty($imagesToDelete)) {
@@ -486,7 +491,6 @@ class ProductController extends Controller
         }
 
         // Handle new image uploads with color associations
-        $imagePath = $product->image;
         $imageColors = $request->input('image_colors', []);
         $firstNewImage = null;
         
@@ -538,7 +542,8 @@ class ProductController extends Controller
         }
         
         // If main image was deleted and no new images, set first remaining image as main
-        if (!empty($allImages) && (in_array($imagePath, $imagesToDelete) || !$imagePath)) {
+        // BUT: Don't override if bundle photo was intentionally removed
+        if (!$bundlePhotoRemoved && !empty($allImages) && (in_array($imagePath, $imagesToDelete) || !$imagePath)) {
             $imagePath = $allImages[0]['path'];
         }
 

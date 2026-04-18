@@ -60,6 +60,7 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && isse
         <input type="hidden" name="is_bundle" value="1">
         <input type="hidden" name="status" value="{{ old('status', $product->status) }}">
         <input type="hidden" name="stock" value="{{ old('stock', $product->stock) }}">
+        <input type="hidden" name="category_id" value="{{ old('category_id', $product->category_id ?? ($categories->first()->id ?? '')) }}">
         
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {{-- Left Column - Bundle Configuration --}}
