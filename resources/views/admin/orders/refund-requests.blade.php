@@ -187,7 +187,29 @@
                                     default => 'refund-status-under-review',
                                 };
 
-                                $displayAmount = (float) ($refundRequest->refund_amount ?? $refundRequest->approved_amount ?? $refundRequest->recommended_refund_amount ?? $order->total_amount ?? $order->total ?? 0);
+                                $rawRefundAmount = $refundRequest->refund_amount;
+                                $rawApprovedAmount = $refundRequest->approved_amount;
+                                $rawRecommendedAmount = $refundRequest->recommended_refund_amount;
+                                $rawOrderAmount = $order->total_amount ?? $order->total;
+
+                                $displayAmount = 0.0;
+                                if ($rawApprovedAmount !== null && (float) $rawApprovedAmount > 0) {
+                                    $displayAmount = (float) $rawApprovedAmount;
+                                } elseif ($rawRefundAmount !== null && (float) $rawRefundAmount > 0) {
+                                    $displayAmount = (float) $rawRefundAmount;
+                                } elseif ($rawRecommendedAmount !== null && (float) $rawRecommendedAmount > 0) {
+                                    $displayAmount = (float) $rawRecommendedAmount;
+                                } elseif ($rawOrderAmount !== null && (float) $rawOrderAmount > 0) {
+                                    $displayAmount = (float) $rawOrderAmount;
+                                } elseif ($rawRefundAmount !== null) {
+                                    $displayAmount = (float) $rawRefundAmount;
+                                } elseif ($rawApprovedAmount !== null) {
+                                    $displayAmount = (float) $rawApprovedAmount;
+                                } elseif ($rawRecommendedAmount !== null) {
+                                    $displayAmount = (float) $rawRecommendedAmount;
+                                } elseif ($rawOrderAmount !== null) {
+                                    $displayAmount = (float) $rawOrderAmount;
+                                }
                                 $refundRef = (string) ($refundRequest->refund_reference ?? ('RF-' . str_pad((string) $refundRequest->id, 4, '0', STR_PAD_LEFT)));
 
                                 $rawEvidence = $refundRequest->evidence_paths;
