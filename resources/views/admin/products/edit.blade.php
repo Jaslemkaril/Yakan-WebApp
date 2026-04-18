@@ -1,8 +1,9 @@
 @extends('layouts.admin')
 @php
 use Illuminate\Support\Facades\Storage;
+$isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && ($existingBundleItems ?? collect())->isNotEmpty());
 @endphp
-@section('title', $isBundleForm ?? false ? 'Edit Bundle' : 'Edit Product')
+@section('title', $isBundleForm ? 'Edit Bundle' : 'Edit Product')
 
 @section('content')
 <div class="space-y-6">
@@ -21,7 +22,6 @@ use Illuminate\Support\Facades\Storage;
     </div>
 
 @php
-    $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && $existingBundleItems->isNotEmpty());
     $initialBundleItems = old('bundle_items', $existingBundleItems->map(function ($item) {
         return [
             'product_id' => $item->product_id,
@@ -1488,6 +1488,48 @@ use Illuminate\Support\Facades\Storage;
         </table>
     @endif
 </div>
+
+<div id="updateProductLoadingOverlay" class="fixed inset-0 z-[10001] hidden items-center justify-center bg-black/50 px-4">
+    <div class="w-full max-w-sm rounded-2xl bg-white shadow-2xl border border-gray-200 p-6 text-center">
+        <div class="mx-auto mb-4 h-10 w-10 border-4 border-[#800000]/20 border-t-[#800000] rounded-full animate-spin"></div>
+        <p id="updateLoadingOverlayTitle" class="text-lg font-bold text-gray-900">Updating {{ $isBundleForm ? 'bundle' : 'product' }}...</p>
+        <p id="updateLoadingOverlayMessage" class="mt-1 text-sm text-gray-600">Please wait while we save your changes.</p>
+    </div>
+</div>
+
+<script>
+(function () {
+    const form = document.querySelector('form[action*="products/"]');
+    const submitBtns = form ? form.querySelectorAll('button[type="submit"]') : [];
+    const overlay = document.getElementById('updateProductLoadingOverlay');
+    const isBundleForm = {{ $isBundleForm ? 'true' : 'false' }};
+    
+    if (!form || submitBtns.length === 0 || !overlay) {
+        return;
+    }
+    
+    form.addEventListener('submit', function (event) {
+        if (form.dataset.submitting === '1') {
+            event.preventDefault();
+            return;
+        }
+        
+        form.dataset.submitting = '1';
+        submitBtns.forEach(btn => {
+            btn.disabled = true;
+            btn.classList.add('opacity-70', 'cursor-not-allowed');
+            if (isBundleForm) {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Updating Bundle...';
+            } else {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Updating Product...';
+            }
+        });
+        
+        overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
+    });
+})();
+</script>
 
 </div>
 @endsection
