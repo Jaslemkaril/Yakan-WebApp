@@ -14,6 +14,7 @@ use App\Services\CloudinaryService;
 use App\Services\TransactionalMailService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class CustomOrderController extends Controller
@@ -4863,7 +4864,7 @@ class CustomOrderController extends Controller
     }
 
     /**
-     * Cancel a custom order
+     * Cancel a custom order (customer-initiated cancellation request)
      */
     public function cancel(Request $request, CustomOrder $order)
     {
@@ -4871,16 +4872,103 @@ class CustomOrderController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $request->validate([
-            'reason' => 'nullable|string|max:1000',
+        $validated = $request->validate([
+            'cancel_reason' => 'required|string|max:255',
+            'cancel_reason_other' => 'nullable|string|max:255',
+            'cancel_notes' => 'nullable|string|max:500',
         ]);
 
-        $order->status = 'cancelled';
-        $order->rejection_reason = $request->reason;
+        $resolvedCancelReason = trim((string) $validated['cancel_reason']);
+        if (strcasecmp($resolvedCancelReason, 'Other') === 0) {
+            $otherReason = trim((string) ($validated['cancel_reason_other'] ?? ''));
+            if ($otherReason === '') {
+                return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                    ->withInput()
+                    ->withErrors(['cancel_reason_other' => 'Please specify your cancellation reason.']);
+            }
+            $resolvedCancelReason = $otherReason;
+        }
+
+        $cancelNotes = trim((string) ($validated['cancel_notes'] ?? ''));
+
+        $currentStatus = strtolower((string) $order->status);
+        $cancellableStatuses = ['pending', 'price_quoted', 'approved', 'processing'];
+
+        // Check if already cancelled or has pending cancellation
+        if (Schema::hasTable('custom_order_refund_requests')) {
+            $existingCancellation = CustomOrderRefundRequest::where('custom_order_id', $order->id)
+                ->where('user_id', Auth::id())
+                ->where('request_type', 'return')
+                ->whereIn('status', ['requested', 'under_review'])
+                ->latest()
+                ->first();
+
+            if ($existingCancellation) {
+                return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                    ->with('info', 'Your cancellation request is already pending admin review.');
+            }
+        }
+
+        if (!in_array($currentStatus, $cancellableStatuses, true)) {
+            $message = 'This order can no longer be cancelled because it is already in ' . strtoupper($order->status) . ' status.';
+            return $this->redirectToRouteWithToken('custom_orders.show', $order)
+                ->with('error', $message);
+        }
+
+        // Determine if payment was made
+        $currentPaymentStatus = strtolower((string) $order->payment_status);
+        $wasPaid = in_array($currentPaymentStatus, ['paid', 'verified'], true);
+
+        // Create cancellation request as a refund request with type='return'
+        if (Schema::hasTable('custom_order_refund_requests')) {
+            $refundAmount = (float) ($order->final_price ?? $order->estimated_price ?? 0);
+
+            $refundPayload = [
+                'custom_order_id' => $order->id,
+                'user_id' => Auth::id(),
+                'request_type' => 'return',
+                'reason' => $resolvedCancelReason,
+                'details' => $cancelNotes ?: 'Customer requested order cancellation',
+                'status' => 'requested',
+                'requested_at' => now(),
+            ];
+
+            if (Schema::hasColumn('custom_order_refund_requests', 'refund_amount')) {
+                $refundPayload['refund_amount'] = $refundAmount;
+            }
+
+            CustomOrderRefundRequest::create($refundPayload);
+        }
+
+        // Update order notes
+        $paymentNote = $wasPaid
+            ? 'Payment was received. Cancellation and refund request are pending admin review.'
+            : 'Cancellation request is pending admin review.';
+
+        $existingNotes = trim((string) $order->admin_notes);
+        $requestReasonLine = 'Customer cancellation requested: ' . $resolvedCancelReason;
+        if (!str_contains($existingNotes, $requestReasonLine)) {
+            $existingNotes = $existingNotes !== ''
+                ? ($existingNotes . "\n" . $requestReasonLine)
+                : $requestReasonLine;
+        }
+
+        if ($cancelNotes !== '' && !str_contains($existingNotes, $cancelNotes)) {
+            $existingNotes .= "\nCustomer note: " . $cancelNotes;
+        }
+
+        $order->admin_notes = $existingNotes;
         $order->save();
 
+        \Log::info('Custom order cancellation requested', [
+            'order_id' => $order->id,
+            'user_id' => Auth::id(),
+            'reason' => $resolvedCancelReason,
+            'was_paid' => $wasPaid
+        ]);
+
         return $this->redirectToRouteWithToken('custom_orders.show', $order)
-            ->with('success', 'Order cancelled successfully.');
+            ->with('success', $paymentNote);
     }
 
     /**

@@ -297,13 +297,34 @@
     $customOrderEstimatedDays = (int) \App\Models\SystemSetting::get('custom_order_estimated_days', 14);
     $estimatedCompletionDate = $order->created_at ? $order->created_at->copy()->addDays($customOrderEstimatedDays) : null;
     $authToken = request('auth_token') ?? session('auth_token') ?? request()->cookie('auth_token');
+    
+    // Cancel order flow variables
+    $orderStatusLower = strtolower((string) ($order->status ?? ''));
+    $canCancelOrder = in_array($orderStatusLower, ['pending', 'price_quoted', 'approved', 'processing'], true);
+    $isCancellationRequested = !empty($order->refundRequest) && $order->refundRequest->request_type === 'return';
+    $showCancelForm = $errors->has('cancel_reason') || !empty(old('cancel_reason'));
+    
+    if ($isCancellationRequested) {
+        $displayOrderStatus = 'Cancellation Pending';
+    } else {
+        $displayOrderStatus = ucfirst(str_replace('_', ' ', $orderStatusLower));
+    }
 @endphp
 <div class="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-5xl mx-auto">
 
-        <!-- Back Button -->
-        <div class="mb-6">
-                <a href="{{ route('custom_orders.index', ['auth_token' => $authToken]) }}" 
+        <!-- Header Buttons -->
+        <div class="mb-6 flex flex-wrap items-center gap-3">
+            @if($canCancelOrder)
+                <button id="cancel-order-toggle" type="button" class="inline-flex items-center justify-center px-5 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all duration-300 shadow-md">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                    Cancel Order
+                </button>
+            @endif
+            
+            <a href="{{ route('custom_orders.index', ['auth_token' => $authToken]) }}" 
                class="inline-flex items-center px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-200 text-gray-700 hover:text-white hover:border-transparent transition-all duration-200 group" style="hover:background-color:#800000;">
                 <svg class="w-5 h-5 mr-2 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -460,6 +481,85 @@
             <!-- Main Content -->
             <div class="lg:col-span-2 space-y-6">
 
+        <!-- Customer Action Buttons -->
+        @if($canCancelOrder)
+        <div id="cancel-order-card" class="mb-8 bg-white rounded-xl shadow-md p-6 border border-gray-200 {{ $showCancelForm ? '' : 'hidden' }}">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Request Cancellation</h3>
+            <form id="cancel-order-form" method="POST" action="{{ route('custom_orders.cancel', ['order' => $order, 'auth_token' => $authToken]) }}">
+                @csrf
+                <input type="hidden" name="cancel_reason" id="cancel_reason_input" value="{{ old('cancel_reason') }}">
+                <input type="hidden" name="cancel_reason_other" id="cancel_reason_other_input" value="{{ old('cancel_reason_other') }}">
+
+                <div id="cancel-step-1">
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Why do you want to cancel?</p>
+                    <div class="mb-4">
+                        <select id="cancel_reason_select" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent text-sm text-gray-800">
+                            <option value="">Select a reason</option>
+                            <option value="Changed my mind" {{ old('cancel_reason') === 'Changed my mind' ? 'selected' : '' }}>Changed my mind</option>
+                            <option value="Wrong item ordered" {{ old('cancel_reason') === 'Wrong item ordered' ? 'selected' : '' }}>Wrong item ordered</option>
+                            <option value="Found it cheaper" {{ old('cancel_reason') === 'Found it cheaper' ? 'selected' : '' }}>Found it cheaper</option>
+                            <option value="Duplicate order" {{ old('cancel_reason') === 'Duplicate order' ? 'selected' : '' }}>Duplicate order</option>
+                            <option value="Taking too long" {{ old('cancel_reason') === 'Taking too long' ? 'selected' : '' }}>Taking too long</option>
+                            <option value="Need to change address" {{ old('cancel_reason') === 'Need to change address' ? 'selected' : '' }}>Need to change address</option>
+                            <option value="Incorrect address provided" {{ old('cancel_reason') === 'Incorrect address provided' ? 'selected' : '' }}>Incorrect address provided</option>
+                            <option value="Want to change items" {{ old('cancel_reason') === 'Want to change items' ? 'selected' : '' }}>Want to change items</option>
+                            <option value="Other" {{ old('cancel_reason') === 'Other' ? 'selected' : '' }}>Other</option>
+                        </select>
+                    </div>
+
+                    <div id="cancel-reason-other-wrap" class="mb-4 hidden">
+                        <label for="cancel_reason_other" class="block text-sm font-medium text-gray-700 mb-2">Please specify</label>
+                        <input id="cancel_reason_other" type="text" maxlength="255" value="{{ old('cancel_reason_other') }}" placeholder="Please specify" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent text-sm text-gray-800">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Additional notes (optional)</label>
+                        <textarea id="cancel_notes" name="cancel_notes" rows="4" maxlength="500" placeholder="Tell us more..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent resize-none">{{ old('cancel_notes') }}</textarea>
+                    </div>
+
+                    <div class="flex justify-end gap-2">
+                        <button type="button" id="cancel-next-btn" class="px-6 py-3 bg-[#800000] text-white font-semibold rounded-lg hover:bg-[#600000] transition-all">Next</button>
+                    </div>
+                </div>
+
+                <div id="cancel-step-2" class="hidden">
+                    <h4 class="text-xl font-bold text-gray-900 mb-2">Cancel this order?</h4>
+                    <p class="text-sm text-gray-600 mb-4">Your cancellation request will be reviewed by admin before final approval.</p>
+
+                    <div class="border border-gray-200 rounded-xl p-4 mb-4 space-y-2">
+                        @php
+                            $refundTarget = strtolower((string) ($order->payment_method ?? '')) === 'gcash' ? 'GCash' : ucfirst(str_replace('_', ' ', (string) ($order->payment_method ?? 'Paymongo')));
+                            $refundAmount = (float) ($order->final_price ?? $order->estimated_price ?? 0);
+                        @endphp
+                        <div class="flex justify-between text-sm"><span class="text-gray-600">Order</span><span class="font-semibold text-gray-900">{{ $order->display_ref }}</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-gray-600">Item</span><span class="font-semibold text-gray-900">{{ $order->product_name ?? 'Custom order items' }}</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-gray-600">Refund amount</span><span class="font-semibold text-[#0b57d0]">₱{{ number_format($refundAmount, 2) }}</span></div>
+                        <div class="flex justify-between text-sm"><span class="text-gray-600">Refund to</span><span class="font-semibold text-gray-900">{{ $refundTarget }}</span></div>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-2">
+                        <button type="button" id="cancel-back-btn" class="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all">Go back</button>
+                        <button type="button" id="cancel-submit-btn" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all">Yes, request cancellation</button>
+                    </div>
+                </div>
+            </form>
+
+            <div id="cancel-confirm-modal" class="fixed inset-0 z-50 hidden">
+                <div class="absolute inset-0 bg-black/40" id="cancel-confirm-backdrop"></div>
+                <div class="absolute inset-0 flex items-center justify-center p-4">
+                    <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-200 p-6">
+                        <h4 class="text-xl font-bold text-gray-900 mb-2">Submit cancellation request?</h4>
+                        <p class="text-sm text-gray-600 mb-5">This will send your request to admin for review. The order will not be cancelled immediately.</p>
+                        <div class="flex items-center justify-end gap-2">
+                            <button type="button" id="cancel-confirm-no" class="px-5 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all">Go back</button>
+                            <button type="button" id="cancel-confirm-yes" class="px-5 py-2.5 bg-[#800000] text-white font-semibold rounded-lg hover:bg-[#600000] transition-all">Submit Request</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+
         @php
             $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
             $showDeliveryBanner = false;
@@ -513,6 +613,23 @@
                 }
             }
         @endphp
+
+        {{-- Cancellation Pending Alert --}}
+        @if($isCancellationRequested && !empty($order->refundRequest))
+            <div class="mb-4 bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-lg p-4 shadow-sm">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-base font-bold text-yellow-900 mb-1">Cancellation Requested</p>
+                        <p class="text-sm text-yellow-800">Your request was submitted and is pending admin approval.</p>
+                    </div>
+                </div>
+            </div>
+        @endif
 
         @if($showDeliveryBanner)
             <div class="mb-4 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-300 rounded-lg p-3 flex items-start gap-3">
@@ -2078,7 +2195,53 @@
                 </div>
             @endif
 
-            @if($order->status === 'completed')
+            {{-- Cancellation / Refund Request Section --}}
+            @if($isCancellationRequested && !empty($order->refundRequest))
+            <div class="mt-8 bg-white rounded-xl shadow-md border border-gray-200 p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 bg-[#800000] rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h11a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">Cancellation Request</h3>
+                        <p class="text-sm text-gray-600">Track your latest cancellation request and admin decision here.</p>
+                    </div>
+                </div>
+
+                @php
+                    $cancelRefundRequest = $order->refundRequest;
+                    $cancelStatusMap = [
+                        'requested' => ['label' => 'Cancellation Pending', 'class' => 'bg-yellow-100 text-yellow-800'],
+                        'under_review' => ['label' => 'Under Review', 'class' => 'bg-blue-100 text-blue-800'],
+                        'approved' => ['label' => 'Approved', 'class' => 'bg-green-100 text-green-800'],
+                        'rejected' => ['label' => 'Rejected', 'class' => 'bg-red-100 text-red-800'],
+                    ];
+                    $cancelChip = $cancelStatusMap[$cancelRefundRequest->status] ?? ['label' => ucfirst($cancelRefundRequest->status), 'class' => 'bg-gray-100 text-gray-800'];
+                @endphp
+
+                <div class="rounded-lg border border-gray-200 p-4 bg-gray-50">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold {{ $cancelChip['class'] }}">{{ $cancelChip['label'] }}</span>
+                        <span class="text-xs text-gray-500">Requested {{ optional($cancelRefundRequest->requested_at)->format('M d, Y h:i A') ?? $cancelRefundRequest->created_at->format('M d, Y h:i A') }}</span>
+                    </div>
+                    <p class="text-sm text-gray-700"><span class="font-semibold">Reason:</span> {{ $cancelRefundRequest->reason }}</p>
+                    @if(!empty($cancelRefundRequest->details))
+                        <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Additional Notes:</span> {{ $cancelRefundRequest->details }}</p>
+                    @endif
+                    <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Cancellation Status:</span> {{ $cancelChip['label'] }}</p>
+                    <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Payment Refund:</span> {{ $cancelRefundRequest->status === 'approved' ? 'Processed' : 'Pending' }}</p>
+
+                    @if(!empty($cancelRefundRequest->admin_note))
+                        <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <p class="text-xs font-semibold text-blue-800 uppercase tracking-wider mb-1">Admin Response</p>
+                            <p class="text-sm text-gray-700">{{ $cancelRefundRequest->admin_note }}</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+            @elseif($order->status === 'completed')
             <div id="custom-refund-section" class="mt-8 bg-white rounded-xl shadow-md border border-gray-200 p-6">
                 <div class="flex items-center gap-3 mb-4">
                     <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color:#800000;">
@@ -2929,6 +3092,197 @@ document.addEventListener('DOMContentLoaded', function () {
     const initialRating = parseInt(ratingInput.value || '0', 10);
     if (initialRating > 0) {
         setCustomRating(initialRating);
+    }
+
+    // Cancel Order Flow JavaScript
+    const cancelOrderToggle = document.getElementById('cancel-order-toggle');
+    const cancelOrderCard = document.getElementById('cancel-order-card');
+    if (cancelOrderToggle && cancelOrderCard) {
+        cancelOrderToggle.addEventListener('click', function() {
+            cancelOrderCard.classList.toggle('hidden');
+            if (!cancelOrderCard.classList.contains('hidden')) {
+                cancelOrderCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    }
+
+    const cancelStep1 = document.getElementById('cancel-step-1');
+    const cancelStep2 = document.getElementById('cancel-step-2');
+    const cancelNextBtn = document.getElementById('cancel-next-btn');
+    const cancelBackBtn = document.getElementById('cancel-back-btn');
+    const cancelReasonInput = document.getElementById('cancel_reason_input');
+    const cancelReasonSelect = document.getElementById('cancel_reason_select');
+    const cancelReasonOtherWrap = document.getElementById('cancel-reason-other-wrap');
+    const cancelReasonOtherInput = document.getElementById('cancel_reason_other');
+    const cancelReasonOtherHidden = document.getElementById('cancel_reason_other_input');
+    const cancelForm = document.getElementById('cancel-order-form');
+    const cancelSubmitBtn = document.getElementById('cancel-submit-btn');
+    const cancelConfirmModal = document.getElementById('cancel-confirm-modal');
+    const cancelConfirmBackdrop = document.getElementById('cancel-confirm-backdrop');
+    const cancelConfirmNo = document.getElementById('cancel-confirm-no');
+    const cancelConfirmYes = document.getElementById('cancel-confirm-yes');
+
+    function openCancelConfirmModal() {
+        if (cancelConfirmModal) {
+            cancelConfirmModal.classList.remove('hidden');
+        }
+    }
+
+    function closeCancelConfirmModal() {
+        if (cancelConfirmModal) {
+            cancelConfirmModal.classList.add('hidden');
+        }
+    }
+
+    function syncCancelReasonState() {
+        const selectedReason = (cancelReasonSelect?.value || '').trim();
+        const isOther = selectedReason === 'Other';
+
+        if (cancelReasonInput) {
+            cancelReasonInput.value = selectedReason;
+        }
+
+        if (cancelReasonOtherWrap) {
+            cancelReasonOtherWrap.classList.toggle('hidden', !isOther);
+        }
+
+        if (cancelReasonOtherInput) {
+            cancelReasonOtherInput.required = isOther;
+            if (!isOther) {
+                cancelReasonOtherInput.value = '';
+            }
+        }
+
+        if (cancelReasonOtherHidden) {
+            cancelReasonOtherHidden.value = isOther ? (cancelReasonOtherInput?.value || '').trim() : '';
+        }
+    }
+
+    if (cancelReasonSelect && cancelReasonInput) {
+        cancelReasonSelect.addEventListener('change', function() {
+            syncCancelReasonState();
+        });
+
+        if ((cancelReasonInput.value || '').trim() !== '' && (cancelReasonSelect.value || '').trim() === '') {
+            cancelReasonSelect.value = cancelReasonInput.value;
+        }
+
+        syncCancelReasonState();
+    }
+
+    if (cancelReasonOtherInput && cancelReasonOtherHidden) {
+        cancelReasonOtherInput.addEventListener('input', function() {
+            cancelReasonOtherHidden.value = cancelReasonOtherInput.value.trim();
+        });
+    }
+
+    if (cancelNextBtn && cancelStep1 && cancelStep2) {
+        cancelNextBtn.addEventListener('click', function() {
+            const reason = (cancelReasonInput?.value || '').trim();
+            if (!reason) {
+                alert('Please select a cancellation reason first.');
+                return;
+            }
+
+            if (reason === 'Other') {
+                const otherReason = (cancelReasonOtherInput?.value || '').trim();
+                if (!otherReason) {
+                    alert('Please specify your cancellation reason.');
+                    cancelReasonOtherInput?.focus();
+                    return;
+                }
+                if (cancelReasonOtherHidden) {
+                    cancelReasonOtherHidden.value = otherReason;
+                }
+            }
+
+            cancelStep1.classList.add('hidden');
+            cancelStep2.classList.remove('hidden');
+        });
+    }
+
+    if (cancelBackBtn && cancelStep1 && cancelStep2) {
+        cancelBackBtn.addEventListener('click', function() {
+            cancelStep2.classList.add('hidden');
+            cancelStep1.classList.remove('hidden');
+        });
+    }
+
+    if (cancelForm) {
+        cancelForm.addEventListener('submit', function(e) {
+            const reason = (cancelReasonInput?.value || '').trim();
+            if (!reason) {
+                e.preventDefault();
+                alert('Please select a cancellation reason first.');
+                if (cancelStep2 && cancelStep1) {
+                    cancelStep2.classList.add('hidden');
+                    cancelStep1.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (reason === 'Other') {
+                const otherReason = (cancelReasonOtherInput?.value || '').trim();
+                if (!otherReason) {
+                    e.preventDefault();
+                    alert('Please specify your cancellation reason.');
+                    if (cancelStep2 && cancelStep1) {
+                        cancelStep2.classList.add('hidden');
+                        cancelStep1.classList.remove('hidden');
+                    }
+                    cancelReasonOtherInput?.focus();
+                    return;
+                }
+                if (cancelReasonOtherHidden) {
+                    cancelReasonOtherHidden.value = otherReason;
+                }
+            }
+        });
+    }
+
+    if (cancelSubmitBtn) {
+        cancelSubmitBtn.addEventListener('click', function() {
+            const reason = (cancelReasonInput?.value || '').trim();
+            if (!reason) {
+                alert('Please select a cancellation reason first.');
+                if (cancelStep2 && cancelStep1) {
+                    cancelStep2.classList.add('hidden');
+                    cancelStep1.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (reason === 'Other') {
+                const otherReason = (cancelReasonOtherInput?.value || '').trim();
+                if (!otherReason) {
+                    alert('Please specify your cancellation reason.');
+                    if (cancelStep2 && cancelStep1) {
+                        cancelStep2.classList.add('hidden');
+                        cancelStep1.classList.remove('hidden');
+                    }
+                    cancelReasonOtherInput?.focus();
+                    return;
+                }
+                if (cancelReasonOtherHidden) {
+                    cancelReasonOtherHidden.value = otherReason;
+                }
+            }
+
+            openCancelConfirmModal();
+        });
+    }
+
+    if (cancelConfirmBackdrop) {
+        cancelConfirmBackdrop.addEventListener('click', closeCancelConfirmModal);
+    }
+    if (cancelConfirmNo) {
+        cancelConfirmNo.addEventListener('click', closeCancelConfirmModal);
+    }
+    if (cancelConfirmYes && cancelForm) {
+        cancelConfirmYes.addEventListener('click', function() {
+            closeCancelConfirmModal();
+            cancelForm.submit();
+        });
     }
 });
 </script>
