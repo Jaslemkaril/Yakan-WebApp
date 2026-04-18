@@ -495,6 +495,13 @@
                 evidencePreviewImg.classList.add('hidden');
                 evidencePreviewImg.src = '';
                 evidencePreviewVideo.classList.remove('hidden');
+                
+                // Add Cloudinary poster for better video preview
+                if (src.includes('cloudinary.com') && src.includes('/video/upload/')) {
+                    const posterUrl = src.replace('/video/upload/', '/video/upload/so_0,f_jpg/').replace('#t=0.1', '');
+                    evidencePreviewVideo.setAttribute('poster', posterUrl);
+                }
+                
                 evidencePreviewVideo.src = src;
                 evidencePreviewVideo.load();
                 evidencePreviewVideo.play().catch(function () {});
@@ -514,6 +521,7 @@
             evidencePreviewImg.classList.add('hidden');
             evidencePreviewVideo.pause();
             evidencePreviewVideo.src = '';
+            evidencePreviewVideo.removeAttribute('poster');
             evidencePreviewVideo.classList.add('hidden');
         };
 
@@ -540,8 +548,11 @@
                 const media = isVideo
                     ? '<video src="' + safeThumb + '#t=0.1" class="h-16 w-full object-cover rounded border border-gray-200 bg-black" muted playsinline preload="metadata"' + posterAttr + '></video>'
                     : '<img src="' + safeThumb + '" class="h-16 w-full object-cover rounded border border-gray-200" alt="Evidence">';
+                
+                // Add #t=0.1 to video src for better thumbnail generation
+                const dataSrc = isVideo ? safeThumb + '#t=0.1' : safeThumb;
 
-                return '<button type="button" class="po-evidence-item w-24 text-left relative" data-type="' + type + '" data-src="' + safeThumb + '">'
+                return '<button type="button" class="po-evidence-item w-24 text-left relative" data-type="' + type + '" data-src="' + dataSrc + '">'
                     + media
                     + (isVideo ? '<div class="absolute inset-0 flex items-center justify-center pointer-events-none"><span class="text-white text-2xl">▶</span></div>' : '')
                     + '</button>';
