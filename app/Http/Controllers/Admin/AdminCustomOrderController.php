@@ -612,7 +612,9 @@ class AdminCustomOrderController extends Controller
                     'available_count' => count($evidence),
                 ]);
 
-                return response('Evidence file not found.', 404);
+                // Return transparent pixel for missing files
+                $transparentPixel = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+                return response($transparentPixel, 200)->header('Content-Type', 'image/png');
             }
 
             $path = str_replace('\\', '/', trim((string) $evidence[$index], " \t\n\r\0\x0B\"'"));
@@ -671,7 +673,9 @@ class AdminCustomOrderController extends Controller
                 'candidate_paths' => $candidatePaths,
             ]);
 
-            return response('Evidence file is unavailable.', 404);
+            // Return transparent pixel for missing files
+            $transparentPixel = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+            return response($transparentPixel, 200)->header('Content-Type', 'image/png');
         } catch (\Throwable $exception) {
             Log::warning('Unable to serve custom-order refund evidence file for admin.', [
                 'refund_request_id' => $refundRequest->id,
@@ -679,7 +683,9 @@ class AdminCustomOrderController extends Controller
                 'error' => $exception->getMessage(),
             ]);
 
-            return response('Evidence file is unavailable.', 404);
+            // Return transparent pixel for error cases
+            $transparentPixel = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+            return response($transparentPixel, 200)->header('Content-Type', 'image/png');
         }
     }
 

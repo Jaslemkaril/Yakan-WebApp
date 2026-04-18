@@ -5227,7 +5227,10 @@ class CustomOrderController extends Controller
             'authorized_user_id' => $authorizedUserId,
         ]);
 
-        abort(404);
+        // Return transparent 1x1 pixel instead of 404 for better UX
+        // This handles old evidence that no longer exists on Railway
+        $transparentPixel = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+        return response($transparentPixel, 200)->header('Content-Type', 'image/png');
     }
 
     /**

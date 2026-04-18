@@ -1007,7 +1007,10 @@ class OrderController extends Controller
                 }
             }
 
-            abort(404);
+            // Return transparent 1x1 pixel instead of 404 for better UX
+            // This handles old evidence that no longer exists on Railway
+            $transparentPixel = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+            return response($transparentPixel, 200)->header('Content-Type', 'image/png');
         } catch (\Throwable $exception) {
             Log::warning('Unable to serve refund evidence file for customer.', [
                 'refund_request_id' => $refundRequest->id,
@@ -1015,7 +1018,9 @@ class OrderController extends Controller
                 'error' => $exception->getMessage(),
             ]);
 
-            abort(404);
+            // Return transparent pixel for missing/error files
+            $transparentPixel = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+            return response($transparentPixel, 200)->header('Content-Type', 'image/png');
         }
     }
 
