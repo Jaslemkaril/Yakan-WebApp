@@ -251,14 +251,14 @@
                                     'reject_not_returned_url' => route('admin.orders.refund_requests.reject_not_returned', $refundRequest),
                                 ];
                             @endphp
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-4 py-3 font-semibold text-[#800000]">#{{ $refundRef }}</td>
+                            <tr class="hover:bg-gray-50 transition-colors" data-refund-request-id="{{ $refundRequest->id }}">
+                                <td class="px-4 py-3 font-semibold text-[#800000] refund-ref-cell">#{{ $refundRef }}</td>
                                 <td class="px-4 py-3 text-gray-800">{{ $customerName }}</td>
                                 <td class="px-4 py-3 text-gray-700">{{ ucfirst(str_replace('_', ' ', (string) ($refundRequest->reason ?? 'Refund'))) }}</td>
                                 <td class="px-4 py-3 text-gray-900 font-semibold">₱{{ number_format($displayAmount, 2) }}</td>
-                                <td class="px-4 py-3"><span class="refund-status-badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
+                                <td class="px-4 py-3"><span class="refund-status-badge refund-status-cell {{ $statusClass }}">{{ $statusLabel }}</span></td>
                                 <td class="px-4 py-3">
-                                    <button type="button" class="refund-review-btn px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-100" data-refund='@json($modalPayload)'>
+                                    <button type="button" class="refund-review-btn px-4 py-2 border border-gray-300 rounded-lg font-semibold hover:bg-gray-100" data-refund-request-id="{{ $refundRequest->id }}" data-refund='@json($modalPayload)'>
                                         Review
                                         <span class="ml-1">↗</span>
                                     </button>
@@ -400,6 +400,7 @@
         const actionButtons = [approveReleaseBtn, requestReturnBtn, rejectBtn, awaitingReleaseBtn, rejectNotReturnedBtn];
 
         let payload = null;
+        let activeReviewButton = null;
 
         function openImagePreview(src) {
             if (!src) {
@@ -449,6 +450,50 @@
                 button.classList.toggle('cursor-not-allowed', isLoading);
             });
             adminNoteEl.disabled = isLoading;
+        }
+
+        function getStatusClassByState(state) {
+            if (state === 'awaiting_return') {
+                return 'refund-status-awaiting-return';
+            }
+            if (state === 'refunded') {
+                return 'refund-status-refunded';
+            }
+            if (state === 'rejected') {
+                return 'refund-status-rejected';
+            }
+            return 'refund-status-under-review';
+        }
+
+        function updateReviewButtonPayload(button, latestPayload) {
+            if (!button || !latestPayload) {
+                return;
+            }
+            button.setAttribute('data-refund', JSON.stringify(latestPayload));
+        }
+
+        function updateRowFromPayload(button, latestPayload) {
+            if (!button || !latestPayload) {
+                return;
+            }
+
+            const row = button.closest('tr');
+            if (!row) {
+                return;
+            }
+
+            const statusBadge = row.querySelector('.refund-status-cell');
+            if (statusBadge) {
+                statusBadge.className = 'refund-status-badge refund-status-cell ' + getStatusClassByState(latestPayload.status_state);
+                statusBadge.textContent = latestPayload.status_label || 'Under review';
+            }
+
+            if (latestPayload.refund_id) {
+                const refCell = row.querySelector('.refund-ref-cell');
+                if (refCell) {
+                    refCell.textContent = '#' + latestPayload.refund_id;
+                }
+            }
         }
 
         function setBadge(state, label) {
@@ -570,6 +615,10 @@
 
                 if (result.refund) {
                     payload = Object.assign({}, payload, result.refund);
+                    if (activeReviewButton) {
+                        updateReviewButtonPayload(activeReviewButton, payload);
+                        updateRowFromPayload(activeReviewButton, payload);
+                    }
                 }
 
                 openModal(payload);
@@ -658,6 +707,7 @@
 
         reviewButtons.forEach(function (button) {
             button.addEventListener('click', function () {
+                activeReviewButton = button;
                 let data = {};
                 try {
                     data = JSON.parse(button.getAttribute('data-refund') || '{}');
