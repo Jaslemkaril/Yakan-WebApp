@@ -3084,14 +3084,13 @@ function previewCustomImages(input) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    // Initialize rating if present
     const ratingInput = document.getElementById('custom-rating');
-    if (!ratingInput) {
-        return;
-    }
-
-    const initialRating = parseInt(ratingInput.value || '0', 10);
-    if (initialRating > 0) {
-        setCustomRating(initialRating);
+    if (ratingInput) {
+        const initialRating = parseInt(ratingInput.value || '0', 10);
+        if (initialRating > 0) {
+            setCustomRating(initialRating);
+        }
     }
 
     // Cancel Order Flow JavaScript
