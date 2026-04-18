@@ -174,9 +174,15 @@ class ProductController extends Controller
                 ? (float) $defaultVariant->price
                 : (float) $product->price;
             $initialDisplayPrice = (float) $product->getDiscountedPrice($initialOriginalPrice);
-            $initialAvailableStock = $defaultVariant
-                ? (int) $defaultVariant->stock
-                : (int) ($product->inventory?->quantity ?? $product->stock ?? 0);
+            
+            // For bundles, use dynamic stock calculation
+            if ($product->is_bundle) {
+                $initialAvailableStock = (int) $product->available_stock;
+            } else {
+                $initialAvailableStock = $defaultVariant
+                    ? (int) $defaultVariant->stock
+                    : (int) ($product->inventory?->quantity ?? $product->stock ?? 0);
+            }
 
             // Track recent view
             if (auth()->check()) {
