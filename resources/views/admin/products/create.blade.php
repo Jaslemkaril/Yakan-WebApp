@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('title', 'Add Product')
+@section('title', request('as_bundle') ? 'Create Bundle' : 'Add Product')
 
 @section('content')
 <div class="space-y-6">
@@ -7,8 +7,8 @@
     <div class="bg-[#800000] rounded-2xl p-6 sm:p-8 text-white shadow-xl">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
-                <h1 class="text-xl md:text-3xl font-bold mb-2">Add New Product</h1>
-                <p class="text-red-100 text-lg">Create a new product for your catalog</p>
+                <h1 class="text-xl md:text-3xl font-bold mb-2">{{ request('as_bundle') ? 'Create Bundle' : 'Add New Product' }}</h1>
+                <p class="text-red-100 text-lg">{{ request('as_bundle') ? 'Manage your product catalog and inventory' : 'Create a new product for your catalog' }}</p>
             </div>
             <a href="{{ route('admin.products.index') }}" class="mt-4 md:mt-0 inline-flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white text-sm font-medium transition">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
@@ -17,16 +17,16 @@
         </div>
     </div>
 
-<div class="max-w-3xl mx-auto p-6 bg-white shadow rounded-lg">
+@php
+    $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && request('as_bundle') ? 1 : 0);
+    $initialBundleItems = old('bundle_items', $isBundleForm ? [['product_id' => '', 'quantity' => 1]] : []);
+    $initialVariantRows = old('variant_rows', $initialVariantRows ?? []);
+    if (!is_array($initialVariantRows)) {
+        $initialVariantRows = [];
+    }
+@endphp
 
-    @php
-        $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && request('as_bundle') ? 1 : 0);
-        $initialBundleItems = old('bundle_items', $isBundleForm ? [['product_id' => '', 'quantity' => 1]] : []);
-        $initialVariantRows = old('variant_rows', $initialVariantRows ?? []);
-        if (!is_array($initialVariantRows)) {
-            $initialVariantRows = [];
-        }
-    @endphp
+<div class="{{ $isBundleForm ? 'max-w-7xl mx-auto' : 'max-w-3xl mx-auto' }} p-6 bg-white shadow rounded-lg">
 
     @if ($errors->any())
         <div class="mb-4 p-4 border border-red-200 bg-red-50 rounded-lg">
@@ -41,12 +41,324 @@
     <form id="addProductForm" action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
         @csrf
         
-        <!-- Preserve auth_token if present in URL -->
+        <!--Preserve auth_token if present in URL -->
         @if(request()->has('auth_token'))
             <input type="hidden" name="auth_token" value="{{ request()->get('auth_token') }}">
         @endif
 
-        <!-- Product Name -->
+        @if($isBundleForm)
+        {{-- BUNDLE CREATION UI --}}
+        <input type="hidden" name="is_bundle" value="1">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {{-- Left Column - Bundle Configuration --}}
+            <div class="lg:col-span-2 space-y-6">
+                {{-- Bundle Details --}}
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Bundle details</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Bundle name</label>
+                            <input type="text" name="name" value="{{ old('name') }}" placeholder="e.g. Summer Starter Pack" 
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                            <textarea name="description" rows="3" placeholder="Describe what's included in this bundle..." 
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]">{{ old('description') }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Bundle Photo --}}
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <h3 class="text-sm font-medium text-gray-700 mb-3">Bundle photo</h3>
+                    
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer" 
+                        onclick="document.getElementById('bundlePhotoInput').click()">
+                        <div id="bundlePhotoPreview" class="hidden">
+                            <img src="" alt="Bundle preview" class="mx-auto max-h-48 rounded-lg mb-2">
+                            <button type="button" onclick="event.stopPropagation(); removeBundlePhoto()" 
+                                class="text-sm text-red-600 hover:text-red-700">Remove photo</button>
+                        </div>
+                        <div id="bundlePhotoPlaceholder">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <p class="mt-1 text-sm text-gray-600">Upload bundle cover photo</p>
+                            <p class="text-xs text-gray-500">(PNG, JPG up to 5MB)</p>
+                        </div>
+                        <input type="file" id="bundlePhotoInput" name="images[]" accept="image/*" class="hidden" onchange="previewBundlePhoto(event)">
+                    </div>
+                </div>
+
+                {{-- Select Products --}}
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <h3 class="text-sm font-medium text-gray-700 mb-3">Select products</h3>
+                    
+                    <input type="text" id="bundleProductSearch" placeholder="Search existing products..." 
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]">
+                    
+                    <div id="bundleProductList" class="space-y-2 max-h-96 overflow-y-auto">
+                        @foreach($bundleComponents ?? [] as $product)
+                        <div class="bundle-product-item flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50" 
+                            data-product-id="{{ $product->id }}" data-product-name="{{ $product->name }}" data-product-price="{{ $product->price }}">
+                            <div class="flex items-center gap-3 flex-1">
+                                <input type="checkbox" class="bundle-product-checkbox rounded border-gray-300 text-[#800000] focus:ring-[#800000]" 
+                                    value="{{ $product->id }}" onchange="toggleBundleProduct(this, {{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->price }})">
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900">{{ $product->name }}</p>
+                                    @if($product->category)
+                                    <p class="text-xs text-gray-500">{{ $product->category->name }}</p>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-semibold text-gray-900">₱{{ number_format($product->price, 2) }}</span>
+                                <button type="button" class="bundle-add-btn px-3 py-1 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50" 
+                                    onclick="addBundleProduct({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->price }})">
+                                    + Add
+                                </button>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    
+                    <p class="text-xs text-gray-500 mt-3">Click a product to add it to the bundle.</p>
+                </div>
+
+                {{-- Pricing & Discount --}}
+                <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <h3 class="text-sm font-medium text-gray-700 mb-4">Pricing & discount</h3>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Bundle discount</label>
+                        <select name="bundle_discount_type" id="bundleDiscountType" 
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]" 
+                            onchange="calculateBundlePrice()">
+                            <option value="percentage_10">10% off total</option>
+                            <option value="percentage_15">15% off total</option>
+                            <option value="percentage_20">20% off total</option>
+                            <option value="percentage_25">25% off total</option>
+                            <option value="percentage_30">30% off total</option>
+                            <option value="custom">Custom discount</option>
+                        </select>
+                        
+                        <div id="customDiscountInput" class="mt-2 hidden">
+                            <input type="number" name="custom_discount" min="0" step="0.01" placeholder="Enter discount amount" 
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]" 
+                                onchange="calculateBundlePrice()">
+                        </div>
+                    </div>
+                    
+                    <p class="text-xs text-gray-500 mt-2">Applied on top of individual product prices.</p>
+                </div>
+            </div>
+
+            {{-- Right Column - Bundle Preview --}}
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg border border-gray-200 p-4 sticky top-4">
+                    <h3 class="text-sm font-medium text-gray-700 mb-4">Bundle preview</h3>
+                    
+                    <div class="mb-4">
+                        <p class="text-lg font-semibold text-gray-900" id="bundlePreviewTitle">Untitled bundle</p>
+                        <p class="text-xs text-gray-500">No items added</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <p class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Items in bundle</p>
+                        <div id="bundlePreviewItems" class="space-y-2 min-h-[100px]">
+                            <p class="text-sm text-gray-400 italic">Add products from the left</p>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t border-gray-200 pt-4 space-y-2">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Original total</span>
+                            <span class="font-medium" id="bundleOriginalTotal">₱0</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Bundle discount</span>
+                            <span class="font-medium text-red-600" id="bundleDiscountAmount">-₱0</span>
+                        </div>
+                        <div class="flex justify-between text-lg font-bold border-t border-gray-200 pt-2">
+                            <span class="text-gray-900">Bundle price</span>
+                            <span class="text-[#800000]" id="bundleFinalPrice">₱0</span>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="price" id="bundlePriceInput" value="0">
+                    <input type="hidden" name="bundle_items_json" id="bundleItemsJson" value="[]">
+                    
+                    <div class="mt-6 space-y-2">
+                        <button type="submit" class="w-full px-4 py-2 bg-[#800000] text-white rounded-lg font-semibold hover:bg-[#600000] transition-colors">
+                            Publish bundle
+                        </button>
+                        <button type="button" class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
+                            Save as draft
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        let bundleItems = [];
+        
+        function previewBundlePhoto(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.querySelector('#bundlePhotoPreview img').src = e.target.result;
+                document.getElementById('bundlePhotoPreview').classList.remove('hidden');
+                document.getElementById('bundlePhotoPlaceholder').classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function removeBundlePhoto() {
+            document.getElementById('bundlePhotoInput').value = '';
+            document.getElementById('bundlePhotoPreview').classList.add('hidden');
+            document.getElementById('bundlePhotoPlaceholder').classList.remove('hidden');
+        }
+        
+        function toggleBundleProduct(checkbox, productId, productName, productPrice) {
+            if (checkbox.checked) {
+                addBundleProduct(productId, productName, productPrice);
+            } else {
+                removeBundleProduct(productId);
+            }
+        }
+        
+        function addBundleProduct(productId, productName, productPrice) {
+            // Check if already added
+            const existing = bundleItems.find(item => item.id === productId);
+            if (existing) {
+                alert('This product is already in the bundle');
+                return;
+            }
+            
+            bundleItems.push({
+                id: productId,
+                name: productName,
+                price: productPrice,
+                quantity: 1
+            });
+            
+            // Check the checkbox
+            document.querySelector(`input[value="${productId}"].bundle-product-checkbox`).checked = true;
+            
+            updateBundlePreview();
+        }
+        
+        function removeBundleProduct(productId) {
+            bundleItems = bundleItems.filter(item => item.id !== productId);
+            
+            // Uncheck the checkbox
+            const checkbox = document.querySelector(`input[value="${productId}"].bundle-product-checkbox`);
+            if (checkbox) checkbox.checked = false;
+            
+            updateBundlePreview();
+        }
+        
+        function updateBundleQuantity(productId, quantity) {
+            const item = bundleItems.find(item => item.id === productId);
+            if (item) {
+                item.quantity = parseInt(quantity) || 1;
+                updateBundlePreview();
+            }
+        }
+        
+        function updateBundlePreview() {
+            const previewContainer = document.getElementById('bundlePreviewItems');
+            const bundleName = document.querySelector('input[name="name"]').value || 'Untitled bundle';
+            
+            document.getElementById('bundlePreviewTitle').textContent = bundleName;
+            
+            if (bundleItems.length === 0) {
+                previewContainer.innerHTML = '<p class="text-sm text-gray-400 italic">Add products from the left</p>';
+                document.querySelector('#bundlePreviewTitle + p').textContent = 'No items added';
+            } else {
+                document.querySelector('#bundlePreviewTitle + p').textContent = `${bundleItems.length} item(s) added`;
+                
+                previewContainer.innerHTML = bundleItems.map(item => `
+                    <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-medium text-gray-900 truncate">${item.name}</p>
+                            <p class="text-xs text-gray-500">₱${Number(item.price).toFixed(2)} × ${item.quantity}</p>
+                        </div>
+                        <div class="flex items-center gap-2 ml-2">
+                            <input type="number" min="1" value="${item.quantity}" 
+                                class="w-12 px-1 py-1 text-xs border border-gray-300 rounded text-center" 
+                                onchange="updateBundleQuantity(${item.id}, this.value)">
+                            <button type="button" onclick="removeBundleProduct(${item.id})" 
+                                class="text-red-600 hover:text-red-700">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            // Update hidden input
+            document.getElementById('bundleItemsJson').value = JSON.stringify(bundleItems);
+            
+            calculateBundlePrice();
+        }
+        
+        function calculateBundlePrice() {
+            const originalTotal = bundleItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            
+            let discount = 0;
+            const discountType = document.getElementById('bundleDiscountType').value;
+            
+            if (discountType.startsWith('percentage_')) {
+                const percentage = parseInt(discountType.split('_')[1]);
+                discount = originalTotal * (percentage / 100);
+            } else if (discountType === 'custom') {
+                discount = parseFloat(document.querySelector('input[name="custom_discount"]').value) || 0;
+                document.getElementById('customDiscountInput').classList.remove('hidden');
+            } else {
+                document.getElementById('customDiscountInput').classList.add('hidden');
+            }
+            
+            const finalPrice = Math.max(0, originalTotal - discount);
+            
+            document.getElementById('bundleOriginalTotal').textContent = `₱${originalTotal.toFixed(2)}`;
+            document.getElementById('bundleDiscountAmount').textContent = `-₱${discount.toFixed(2)}`;
+            document.getElementById('bundleFinalPrice').textContent = `₱${finalPrice.toFixed(2)}`;
+            document.getElementById('bundlePriceInput').value = finalPrice.toFixed(2);
+        }
+        
+        // Product search
+        document.getElementById('bundleProductSearch').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const products = document.querySelectorAll('.bundle-product-item');
+            
+            products.forEach(product => {
+                const productName = product.dataset.productName.toLowerCase();
+                if (productName.includes(searchTerm)) {
+                    product.classList.remove('hidden');
+                } else {
+                    product.classList.add('hidden');
+                }
+            });
+        });
+        
+        // Update bundle name in preview
+        document.querySelector('input[name="name"]').addEventListener('input', function(e) {
+            document.getElementById('bundlePreviewTitle').textContent = e.target.value || 'Untitled bundle';
+        });
+        </script>
+
+        @else
+        {{-- REGULAR PRODUCT CREATION UI --}}
         <div>
             <label class="block font-medium text-gray-700">Name</label>
             <input type="text" name="name" value="{{ old('name') }}"
@@ -692,6 +1004,7 @@
             class="bg-[#800000] text-white px-6 py-3 rounded-lg hover:bg-[#600000] transition-colors duration-200 font-medium shadow-lg">
             <i class="fas fa-plus mr-2"></i>Create Product
         </button>
+        @endif
     </form>
 
     <div id="addProductLoadingOverlay" class="fixed inset-0 z-[10001] hidden items-center justify-center bg-black/50 px-4">
