@@ -38,6 +38,39 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/facebook', [SocialAuthController::class, 'facebookLogin'])->middleware('throttle:5,1');
 
     // ===================== DIAGNOSTIC (Public, temporary) =====================
+    Route::get('/diagnostic/logs', function (\Illuminate\Http\Request $request) {
+        $lines = (int) ($request->query('lines', 200));
+        $lines = max(10, min(1000, $lines));
+        $filter = (string) $request->query('filter', '');
+
+        $logPath = storage_path('logs/laravel.log');
+        if (!file_exists($logPath)) {
+            return response()->json(['success' => false, 'message' => 'No log file found', 'path' => $logPath]);
+        }
+
+        $fileSize = filesize($logPath);
+        $chunkSize = min($fileSize, 500 * 1024); // last ~500KB
+        $fp = fopen($logPath, 'r');
+        fseek($fp, max(0, $fileSize - $chunkSize));
+        $content = fread($fp, $chunkSize);
+        fclose($fp);
+
+        $rows = array_filter(explode("\n", $content));
+        if ($filter !== '') {
+            $rows = array_values(array_filter($rows, fn($r) => stripos($r, $filter) !== false));
+        }
+        $rows = array_slice($rows, -$lines);
+
+        return response()->json([
+            'success' => true,
+            'file_size_bytes' => $fileSize,
+            'log_path' => $logPath,
+            'line_count' => count($rows),
+            'filter_applied' => $filter,
+            'lines' => $rows,
+        ]);
+    });
+
     Route::get('/diagnostic/recent-orders/{userId}', function ($userId) {
         $orders = \App\Models\Order::with('items.product')
             ->where('user_id', (int) $userId)
