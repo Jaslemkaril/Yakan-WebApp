@@ -301,7 +301,7 @@
     // Cancel order flow variables
     $orderStatusLower = strtolower((string) ($order->status ?? ''));
     $canCancelOrder = in_array($orderStatusLower, ['pending', 'price_quoted', 'approved', 'processing'], true);
-    $isCancellationRequested = !empty($order->refundRequest) && $order->refundRequest->request_type === 'return';
+    $isCancellationRequested = !empty($customRefundRequest) && $customRefundRequest->request_type === 'return';
     $showCancelForm = $errors->has('cancel_reason') || !empty(old('cancel_reason'));
     
     if ($isCancellationRequested) {
@@ -527,7 +527,7 @@
         @endphp
 
         {{-- Cancellation Pending Alert --}}
-        @if($isCancellationRequested && !empty($order->refundRequest))
+        @if($isCancellationRequested && !empty($customRefundRequest))
             <div class="mb-4 bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-300 rounded-lg p-4 shadow-sm">
                 <div class="flex items-start gap-3">
                     <div class="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -2108,7 +2108,7 @@
             @endif
 
             {{-- Cancellation / Refund Request Section --}}
-            @if($isCancellationRequested && !empty($order->refundRequest))
+            @if($isCancellationRequested && !empty($customRefundRequest))
             <div class="mt-8 bg-white rounded-xl shadow-md border border-gray-200 p-6">
                 <div class="flex items-center gap-3 mb-4">
                     <div class="w-10 h-10 bg-[#800000] rounded-lg flex items-center justify-center">
@@ -2123,7 +2123,7 @@
                 </div>
 
                 @php
-                    $cancelRefundRequest = $order->refundRequest;
+                    $cancelRefundRequest = $customRefundRequest;
                     $cancelStatusMap = [
                         'requested' => ['label' => 'Cancellation Pending', 'class' => 'bg-yellow-100 text-yellow-800'],
                         'under_review' => ['label' => 'Under Review', 'class' => 'bg-blue-100 text-blue-800'],
