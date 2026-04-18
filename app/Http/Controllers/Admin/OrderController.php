@@ -466,18 +466,21 @@ class OrderController extends Controller
                         $isVideo = in_array($ext, ['mp4', 'mov', 'webm'], true);
                         $url = route('admin.custom-orders.refund_evidence.view', ['refundRequest' => $refundRequest->id, 'index' => count($evidencePreviews)]);
 
-                        $rawEvidencePath = str_replace('\\', '/', ltrim((string) $evidencePath, '/'));
-                        $publicEvidencePath = ltrim(str_replace(['public/', 'storage/'], '', $rawEvidencePath), '/');
-                        $fallbackEvidenceUrl = asset('storage/' . $publicEvidencePath);
-                        $previewUrl = (str_starts_with((string) $evidencePath, 'http://') || str_starts_with((string) $evidencePath, 'https://'))
-                            ? (string) $evidencePath
-                            : $fallbackEvidenceUrl;
+                        // If path is already a full URL, use it directly
+                        if (str_starts_with((string) $evidencePath, 'http://') || str_starts_with((string) $evidencePath, 'https://')) {
+                            $previewUrl = (string) $evidencePath;
+                        } else {
+                            // Normalize path: remove 'public/', 'storage/' prefixes and leading slashes
+                            $cleanPath = ltrim(str_replace(['public/', 'storage/', '\\'], ['', '', '/'], (string) $evidencePath), '/');
+                            // Generate public storage URL
+                            $previewUrl = asset('storage/' . $cleanPath);
+                        }
 
                         $evidencePreviews[] = [
                             'url' => $url,
                             'open_url' => $previewUrl,
                             'preview_url' => $previewUrl,
-                            'fallback_url' => $fallbackEvidenceUrl,
+                            'fallback_url' => $previewUrl,
                             'is_image' => $isImage,
                             'is_video' => $isVideo,
                         ];

@@ -526,7 +526,7 @@
 
             const cards = evidence.map(function (item) {
                 const isVideo = !!item.is_video;
-                const thumb = item.url || item.open_url || item.preview_url || item.fallback_url || '#';
+                const thumb = item.preview_url || item.open_url || item.fallback_url || '#';
                 const safeThumb = String(thumb).replace(/'/g, '&#39;');
                 const type = isVideo ? 'video' : 'image';
                 const media = isVideo
