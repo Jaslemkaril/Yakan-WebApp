@@ -2242,7 +2242,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">Evidence <span class="text-red-600">*</span> (up to 5 files)</label>
-                                    <input id="custom-refund-evidence-input" type="file" name="evidence[]" accept="image/*,video/mp4,video/quicktime,video/webm,.pdf,.mp4,.mov,.webm" multiple required class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:text-white cursor-pointer" style="--tw-file-bg:#800000;">
+                                    <input id="custom-refund-evidence-input" type="file" name="evidence[]" accept="image/*,video/mp4,video/quicktime,video/webm,.pdf,.mp4,.mov,.webm" multiple required class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#800000] file:text-white hover:file:bg-[#600000] cursor-pointer">
                                     <p id="custom-refund-evidence-help" class="text-xs text-gray-500 mt-1">Required. Accepted: JPG, PNG, WEBP, PDF, MP4, MOV, WEBM (max 20MB each)</p>
                                     <div id="custom-refund-evidence-preview" class="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2"></div>
                                 </div>
