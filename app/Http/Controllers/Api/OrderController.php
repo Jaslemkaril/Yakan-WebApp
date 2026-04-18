@@ -69,11 +69,25 @@ class OrderController extends Controller
 
     public function store(Request $request)
     {
+        \Log::info('[OrderStore] === REQUEST RECEIVED ===', [
+            'user_id' => optional($request->user())->id,
+            'source' => $request->input('source'),
+            'payment_method' => $request->input('payment_method'),
+            'item_count' => is_array($request->input('items')) ? count($request->input('items')) : null,
+            'client_subtotal' => $request->input('subtotal'),
+            'client_total' => $request->input('total'),
+            'client_total_amount' => $request->input('total_amount'),
+            'client_shipping_fee' => $request->input('shipping_fee'),
+            'notes_excerpt' => substr((string) $request->input('notes'), 0, 120),
+            'user_agent' => substr((string) $request->header('User-Agent'), 0, 200),
+        ]);
+
         try {
             // Get authenticated user (required now)
             $user = $request->user();
             
             if (!$user) {
+                \Log::warning('[OrderStore] Rejected: no authenticated user');
                 return response()->json([
                     'success' => false,
                     'message' => 'Authentication required to create an order'
@@ -356,16 +370,24 @@ class OrderController extends Controller
             if (\DB::transactionLevel() > 0) {
                 \DB::rollBack();
             }
+            \Log::warning('[OrderStore] Validation failed', [
+                'errors' => $e->errors(),
+            ]);
+            $flat = collect($e->errors())->flatten()->implode(' ');
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
+                'message' => $flat ?: 'Validation failed',
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
             if (\DB::transactionLevel() > 0) {
                 \DB::rollBack();
             }
-            \Log::error('Order store error', ['message' => $e->getMessage()]);
+            \Log::error('[OrderStore] Unexpected error', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Order could not be created. Please try again.'
