@@ -211,8 +211,18 @@
                                     $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true);
                                     $isVideo = in_array($ext, ['mp4', 'mov', 'webm'], true);
                                     $url = route('admin.orders.refund_evidence.view', ['refundRequest' => $refundRequest->id, 'index' => count($evidencePreviews)]);
+
+                                    $rawEvidencePath = str_replace('\\', '/', ltrim((string) $evidencePath, '/'));
+                                    $publicEvidencePath = ltrim(str_replace(['public/', 'storage/'], '', $rawEvidencePath), '/');
+                                    $fallbackEvidenceUrl = asset('storage/' . $publicEvidencePath);
+                                    $previewUrl = (str_starts_with((string) $evidencePath, 'http://') || str_starts_with((string) $evidencePath, 'https://'))
+                                        ? (string) $evidencePath
+                                        : $fallbackEvidenceUrl;
+
                                     $evidencePreviews[] = [
                                         'url' => $url,
+                                        'preview_url' => $previewUrl,
+                                        'fallback_url' => $fallbackEvidenceUrl,
                                         'is_image' => $isImage,
                                         'is_video' => $isVideo,
                                     ];
@@ -450,7 +460,11 @@
 
             const html = evidence.map(function (item) {
                 if (item.is_image) {
-                    return '<a href="' + item.url + '" target="_blank" class="inline-block mr-2 mb-2"><img src="' + item.url + '" class="w-20 h-20 object-cover rounded-lg border border-gray-200" alt="Evidence"></a>';
+                    const imgSrc = item.preview_url || item.url;
+                    const fallbackSrc = item.fallback_url || item.url;
+                    return '<a href="' + item.url + '" target="_blank" class="inline-block mr-2 mb-2">'
+                        + '<img src="' + imgSrc + '" onerror="if(this.dataset.err){this.onerror=null;this.src=\'' + fallbackSrc + '\';return;}this.dataset.err=\'1\';this.src=\'' + item.url + '\';" class="w-20 h-20 object-cover rounded-lg border border-gray-200" alt="Evidence">'
+                        + '</a>';
                 }
                 if (item.is_video) {
                     return '<a href="' + item.url + '" target="_blank" class="inline-flex items-center px-3 py-2 mr-2 mb-2 rounded-lg border border-blue-300 bg-blue-50 text-blue-700 text-xs">View video</a>';
