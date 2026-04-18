@@ -816,9 +816,14 @@ const CheckoutScreen = ({ navigation }) => {
       const finalShippingFee = serverShippingFee ?? actualShippingFee;
       const finalDiscount = serverDiscount ?? discount;
       const finalTotal = serverTotal ?? actualTotal;
-      const finalPayableNow = (effectivePaymentOption === 'downpayment' && serverPayableNow !== null)
-        ? serverPayableNow
-        : (serverTotal ?? actualDownpaymentAmount);
+      // For downpayment orders, the "amount due now" must be the downpayment
+      // amount — never the full order total. Previously the fallback
+      // `serverTotal ?? actualDownpaymentAmount` meant a downpayment order
+      // with a missing `amount_due_now` in the response would incorrectly
+      // charge the full total.
+      const finalPayableNow = effectivePaymentOption === 'downpayment'
+        ? (serverPayableNow ?? actualDownpaymentAmount)
+        : (serverTotal ?? actualTotal);
       const finalRemainingBalance = serverRemainingBalance
         ?? Math.max(0, Number(((finalTotal ?? 0) - (finalPayableNow ?? 0)).toFixed(2)));
 

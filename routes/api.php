@@ -107,6 +107,27 @@ Route::prefix('v1')->group(function () {
         ]);
     });
 
+    // Inspect orders-table schema — confirms whether downpayment columns exist.
+    Route::get('/diagnostic/orders-schema', function () {
+        $has = fn($col) => \Illuminate\Support\Facades\Schema::hasColumn('orders', $col);
+        return response()->json([
+            'success' => true,
+            'orders_table_exists' => \Illuminate\Support\Facades\Schema::hasTable('orders'),
+            'columns_present' => [
+                'payment_option' => $has('payment_option'),
+                'downpayment_rate' => $has('downpayment_rate'),
+                'downpayment_amount' => $has('downpayment_amount'),
+                'remaining_balance' => $has('remaining_balance'),
+                'payment_method' => $has('payment_method'),
+                'payment_status' => $has('payment_status'),
+                'total_amount' => $has('total_amount'),
+                'total' => $has('total'),
+                'delivery_type' => $has('delivery_type'),
+                'notes' => $has('notes'),
+            ],
+        ]);
+    });
+
     // Log event to DB for diagnostic purposes (written via custom channel elsewhere).
     Route::get('/diagnostic/events', function (\Illuminate\Http\Request $request) {
         if (!\Illuminate\Support\Facades\Schema::hasTable('diagnostic_events')) {
