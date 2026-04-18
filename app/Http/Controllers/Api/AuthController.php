@@ -126,9 +126,10 @@ class AuthController extends Controller
             ]);
             
         } catch (\Illuminate\Validation\ValidationException $e) {
+            $allErrors = collect($e->errors())->flatten()->implode(' ');
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
+                'message' => $allErrors ?: 'Validation failed',
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
@@ -145,7 +146,7 @@ class AuthController extends Controller
         try {
             $validated = $request->validate([
                 'email' => 'required|email',
-                'otp' => 'nullable|string|size:6',
+                'otp' => 'required_without_all:otp_code,code|nullable|string|size:6',
                 'otp_code' => 'nullable|string|size:6',
                 'code' => 'nullable|string|size:6',
             ]);
@@ -238,9 +239,10 @@ class AuthController extends Controller
                 ],
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            $allErrors = collect($e->errors())->flatten()->implode(' ');
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
+                'message' => $allErrors ?: 'Validation failed',
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Throwable $e) {
@@ -297,9 +299,10 @@ class AuthController extends Controller
                 ],
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            $allErrors = collect($e->errors())->flatten()->implode(' ');
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
+                'message' => $allErrors ?: 'Validation failed',
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Throwable $e) {
@@ -369,9 +372,10 @@ class AuthController extends Controller
                 ],
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            $allErrors = collect($e->errors())->flatten()->implode(' ');
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
+                'message' => $allErrors ?: 'Validation failed',
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Throwable $e) {
@@ -436,9 +440,10 @@ class AuthController extends Controller
                 'message' => 'Your password has been reset successfully. You can now log in.',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            $allErrors = collect($e->errors())->flatten()->implode(' ');
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
+                'message' => $allErrors ?: 'Validation failed',
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Throwable $e) {

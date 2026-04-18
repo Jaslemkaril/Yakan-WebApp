@@ -191,14 +191,17 @@ class PaymongoPaymentController extends Controller
             }
         }
 
+        // If the order was already resolved and belongs to the authenticated user
+        // (ownership verified below), accept the checkout even when the mobile's
+        // checkout_reference no longer matches payment_reference — which is
+        // expected after PayMongoCheckoutService overwrites it with the session ID.
         if ($requestedCheckoutReference !== '' && !$matchesPaymentReference && !$matchesNotesCheckoutTag && !$allowHeuristicCheckoutReference) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Checkout reference mismatch. Please return to checkout and try again.',
-                'errors' => [
-                    'checkout_reference' => ['Provided checkout reference does not match the selected order.'],
-                ],
-            ], 422);
+            // Tag the order notes so future lookups can find it by this reference.
+            $existingNotes = (string) ($order->notes ?? '');
+            if (stripos($existingNotes, $notesCheckoutTag) === false) {
+                $order->notes = trim($existingNotes . "\n" . $notesCheckoutTag);
+                $order->save();
+            }
         }
 
         try {

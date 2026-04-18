@@ -65,7 +65,10 @@ export default function OtpVerificationScreen({ route, navigation }) {
       const response = await ApiService.verifyOtp(normalizedEmail, normalizedOtp);
 
       if (!response.success) {
-        Alert.alert('Verification Failed', response.error || 'Invalid or expired code.');
+        const msg = response.error
+          || response.data?.message
+          || 'Invalid or expired code.';
+        Alert.alert('Verification Failed', msg);
         return;
       }
 

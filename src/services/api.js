@@ -185,8 +185,11 @@ class ApiService {
       if (!response.ok) {
         // Preserve backend validation payloads so screens can render field-specific errors.
         const validationErrors = responseData?.errors || null;
-        const firstValidationError = validationErrors
-          ? Object.values(validationErrors)?.[0]?.[0]
+        const errorValues = validationErrors && typeof validationErrors === 'object'
+          ? Object.values(validationErrors)
+          : [];
+        const firstValidationError = errorValues.length > 0
+          ? (Array.isArray(errorValues[0]) ? errorValues[0][0] : errorValues[0])
           : null;
         const errorMessage = firstValidationError || responseData?.message || `HTTP Error: ${response.status}`;
 

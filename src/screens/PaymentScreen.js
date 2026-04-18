@@ -493,7 +493,9 @@ export default function PaymentScreen({ navigation, route }) {
           ).toLowerCase();
           const isCheckoutReferenceMismatch =
             firstAttemptMessage.includes('checkout reference mismatch')
-            || firstAttemptMessage.includes('checkout_reference');
+            || firstAttemptMessage.includes('checkout_reference')
+            || firstAttemptMessage.includes('checkout reference does not match')
+            || firstAttemptMessage.includes('reference mismatch');
 
           if (!paymongoCheckout?.success && !backendId && isCheckoutReferenceMismatch && fallbackOrderRef) {
             paymongoCheckout = await ApiService.createPaymongoCheckout(
