@@ -367,14 +367,20 @@ class InventoryController extends Controller
     {
         $this->ensureStockLogsTable();
         try {
-            \App\Models\StockLog::create([
+            $logData = [
                 'product_id' => $productId,
                 'quantity'   => $qty,
-                'stock_before' => $stockBefore,
-                'stock_after' => $stockAfter,
                 'note'       => $note,
                 'created_by' => auth()->id(),
-            ]);
+            ];
+
+            // Only add stock_before/after if columns exist
+            if (\Schema::hasColumn('stock_logs', 'stock_before')) {
+                $logData['stock_before'] = $stockBefore;
+                $logData['stock_after'] = $stockAfter;
+            }
+
+            \App\Models\StockLog::create($logData);
         } catch (\Exception $e) {
             \Log::warning('Could not write stock log: ' . $e->getMessage());
         }

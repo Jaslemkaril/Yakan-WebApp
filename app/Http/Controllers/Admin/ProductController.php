@@ -933,14 +933,20 @@ class ProductController extends Controller
 
         // Log the stock addition (guard against missing table during migration)
         if (\Schema::hasTable('stock_logs')) {
-            \App\Models\StockLog::create([
+            $logData = [
                 'product_id' => $product->id,
                 'quantity'   => $qty,
-                'stock_before' => $stockBefore,
-                'stock_after' => $stockAfter,
                 'note'       => $note,
                 'created_by' => auth()->id(),
-            ]);
+            ];
+
+            // Only add stock_before/after if columns exist
+            if (\Schema::hasColumn('stock_logs', 'stock_before')) {
+                $logData['stock_before'] = $stockBefore;
+                $logData['stock_after'] = $stockAfter;
+            }
+
+            \App\Models\StockLog::create($logData);
         }
 
         Cache::flush();
@@ -990,14 +996,20 @@ class ProductController extends Controller
 
         // Log the stock deduction as negative quantity
         if (\Schema::hasTable('stock_logs')) {
-            \App\Models\StockLog::create([
+            $logData = [
                 'product_id' => $product->id,
                 'quantity'   => -$qty,
-                'stock_before' => $stockBefore,
-                'stock_after' => $stockAfter,
                 'note'       => $note,
                 'created_by' => auth()->id(),
-            ]);
+            ];
+
+            // Only add stock_before/after if columns exist
+            if (\Schema::hasColumn('stock_logs', 'stock_before')) {
+                $logData['stock_before'] = $stockBefore;
+                $logData['stock_after'] = $stockAfter;
+            }
+
+            \App\Models\StockLog::create($logData);
         }
 
         Cache::flush();
