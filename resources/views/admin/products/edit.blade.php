@@ -1358,13 +1358,21 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && isse
                         @endif
                     </td>
                     <td class="px-3 py-2 text-gray-600">
-                        {{ $log->stock_before ?? '—' }} units
+                        @if($log->stock_before !== null)
+                            {{ $log->stock_before }} units
+                        @else
+                            —
+                        @endif
                     </td>
                     <td class="px-3 py-2 font-bold {{ $log->quantity >= 0 ? 'text-green-700' : 'text-red-700' }}">
                         {{ $log->quantity > 0 ? '+' : '' }}{{ $log->quantity }}
                     </td>
                     <td class="px-3 py-2 font-semibold text-gray-800">
-                        {{ $log->stock_after ?? '—' }} units
+                        @if($log->stock_after !== null)
+                            {{ $log->stock_after }} units
+                        @else
+                            —
+                        @endif
                     </td>
                     <td class="px-3 py-2 text-gray-600">{{ $log->creator?->name ?? '—' }}</td>
                     <td class="px-3 py-2 text-gray-500">{{ $log->note ?? '—' }}</td>
