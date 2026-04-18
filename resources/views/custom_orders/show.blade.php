@@ -3286,7 +3286,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 </script>
-@endif
 
 <style>
 @keyframes fade-in {
