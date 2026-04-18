@@ -357,7 +357,11 @@
 
 <div id="refundImagePreviewModal" class="fixed inset-0 bg-black/80 z-[60] hidden items-center justify-center p-4">
     <button id="closeRefundImagePreviewModal" type="button" class="absolute top-4 right-4 w-10 h-10 rounded-full border border-white/40 bg-black/40 text-white text-2xl leading-none hover:bg-black/60" aria-label="Close image preview">×</button>
-    <img id="refundImagePreviewEl" src="" alt="Refund evidence preview" class="max-w-[95vw] max-h-[90vh] object-contain rounded-lg shadow-2xl border border-white/20">
+    <img id="refundImagePreviewEl" src="" alt="Refund evidence preview" class="hidden max-w-[95vw] max-h-[90vh] object-contain rounded-lg shadow-2xl border border-white/20">
+    <video id="refundVideoPreviewEl" class="hidden max-w-[95vw] max-h-[90vh] rounded-lg shadow-2xl border border-white/20 bg-black" controls playsinline>
+        <source id="refundVideoPreviewSource" src="">
+        Your browser does not support video playback.
+    </video>
 </div>
 
 <script>
@@ -367,6 +371,8 @@
         const imagePreviewModal = document.getElementById('refundImagePreviewModal');
         const closeImagePreviewBtn = document.getElementById('closeRefundImagePreviewModal');
         const imagePreviewEl = document.getElementById('refundImagePreviewEl');
+        const videoPreviewEl = document.getElementById('refundVideoPreviewEl');
+        const videoPreviewSource = document.getElementById('refundVideoPreviewSource');
         const reviewButtons = document.querySelectorAll('.refund-review-btn');
 
         const refundIdEl = document.getElementById('modalRefundId');
@@ -402,20 +408,75 @@
         let payload = null;
         let activeReviewButton = null;
 
-        function openImagePreview(src) {
+        function openImagePreview(type, src, fallbackSrc) {
             if (!src) {
                 return;
             }
-            imagePreviewEl.src = src;
+
             imagePreviewModal.classList.remove('hidden');
             imagePreviewModal.classList.add('flex');
             document.body.classList.add('overflow-hidden');
+
+            if (type === 'video' && videoPreviewEl && videoPreviewSource) {
+                imagePreviewEl.classList.add('hidden');
+                imagePreviewEl.src = '';
+
+                let fallbackTried = false;
+                const setVideoSource = function(videoSrc) {
+                    videoPreviewSource.src = videoSrc;
+                    videoPreviewEl.load();
+                    const playAttempt = videoPreviewEl.play();
+                    if (playAttempt && typeof playAttempt.catch === 'function') {
+                        playAttempt.catch(function () {
+                            // Ignore autoplay restrictions; controls remain available.
+                        });
+                    }
+                };
+
+                videoPreviewEl.onerror = function () {
+                    if (!fallbackTried && fallbackSrc && fallbackSrc !== src) {
+                        fallbackTried = true;
+                        setVideoSource(fallbackSrc);
+                    }
+                };
+
+                videoPreviewEl.classList.remove('hidden');
+                setVideoSource(src);
+                return;
+            }
+
+            if (videoPreviewEl && videoPreviewSource) {
+                videoPreviewEl.pause();
+                videoPreviewEl.classList.add('hidden');
+                videoPreviewEl.onerror = null;
+                videoPreviewSource.src = '';
+                videoPreviewEl.load();
+            }
+
+            imagePreviewEl.classList.remove('hidden');
+            imagePreviewEl.src = src;
+            imagePreviewEl.onerror = function () {
+                if (fallbackSrc && fallbackSrc !== src) {
+                    imagePreviewEl.onerror = null;
+                    imagePreviewEl.src = fallbackSrc;
+                }
+            };
         }
 
         function closeImagePreview() {
             imagePreviewModal.classList.add('hidden');
             imagePreviewModal.classList.remove('flex');
             imagePreviewEl.src = '';
+            imagePreviewEl.classList.add('hidden');
+
+            if (videoPreviewEl && videoPreviewSource) {
+                videoPreviewEl.pause();
+                videoPreviewEl.classList.add('hidden');
+                videoPreviewEl.onerror = null;
+                videoPreviewSource.src = '';
+                videoPreviewEl.load();
+            }
+
             if (modal.classList.contains('hidden')) {
                 document.body.classList.remove('overflow-hidden');
             }
@@ -554,12 +615,17 @@
                     const imgSrc = item.preview_url || item.url;
                     const fallbackSrc = item.fallback_url || item.url;
                     const openUrl = item.open_url || item.preview_url || item.url;
-                    return '<a href="#" data-preview-src="' + openUrl + '" class="refund-evidence-image inline-block mr-2 mb-2" title="Click to preview">'
+                    return '<a href="#" data-preview-type="image" data-preview-src="' + openUrl + '" data-preview-fallback="' + fallbackSrc + '" class="refund-evidence-preview inline-block mr-2 mb-2" title="Click to preview">'
                         + '<img src="' + imgSrc + '" onerror="if(this.dataset.err){this.onerror=null;this.src=\'' + fallbackSrc + '\';return;}this.dataset.err=\'1\';this.src=\'' + item.url + '\';" class="w-20 h-20 object-cover rounded-lg border border-gray-200" alt="Evidence">'
                         + '</a>';
                 }
                 if (item.is_video) {
-                    return '<a href="' + item.url + '" target="_blank" class="inline-flex items-center px-3 py-2 mr-2 mb-2 rounded-lg border border-blue-300 bg-blue-50 text-blue-700 text-xs">View video</a>';
+                    const videoSrc = item.url;
+                    const videoFallback = item.open_url || item.preview_url || item.fallback_url || item.url;
+                    return '<button type="button" data-preview-type="video" data-preview-src="' + videoSrc + '" data-preview-fallback="' + videoFallback + '" class="refund-evidence-preview relative inline-block mr-2 mb-2 w-24 h-20 rounded-lg overflow-hidden border border-blue-300 bg-blue-50" title="Play video">'
+                        + '<video class="w-full h-full object-cover bg-black" muted playsinline preload="metadata"><source src="' + videoSrc + '"></video>'
+                        + '<span class="absolute inset-0 flex items-center justify-center bg-black/25"><span class="inline-flex items-center px-2 py-0.5 rounded bg-white/90 text-[10px] font-semibold text-blue-700">Play</span></span>'
+                        + '</button>';
                 }
                 return '<a href="' + item.url + '" target="_blank" class="inline-flex items-center px-3 py-2 mr-2 mb-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-xs">View file</a>';
             }).join('');
@@ -739,12 +805,16 @@
         });
 
         evidenceWrapEl.addEventListener('click', function (event) {
-            const trigger = event.target.closest('.refund-evidence-image');
+            const trigger = event.target.closest('.refund-evidence-preview');
             if (!trigger) {
                 return;
             }
             event.preventDefault();
-            openImagePreview(trigger.getAttribute('data-preview-src'));
+            openImagePreview(
+                trigger.getAttribute('data-preview-type') || 'image',
+                trigger.getAttribute('data-preview-src') || '',
+                trigger.getAttribute('data-preview-fallback') || ''
+            );
         });
 
         closeImagePreviewBtn.addEventListener('click', closeImagePreview);

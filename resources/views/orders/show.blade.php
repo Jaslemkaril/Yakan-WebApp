@@ -504,9 +504,9 @@
                                             <img src="{{ $evidenceUrl }}" onerror="this.onerror=null;this.src='{{ $fallbackEvidenceUrl }}';" alt="Refund evidence" class="w-24 h-24 object-cover hover:opacity-90 transition-opacity">
                                         </button>
                                     @elseif($isVideoEvidence)
-                                        <button type="button" class="refund-media-trigger relative block w-40 rounded-lg overflow-hidden border border-blue-300 bg-blue-50 hover:bg-blue-100 transition-colors" data-media-type="video" data-media-src="{{ $previewEvidenceUrl }}" data-media-fallback="{{ $evidenceUrl }}" title="Play video evidence">
+                                        <button type="button" class="refund-media-trigger relative block w-40 rounded-lg overflow-hidden border border-blue-300 bg-blue-50 hover:bg-blue-100 transition-colors" data-media-type="video" data-media-src="{{ $evidenceUrl }}" data-media-fallback="{{ $previewEvidenceUrl }}" title="Play video evidence">
                                             <video class="w-full h-24 object-cover bg-black" muted playsinline preload="metadata">
-                                                <source src="{{ $previewEvidenceUrl }}">
+                                                <source src="{{ $evidenceUrl }}">
                                             </video>
                                             <div class="absolute inset-0 flex items-center justify-center bg-black/25">
                                                 <span class="inline-flex items-center px-2 py-1 rounded-md bg-white/90 text-xs font-semibold text-blue-700">Play video</span>
@@ -1352,21 +1352,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 refundEvidenceModalImage.classList.add('hidden');
                 refundEvidenceModalImage.src = '';
             }
-            refundEvidenceModalVideoSource.src = src;
+            let fallbackTried = false;
+            const setVideoSource = function(videoSrc) {
+                refundEvidenceModalVideoSource.src = videoSrc;
+                refundEvidenceModalVideo.load();
+                const playAttempt = refundEvidenceModalVideo.play();
+                if (playAttempt && typeof playAttempt.catch === 'function') {
+                    playAttempt.catch(function() {
+                        // Ignore autoplay restrictions; controls remain available.
+                    });
+                }
+            };
+
+            refundEvidenceModalVideo.onerror = function() {
+                if (!fallbackTried && fallbackSrc && fallbackSrc !== src) {
+                    fallbackTried = true;
+                    setVideoSource(fallbackSrc);
+                }
+            };
+
             refundEvidenceModalVideo.classList.remove('hidden');
-            refundEvidenceModalVideo.load();
-            const playAttempt = refundEvidenceModalVideo.play();
-            if (playAttempt && typeof playAttempt.catch === 'function') {
-                playAttempt.catch(function() {
-                    // Ignore autoplay restrictions; controls remain available.
-                });
-            }
+            setVideoSource(src);
             return;
         }
 
         if (refundEvidenceModalVideo && refundEvidenceModalVideoSource) {
             refundEvidenceModalVideo.pause();
             refundEvidenceModalVideo.classList.add('hidden');
+            refundEvidenceModalVideo.onerror = null;
             refundEvidenceModalVideoSource.src = '';
             refundEvidenceModalVideo.load();
         }
