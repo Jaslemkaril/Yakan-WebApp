@@ -5155,14 +5155,42 @@ class CustomOrderController extends Controller
         $candidates = array_values(array_unique(array_filter([
             $path,
             ltrim($path, '/'),
+            str_starts_with($path, 'public/') ? substr($path, 7) : null,
             str_starts_with($path, 'storage/') ? substr($path, 8) : null,
             urldecode($path),
+            str_starts_with(urldecode($path), 'public/') ? substr(urldecode($path), 7) : null,
             str_starts_with(urldecode($path), 'storage/') ? substr(urldecode($path), 8) : null,
         ], fn ($v) => is_string($v) && $v !== '')));
 
         foreach ($candidates as $candidate) {
             if (Storage::disk('public')->exists($candidate)) {
-                return Storage::disk('public')->response($candidate);
+                $absolutePath = Storage::disk('public')->path($candidate);
+                $mimeType = Storage::disk('public')->mimeType($candidate) ?: 'application/octet-stream';
+                return response()->file($absolutePath, [
+                    'Content-Type' => $mimeType,
+                    'Content-Disposition' => 'inline; filename="' . basename($absolutePath) . '"',
+                    'X-Content-Type-Options' => 'nosniff',
+                ]);
+            }
+
+            if (Storage::disk('local')->exists($candidate)) {
+                $absolutePath = Storage::disk('local')->path($candidate);
+                $mimeType = Storage::disk('local')->mimeType($candidate) ?: 'application/octet-stream';
+                return response()->file($absolutePath, [
+                    'Content-Type' => $mimeType,
+                    'Content-Disposition' => 'inline; filename="' . basename($absolutePath) . '"',
+                    'X-Content-Type-Options' => 'nosniff',
+                ]);
+            }
+
+            $publicStorageRelative = ltrim(str_replace(['public/', 'storage/'], '', $candidate), '/');
+            $publicStoragePath = public_path('storage/' . $publicStorageRelative);
+            if (is_file($publicStoragePath)) {
+                return response()->file($publicStoragePath, [
+                    'Content-Type' => mime_content_type($publicStoragePath) ?: 'application/octet-stream',
+                    'Content-Disposition' => 'inline; filename="' . basename($publicStoragePath) . '"',
+                    'X-Content-Type-Options' => 'nosniff',
+                ]);
             }
         }
 

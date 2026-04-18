@@ -2124,14 +2124,17 @@
                                 <div class="flex flex-wrap gap-2">
                                     @foreach($customRefundEvidence as $evidencePath)
                                         @php
-                                            $customEvidenceUrl = route('custom_orders.refund-evidence.view', ['refundRequest' => $customRefundRequest->id, 'index' => $loop->index]);
+                                            $customEvidenceUrl = route('custom_orders.refund-evidence.view', ['refundRequest' => $customRefundRequest->id, 'index' => $loop->index, 'auth_token' => $authToken]);
+                                            $customRawEvidencePath = str_replace('\\', '/', ltrim((string) $evidencePath, '/'));
+                                            $customPublicEvidencePath = ltrim(str_replace(['public/', 'storage/'], '', $customRawEvidencePath), '/');
+                                            $customFallbackEvidenceUrl = asset('storage/' . $customPublicEvidencePath);
                                             $customExt = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
                                             $customIsImage = in_array($customExt, ['jpg', 'jpeg', 'png', 'webp'], true);
                                             $customIsVideo = in_array($customExt, ['mp4', 'mov', 'webm'], true);
                                         @endphp
                                         @if($customIsImage)
                                             <a href="{{ $customEvidenceUrl }}" target="_blank" class="block rounded-lg overflow-hidden border border-gray-200 bg-white">
-                                                <img src="{{ $customEvidenceUrl }}" alt="Refund evidence" class="w-24 h-24 object-cover">
+                                                <img src="{{ $customEvidenceUrl }}" onerror="this.onerror=null;this.src='{{ $customFallbackEvidenceUrl }}';" alt="Refund evidence" class="w-24 h-24 object-cover">
                                             </a>
                                         @elseif($customIsVideo)
                                             <a href="{{ $customEvidenceUrl }}" target="_blank" class="inline-flex items-center px-3 py-2 rounded-lg border border-blue-300 text-sm text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">
