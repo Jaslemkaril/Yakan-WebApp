@@ -433,7 +433,7 @@
             }
 
             timelineEl.innerHTML = items.map(function (item) {
-                const dotColor = item[2] === 'done' ? '#2f6b1f' : '#d1d5db';
+                const dotColor = item[2] === 'done' ? '#800000' : '#d1d5db';
                 const titleClass = item[2] === 'done' ? 'text-gray-900 font-semibold' : 'text-gray-500 font-semibold';
                 return '<div class="flex items-start gap-2">'
                     + '<span class="refund-timeline-dot" style="background-color:' + dotColor + ';"></span>'
