@@ -529,12 +529,21 @@
                 const thumb = item.preview_url || item.open_url || item.fallback_url || '#';
                 const safeThumb = String(thumb).replace(/'/g, '&#39;');
                 const type = isVideo ? 'video' : 'image';
+                
+                // Generate Cloudinary video poster
+                let posterAttr = '';
+                if (isVideo && safeThumb.includes('cloudinary.com')) {
+                    const posterUrl = safeThumb.replace('/video/upload/', '/video/upload/so_0,f_jpg/');
+                    posterAttr = ' poster="' + posterUrl + '"';
+                }
+                
                 const media = isVideo
-                    ? '<video src="' + safeThumb + '" class="h-16 w-full object-cover rounded border border-gray-200" muted playsinline></video>'
+                    ? '<video src="' + safeThumb + '#t=0.1" class="h-16 w-full object-cover rounded border border-gray-200 bg-black" muted playsinline preload="metadata"' + posterAttr + '></video>'
                     : '<img src="' + safeThumb + '" class="h-16 w-full object-cover rounded border border-gray-200" alt="Evidence">';
 
-                return '<button type="button" class="po-evidence-item w-24 text-left" data-type="' + type + '" data-src="' + safeThumb + '">'
+                return '<button type="button" class="po-evidence-item w-24 text-left relative" data-type="' + type + '" data-src="' + safeThumb + '">'
                     + media
+                    + (isVideo ? '<div class="absolute inset-0 flex items-center justify-center pointer-events-none"><span class="text-white text-2xl">▶</span></div>' : '')
                     + '</button>';
             }).join('');
 

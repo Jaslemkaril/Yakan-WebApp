@@ -501,6 +501,12 @@
                                         $ext = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
                                         $isImageEvidence = in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true);
                                         $isVideoEvidence = in_array($ext, ['mp4', 'mov', 'webm'], true);
+                                        
+                                        // Generate Cloudinary video thumbnail
+                                        $videoPoster = '';
+                                        if ($isVideoEvidence && str_contains($previewEvidenceUrl, 'cloudinary.com')) {
+                                            $videoPoster = str_replace('/video/upload/', '/video/upload/so_0,f_jpg/', $previewEvidenceUrl);
+                                        }
                                     @endphp
 
                                     @if($isImageEvidence)
@@ -509,11 +515,11 @@
                                         </button>
                                     @elseif($isVideoEvidence)
                                         <button type="button" class="refund-media-trigger relative block w-40 rounded-lg overflow-hidden border border-blue-300 bg-blue-50 hover:bg-blue-100 transition-colors" data-media-type="video" data-media-src="{{ $previewEvidenceUrl }}" data-media-fallback="{{ $previewEvidenceUrl }}" title="Play video evidence">
-                                            <video class="w-full h-24 object-cover bg-black" muted playsinline preload="metadata">
-                                                <source src="{{ $previewEvidenceUrl }}">
+                                            <video class="w-full h-24 object-cover bg-black" muted playsinline preload="metadata" @if($videoPoster) poster="{{ $videoPoster }}" @endif>
+                                                <source src="{{ $previewEvidenceUrl }}#t=0.1">
                                             </video>
-                                            <div class="absolute inset-0 flex items-center justify-center bg-black/25">
-                                                <span class="inline-flex items-center px-2 py-1 rounded-md bg-white/90 text-xs font-semibold text-blue-700">Play video</span>
+                                            <div class="absolute inset-0 flex items-center justify-center bg-black/25 pointer-events-none">
+                                                <span class="inline-flex items-center px-2 py-1 rounded-md bg-white/90 text-xs font-semibold text-blue-700">▶ Play video</span>
                                             </div>
                                         </button>
                                     @else

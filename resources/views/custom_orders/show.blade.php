@@ -2138,18 +2138,24 @@
                                             $customExt = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
                                             $customIsImage = in_array($customExt, ['jpg', 'jpeg', 'png', 'webp'], true);
                                             $customIsVideo = in_array($customExt, ['mp4', 'mov', 'webm'], true);
+                                            
+                                            // Generate Cloudinary video thumbnail
+                                            $customVideoPoster = '';
+                                            if ($customIsVideo && str_contains($customPreviewUrl, 'cloudinary.com')) {
+                                                $customVideoPoster = str_replace('/video/upload/', '/video/upload/so_0,f_jpg/', $customPreviewUrl);
+                                            }
                                         @endphp
                                         @if($customIsImage)
                                             <a href="{{ $customPreviewUrl }}" target="_blank" class="block rounded-lg overflow-hidden border border-gray-200 bg-white">
                                                 <img src="{{ $customPreviewUrl }}" onerror="this.onerror=null;this.src='{{ $customEvidenceUrl }}';" alt="Refund evidence" class="w-24 h-24 object-cover">
                                             </a>
                                         @elseif($customIsVideo)
-                                            <a href="{{ $customPreviewUrl }}" target="_blank" class="block rounded-lg overflow-hidden border border-blue-300 bg-blue-50">
-                                                <video class="w-40 h-24 object-cover bg-black" muted playsinline preload="metadata">
-                                                    <source src="{{ $customPreviewUrl }}">
+                                            <a href="{{ $customPreviewUrl }}" target="_blank" class="relative block rounded-lg overflow-hidden border border-blue-300 bg-blue-50">
+                                                <video class="w-40 h-24 object-cover bg-black" muted playsinline preload="metadata" @if($customVideoPoster) poster="{{ $customVideoPoster }}" @endif>
+                                                    <source src="{{ $customPreviewUrl }}#t=0.1">
                                                 </video>
                                                 <div class="absolute inset-0 flex items-center justify-center bg-black/25 pointer-events-none">
-                                                    <span class="inline-flex items-center px-2 py-1 rounded-md bg-white/90 text-xs font-semibold text-blue-700">Play video</span>
+                                                    <span class="inline-flex items-center px-2 py-1 rounded-md bg-white/90 text-xs font-semibold text-blue-700">▶ Play video</span>
                                                 </div>
                                             </a>
                                         @else
