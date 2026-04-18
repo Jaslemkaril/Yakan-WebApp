@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 @php
 use Illuminate\Support\Facades\Storage;
-$isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && ($existingBundleItems ?? collect())->isNotEmpty());
+$isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && isset($existingBundleItems) && $existingBundleItems->isNotEmpty());
 @endphp
 @section('title', $isBundleForm ? 'Edit Bundle' : 'Edit Product')
 
@@ -11,8 +11,8 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && ($ex
     <div class="bg-[#800000] rounded-2xl p-6 sm:p-8 text-white shadow-xl">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
-                <h1 class="text-xl md:text-3xl font-bold mb-2">{{ ($isBundleForm ?? false) ? 'Edit Bundle' : 'Edit Product' }}</h1>
-                <p class="text-red-100 text-lg">Update {{ ($isBundleForm ?? false) ? 'bundle' : 'product' }} details for {{ $product->name }}</p>
+                <h1 class="text-xl md:text-3xl font-bold mb-2">{{ $isBundleForm ? 'Edit Bundle' : 'Edit Product' }}</h1>
+                <p class="text-red-100 text-lg">Update {{ $isBundleForm ? 'bundle' : 'product' }} details for {{ $product->name }}</p>
             </div>
             <a href="{{ route('admin.products.index') }}" class="mt-4 md:mt-0 inline-flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white text-sm font-medium transition">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
@@ -22,12 +22,12 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && ($ex
     </div>
 
 @php
-    $initialBundleItems = old('bundle_items', $existingBundleItems->map(function ($item) {
+    $initialBundleItems = old('bundle_items', isset($existingBundleItems) ? $existingBundleItems->map(function ($item) {
         return [
             'product_id' => $item->product_id,
             'quantity' => $item->quantity,
         ];
-    })->toArray());
+    })->toArray() : []);
     $initialVariantRows = old('variant_rows', $existingVariantRows ?? []);
     if (!is_array($initialVariantRows)) {
         $initialVariantRows = [];
@@ -218,15 +218,19 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && ($ex
 
         <script>
         // Initialize bundle items from existing data
-        let bundleItems = @json(collect($initialBundleItems)->map(function($item) use ($bundleComponents) {
-            $product = $bundleComponents->firstWhere('id', $item['product_id']);
+        @php
+        $bundleComponentsForJs = isset($bundleComponents) ? $bundleComponents : collect();
+        $bundleItemsInitialData = collect($initialBundleItems)->map(function($item) use ($bundleComponentsForJs) {
+            $product = $bundleComponentsForJs->firstWhere('id', $item['product_id']);
             return [
                 'id' => $item['product_id'],
                 'name' => $product->name ?? 'Unknown Product',
                 'price' => $product->price ?? 0,
                 'quantity' => $item['quantity']
             ];
-        })->values());
+        })->values();
+        @endphp
+        let bundleItems = @json($bundleItemsInitialData);
         
         function previewBundlePhoto(event) {
             const file = event.target.files[0];
