@@ -50,6 +50,85 @@
     .subtotal-price {
         transition: all 0.3s ease;
     }
+
+    /* Bundle Styles */
+    .bundle-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        margin-left: 8px;
+        vertical-align: middle;
+    }
+
+    .bundle-toggle {
+        background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+        border: 2px solid #fb923c;
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 8px;
+        margin-bottom: 8px;
+    }
+
+    .bundle-toggle:hover {
+        background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+        transform: translateX(4px);
+        box-shadow: 0 4px 12px rgba(251, 146, 60, 0.2);
+    }
+
+    .bundle-toggle-text {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #c2410c;
+    }
+
+    .bundle-toggle-icon {
+        transition: transform 0.3s ease;
+        color: #ea580c;
+    }
+
+    .bundle-toggle-icon.expanded {
+        transform: rotate(180deg);
+    }
+
+    .bundle-items-list {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+        opacity: 0;
+    }
+
+    .bundle-items-list.expanded {
+        max-height: 500px;
+        opacity: 1;
+        margin-bottom: 8px;
+    }
+
+    .bundle-item-card {
+        background: white;
+        border-radius: 6px;
+        padding: 8px;
+        margin-bottom: 6px;
+        border: 1px solid #fed7aa;
+        transition: all 0.2s ease;
+    }
+
+    .bundle-item-card:hover {
+        background: #fffbeb;
+        border-color: #fb923c;
+        transform: translateX(4px);
+    }
     
     @media (max-width: 640px) {
         .mobile-stack {
@@ -304,10 +383,47 @@
                                     
                                     <!-- Product Details -->
                                     <div class="flex-1 min-w-0">
-                                        <h3 class="font-semibold text-gray-900 mb-1">{{ $item->product->name }}</h3>
+                                        <h3 class="font-semibold text-gray-900 mb-1">
+                                            {{ $item->product->name }}
+                                            @if($item->product->is_bundle)
+                                                <span class="bundle-badge">Bundle</span>
+                                            @endif
+                                        </h3>
                                         @if($variant)
                                             <p class="text-xs text-gray-500 mb-2">Variant: {{ $variant->display_name }}</p>
                                         @endif
+                                        
+                                        @if($item->product->is_bundle && $item->product->bundleItems && $item->product->bundleItems->count() > 0)
+                                            <div class="mb-2">
+                                                <div class="bundle-toggle" onclick="toggleBundleItems({{ $item->id }})">
+                                                    <div class="bundle-toggle-text">
+                                                        <span>📦</span>
+                                                        <span>{{ $item->product->bundleItems->count() }} items · Tap to see details</span>
+                                                    </div>
+                                                    <svg class="bundle-toggle-icon" id="bundle-icon-{{ $item->id }}" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
+                                                </div>
+                                                <div class="bundle-items-list" id="bundle-list-{{ $item->id }}">
+                                                    @foreach($item->product->bundleItems as $bundleItem)
+                                                        @if($bundleItem->componentProduct)
+                                                            <div class="bundle-item-card">
+                                                                <div class="flex items-center gap-2">
+                                                                    <img src="{{ $bundleItem->componentProduct->image_src }}" 
+                                                                         alt="{{ $bundleItem->componentProduct->name }}" 
+                                                                         class="w-8 h-8 object-cover rounded border border-orange-200">
+                                                                    <div class="flex-1">
+                                                                        <p class="text-xs font-semibold text-gray-900">{{ $bundleItem->componentProduct->name }}</p>
+                                                                        <p class="text-xs text-gray-600">Qty: {{ $bundleItem->quantity }}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @endif
+                                        
                                         @if($item->product->description)
                                             <p class="text-sm text-gray-500 mb-2 line-clamp-1">{{ $item->product->description }}</p>
                                         @endif
@@ -2296,6 +2412,17 @@ document.addEventListener('DOMContentLoaded', function() {
 @push('scripts')
 <script>
 (function () {
+    // ── Bundle Toggle Function ──────────────────────────────────────────────
+    window.toggleBundleItems = function(itemId) {
+        const list = document.getElementById('bundle-list-' + itemId);
+        const icon = document.getElementById('bundle-icon-' + itemId);
+        
+        if (list && icon) {
+            list.classList.toggle('expanded');
+            icon.classList.toggle('expanded');
+        }
+    };
+
     // ── Coupon AJAX ──────────────────────────────────────────────────────────
     const csrfToken    = document.querySelector('meta[name="csrf-token"]')?.content
                           || '{{ csrf_token() }}';
