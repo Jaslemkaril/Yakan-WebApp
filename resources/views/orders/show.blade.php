@@ -49,17 +49,19 @@
     }
 
     .user-bundle-items-list {
-        max-height: 0;
-        overflow: hidden;
+        max-height: 0 !important;
+        overflow: hidden !important;
         transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
-        opacity: 0;
+        opacity: 0 !important;
         margin-top: 0;
+        visibility: hidden;
     }
 
     .user-bundle-items-list.expanded {
-        max-height: 500px;
-        opacity: 1;
+        max-height: 500px !important;
+        opacity: 1 !important;
         margin-top: 10px;
+        visibility: visible;
     }
 
     .user-bundle-item-card {

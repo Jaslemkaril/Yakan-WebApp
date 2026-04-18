@@ -321,16 +321,18 @@
     }
 
     .bundle-items-list {
-        max-height: 0;
-        overflow: hidden;
+        max-height: 0 !important;
+        overflow: hidden !important;
         transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
-        opacity: 0;
+        opacity: 0 !important;
+        visibility: hidden;
     }
 
     .bundle-items-list.expanded {
-        max-height: 500px;
-        opacity: 1;
+        max-height: 500px !important;
+        opacity: 1 !important;
         margin-bottom: 12px;
+        visibility: visible;
     }
 
     .bundle-item-card {
