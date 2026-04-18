@@ -106,7 +106,7 @@ class OrderController extends Controller
     // Show single order
     public function show(Order $order)
     {
-        $order->load('user', 'userAddress', 'orderItems.product.category');
+        $order->load('user', 'userAddress', 'orderItems.product.category', 'orderItems.product.bundleItems.componentProduct');
 
         $latestRefundRequest = null;
         if (Schema::hasTable('order_refund_requests')) {

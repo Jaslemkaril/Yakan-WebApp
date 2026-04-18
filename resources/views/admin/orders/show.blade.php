@@ -2,6 +2,84 @@
 
 @section('title', 'Order Details')
 
+@push('styles')
+<style>
+    /* Bundle Styles for Admin */
+    .admin-bundle-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        color: white;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 700;
+        margin-left: 8px;
+        vertical-align: middle;
+    }
+
+    .admin-bundle-toggle {
+        background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+        border: 2px solid #9ca3af;
+        border-radius: 6px;
+        padding: 6px 10px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #4b5563;
+    }
+
+    .admin-bundle-toggle:hover {
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        border-color: #6b7280;
+        transform: translateX(2px);
+    }
+
+    .admin-bundle-toggle-icon {
+        transition: transform 0.3s ease;
+        color: #6b7280;
+    }
+
+    .admin-bundle-toggle-icon.expanded {
+        transform: rotate(180deg);
+    }
+
+    .admin-bundle-items-list {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+        opacity: 0;
+        margin-top: 0;
+    }
+
+    .admin-bundle-items-list.expanded {
+        max-height: 400px;
+        opacity: 1;
+        margin-top: 8px;
+    }
+
+    .admin-bundle-item-card {
+        background: #fafafa;
+        border-radius: 4px;
+        padding: 6px 8px;
+        margin-bottom: 4px;
+        border: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .admin-bundle-item-card:hover {
+        background: #f3f4f6;
+        border-color: #9ca3af;
+    }
+</style>
+@endpush
+
 @section('content')
 @php
     $normalizedDeliveryType = strtolower((string) ($order->delivery_type ?? 'delivery'));
@@ -409,12 +487,41 @@
                                     @endif
                                 </div>
                                 <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900">{{ $item->product->name ?? 'Deleted Product' }}</div>
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {{ $item->product->name ?? 'Deleted Product' }}
+                                        @if($item->product && $item->product->is_bundle)
+                                            <span class="admin-bundle-badge">Bundle</span>
+                                        @endif
+                                    </div>
                                     @if($item->product && $item->product->category)
                                         <div class="text-sm text-gray-500">{{ $item->product->category->name ?? 'Uncategorized' }}</div>
                                     @endif
                                     @if($item->product && $item->product->sku)
                                         <div class="text-xs text-gray-400 font-mono mt-1">SKU: {{ $item->product->sku }}</div>
+                                    @endif
+                                    @if($item->product && $item->product->is_bundle && $item->product->bundleItems && $item->product->bundleItems->count() > 0)
+                                        <div class="admin-bundle-toggle" onclick="toggleAdminBundleItems({{ $item->id }})">
+                                            <span>📦</span>
+                                            <span>{{ $item->product->bundleItems->count() }} items · Tap to see details</span>
+                                            <svg class="admin-bundle-toggle-icon" id="admin-bundle-icon-{{ $item->id }}" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                                            </svg>
+                                        </div>
+                                        <div class="admin-bundle-items-list" id="admin-bundle-list-{{ $item->id }}">
+                                            @foreach($item->product->bundleItems as $bundleItem)
+                                                @if($bundleItem->componentProduct)
+                                                    <div class="admin-bundle-item-card">
+                                                        <img src="{{ $bundleItem->componentProduct->image_src }}" 
+                                                             alt="{{ $bundleItem->componentProduct->name }}" 
+                                                             class="w-6 h-6 object-cover rounded border border-gray-300">
+                                                        <div class="flex-1 text-xs">
+                                                            <div class="font-semibold text-gray-900">{{ $bundleItem->componentProduct->name }}</div>
+                                                            <div class="text-gray-600">Qty: {{ $bundleItem->quantity }}</div>
+                                                        </div>
+                                                    </div>
+                                                @endif
+                                            @endforeach
+                                        </div>
                                     @endif
                                 </div>
                             </div>
@@ -1547,3 +1654,17 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endsection
+
+@push('scripts')
+<script>
+function toggleAdminBundleItems(itemId) {
+    const list = document.getElementById('admin-bundle-list-' + itemId);
+    const icon = document.getElementById('admin-bundle-icon-' + itemId);
+    
+    if (list && icon) {
+        list.classList.toggle('expanded');
+        icon.classList.toggle('expanded');
+    }
+}
+</script>
+@endpush
