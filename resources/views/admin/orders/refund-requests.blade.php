@@ -221,6 +221,7 @@
 
                                     $evidencePreviews[] = [
                                         'url' => $url,
+                                        'open_url' => $previewUrl,
                                         'preview_url' => $previewUrl,
                                         'fallback_url' => $fallbackEvidenceUrl,
                                         'is_image' => $isImage,
@@ -462,7 +463,8 @@
                 if (item.is_image) {
                     const imgSrc = item.preview_url || item.url;
                     const fallbackSrc = item.fallback_url || item.url;
-                    return '<a href="' + item.url + '" target="_blank" class="inline-block mr-2 mb-2">'
+                    const openUrl = item.open_url || item.preview_url || item.url;
+                    return '<a href="' + openUrl + '" target="_blank" class="inline-block mr-2 mb-2">'
                         + '<img src="' + imgSrc + '" onerror="if(this.dataset.err){this.onerror=null;this.src=\'' + fallbackSrc + '\';return;}this.dataset.err=\'1\';this.src=\'' + item.url + '\';" class="w-20 h-20 object-cover rounded-lg border border-gray-200" alt="Evidence">'
                         + '</a>';
                 }
