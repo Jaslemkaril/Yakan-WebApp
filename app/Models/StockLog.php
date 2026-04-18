@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class StockLog extends Model
 {
-    protected $fillable = ['product_id', 'quantity', 'note', 'created_by'];
+    protected $fillable = ['product_id', 'quantity', 'stock_before', 'stock_after', 'note', 'created_by'];
 
     public function product()
     {

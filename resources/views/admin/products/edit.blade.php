@@ -1339,7 +1339,9 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && isse
                 <tr class="bg-gray-50 text-left">
                     <th class="px-3 py-2 text-gray-600 font-semibold">Date &amp; Time</th>
                     <th class="px-3 py-2 text-gray-600 font-semibold">Movement</th>
-                    <th class="px-3 py-2 text-gray-600 font-semibold">Quantity</th>
+                    <th class="px-3 py-2 text-gray-600 font-semibold">Before</th>
+                    <th class="px-3 py-2 text-gray-600 font-semibold">Change</th>
+                    <th class="px-3 py-2 text-gray-600 font-semibold">After</th>
                     <th class="px-3 py-2 text-gray-600 font-semibold">Added By</th>
                     <th class="px-3 py-2 text-gray-600 font-semibold">Note</th>
                 </tr>
@@ -1355,8 +1357,14 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && isse
                             <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">Stock Out</span>
                         @endif
                     </td>
+                    <td class="px-3 py-2 text-gray-600">
+                        {{ $log->stock_before ?? '—' }} units
+                    </td>
                     <td class="px-3 py-2 font-bold {{ $log->quantity >= 0 ? 'text-green-700' : 'text-red-700' }}">
                         {{ $log->quantity > 0 ? '+' : '' }}{{ $log->quantity }}
+                    </td>
+                    <td class="px-3 py-2 font-semibold text-gray-800">
+                        {{ $log->stock_after ?? '—' }} units
                     </td>
                     <td class="px-3 py-2 text-gray-600">{{ $log->creator?->name ?? '—' }}</td>
                     <td class="px-3 py-2 text-gray-500">{{ $log->note ?? '—' }}</td>

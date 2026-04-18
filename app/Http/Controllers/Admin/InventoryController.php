@@ -211,12 +211,16 @@ class InventoryController extends Controller
             'note' => 'nullable|string|max:255',
         ]);
 
+        $stockBefore = (int) $inventory->quantity;
         $inventory->restock($validated['quantity']);
+        $stockAfter = (int) $inventory->quantity;
         $inventory->product?->update(['stock' => $inventory->quantity]);
 
         $this->logStockMovement(
             $inventory->product_id,
             $validated['quantity'],
+            $stockBefore,
+            $stockAfter,
             $validated['note'] ?? 'Restock from inventory page'
         );
 
@@ -236,19 +240,24 @@ class InventoryController extends Controller
             'note' => 'nullable|string|max:255',
         ]);
 
-        if ($validated['quantity'] > $inventory->quantity) {
+        $stockBefore = (int) $inventory->quantity;
+
+        if ($validated['quantity'] > $stockBefore) {
             return $this->redirectToIndex()
-                ->with('error', "Cannot remove {$validated['quantity']} units. Available stock is only {$inventory->quantity}.");
+                ->with('error', "Cannot remove {$validated['quantity']} units. Available stock is only {$stockBefore}.");
         }
 
         $inventory->quantity -= $validated['quantity'];
-        $inventory->low_stock_alert = $this->shouldTriggerLowStockAlert((int) $inventory->quantity, (int) $inventory->min_stock_level);
+        $stockAfter = (int) $inventory->quantity;
+        $inventory->low_stock_alert = $this->shouldTriggerLowStockAlert($stockAfter, (int) $inventory->min_stock_level);
         $inventory->save();
         $inventory->product?->update(['stock' => $inventory->quantity]);
 
         $this->logStockMovement(
             $inventory->product_id,
             -$validated['quantity'],
+            $stockBefore,
+            $stockAfter,
             $validated['note'] ?? 'Stock out from inventory page'
         );
 
@@ -354,13 +363,15 @@ class InventoryController extends Controller
     /**
      * Create stock log entries (called from restock/stockOut).
      */
-    private function logStockMovement(int $productId, int $qty, string $note): void
+    private function logStockMovement(int $productId, int $qty, int $stockBefore, int $stockAfter, string $note): void
     {
         $this->ensureStockLogsTable();
         try {
             \App\Models\StockLog::create([
                 'product_id' => $productId,
                 'quantity'   => $qty,
+                'stock_before' => $stockBefore,
+                'stock_after' => $stockAfter,
                 'note'       => $note,
                 'created_by' => auth()->id(),
             ]);

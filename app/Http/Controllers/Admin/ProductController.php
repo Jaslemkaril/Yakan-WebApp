@@ -919,17 +919,25 @@ class ProductController extends Controller
             return redirect($redirectUrl)->with('error', 'This product uses variants. Update stock per variant in the product edit form.');
         }
 
+        // Capture stock before change
+        $stockBefore = (int) $product->fresh()->available_stock;
+
         if ($product->inventory) {
             $product->inventory->increment('quantity', $qty);
         } else {
             $product->increment('stock', $qty);
         }
 
+        // Capture stock after change
+        $stockAfter = (int) $product->fresh()->available_stock;
+
         // Log the stock addition (guard against missing table during migration)
         if (\Schema::hasTable('stock_logs')) {
             \App\Models\StockLog::create([
                 'product_id' => $product->id,
                 'quantity'   => $qty,
+                'stock_before' => $stockBefore,
+                'stock_after' => $stockAfter,
                 'note'       => $note,
                 'created_by' => auth()->id(),
             ]);
@@ -964,9 +972,11 @@ class ProductController extends Controller
             return redirect($redirectUrl)->with('error', 'This product uses variants. Update stock per variant in the product edit form.');
         }
 
-        $currentStock = (int) $product->fresh()->available_stock;
-        if ($qty > $currentStock) {
-            return redirect($redirectUrl)->with('error', "Cannot stock out {$qty} unit(s). Available stock is only {$currentStock}.");
+        // Capture stock before change
+        $stockBefore = (int) $product->fresh()->available_stock;
+        
+        if ($qty > $stockBefore) {
+            return redirect($redirectUrl)->with('error', "Cannot stock out {$qty} unit(s). Available stock is only {$stockBefore}.");
         }
 
         if ($product->inventory) {
@@ -975,11 +985,16 @@ class ProductController extends Controller
             $product->decrement('stock', $qty);
         }
 
+        // Capture stock after change
+        $stockAfter = (int) $product->fresh()->available_stock;
+
         // Log the stock deduction as negative quantity
         if (\Schema::hasTable('stock_logs')) {
             \App\Models\StockLog::create([
                 'product_id' => $product->id,
                 'quantity'   => -$qty,
+                'stock_before' => $stockBefore,
+                'stock_after' => $stockAfter,
                 'note'       => $note,
                 'created_by' => auth()->id(),
             ]);
