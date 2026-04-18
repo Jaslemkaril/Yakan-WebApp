@@ -173,7 +173,7 @@ class CartController extends Controller
      */
     public function index()
     {
-        $cartItems = Cart::with('product.inventory', 'product.variants', 'product.bundleItems.product', 'variant')
+        $cartItems = Cart::with('product.inventory', 'product.variants', 'product.bundleItems.componentProduct', 'variant')
                         ->where('user_id', Auth::id())
                         ->get()
                         ->map(function ($item) {
@@ -190,18 +190,10 @@ class CartController extends Controller
                                         'product_id' => $bundleItem->product_id,
                                         'quantity' => $bundleItem->quantity,
                                         'product' => [
-                                            'id' => $bundleItem->product->id,
-                                            'name' => $bundleItem->product->name,
-                                            'image' => $bundleItem->product->image,
-                                            'price' => (float) $bundleItem->product->price,
-                                        ]
-                                    ];
-                                });
-                            }
-
-                            return [
-                                'id' => $item->id,
-                                'product_id' => $item->product_id,
+                            'id' => $bundleItem->componentProduct->id,
+                            'name' => $bundleItem->componentProduct->name,
+                            'image' => $bundleItem->componentProduct->image,
+                            'price' => (float) $bundleItem->componentProduct->price,
                                 'variant_id' => $variant?->id,
                                 'quantity' => $item->quantity,
                                 'variant' => $variant ? [

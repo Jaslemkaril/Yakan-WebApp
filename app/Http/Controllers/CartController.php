@@ -535,9 +535,9 @@ class CartController extends Controller
         // Manually load products with inventory + variants + bundle items to ensure variant-aware cart display.
         foreach ($cartItems as $item) {
             if (!$item->product) {
-                $item->load('product.inventory', 'product.variants', 'product.bundleItems.product', 'variant');
+                $item->load('product.inventory', 'product.variants', 'product.bundleItems.componentProduct', 'variant');
             } else {
-                $item->load('product.inventory', 'product.variants', 'product.bundleItems.product', 'variant');
+                $item->load('product.inventory', 'product.variants', 'product.bundleItems.componentProduct', 'variant');
             }
         }
 

@@ -404,17 +404,17 @@
                                                     <p class="text-xs font-bold text-orange-800 mb-2">📦 Included in this bundle:</p>
                                                     <div class="space-y-2">
                                                         @foreach($product->bundleItems as $bundleItem)
-                                                            <div class="flex items-center gap-2">
-                                                                @if($bundleItem->product)
-                                                                    <img src="{{ $bundleItem->product->image_src }}" 
-                                                                         alt="{{ $bundleItem->product->name }}" 
+                                                            @if($bundleItem->componentProduct)
+                                                                <div class="flex items-center gap-2">
+                                                                    <img src="{{ $bundleItem->componentProduct->image_src }}" 
+                                                                         alt="{{ $bundleItem->componentProduct->name }}" 
                                                                          class="w-10 h-10 object-cover rounded border border-orange-200">
                                                                     <div class="flex-1">
-                                                                        <p class="text-xs font-medium text-gray-900">{{ $bundleItem->product->name }}</p>
+                                                                        <p class="text-xs font-medium text-gray-900">{{ $bundleItem->componentProduct->name }}</p>
                                                                         <p class="text-xs text-gray-600">Qty: {{ $bundleItem->quantity }}</p>
                                                                     </div>
-                                                                @endif
-                                                            </div>
+                                                                </div>
+                                                            @endif
                                                         @endforeach
                                                     </div>
                                                 </div>
