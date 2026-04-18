@@ -284,6 +284,24 @@ class OrderController extends Controller
                         default => 'pending',
                     };
 
+                    $reason = trim((string) ($refundRequest->details ?: $refundRequest->reason ?: 'Customer requested cancellation'));
+                    $reasonShort = Str::limit($reason, 45, '...');
+
+                    $modalPayload = [
+                        'order_id' => '#C-' . $order->id,
+                        'customer' => (string) ($refundRequest->user?->name ?: $order->customer_name ?: $order->user?->name ?: 'N/A'),
+                        'refund_amount' => number_format((float) ($order->final_price ?? 0), 2),
+                        'payment_method' => ucfirst(str_replace('_', ' ', (string) ($order->payment_method ?? 'N/A'))),
+                        'order_status' => ucfirst(str_replace('_', ' ', (string) ($order->status ?? 'N/A'))),
+                        'cancel_reason' => $reason,
+                        'customer_note' => 'No customer note provided.',
+                        'status_state' => $normalizedStatus,
+                        'order_show_url' => route('admin.custom-orders.show', $order),
+                        'approve_url' => route('admin.custom-orders.refund_requests.approve', $refundRequest),
+                        'reject_url' => route('admin.custom-orders.refund_requests.reject', $refundRequest),
+                        'is_custom' => true,
+                    ];
+
                     return [
                         'created_at' => $refundRequest->requested_at ?? $refundRequest->created_at,
                         'row_id' => 'custom-cancel-' . $refundRequest->id,
@@ -295,6 +313,9 @@ class OrderController extends Controller
                         'status_key' => $normalizedStatus,
                         'status_label' => ucfirst($normalizedStatus),
                         'view_url' => route('admin.custom-orders.show', $order),
+                        'action_kind' => 'cancel_modal',
+                        'cancel_payload' => $modalPayload,
+                        'reason' => $reasonShort,
                     ];
                 })
                 ->filter();
@@ -325,8 +346,72 @@ class OrderController extends Controller
                         in_array($status, ['rejected'], true) => 'rejected',
                         in_array($status, ['pending_payout', 'return_received', 'approved', 'processed'], true)
                             || strtolower((string) $refundRequest->payout_status) === 'completed' => 'refunded',
+                        in_array($status, ['awaiting_return_shipment', 'return_in_transit'], true) => 'awaiting_return',
                         default => 'under_review',
                     };
+
+                    $rawEvidence = $refundRequest->evidence_paths;
+                    if (is_string($rawEvidence) && $rawEvidence !== '') {
+                        $decodedEvidence = json_decode($rawEvidence, true);
+                        if (json_last_error() === JSON_ERROR_NONE && is_array($decodedEvidence)) {
+                            $rawEvidence = $decodedEvidence;
+                        }
+                    }
+                    $evidenceList = array_values(array_filter(is_array($rawEvidence) ? $rawEvidence : [], fn ($value) => $value !== null && $value !== ''));
+                    $evidencePreviews = [];
+                    foreach ($evidenceList as $evidencePath) {
+                        $ext = strtolower(pathinfo(parse_url((string) $evidencePath, PHP_URL_PATH) ?? (string) $evidencePath, PATHINFO_EXTENSION));
+                        $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true);
+                        $isVideo = in_array($ext, ['mp4', 'mov', 'webm'], true);
+                        $url = route('admin.orders.refund_evidence.view', ['refundRequest' => $refundRequest->id, 'index' => count($evidencePreviews)]);
+
+                        $rawEvidencePath = str_replace('\\', '/', ltrim((string) $evidencePath, '/'));
+                        $publicEvidencePath = ltrim(str_replace(['public/', 'storage/'], '', $rawEvidencePath), '/');
+                        $fallbackEvidenceUrl = asset('storage/' . $publicEvidencePath);
+                        $previewUrl = (str_starts_with((string) $evidencePath, 'http://') || str_starts_with((string) $evidencePath, 'https://'))
+                            ? (string) $evidencePath
+                            : $fallbackEvidenceUrl;
+
+                        $evidencePreviews[] = [
+                            'url' => $url,
+                            'open_url' => $previewUrl,
+                            'preview_url' => $previewUrl,
+                            'fallback_url' => $fallbackEvidenceUrl,
+                            'is_image' => $isImage,
+                            'is_video' => $isVideo,
+                        ];
+                    }
+
+                    $statusLabel = match ($normalizedStatus) {
+                        'under_review' => 'Under review',
+                        'awaiting_return' => 'Awaiting return',
+                        'refunded' => 'Refunded',
+                        'rejected' => 'Rejected',
+                        default => Str::headline($normalizedStatus),
+                    };
+
+                    $modalPayload = [
+                        'refund_id' => (string) ($refundRequest->refund_reference ?: ('RF-' . str_pad((string) $refundRequest->id, 4, '0', STR_PAD_LEFT))),
+                        'refund_request_id' => $refundRequest->id,
+                        'status_state' => $normalizedStatus,
+                        'status_label' => $statusLabel,
+                        'customer' => (string) ($refundRequest->user?->name ?: $order->customer_name ?: $order->user?->name ?: 'Customer'),
+                        'order_ref' => $order->order_ref ?? ('#' . $order->id),
+                        'order_show_url' => route('admin.orders.show', $order),
+                        'refund_type' => ucfirst(str_replace('_', ' ', (string) ($refundRequest->reason ?? 'Refund'))),
+                        'reason' => trim((string) ($refundRequest->comment ?? $refundRequest->details ?? '')),
+                        'amount' => number_format((float) ($refundRequest->refund_amount ?? $refundRequest->approved_amount ?? $refundRequest->recommended_refund_amount ?? $order->total_amount ?? $order->total ?? 0), 2),
+                        'refund_to' => ucfirst(str_replace('_', ' ', (string) ($order->payment_method ?? 'GCash'))),
+                        'customer_note' => trim((string) ($refundRequest->comment ?? $refundRequest->details ?? '')),
+                        'requested_at' => optional($refundRequest->requested_at)->format('M d, h:i A') ?? $refundRequest->created_at->format('M d, h:i A'),
+                        'admin_note' => trim((string) ($refundRequest->admin_note ?? '')),
+                        'evidence' => $evidencePreviews,
+                        'approve_release_url' => route('admin.orders.refund_requests.quick_release', $refundRequest),
+                        'request_return_url' => route('admin.orders.refund_requests.request_return', $refundRequest),
+                        'reject_url' => route('admin.orders.refund_requests.reject', $refundRequest),
+                        'reject_not_returned_url' => route('admin.orders.refund_requests.reject_not_returned', $refundRequest),
+                        'is_custom' => false,
+                    ];
 
                     return [
                         'created_at' => $refundRequest->requested_at ?? $refundRequest->created_at,
@@ -337,13 +422,10 @@ class OrderController extends Controller
                         'order_type' => 'normal',
                         'amount' => (float) ($refundRequest->refund_amount ?? $refundRequest->approved_amount ?? $refundRequest->recommended_refund_amount ?? $order->total_amount ?? $order->total ?? 0),
                         'status_key' => $normalizedStatus,
-                        'status_label' => match ($normalizedStatus) {
-                            'under_review' => 'Under review',
-                            'refunded' => 'Refunded',
-                            'rejected' => 'Rejected',
-                            default => Str::headline($normalizedStatus),
-                        },
+                        'status_label' => $statusLabel,
                         'view_url' => route('admin.orders.show', $order),
+                        'action_kind' => 'refund_modal',
+                        'refund_payload' => $modalPayload,
                     ];
                 })
                 ->filter();
@@ -369,6 +451,68 @@ class OrderController extends Controller
                         default => 'under_review',
                     };
 
+                    $rawEvidence = $refundRequest->evidence_paths;
+                    if (is_string($rawEvidence) && $rawEvidence !== '') {
+                        $decodedEvidence = json_decode($rawEvidence, true);
+                        if (json_last_error() === JSON_ERROR_NONE && is_array($decodedEvidence)) {
+                            $rawEvidence = $decodedEvidence;
+                        }
+                    }
+                    $evidenceList = array_values(array_filter(is_array($rawEvidence) ? $rawEvidence : [], fn ($value) => $value !== null && $value !== ''));
+                    $evidencePreviews = [];
+                    foreach ($evidenceList as $evidencePath) {
+                        $ext = strtolower(pathinfo(parse_url((string) $evidencePath, PHP_URL_PATH) ?? (string) $evidencePath, PATHINFO_EXTENSION));
+                        $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true);
+                        $isVideo = in_array($ext, ['mp4', 'mov', 'webm'], true);
+                        $url = route('admin.custom-orders.refund_evidence.view', ['refundRequest' => $refundRequest->id, 'index' => count($evidencePreviews)]);
+
+                        $rawEvidencePath = str_replace('\\', '/', ltrim((string) $evidencePath, '/'));
+                        $publicEvidencePath = ltrim(str_replace(['public/', 'storage/'], '', $rawEvidencePath), '/');
+                        $fallbackEvidenceUrl = asset('storage/' . $publicEvidencePath);
+                        $previewUrl = (str_starts_with((string) $evidencePath, 'http://') || str_starts_with((string) $evidencePath, 'https://'))
+                            ? (string) $evidencePath
+                            : $fallbackEvidenceUrl;
+
+                        $evidencePreviews[] = [
+                            'url' => $url,
+                            'open_url' => $previewUrl,
+                            'preview_url' => $previewUrl,
+                            'fallback_url' => $fallbackEvidenceUrl,
+                            'is_image' => $isImage,
+                            'is_video' => $isVideo,
+                        ];
+                    }
+
+                    $statusLabel = match ($normalizedStatus) {
+                        'under_review' => 'Under review',
+                        'refunded' => 'Refunded',
+                        'rejected' => 'Rejected',
+                        default => Str::headline($normalizedStatus),
+                    };
+
+                    $modalPayload = [
+                        'refund_id' => '#RF-' . $refundRequest->id,
+                        'refund_request_id' => $refundRequest->id,
+                        'status_state' => $normalizedStatus,
+                        'status_label' => $statusLabel,
+                        'customer' => (string) ($refundRequest->user?->name ?: $order->customer_name ?: $order->user?->name ?: 'Customer'),
+                        'order_ref' => '#C-' . $order->id,
+                        'order_show_url' => route('admin.custom-orders.show', $order),
+                        'refund_type' => ucfirst((string) ($refundRequest->request_type ?: 'refund')),
+                        'reason' => trim((string) ($refundRequest->reason ?? '')),
+                        'amount' => number_format((float) ($order->final_price ?? 0), 2),
+                        'refund_to' => ucfirst(str_replace('_', ' ', (string) ($order->payment_method ?? 'GCash'))),
+                        'customer_note' => trim((string) ($refundRequest->details ?? '')),
+                        'requested_at' => optional($refundRequest->requested_at)->format('M d, h:i A') ?? $refundRequest->created_at->format('M d, h:i A'),
+                        'admin_note' => trim((string) ($refundRequest->admin_note ?? '')),
+                        'evidence' => $evidencePreviews,
+                        'approve_release_url' => route('admin.custom-orders.refund_requests.approve', $refundRequest),
+                        'request_return_url' => null,
+                        'reject_url' => route('admin.custom-orders.refund_requests.reject', $refundRequest),
+                        'reject_not_returned_url' => null,
+                        'is_custom' => true,
+                    ];
+
                     return [
                         'created_at' => $refundRequest->requested_at ?? $refundRequest->created_at,
                         'row_id' => 'custom-refund-' . $refundRequest->id,
@@ -378,13 +522,10 @@ class OrderController extends Controller
                         'order_type' => 'custom',
                         'amount' => (float) ($order->final_price ?? 0),
                         'status_key' => $normalizedStatus,
-                        'status_label' => match ($normalizedStatus) {
-                            'under_review' => 'Under review',
-                            'refunded' => 'Refunded',
-                            'rejected' => 'Rejected',
-                            default => Str::headline($normalizedStatus),
-                        },
+                        'status_label' => $statusLabel,
                         'view_url' => route('admin.custom-orders.show', $order),
+                        'action_kind' => 'refund_modal',
+                        'refund_payload' => $modalPayload,
                     ];
                 })
                 ->filter();
@@ -508,6 +649,17 @@ class OrderController extends Controller
 
             $requestedAt = $cancelRelatedRefund?->requested_at ?? $order->updated_at;
 
+            $reason = 'Customer requested cancellation';
+            if (!empty($cancelRelatedRefund?->details)) {
+                $reason = (string) $cancelRelatedRefund->details;
+            }
+            if (preg_match('/Customer cancellation requested:\s*(.+)$/mi', (string) ($order->admin_notes ?? ''), $matches) === 1) {
+                $reason = trim((string) $matches[1]);
+            }
+            if (preg_match('/Reason:\s*(.+)$/mi', $reason, $reasonFromDetails) === 1) {
+                $reason = trim((string) $reasonFromDetails[1]);
+            }
+
             return [
                 'created_at' => $requestedAt,
                 'row_id' => 'regular-cancel-' . $order->id,
@@ -519,6 +671,21 @@ class OrderController extends Controller
                 'status_key' => $statusKey,
                 'status_label' => ucfirst($statusKey),
                 'view_url' => route('admin.orders.show', $order),
+                'action_kind' => 'cancel_modal',
+                'cancel_payload' => [
+                    'order_id' => $order->order_ref ?? ('#' . $order->id),
+                    'customer' => $order->user->name ?? $order->customer_name ?? 'N/A',
+                    'refund_amount' => number_format((float) ($order->total_amount ?? $order->total ?? 0), 2),
+                    'payment_method' => ucfirst(str_replace('_', ' ', (string) ($order->payment_method ?? 'N/A'))),
+                    'order_status' => ucfirst(str_replace('_', ' ', (string) ($order->status ?? 'N/A'))),
+                    'cancel_reason' => $reason,
+                    'customer_note' => 'No customer note provided.',
+                    'status_state' => $statusKey,
+                    'order_show_url' => route('admin.orders.show', $order),
+                    'approve_url' => route('admin.orders.cancel_requests.approve', $order),
+                    'reject_url' => route('admin.orders.cancel_requests.reject', $order),
+                    'is_custom' => false,
+                ],
             ];
         });
     }
