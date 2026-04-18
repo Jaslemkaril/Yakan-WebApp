@@ -81,7 +81,9 @@ const OrdersScreen = ({ navigation }) => {
       out_for_delivery:     '#FF5722',
       delivered:            '#22C55E',
       completed:            '#16A34A',
+      cancellation_requested:'#D97706',
       cancelled:            '#EF4444',
+      refunded:             '#92400E',
     };
     return statusColors[status] || '#8B1A1A';
   };
@@ -96,10 +98,10 @@ const OrdersScreen = ({ navigation }) => {
 
   const filterOrders = (list) => {
     switch (activeFilter) {
-      case 'active':    return list.filter(o => ['pending','pending_payment','confirmed','processing'].includes(o.status));
+      case 'active':    return list.filter(o => ['pending','pending_payment','pending_confirmation','confirmed','processing','cancellation_requested'].includes(o.status));
       case 'transit':   return list.filter(o => ['shipped','out_for_delivery'].includes(o.status));
       case 'delivered': return list.filter(o => ['delivered','completed'].includes(o.status));
-      case 'cancelled': return list.filter(o => o.status === 'cancelled');
+      case 'cancelled': return list.filter(o => ['cancellation_requested','cancelled','refunded'].includes(o.status));
       default:          return list;
     }
   };
@@ -116,7 +118,9 @@ const OrdersScreen = ({ navigation }) => {
       out_for_delivery:     'Out for Delivery',
       delivered:            'Delivered',
       completed:            'Completed',
+      cancellation_requested:'Cancellation Requested',
       cancelled:            'Cancelled',
+      refunded:             'Refunded',
     };
     return labels[status] || status;
   };
@@ -158,17 +162,17 @@ const OrdersScreen = ({ navigation }) => {
 
   const filterCount = (key) => {
     switch (key) {
-      case 'active':    return orders.filter(o => ['pending','pending_payment','confirmed','processing'].includes(o.status)).length;
+      case 'active':    return orders.filter(o => ['pending','pending_payment','pending_confirmation','confirmed','processing','cancellation_requested'].includes(o.status)).length;
       case 'transit':   return orders.filter(o => ['shipped','out_for_delivery'].includes(o.status)).length;
       case 'delivered': return orders.filter(o => ['delivered','completed'].includes(o.status)).length;
-      case 'cancelled': return orders.filter(o => o.status === 'cancelled').length;
+      case 'cancelled': return orders.filter(o => ['cancellation_requested','cancelled','refunded'].includes(o.status)).length;
       default: return orders.length;
     }
   };
 
   const stats = [
     { label: 'Total',      count: orders.length,                                                                                      color: '#8B1A1A',  icon: 'package-variant-closed' },
-    { label: 'Active',     count: orders.filter(o => ['pending','pending_payment','confirmed','processing'].includes(o.status)).length, color: '#F59E0B',  icon: 'clock-outline' },
+    { label: 'Active',     count: orders.filter(o => ['pending','pending_payment','pending_confirmation','confirmed','processing','cancellation_requested'].includes(o.status)).length, color: '#F59E0B',  icon: 'clock-outline' },
     { label: 'In Transit', count: orders.filter(o => ['shipped','out_for_delivery'].includes(o.status)).length,                       color: '#0EA5E9',  icon: 'truck-fast' },
     { label: 'Delivered',  count: orders.filter(o => ['delivered','completed'].includes(o.status)).length,                            color: '#22C55E',  icon: 'home-check' },
   ];

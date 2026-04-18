@@ -476,9 +476,53 @@ class ApiService {
   /**
    * Cancel order
    */
-  async cancelOrder(orderId, reason = '') {
+  async cancelOrder(orderId, reason = '', notes = '') {
     const endpoint = API_CONFIG.ENDPOINTS.ORDERS.CANCEL.replace(':id', orderId);
-    return this.request('POST', endpoint, { reason });
+    const normalizedReason = (reason || '').trim();
+    const normalizedNotes = (notes || '').trim();
+
+    return this.request('POST', endpoint, {
+      reason: normalizedReason,
+      cancel_reason: normalizedReason,
+      cancel_notes: normalizedNotes,
+    });
+  }
+
+  /**
+   * Submit refund request for an order
+   */
+  async requestOrderRefund(orderId, refundData = {}, evidence = []) {
+    const endpoint = API_CONFIG.ENDPOINTS.ORDERS.REFUND_REQUEST.replace(':id', orderId);
+
+    const files = Array.isArray(evidence) ? evidence.filter(Boolean) : [];
+    if (files.length === 0) {
+      return this.request('POST', endpoint, refundData);
+    }
+
+    const formData = new FormData();
+    Object.entries(refundData || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+
+    files.forEach((fileUri, index) => {
+      const uri = String(fileUri);
+      const extension = (uri.split('.').pop() || 'jpg').toLowerCase();
+      const mime = ['jpg', 'jpeg', 'png', 'webp'].includes(extension)
+        ? `image/${extension === 'jpg' ? 'jpeg' : extension}`
+        : ['mp4', 'mov', 'webm'].includes(extension)
+          ? `video/${extension === 'mov' ? 'quicktime' : extension}`
+          : 'application/octet-stream';
+
+      formData.append('evidence[]', {
+        uri,
+        type: mime,
+        name: `refund_evidence_${Date.now()}_${index}.${extension}`,
+      });
+    });
+
+    return this.request('POST', endpoint, formData, true);
   }
 
   /**

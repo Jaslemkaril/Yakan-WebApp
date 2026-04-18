@@ -70,6 +70,7 @@ export const API_CONFIG = {
       GET: '/orders/:id',
       UPDATE: '/orders/:id',
       CANCEL: '/orders/:id/cancel',
+      REFUND_REQUEST: '/orders/:id/refund-request',
       STATUS: '/orders/:id/status',
     },
     

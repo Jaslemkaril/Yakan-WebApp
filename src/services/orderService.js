@@ -70,6 +70,13 @@ class OrderService {
   }
 
   /**
+   * Request refund for an order
+   */
+  async requestOrderRefund(orderId, refundData = {}, evidence = []) {
+    return await ApiService.requestOrderRefund(orderId, refundData, evidence);
+  }
+
+  /**
    * Upload payment proof for an order
    */
   async uploadPaymentProof(orderId, imageUri) {

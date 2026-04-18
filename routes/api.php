@@ -244,6 +244,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/orders', [OrderController::class, 'store']);
         Route::post('/orders/{id}/upload-receipt', [OrderController::class, 'uploadReceipt']);
         Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel']);
+        Route::post('/orders/{id}/refund-request', [OrderController::class, 'requestRefund']);
         
         // Payment proof upload (mobile/web)
         Route::post('/payments/upload-proof', [PaymentController::class, 'uploadProof']);

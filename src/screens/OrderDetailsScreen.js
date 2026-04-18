@@ -36,7 +36,9 @@ const normalizeStatus = (apiStatus, paymentStatus, fallback) => {
     shipped: 'shipped',
     delivered: 'delivered',
     completed: 'completed',
+    cancellation_requested: 'cancellation_requested',
     cancelled: 'cancelled',
+    refunded: 'refunded',
   };
 
   let status = map[apiStatus] || apiStatus || fallback || 'pending';
@@ -55,6 +57,15 @@ const CANCEL_REASONS = [
   'Other',
 ];
 
+const REFUND_REASONS = [
+  'Item not as described',
+  'Damaged item',
+  'Wrong item received',
+  'Incomplete order',
+  'Changed my mind',
+  'Other',
+];
+
 const OrderDetailsScreen = ({ navigation, route }) => {
   const { theme } = useTheme();
   const [order, setOrder] = useState(null);
@@ -63,6 +74,11 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   const [selectedCancelReason, setSelectedCancelReason] = useState('');
   const [customCancelReason, setCustomCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [selectedRefundReason, setSelectedRefundReason] = useState('');
+  const [customRefundReason, setCustomRefundReason] = useState('');
+  const [refundComment, setRefundComment] = useState('');
+  const [isRequestingRefund, setIsRequestingRefund] = useState(false);
   const scaleAnim = new Animated.Value(0);
   const slideAnim = new Animated.Value(100);
 
@@ -127,6 +143,9 @@ const OrderDetailsScreen = ({ navigation, route }) => {
             subtotal: apiOrder.subtotal ?? prev?.subtotal ?? 0,
             shippingFee: apiOrder.shipping_fee ?? prev?.shippingFee ?? 0,
             total: apiOrder.total ?? apiOrder.total_amount ?? prev?.total ?? 0,
+            can_request_refund: apiOrder.can_request_refund ?? prev?.can_request_refund,
+            refund_request_in_progress: apiOrder.refund_request_in_progress ?? prev?.refund_request_in_progress,
+            latest_refund_request: apiOrder.latest_refund_request ?? prev?.latest_refund_request,
           };
         });
       }
@@ -221,12 +240,26 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     }
   };
 
-  const canCancelOrder = order?.status === 'pending' || order?.status === 'pending_confirmation';
+  const canCancelOrder = ['pending', 'pending_confirmation', 'confirmed', 'processing'].includes(order?.status);
+
+  const latestRefundRequest = order?.latest_refund_request || null;
+  const latestRefundWorkflow = (latestRefundRequest?.workflow_status || latestRefundRequest?.status || '').toLowerCase();
+  const refundRequestInProgress = Boolean(
+    order?.refund_request_in_progress
+    || ['requested', 'pending_review', 'under_review', 'awaiting_return_shipment', 'return_in_transit', 'pending_payout', 'approved'].includes(latestRefundWorkflow)
+  );
 
   const openCancelModal = () => {
     setSelectedCancelReason('');
     setCustomCancelReason('');
     setShowCancelModal(true);
+  };
+
+  const openRefundModal = () => {
+    setSelectedRefundReason('');
+    setCustomRefundReason('');
+    setRefundComment('');
+    setShowRefundModal(true);
   };
 
   const confirmCancelOrder = async () => {
@@ -251,8 +284,8 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       if (response?.success) {
         setOrder((prev) => ({
           ...prev,
-          status: 'cancelled',
-          adminNotes: `Customer cancelled: ${reason}`,
+          status: 'cancellation_requested',
+          adminNotes: `Customer cancellation requested: ${reason}`,
         }));
 
         const ordersJson = await AsyncStorage.getItem('pendingOrders');
@@ -260,14 +293,15 @@ const OrderDetailsScreen = ({ navigation, route }) => {
           const orders = JSON.parse(ordersJson);
           const updatedOrders = orders.map((o) =>
             String(o.backendOrderId) === String(backendId) || String(o.id) === String(backendId)
-              ? { ...o, status: 'cancelled', adminNotes: `Customer cancelled: ${reason}` }
+              ? { ...o, status: 'cancellation_requested', adminNotes: `Customer cancellation requested: ${reason}` }
               : o
           );
           await AsyncStorage.setItem('pendingOrders', JSON.stringify(updatedOrders));
         }
 
         setShowCancelModal(false);
-        Alert.alert('Order Cancelled', 'Your order has been cancelled successfully.');
+        Alert.alert('Request Submitted', 'Your cancellation request was sent to admin and is now pending review.');
+        await refreshFromApi(backendId);
       } else {
         Alert.alert('Error', response?.error || response?.message || 'Failed to cancel order');
       }
@@ -276,6 +310,69 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       Alert.alert('Error', 'Failed to cancel order');
     } finally {
       setIsCancelling(false);
+    }
+  };
+
+  const confirmRefundRequest = async () => {
+    const reason = selectedRefundReason === 'Other'
+      ? customRefundReason.trim()
+      : selectedRefundReason;
+
+    if (!reason) {
+      Alert.alert('Reason Required', 'Please select or enter a refund reason.');
+      return;
+    }
+
+    const comment = refundComment.trim();
+    if (!comment) {
+      Alert.alert('Details Required', 'Please provide a short explanation for your refund request.');
+      return;
+    }
+
+    const backendId = order?.backendOrderId || order?.id;
+    if (!backendId) {
+      Alert.alert('Error', 'Order ID not found');
+      return;
+    }
+
+    setIsRequestingRefund(true);
+    try {
+      const response = await ApiService.requestOrderRefund(backendId, {
+        reason,
+        comment,
+        details: comment,
+        refund_type: reason.toLowerCase() === 'changed my mind' ? 'change_of_mind' : 'full',
+      });
+
+      if (response?.success) {
+        const refundRequest = response?.data?.data?.refund_request
+          || response?.data?.refund_request
+          || {
+            status: 'requested',
+            workflow_status: 'pending_review',
+            reason,
+            comment,
+            requested_at: new Date().toISOString(),
+          };
+
+        setOrder((prev) => ({
+          ...prev,
+          latest_refund_request: refundRequest,
+          refund_request_in_progress: true,
+          can_request_refund: false,
+        }));
+
+        setShowRefundModal(false);
+        Alert.alert('Refund Requested', 'Your refund request was submitted and is now pending admin review.');
+        await refreshFromApi(backendId);
+      } else {
+        Alert.alert('Error', response?.error || response?.message || 'Failed to submit refund request');
+      }
+    } catch (error) {
+      console.error('Error requesting refund:', error);
+      Alert.alert('Error', 'Failed to submit refund request');
+    } finally {
+      setIsRequestingRefund(false);
     }
   };
 
@@ -306,14 +403,19 @@ const OrderDetailsScreen = ({ navigation, route }) => {
 
   const currentStageIndex = trackingStages.findIndex(s => s.key === order.status);
   const displayStageIndex = Math.max(0, currentStageIndex);
+  const isCancellationRequested = order.status === 'cancellation_requested';
   const isCancelled = order.status === 'cancelled';
   const isRefunded = order.status === 'refunded';
-  const currentStatusColor = isCancelled
+  const currentStatusColor = isCancellationRequested
+    ? '#D97706'
+    : isCancelled
     ? '#DC2626'
     : isRefunded
       ? '#92400E'
       : (trackingStages[displayStageIndex]?.color || colors.primary);
-  const currentStatusLabel = isCancelled
+  const currentStatusLabel = isCancellationRequested
+    ? 'Cancellation Requested'
+    : isCancelled
     ? 'Cancelled'
     : isRefunded
       ? 'Refunded'
@@ -331,6 +433,15 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   const paymentLabel = isDownpaymentOrder
     ? (isPaymentSettled ? (remainingBalance > 0 ? 'Downpayment Paid' : 'Fully Paid') : 'Downpayment Pending')
     : (isPaymentSettled ? 'Paid' : 'Pending');
+  const canRequestRefund = !refundRequestInProgress
+    && !isCancellationRequested
+    && !isCancelled
+    && !isRefunded
+    && (
+      order?.can_request_refund === true
+      || order?.canRequestRefund === true
+      || (['delivered', 'completed'].includes(order?.status) && isPaymentSettled)
+    );
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -382,6 +493,16 @@ const OrderDetailsScreen = ({ navigation, route }) => {
           </View>
         </View>
 
+        {isCancellationRequested && (
+          <View style={styles.cancelledNoticeCard}>
+            <Ionicons name="time-outline" size={22} color="#B45309" />
+            <View style={styles.cancelledNoticeContent}>
+              <Text style={[styles.cancelledNoticeTitle, { color: '#B45309' }]}>Cancellation Pending</Text>
+              <Text style={[styles.cancelledNoticeText, { color: '#78350F' }]}>Your cancellation request is pending admin review.</Text>
+            </View>
+          </View>
+        )}
+
         {isCancelled && (
           <View style={styles.cancelledNoticeCard}>
             <Ionicons name="close-circle" size={22} color="#B91C1C" />
@@ -389,6 +510,18 @@ const OrderDetailsScreen = ({ navigation, route }) => {
               <Text style={styles.cancelledNoticeTitle}>Order Cancelled</Text>
               <Text style={styles.cancelledNoticeText}>
                 {order.adminNotes || order.admin_notes || 'This order was cancelled by the customer.'}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {refundRequestInProgress && !isRefunded && (
+          <View style={styles.refundNoticeCard}>
+            <Ionicons name="refresh-circle" size={22} color="#7C3AED" />
+            <View style={styles.cancelledNoticeContent}>
+              <Text style={[styles.cancelledNoticeTitle, { color: '#6D28D9' }]}>Refund Request In Progress</Text>
+              <Text style={[styles.cancelledNoticeText, { color: '#4C1D95' }]}>
+                {latestRefundRequest?.comment || latestRefundRequest?.details || 'Your refund request is pending admin review.'}
               </Text>
             </View>
           </View>
@@ -608,6 +741,17 @@ const OrderDetailsScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         )}
 
+        {canRequestRefund && (
+          <TouchableOpacity
+            style={[styles.refundOrderButton, isRequestingRefund && styles.cancelOrderButtonDisabled]}
+            onPress={openRefundModal}
+            disabled={isRequestingRefund}
+          >
+            <Ionicons name="cash-outline" size={22} color={colors.white} />
+            <Text style={styles.cancelOrderButtonText}>{isRequestingRefund ? 'Submitting...' : 'Request Refund'}</Text>
+          </TouchableOpacity>
+        )}
+
         {order.status === 'delivered' && (
           <TouchableOpacity 
             style={styles.orderReceivedButton}
@@ -693,6 +837,71 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 disabled={isCancelling}
               >
                 <Text style={styles.cancelModalPrimaryText}>{isCancelling ? 'Cancelling...' : 'Confirm'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showRefundModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRefundModal(false)}
+      >
+        <View style={styles.cancelModalOverlay}>
+          <View style={styles.cancelModalCard}>
+            <Text style={styles.cancelModalTitle}>Request Refund</Text>
+            <Text style={styles.cancelModalSubtitle}>Tell us why you are requesting a refund.</Text>
+
+            {REFUND_REASONS.map((reason) => {
+              const isSelected = selectedRefundReason === reason;
+              return (
+                <TouchableOpacity
+                  key={reason}
+                  style={[styles.cancelReasonOption, isSelected && styles.cancelReasonOptionSelected]}
+                  onPress={() => setSelectedRefundReason(reason)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.cancelReasonText, isSelected && styles.cancelReasonTextSelected]}>{reason}</Text>
+                  {isSelected ? <Ionicons name="checkmark-circle" size={18} color={colors.primary} /> : null}
+                </TouchableOpacity>
+              );
+            })}
+
+            {selectedRefundReason === 'Other' && (
+              <TextInput
+                value={customRefundReason}
+                onChangeText={setCustomRefundReason}
+                style={styles.cancelReasonInput}
+                placeholder="Type your refund reason"
+                placeholderTextColor="#9CA3AF"
+              />
+            )}
+
+            <TextInput
+              value={refundComment}
+              onChangeText={setRefundComment}
+              style={[styles.cancelReasonInput, { minHeight: 88, textAlignVertical: 'top' }]}
+              placeholder="Describe the issue and what happened"
+              placeholderTextColor="#9CA3AF"
+              multiline
+            />
+
+            <View style={styles.cancelModalActions}>
+              <TouchableOpacity
+                style={styles.cancelModalSecondaryButton}
+                onPress={() => setShowRefundModal(false)}
+                disabled={isRequestingRefund}
+              >
+                <Text style={styles.cancelModalSecondaryText}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.refundModalPrimaryButton, isRequestingRefund && styles.cancelOrderButtonDisabled]}
+                onPress={confirmRefundRequest}
+                disabled={isRequestingRefund}
+              >
+                <Text style={styles.cancelModalPrimaryText}>{isRequestingRefund ? 'Submitting...' : 'Submit'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1139,6 +1348,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 14,
   },
+  refundOrderButton: {
+    backgroundColor: '#7C3AED',
+    borderRadius: 14,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
   cancelOrderButtonDisabled: {
     opacity: 0.7,
   },
@@ -1268,6 +1486,16 @@ const styles = StyleSheet.create({
   cancelledNoticeCard: {
     backgroundColor: '#FEF2F2',
     borderColor: '#FCA5A5',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  refundNoticeCard: {
+    backgroundColor: '#F5F3FF',
+    borderColor: '#C4B5FD',
     borderWidth: 1,
     borderRadius: 12,
     padding: 14,
@@ -1497,6 +1725,12 @@ const styles = StyleSheet.create({
   },
   cancelModalPrimaryButton: {
     backgroundColor: '#DC2626',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  refundModalPrimaryButton: {
+    backgroundColor: '#7C3AED',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
