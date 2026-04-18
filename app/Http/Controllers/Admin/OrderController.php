@@ -360,7 +360,7 @@ class OrderController extends Controller
 
         $currentStatus = strtolower((string) ($refundRequest->workflow_status ?: $refundRequest->status));
         if (!in_array($currentStatus, ['requested', 'pending_review', 'under_review'], true)) {
-            return redirect()->back()->with('error', 'This request is no longer in review state.');
+            return $this->refundActionErrorResponse($request, 'This request is no longer in review state.');
         }
 
         $refundRequest->status = 'approved';
@@ -383,7 +383,7 @@ class OrderController extends Controller
             'Your refund request is approved for return processing. Please return the item so we can continue with refund release.'
         );
 
-        return redirect()->back()->with('success', 'Return request has been sent to the customer.');
+        return $this->refundActionSuccessResponse($request, $refundRequest, 'Return request has been sent to the customer.');
     }
 
     /**
@@ -397,12 +397,12 @@ class OrderController extends Controller
 
         $currentStatus = strtolower((string) ($refundRequest->workflow_status ?: $refundRequest->status));
         if (!in_array($currentStatus, ['requested', 'pending_review', 'under_review', 'awaiting_return_shipment', 'return_in_transit', 'pending_payout', 'return_received', 'approved'], true)) {
-            return redirect()->back()->with('error', 'This request is not eligible for quick release.');
+            return $this->refundActionErrorResponse($request, 'This request is not eligible for quick release.');
         }
 
         $order = $refundRequest->order;
         if (!$order) {
-            return redirect()->back()->with('error', 'Associated order not found.');
+            return $this->refundActionErrorResponse($request, 'Associated order not found.');
         }
 
         $this->ensureRefundedPaymentStatusSupported();
@@ -442,7 +442,7 @@ class OrderController extends Controller
 
         $this->notifyRefundDecision($refundRequest, 'approved');
 
-        return redirect()->back()->with('success', 'Refund released and recorded successfully.');
+        return $this->refundActionSuccessResponse($request, $refundRequest, 'Refund released and recorded successfully.');
     }
 
     /**
@@ -456,7 +456,7 @@ class OrderController extends Controller
 
         $currentStatus = strtolower((string) ($refundRequest->workflow_status ?: $refundRequest->status));
         if (!in_array($currentStatus, ['awaiting_return_shipment', 'return_in_transit'], true)) {
-            return redirect()->back()->with('error', 'Only awaiting-return requests can be rejected with this action.');
+            return $this->refundActionErrorResponse($request, 'Only awaiting-return requests can be rejected with this action.');
         }
 
         $refundRequest->status = 'rejected';
@@ -472,7 +472,65 @@ class OrderController extends Controller
 
         $this->notifyRefundDecision($refundRequest, 'rejected');
 
-        return redirect()->back()->with('success', 'Refund request rejected due to item not returned.');
+        return $this->refundActionSuccessResponse($request, $refundRequest, 'Refund request rejected due to item not returned.');
+    }
+
+    private function refundActionSuccessResponse(Request $request, OrderRefundRequest $refundRequest, string $message)
+    {
+        if ($this->isJsonLikeRequest($request)) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'refund' => $this->buildRefundActionPayload($refundRequest),
+            ]);
+        }
+
+        return redirect()->back()->with('success', $message);
+    }
+
+    private function refundActionErrorResponse(Request $request, string $message, int $status = 422)
+    {
+        if ($this->isJsonLikeRequest($request)) {
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+            ], $status);
+        }
+
+        return redirect()->back()->with('error', $message);
+    }
+
+    private function buildRefundActionPayload(OrderRefundRequest $refundRequest): array
+    {
+        $workflow = strtolower((string) ($refundRequest->workflow_status ?: $refundRequest->status));
+        $statusState = 'under_review';
+
+        if (in_array($workflow, ['awaiting_return_shipment', 'return_in_transit'], true)) {
+            $statusState = 'awaiting_return';
+        } elseif (in_array($workflow, ['processed', 'pending_payout', 'return_received', 'approved'], true) || strtolower((string) ($refundRequest->payout_status ?? '')) === 'completed') {
+            $statusState = 'refunded';
+        } elseif ($workflow === 'rejected' || strtoupper((string) ($refundRequest->final_decision ?? '')) === 'REJECT') {
+            $statusState = 'rejected';
+        }
+
+        $statusLabel = match ($statusState) {
+            'awaiting_return' => 'Awaiting return',
+            'refunded' => 'Refunded',
+            'rejected' => 'Rejected',
+            default => 'Under review',
+        };
+
+        return [
+            'refund_request_id' => $refundRequest->id,
+            'status_state' => $statusState,
+            'status_label' => $statusLabel,
+            'admin_note' => trim((string) ($refundRequest->admin_note ?? '')),
+        ];
+    }
+
+    private function isJsonLikeRequest(Request $request): bool
+    {
+        return $request->expectsJson() || $request->wantsJson() || $request->ajax();
     }
 
     /**
@@ -1152,12 +1210,12 @@ class OrderController extends Controller
 
         $workflowStatus = strtolower((string) ($refundRequest->workflow_status ?: $refundRequest->status));
         if (!in_array($workflowStatus, ['pending_review', 'under_review', 'requested'], true)) {
-            return redirect()->back()->with('error', 'This refund request is not in a reviewable state.');
+            return $this->refundActionErrorResponse($request, 'This refund request is not in a reviewable state.');
         }
 
         $order = $refundRequest->order;
         if (!$order) {
-            return redirect()->back()->with('error', 'Associated order was not found.');
+            return $this->refundActionErrorResponse($request, 'Associated order was not found.');
         }
 
         $selectedDecision = strtoupper((string) ($validated['admin_decision'] ?? 'recommended'));
@@ -1193,7 +1251,7 @@ class OrderController extends Controller
 
         if ($selectedDecision === 'REJECT') {
             $this->notifyRefundDecision($refundRequest, 'rejected');
-            return redirect()->back()->with('success', 'Refund request rejected.');
+            return $this->refundActionSuccessResponse($request, $refundRequest, 'Refund request rejected.');
         }
 
         if ($selectedDecision === 'RETURN_REQUIRED') {
@@ -1202,7 +1260,7 @@ class OrderController extends Controller
                 'Return Required',
                 'Your refund request is approved for return processing. Please submit your return shipment details to continue.'
             );
-            return redirect()->back()->with('success', 'Refund review saved. Waiting for customer return shipment details.');
+            return $this->refundActionSuccessResponse($request, $refundRequest, 'Refund review saved. Waiting for customer return shipment details.');
         }
 
         $this->notifyRefundWorkflowUpdate(
@@ -1211,7 +1269,7 @@ class OrderController extends Controller
             'Your refund request has been reviewed and is now pending payout processing.'
         );
 
-        return redirect()->back()->with('success', 'Refund decision saved. Request is now pending payout processing.');
+        return $this->refundActionSuccessResponse($request, $refundRequest, 'Refund decision saved. Request is now pending payout processing.');
     }
 
     /**

@@ -341,6 +341,7 @@
                         <label for="modalAdminNote" class="text-sm font-semibold text-gray-700">Admin note</label>
                         <textarea id="modalAdminNote" rows="3" class="refund-input mt-2" placeholder="e.g. Photo verified, refund approved..."></textarea>
                         <p id="modalActionError" class="hidden mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700"></p>
+                        <p id="modalActionSuccess" class="hidden mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700"></p>
                     </div>
 
                     <div id="modalReadonlyMessage" class="hidden rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-700 text-center"></div>
@@ -383,6 +384,7 @@
 
         const actionSection = document.getElementById('modalActionSection');
         const actionError = document.getElementById('modalActionError');
+        const actionSuccess = document.getElementById('modalActionSuccess');
         const adminNoteEl = document.getElementById('modalAdminNote');
         const adminNoteSectionEl = document.getElementById('modalAdminNoteSection');
         const readonlyMessageEl = document.getElementById('modalReadonlyMessage');
@@ -394,6 +396,8 @@
         const awaitingHint = document.getElementById('modalAwaitingHint');
         const awaitingReleaseBtn = document.getElementById('modalAwaitingReleaseBtn');
         const rejectNotReturnedBtn = document.getElementById('modalRejectNotReturnedBtn');
+
+        const actionButtons = [approveReleaseBtn, requestReturnBtn, rejectBtn, awaitingReleaseBtn, rejectNotReturnedBtn];
 
         let payload = null;
 
@@ -419,6 +423,8 @@
         function resetActions() {
             actionError.classList.add('hidden');
             actionError.textContent = '';
+            actionSuccess.classList.add('hidden');
+            actionSuccess.textContent = '';
             adminNoteEl.value = payload?.admin_note || '';
             adminNoteSectionEl.classList.remove('hidden');
             readonlyMessageEl.classList.add('hidden');
@@ -431,6 +437,18 @@
             awaitingHint.classList.add('hidden');
             awaitingReleaseBtn.classList.add('hidden');
             rejectNotReturnedBtn.classList.add('hidden');
+        }
+
+        function setButtonsLoading(isLoading) {
+            actionButtons.forEach(function (button) {
+                if (!button || button.classList.contains('hidden')) {
+                    return;
+                }
+                button.disabled = isLoading;
+                button.classList.toggle('opacity-60', isLoading);
+                button.classList.toggle('cursor-not-allowed', isLoading);
+            });
+            adminNoteEl.disabled = isLoading;
         }
 
         function setBadge(state, label) {
@@ -504,11 +522,13 @@
             evidenceWrapEl.innerHTML = html;
         }
 
-        function postTo(url, requireNote) {
+        async function postTo(url, requireNote) {
             const note = (adminNoteEl.value || '').trim();
             if (requireNote && note === '') {
                 actionError.classList.remove('hidden');
                 actionError.textContent = 'Admin note is required for this action.';
+                actionSuccess.classList.add('hidden');
+                actionSuccess.textContent = '';
                 adminNoteEl.classList.add('border-rose-500', 'focus:ring-rose-500', 'focus:border-rose-500');
                 adminNoteEl.focus();
                 return;
@@ -516,26 +536,51 @@
 
             actionError.classList.add('hidden');
             actionError.textContent = '';
+            actionSuccess.classList.add('hidden');
+            actionSuccess.textContent = '';
             adminNoteEl.classList.remove('border-rose-500', 'focus:ring-rose-500', 'focus:border-rose-500');
 
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = url;
+            setButtonsLoading(true);
 
-            const token = document.createElement('input');
-            token.type = 'hidden';
-            token.name = '_token';
-            token.value = '{{ csrf_token() }}';
-            form.appendChild(token);
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        admin_note: note
+                    })
+                });
 
-            const noteInput = document.createElement('input');
-            noteInput.type = 'hidden';
-            noteInput.name = 'admin_note';
-            noteInput.value = note;
-            form.appendChild(noteInput);
+                const result = await response.json().catch(function () {
+                    return {};
+                });
 
-            document.body.appendChild(form);
-            form.submit();
+                if (!response.ok || result.success === false) {
+                    let message = result.message || 'Unable to process this action right now.';
+                    if (result.errors && result.errors.admin_note && result.errors.admin_note.length) {
+                        message = result.errors.admin_note[0];
+                    }
+                    throw new Error(message);
+                }
+
+                if (result.refund) {
+                    payload = Object.assign({}, payload, result.refund);
+                }
+
+                openModal(payload);
+                actionSuccess.classList.remove('hidden');
+                actionSuccess.textContent = result.message || 'Action completed successfully.';
+            } catch (error) {
+                actionError.classList.remove('hidden');
+                actionError.textContent = error && error.message ? error.message : 'Something went wrong. Please try again.';
+            } finally {
+                setButtonsLoading(false);
+            }
         }
 
         function openModal(data) {
@@ -603,7 +648,10 @@
             modal.classList.remove('flex');
             actionError.classList.add('hidden');
             actionError.textContent = '';
+            actionSuccess.classList.add('hidden');
+            actionSuccess.textContent = '';
             adminNoteEl.classList.remove('border-rose-500', 'focus:ring-rose-500', 'focus:border-rose-500');
+            setButtonsLoading(false);
             closeImagePreview();
             document.body.classList.remove('overflow-hidden');
         }
