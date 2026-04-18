@@ -532,12 +532,12 @@ class CartController extends Controller
                         ->orderBy('created_at', 'desc')
                         ->get();
 
-        // Manually load products with inventory + variants to ensure variant-aware cart display.
+        // Manually load products with inventory + variants + bundle items to ensure variant-aware cart display.
         foreach ($cartItems as $item) {
             if (!$item->product) {
-                $item->load('product.inventory', 'product.variants', 'variant');
+                $item->load('product.inventory', 'product.variants', 'product.bundleItems.product', 'variant');
             } else {
-                $item->load('product.inventory', 'product.variants', 'variant');
+                $item->load('product.inventory', 'product.variants', 'product.bundleItems.product', 'variant');
             }
         }
 

@@ -341,9 +341,12 @@
                                     ? (float) $product->getDiscountedPrice((float) ($variant?->price ?? $product->price))
                                     : 0;
                                 $lineSubtotal = $unitPrice * (int) $item->quantity;
-                                $stockLevel = $variant
-                                    ? (int) ($variant->stock ?? 0)
-                                    : (int) ($product?->inventory?->quantity ?? $product?->stock ?? 0);
+                                // For bundles, use available_stock (dynamic calculation), otherwise use variant/product stock
+                                $stockLevel = $product && $product->is_bundle
+                                    ? (int) $product->available_stock
+                                    : ($variant
+                                        ? (int) ($variant->stock ?? 0)
+                                        : (int) ($product?->inventory?->quantity ?? $product?->stock ?? 0));
                             @endphp
                             
                             @if($product)
@@ -372,10 +375,15 @@
                                             <div class="flex justify-between items-start mb-3">
                                                 <div>
                                                     <h3 class="text-lg font-bold text-gray-900 mb-2">{{ $product->name }}</h3>
+                                                    @if($product->is_bundle)
+                                                        <span class="inline-block bg-gradient-to-r from-orange-400 to-orange-600 text-white px-3 py-1 rounded-full text-xs font-bold mb-2">
+                                                            Bundle
+                                                        </span>
+                                                    @endif
                                                     @if($variant)
                                                         <div class="text-sm font-medium text-gray-600 mb-2">Variant: {{ $variant->display_name }}</div>
                                                     @endif
-                                                    @if($product->category)
+                                                    @if($product->category && !$product->is_bundle)
                                                         <span class="category-badge">
                                                             {{ $product->category->name }}
                                                         </span>
@@ -390,6 +398,27 @@
                                             </div>
 
                                             <p class="text-gray-600 text-sm mb-4 line-clamp-2">{{ $product->description ?? 'Premium quality product' }}</p>
+
+                                            @if($product->is_bundle && $product->bundleItems->count() > 0)
+                                                <div class="mb-4 p-3 bg-orange-50 border-l-4 border-orange-400 rounded">
+                                                    <p class="text-xs font-bold text-orange-800 mb-2">📦 Included in this bundle:</p>
+                                                    <div class="space-y-2">
+                                                        @foreach($product->bundleItems as $bundleItem)
+                                                            <div class="flex items-center gap-2">
+                                                                @if($bundleItem->product)
+                                                                    <img src="{{ $bundleItem->product->image_src }}" 
+                                                                         alt="{{ $bundleItem->product->name }}" 
+                                                                         class="w-10 h-10 object-cover rounded border border-orange-200">
+                                                                    <div class="flex-1">
+                                                                        <p class="text-xs font-medium text-gray-900">{{ $bundleItem->product->name }}</p>
+                                                                        <p class="text-xs text-gray-600">Qty: {{ $bundleItem->quantity }}</p>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @endif
 
                                             <div class="flex items-center justify-between flex-wrap gap-4">
                                                 <div>
