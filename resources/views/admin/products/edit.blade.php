@@ -1378,6 +1378,7 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && isse
     </form>
 </div>
 
+@if(!$product->is_bundle)
 {{-- ===== Stock History Panel (outside the edit form) ===== --}}
 <div class="max-w-3xl mx-auto mt-6 bg-white shadow rounded-lg p-6">
     <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
@@ -1492,6 +1493,7 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && isse
         </table>
     @endif
 </div>
+@endif
 
 <div id="updateProductLoadingOverlay" class="fixed inset-0 z-[10001] hidden items-center justify-center bg-black/50 px-4">
     <div class="w-full max-w-sm rounded-2xl bg-white shadow-2xl border border-gray-200 p-6 text-center">
