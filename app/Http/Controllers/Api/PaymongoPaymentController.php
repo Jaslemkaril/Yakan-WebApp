@@ -104,10 +104,13 @@ class PaymongoPaymentController extends Controller
                 if ($order) {
                     $resolvedViaHeuristic = true;
                 }
-            }
-
-            if (!$order) {
-                // Fallback: most recent pending PayMongo order.
+                // IMPORTANT: If the client sent an explicit amount hint but no
+                // recent order matches it, DO NOT fall through to the generic
+                // "most recent pending" fallback — that would pick a stale
+                // unrelated order from a previous test, causing the user to be
+                // charged the wrong amount for the wrong order.
+            } else {
+                // No amount hint provided — fallback to most recent pending PayMongo order.
                 $order = $recentOrders->first(function (Order $candidate) {
                     $paymentMethod = strtolower((string) ($candidate->payment_method ?? ''));
                     $paymentStatus = strtolower((string) ($candidate->payment_status ?? ''));
