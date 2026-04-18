@@ -924,9 +924,9 @@
                    || request()->is('admin/dashboard*')
                    || request()->is('staff/dashboard*');
                $isOrdersRoute = request()->routeIs('admin.regular.*') || request()->is('admin/orders*');
-               $isPostOrderRequestsActive = request()->routeIs('staff.orders.refund_requests', 'admin.orders.refund_requests.*')
-                   || request()->is('staff/orders/refund-requests*')
-                   || request()->is('admin/orders/refund-requests*');
+               $isPostOrderRequestsActive = request()->routeIs('staff.orders.post_order_requests', 'admin.orders.post_order_requests.*')
+                   || request()->is('staff/orders/post-order-requests*')
+                   || request()->is('admin/orders/post-order-requests*');
                $isCancelledOrdersActive = request()->routeIs('staff.orders.cancelled')
                    || ($isOrdersRoute && $currentOrderStatusFilter === 'cancelled');
                $isRefundedOrdersActive = request()->routeIs('staff.orders.refunded')
@@ -952,7 +952,7 @@
         @endif
     </a>
 
-    <a href="{{ $isOrderStaff ? route('staff.orders.refund_requests') : route('admin.orders.refund_requests.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ $isPostOrderRequestsActive ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+    <a href="{{ $isOrderStaff ? route('staff.orders.post_order_requests') : route('admin.orders.post_order_requests.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ $isPostOrderRequestsActive ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
         <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Post-Order Request</span>
     </a>

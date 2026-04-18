@@ -586,6 +586,7 @@ Route::get('/staff/orders/cancelled', [App\Http\Controllers\Staff\DashboardContr
 Route::get('/staff/orders/refunded', [App\Http\Controllers\Staff\DashboardController::class, 'refundedOrders'])->middleware('admin:order_staff')->name('staff.orders.refunded');
 Route::get('/staff/orders/cancel-requests', [App\Http\Controllers\Admin\OrderController::class, 'cancelRequests'])->middleware('admin:order_staff')->name('staff.orders.cancel_requests');
 Route::get('/staff/orders/refund-requests', [App\Http\Controllers\Admin\OrderController::class, 'refundRequests'])->middleware('admin:order_staff')->name('staff.orders.refund_requests');
+Route::get('/staff/orders/post-order-requests', [App\Http\Controllers\Admin\OrderController::class, 'postOrderRequests'])->middleware('admin:order_staff')->name('staff.orders.post_order_requests');
 
 // Regular user login routes
 Route::get('/login', function() {
@@ -1195,6 +1196,7 @@ Route::middleware(['admin:admin,order_staff'])->prefix('admin')->name('admin.')-
     // Orders (Regular Orders)
     Route::prefix('orders')->group(function () {
         Route::get('/', [AdminOrderController::class, 'index'])->name('regular.index');
+        Route::get('/post-order-requests', [AdminOrderController::class, 'postOrderRequests'])->name('orders.post_order_requests.index');
         Route::get('/cancel-requests', [AdminOrderController::class, 'cancelRequests'])->name('orders.cancel_requests.index');
         Route::get('/refund-requests', [AdminOrderController::class, 'refundRequests'])->name('orders.refund_requests.index');
         Route::get('/create', [AdminOrderController::class, 'create'])->name('orders.create');

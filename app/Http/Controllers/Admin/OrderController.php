@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\OrderRefundRequest;
+use App\Models\CustomOrder;
+use App\Models\CustomOrderRefundRequest;
 use App\Services\Payment\PayMongoCheckoutService;
 use App\Services\TransactionalMailService;
 use Illuminate\Http\JsonResponse;
@@ -14,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class OrderController extends Controller
 {
@@ -240,6 +243,284 @@ class OrderController extends Controller
             'pendingRequests',
             'resolvedToday'
         ));
+    }
+
+    /**
+     * Unified post-order requests (regular + custom, cancel + refund).
+     */
+    public function postOrderRequests(Request $request)
+    {
+        $typeFilter = strtolower((string) $request->query('type', 'all'));
+        if (!in_array($typeFilter, ['all', 'cancel', 'refund'], true)) {
+            $typeFilter = 'all';
+        }
+
+        $search = trim((string) $request->query('search', ''));
+        $perPage = max(1, min(50, (int) $request->query('per_page', 15)));
+        $page = max(1, (int) $request->query('page', 1));
+
+        $rows = collect();
+
+        // Regular cancellation requests.
+        $regularCancelRows = $this->buildRegularCancelRequestRows();
+
+        // Custom cancellation-equivalent requests (request_type=return).
+        $customCancelRows = collect();
+        if (Schema::hasTable('custom_order_refund_requests')) {
+            $customCancelRows = CustomOrderRefundRequest::with(['customOrder.user', 'user'])
+                ->where('request_type', 'return')
+                ->latest('requested_at')
+                ->get()
+                ->map(function (CustomOrderRefundRequest $refundRequest) {
+                    $order = $refundRequest->customOrder;
+                    if (!$order) {
+                        return null;
+                    }
+
+                    $statusKey = strtolower((string) $refundRequest->status);
+                    $normalizedStatus = match ($statusKey) {
+                        'approved', 'processed' => 'approved',
+                        'rejected' => 'rejected',
+                        default => 'pending',
+                    };
+
+                    return [
+                        'created_at' => $refundRequest->requested_at ?? $refundRequest->created_at,
+                        'row_id' => 'custom-cancel-' . $refundRequest->id,
+                        'display_id' => '#C-' . $order->id,
+                        'customer' => (string) ($refundRequest->user?->name ?: $order->customer_name ?: $order->user?->name ?: 'N/A'),
+                        'type' => 'cancel',
+                        'order_type' => 'custom',
+                        'amount' => (float) ($order->final_price ?? 0),
+                        'status_key' => $normalizedStatus,
+                        'status_label' => ucfirst($normalizedStatus),
+                        'view_url' => route('admin.custom-orders.show', $order),
+                    ];
+                })
+                ->filter();
+        }
+
+        $cancelRows = $regularCancelRows->concat($customCancelRows)->values();
+
+        // Regular refund requests.
+        $regularRefundRows = collect();
+        if (Schema::hasTable('order_refund_requests')) {
+            $regularRefundRows = OrderRefundRequest::with(['order.user', 'user'])
+                ->whereHas('order')
+                ->where(function ($builder) {
+                    $builder->whereRaw('LOWER(COALESCE(reason, "")) NOT LIKE ?', ['%cancel%'])
+                        ->whereRaw('LOWER(COALESCE(comment, "")) NOT LIKE ?', ['%cancel%'])
+                        ->whereRaw('LOWER(COALESCE(details, "")) NOT LIKE ?', ['%cancel%']);
+                })
+                ->latest('requested_at')
+                ->get()
+                ->map(function (OrderRefundRequest $refundRequest) {
+                    $order = $refundRequest->order;
+                    if (!$order) {
+                        return null;
+                    }
+
+                    $status = strtolower((string) ($refundRequest->workflow_status ?: $refundRequest->status));
+                    $normalizedStatus = match (true) {
+                        in_array($status, ['rejected'], true) => 'rejected',
+                        in_array($status, ['pending_payout', 'return_received', 'approved', 'processed'], true)
+                            || strtolower((string) $refundRequest->payout_status) === 'completed' => 'refunded',
+                        default => 'under_review',
+                    };
+
+                    return [
+                        'created_at' => $refundRequest->requested_at ?? $refundRequest->created_at,
+                        'row_id' => 'regular-refund-' . $refundRequest->id,
+                        'display_id' => (string) ($refundRequest->refund_reference ?: ('#RF-' . $refundRequest->id)),
+                        'customer' => (string) ($refundRequest->user?->name ?: $order->customer_name ?: $order->user?->name ?: 'N/A'),
+                        'type' => 'refund',
+                        'order_type' => 'normal',
+                        'amount' => (float) ($refundRequest->refund_amount ?? $refundRequest->approved_amount ?? $refundRequest->recommended_refund_amount ?? $order->total_amount ?? $order->total ?? 0),
+                        'status_key' => $normalizedStatus,
+                        'status_label' => match ($normalizedStatus) {
+                            'under_review' => 'Under review',
+                            'refunded' => 'Refunded',
+                            'rejected' => 'Rejected',
+                            default => Str::headline($normalizedStatus),
+                        },
+                        'view_url' => route('admin.orders.show', $order),
+                    ];
+                })
+                ->filter();
+        }
+
+        // Custom refund requests.
+        $customRefundRows = collect();
+        if (Schema::hasTable('custom_order_refund_requests')) {
+            $customRefundRows = CustomOrderRefundRequest::with(['customOrder.user', 'user'])
+                ->where('request_type', 'refund')
+                ->latest('requested_at')
+                ->get()
+                ->map(function (CustomOrderRefundRequest $refundRequest) {
+                    $order = $refundRequest->customOrder;
+                    if (!$order) {
+                        return null;
+                    }
+
+                    $statusKey = strtolower((string) $refundRequest->status);
+                    $normalizedStatus = match ($statusKey) {
+                        'approved', 'processed' => 'refunded',
+                        'rejected' => 'rejected',
+                        default => 'under_review',
+                    };
+
+                    return [
+                        'created_at' => $refundRequest->requested_at ?? $refundRequest->created_at,
+                        'row_id' => 'custom-refund-' . $refundRequest->id,
+                        'display_id' => '#RF-' . $refundRequest->id,
+                        'customer' => (string) ($refundRequest->user?->name ?: $order->customer_name ?: $order->user?->name ?: 'N/A'),
+                        'type' => 'refund',
+                        'order_type' => 'custom',
+                        'amount' => (float) ($order->final_price ?? 0),
+                        'status_key' => $normalizedStatus,
+                        'status_label' => match ($normalizedStatus) {
+                            'under_review' => 'Under review',
+                            'refunded' => 'Refunded',
+                            'rejected' => 'Rejected',
+                            default => Str::headline($normalizedStatus),
+                        },
+                        'view_url' => route('admin.custom-orders.show', $order),
+                    ];
+                })
+                ->filter();
+        }
+
+        $refundRows = $regularRefundRows->concat($customRefundRows)->values();
+
+        $stats = [
+            'cancel' => [
+                'pending' => $cancelRows->where('status_key', 'pending')->count(),
+                'approved' => $cancelRows->where('status_key', 'approved')->count(),
+                'rejected' => $cancelRows->where('status_key', 'rejected')->count(),
+            ],
+            'refund' => [
+                'under_review' => $refundRows->where('status_key', 'under_review')->count(),
+                'refunded' => $refundRows->where('status_key', 'refunded')->count(),
+                'rejected' => $refundRows->where('status_key', 'rejected')->count(),
+            ],
+        ];
+
+        if ($typeFilter === 'cancel') {
+            $rows = $cancelRows;
+        } elseif ($typeFilter === 'refund') {
+            $rows = $refundRows;
+        } else {
+            $rows = $cancelRows->concat($refundRows)->values();
+        }
+
+        if ($search !== '') {
+            $needle = Str::lower($search);
+            $rows = $rows->filter(function (array $row) use ($needle) {
+                return Str::contains(Str::lower((string) $row['display_id']), $needle)
+                    || Str::contains(Str::lower((string) $row['customer']), $needle)
+                    || Str::contains(Str::lower((string) $row['order_type']), $needle)
+                    || Str::contains(Str::lower((string) $row['status_label']), $needle);
+            })->values();
+        }
+
+        $rows = $rows->sortByDesc(function (array $row) {
+            return optional($row['created_at'])->getTimestamp() ?? 0;
+        })->values();
+
+        $total = $rows->count();
+        $paginatedRows = $rows->forPage($page, $perPage)->values();
+
+        $requests = new LengthAwarePaginator(
+            $paginatedRows,
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
+        return view('admin.orders.post-order-requests', [
+            'requests' => $requests,
+            'stats' => $stats,
+            'typeFilter' => $typeFilter,
+            'search' => $search,
+        ]);
+    }
+
+    private function buildRegularCancelRequestRows()
+    {
+        $hasRefundTable = Schema::hasTable('order_refund_requests');
+        $hasRefundCommentColumn = $hasRefundTable && Schema::hasColumn('order_refund_requests', 'comment');
+        $hasRefundWorkflowColumn = $hasRefundTable && Schema::hasColumn('order_refund_requests', 'workflow_status');
+
+        $orders = Order::with(['user', 'refundRequests' => function ($query) {
+            $query->latest();
+        }])->where(function ($query) use ($hasRefundTable, $hasRefundCommentColumn) {
+            $query->where('status', 'cancellation_requested')
+                ->orWhere('admin_notes', 'like', '%cancel%')
+                ->orWhere('notes', 'like', '%cancel%');
+
+            if ($hasRefundTable) {
+                $query->orWhereHas('refundRequests', function ($refundQuery) use ($hasRefundCommentColumn) {
+                    $refundQuery->where('reason', 'like', '%cancel%')
+                        ->orWhere('details', 'like', '%cancel%');
+
+                    if ($hasRefundCommentColumn) {
+                        $refundQuery->orWhere('comment', 'like', '%cancel%');
+                    }
+                });
+            }
+        })->orderByDesc('updated_at')->get();
+
+        return $orders->map(function (Order $order) use ($hasRefundWorkflowColumn) {
+            $cancelRelatedRefund = $order->refundRequests
+                ->first(function (OrderRefundRequest $refundRequest) {
+                    $haystack = Str::lower(trim((string) ($refundRequest->reason . ' ' . $refundRequest->details . ' ' . $refundRequest->comment)));
+                    return Str::contains($haystack, 'cancel');
+                });
+
+            $statusKey = 'pending';
+            if ($cancelRelatedRefund) {
+                $workflow = Str::lower((string) ($cancelRelatedRefund->workflow_status ?: $cancelRelatedRefund->status));
+                $isRejected = $workflow === 'rejected' || Str::upper((string) $cancelRelatedRefund->final_decision) === 'REJECT';
+                $isApproved = in_array($workflow, ['approved', 'processed', 'pending_payout'], true)
+                    || strtolower((string) $cancelRelatedRefund->status) === 'approved';
+
+                if ($isRejected) {
+                    $statusKey = 'rejected';
+                } elseif ($isApproved) {
+                    $statusKey = 'approved';
+                }
+            }
+
+            if ($order->status === 'cancellation_requested') {
+                $statusKey = 'pending';
+            } elseif (in_array($order->status, ['cancelled', 'refunded'], true) && $statusKey !== 'rejected') {
+                $statusKey = 'approved';
+            }
+
+            $notesText = Str::lower((string) ($order->admin_notes . ' ' . $order->notes));
+            if ($statusKey === 'pending' && Str::contains($notesText, 'rejected')) {
+                $statusKey = 'rejected';
+            }
+
+            $requestedAt = $cancelRelatedRefund?->requested_at ?? $order->updated_at;
+
+            return [
+                'created_at' => $requestedAt,
+                'row_id' => 'regular-cancel-' . $order->id,
+                'display_id' => '#C-' . $order->id,
+                'customer' => (string) ($order->customer_name ?: $order->user?->name ?: 'N/A'),
+                'type' => 'cancel',
+                'order_type' => 'normal',
+                'amount' => (float) ($order->total_amount ?? $order->total ?? 0),
+                'status_key' => $statusKey,
+                'status_label' => ucfirst($statusKey),
+                'view_url' => route('admin.orders.show', $order),
+            ];
+        });
     }
 
     /**
