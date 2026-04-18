@@ -131,7 +131,7 @@ class TrackOrderController extends Controller
      */
     public function show($trackingNumber)
     {
-        $order = Order::with(['user', 'orderItems.product'])
+        $order = Order::with(['user', 'orderItems.product.bundleItems.componentProduct'])
                      ->where('tracking_number', $trackingNumber)
                      ->firstOrFail();
 

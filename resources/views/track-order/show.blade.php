@@ -172,6 +172,86 @@
         0%, 100% { transform: scale(1); opacity:1; }
         50% { transform: scale(1.4); opacity:0.6; }
     }
+
+    /* Bundle Styles for Track Order */
+    .track-bundle-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #800000 0%, #600000 100%);
+        color: white;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 700;
+        margin-left: 6px;
+        vertical-align: middle;
+        box-shadow: 0 2px 4px rgba(128, 0, 0, 0.2);
+    }
+
+    .track-bundle-toggle {
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        border: 2px solid #800000;
+        border-radius: 8px;
+        padding: 6px 10px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #800000;
+    }
+
+    .track-bundle-toggle:hover {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        border-color: #600000;
+        transform: translateX(2px);
+        box-shadow: 0 2px 6px rgba(128, 0, 0, 0.15);
+    }
+
+    .track-bundle-toggle-icon {
+        transition: transform 0.3s ease;
+        color: #800000;
+    }
+
+    .track-bundle-toggle-icon.expanded {
+        transform: rotate(180deg);
+    }
+
+    .track-bundle-items-list {
+        max-height: 0 !important;
+        overflow: hidden !important;
+        transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+        opacity: 0 !important;
+        margin-top: 0;
+        visibility: hidden;
+    }
+
+    .track-bundle-items-list.expanded {
+        max-height: 500px !important;
+        opacity: 1 !important;
+        margin-top: 8px;
+        visibility: visible;
+    }
+
+    .track-bundle-item-card {
+        background: white;
+        border-radius: 6px;
+        padding: 8px 10px;
+        margin-bottom: 6px;
+        border: 1px solid #fee2e2;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.2s ease;
+    }
+
+    .track-bundle-item-card:hover {
+        background: #fef2f2;
+        border-color: #fecaca;
+        box-shadow: 0 2px 4px rgba(128, 0, 0, 0.1);
+    }
 </style>
 @endpush
 
@@ -482,9 +562,38 @@
                                 </div>
                             @endif
                             <div class="flex-1 min-w-0">
-                                <h4 class="font-semibold text-gray-900 truncate">{{ $item->product->name ?? $item->product_name ?? 'Product' }}</h4>
-                                @if($item->product && $item->product->category)
+                                <h4 class="font-semibold text-gray-900 truncate">
+                                    {{ $item->product->name ?? $item->product_name ?? 'Product' }}
+                                    @if($item->product && $item->product->is_bundle)
+                                        <span class="track-bundle-badge">Bundle</span>
+                                    @endif
+                                </h4>
+                                @if($item->product && $item->product->category && !$item->product->is_bundle)
                                     <p class="text-xs text-gray-500 mt-0.5">{{ $item->product->category->name }}</p>
+                                @endif
+                                @if($item->product && $item->product->is_bundle && $item->product->bundleItems && $item->product->bundleItems->count() > 0)
+                                    <div class="track-bundle-toggle" onclick="toggleTrackBundleItems({{ $item->id }})">
+                                        <span>📦</span>
+                                        <span>{{ $item->product->bundleItems->count() }} items · Tap to see details</span>
+                                        <svg class="track-bundle-toggle-icon" id="track-bundle-icon-{{ $item->id }}" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                    </div>
+                                    <div class="track-bundle-items-list" id="track-bundle-list-{{ $item->id }}">
+                                        @foreach($item->product->bundleItems as $bundleItem)
+                                            @if($bundleItem->componentProduct)
+                                                <div class="track-bundle-item-card">
+                                                    <img src="{{ $bundleItem->componentProduct->image_src }}" 
+                                                         alt="{{ $bundleItem->componentProduct->name }}" 
+                                                         class="w-10 h-10 object-cover rounded border border-gray-300">
+                                                    <div class="flex-1 text-sm">
+                                                        <div class="font-semibold text-gray-900">{{ $bundleItem->componentProduct->name }}</div>
+                                                        <div class="text-gray-600 text-xs mt-0.5">Qty: {{ (int) $bundleItem->quantity * (int) $item->quantity }}</div>
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        @endforeach
+                                    </div>
                                 @endif
                                 <div class="flex items-center gap-3 mt-1.5">
                                     <span class="text-xs bg-gray-200 text-gray-700 rounded px-2 py-0.5 font-medium">Qty: {{ $item->quantity }}</span>
@@ -705,3 +814,17 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+function toggleTrackBundleItems(itemId) {
+    const list = document.getElementById('track-bundle-list-' + itemId);
+    const icon = document.getElementById('track-bundle-icon-' + itemId);
+    
+    if (list && icon) {
+        list.classList.toggle('expanded');
+        icon.classList.toggle('expanded');
+    }
+}
+</script>
+@endpush
