@@ -315,15 +315,6 @@
 
         <!-- Header Buttons -->
         <div class="mb-6 flex flex-wrap items-center gap-3">
-            @if($canCancelOrder)
-                <button id="cancel-order-toggle" type="button" class="inline-flex items-center justify-center px-5 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all duration-300 shadow-md">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                    Cancel Order
-                </button>
-            @endif
-            
             <a href="{{ route('custom_orders.index', ['auth_token' => $authToken]) }}" 
                class="inline-flex items-center px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-200 text-gray-700 hover:text-white hover:border-transparent transition-all duration-200 group" style="hover:background-color:#800000;">
                 <svg class="w-5 h-5 mr-2 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2471,6 +2462,14 @@
 
             <!-- Navigation Buttons -->
             <div class="mt-8 flex flex-col sm:flex-row gap-4">
+                @if($canCancelOrder)
+                    <button id="cancel-order-toggle" type="button" class="flex-1 inline-flex items-center justify-center px-6 py-4 bg-red-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 hover:bg-red-700">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        Cancel Order
+                    </button>
+                @endif
                      <a href="{{ route('custom_orders.index', ['auth_token' => $authToken]) }}" 
                    class="flex-1 inline-flex items-center justify-center px-6 py-4 bg-white border-2 text-gray-700 font-bold rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200" style="border-color:#c08080;" onmouseover="this.style.backgroundColor='#fff5f5'" onmouseout="this.style.backgroundColor='white'">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
