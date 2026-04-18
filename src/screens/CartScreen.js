@@ -113,30 +113,26 @@ const CartScreen = ({ navigation }) => {
 
   const renderCartItem = ({ item }) => {
     // Construct full image URL if needed
-    const getImageUri = () => {
-      if (!item || !item.image) {
-        console.log('[CartScreen] No image for item:', item?.name);
+    const getImageUri = (image) => {
+      if (!image) {
         return null;
       }
       
-      let imageStr = item.image;
+      let imageStr = image;
       
       // If image is an object, extract the path
       if (typeof imageStr === 'object' && imageStr !== null) {
         imageStr = imageStr.path || imageStr.url || null;
-        console.log('[CartScreen] Image is object, extracted path:', imageStr);
       }
       
       // Ensure image is a string
       imageStr = String(imageStr).trim();
       if (!imageStr || imageStr === 'null' || imageStr === '[object Object]') {
-        console.log('[CartScreen] Empty or invalid image string:', imageStr);
         return null;
       }
       
       // If it's already a full URL, use it
       if (imageStr.startsWith('http')) {
-        console.log('[CartScreen] Using full URL:', imageStr);
         return imageStr;
       }
       
@@ -145,12 +141,14 @@ const CartScreen = ({ navigation }) => {
         ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${imageStr}`
         : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/uploads/products/${imageStr}`;
       
-      console.log('[CartScreen] Constructed URL:', fullUrl);
       return fullUrl;
     };
 
-    const imageUri = getImageUri();
+    const imageUri = getImageUri(item.image);
     const isSelected = selectedItems[item.id] || false;
+    const isBundle = item.is_bundle || false;
+    const bundleItems = item.bundle_items || [];
+    const [showBundleItems, setShowBundleItems] = useState(false);
 
     return (
       <View style={styles.cartItemCard}>
@@ -173,12 +171,6 @@ const CartScreen = ({ navigation }) => {
               source={{ uri: imageUri }}
               style={styles.productImage}
               resizeMode="cover"
-              onLoad={() => {
-                console.log('[CartScreen] Image loaded:', imageUri);
-              }}
-              onError={(error) => {
-                console.log('[CartScreen] Image load error:', error, 'URI:', imageUri);
-              }}
             />
           ) : (
             <View style={[styles.productImage, styles.placeholderImage]}>
@@ -189,9 +181,66 @@ const CartScreen = ({ navigation }) => {
 
         {/* Product Details */}
         <View style={styles.detailsContainer}>
-          <Text style={styles.productName} numberOfLines={2}>
-            {item.name || 'Product'}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={styles.productName} numberOfLines={2}>
+              {item.name || 'Product'}
+            </Text>
+            {isBundle && (
+              <View style={styles.bundleBadge}>
+                <Text style={styles.bundleBadgeText}>Bundle</Text>
+              </View>
+            )}
+          </View>
+
+          {isBundle && bundleItems.length > 0 && (
+            <TouchableOpacity 
+              onPress={() => setShowBundleItems(!showBundleItems)}
+              style={styles.bundleToggle}
+            >
+              <Text style={styles.bundleToggleText}>
+                {bundleItems.length} items · Tap to see details
+              </Text>
+              <Ionicons 
+                name={showBundleItems ? "chevron-up" : "chevron-down"} 
+                size={16} 
+                color="#666" 
+              />
+            </TouchableOpacity>
+          )}
+
+          {showBundleItems && bundleItems.length > 0 && (
+            <View style={styles.bundleItemsList}>
+              {bundleItems.map((bundleItem, index) => {
+                const bundleItemImageUri = getImageUri(bundleItem.product?.image);
+                return (
+                  <View key={index} style={styles.bundleItem}>
+                    {bundleItemImageUri ? (
+                      <Image
+                        source={{ uri: bundleItemImageUri }}
+                        style={styles.bundleItemImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={[styles.bundleItemImage, styles.placeholderImage]}>
+                        <Text style={{ fontSize: 12 }}>📦</Text>
+                      </View>
+                    )}
+                    <View style={styles.bundleItemDetails}>
+                      <Text style={styles.bundleItemName} numberOfLines={1}>
+                        {bundleItem.product?.name}
+                      </Text>
+                      {bundleItem.product?.size && (
+                        <Text style={styles.bundleItemVariant}>
+                          Size {bundleItem.product.size}
+                        </Text>
+                      )}
+                    </View>
+                    <Text style={styles.bundleItemQuantity}>× {bundleItem.quantity}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
 
           {(item.variant_size || item.variant_color) ? (
             <Text style={styles.productDescription} numberOfLines={1}>
@@ -199,7 +248,7 @@ const CartScreen = ({ navigation }) => {
             </Text>
           ) : null}
           
-          {item.description && (
+          {item.description && !isBundle && (
             <Text style={styles.productDescription} numberOfLines={1}>
               {item.description}
             </Text>
@@ -634,6 +683,67 @@ const getStyles = (theme) => StyleSheet.create({
   continueShoppingText: {
     color: theme.primary,
     fontSize: 14,
+    fontWeight: '600',
+  },
+  // Bundle styles
+  bundleBadge: {
+    backgroundColor: '#FFA500',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 6,
+  },
+  bundleBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  bundleToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    gap: 4,
+  },
+  bundleToggleText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  bundleItemsList: {
+    backgroundColor: theme.surfaceBg || '#f5f5f5',
+    borderRadius: 8,
+    padding: 8,
+    marginVertical: 8,
+  },
+  bundleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border || '#e0e0e0',
+  },
+  bundleItemImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+    marginRight: 8,
+    backgroundColor: theme.background || '#fff',
+  },
+  bundleItemDetails: {
+    flex: 1,
+  },
+  bundleItemName: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: theme.text,
+  },
+  bundleItemVariant: {
+    fontSize: 10,
+    color: theme.textSecondary,
+    marginTop: 2,
+  },
+  bundleItemQuantity: {
+    fontSize: 11,
+    color: theme.textSecondary,
     fontWeight: '600',
   },
 });

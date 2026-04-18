@@ -173,7 +173,7 @@ class CartController extends Controller
      */
     public function index()
     {
-        $cartItems = Cart::with('product.inventory', 'product.variants', 'variant')
+        $cartItems = Cart::with('product.inventory', 'product.variants', 'product.bundleItems.product', 'variant')
                         ->where('user_id', Auth::id())
                         ->get()
                         ->map(function ($item) {
@@ -181,6 +181,23 @@ class CartController extends Controller
                             $effectiveStock = $this->getEffectiveStock($item->product, $variant);
                             $priceMeta = $this->getPriceMeta($item->product, $variant);
                             $variantPriceMeta = $variant ? $this->getPriceMeta($item->product, $variant) : null;
+                            
+                            // Bundle items data
+                            $bundleItems = null;
+                            if ($item->product->is_bundle && $item->product->bundleItems) {
+                                $bundleItems = $item->product->bundleItems->map(function ($bundleItem) {
+                                    return [
+                                        'product_id' => $bundleItem->product_id,
+                                        'quantity' => $bundleItem->quantity,
+                                        'product' => [
+                                            'id' => $bundleItem->product->id,
+                                            'name' => $bundleItem->product->name,
+                                            'image' => $bundleItem->product->image,
+                                            'price' => (float) $bundleItem->product->price,
+                                        ]
+                                    ];
+                                });
+                            }
 
                             return [
                                 'id' => $item->id,
@@ -206,6 +223,8 @@ class CartController extends Controller
                                     'has_product_discount' => $priceMeta['has_product_discount'],
                                     'image' => $item->product->image,
                                     'stock' => $effectiveStock,
+                                    'is_bundle' => (bool) $item->product->is_bundle,
+                                    'bundle_items' => $bundleItems,
                                 ],
                                 'created_at' => $item->created_at,
                                 'updated_at' => $item->updated_at,
