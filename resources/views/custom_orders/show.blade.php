@@ -472,85 +472,6 @@
             <!-- Main Content -->
             <div class="lg:col-span-2 space-y-6">
 
-        <!-- Customer Action Buttons -->
-        @if($canCancelOrder)
-        <div id="cancel-order-card" class="mb-8 bg-white rounded-xl shadow-md p-6 border border-gray-200 {{ $showCancelForm ? '' : 'hidden' }}">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">Request Cancellation</h3>
-            <form id="cancel-order-form" method="POST" action="{{ route('custom_orders.cancel', ['order' => $order, 'auth_token' => $authToken]) }}">
-                @csrf
-                <input type="hidden" name="cancel_reason" id="cancel_reason_input" value="{{ old('cancel_reason') }}">
-                <input type="hidden" name="cancel_reason_other" id="cancel_reason_other_input" value="{{ old('cancel_reason_other') }}">
-
-                <div id="cancel-step-1">
-                    <p class="text-sm font-semibold text-gray-700 mb-2">Why do you want to cancel?</p>
-                    <div class="mb-4">
-                        <select id="cancel_reason_select" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent text-sm text-gray-800">
-                            <option value="">Select a reason</option>
-                            <option value="Changed my mind" {{ old('cancel_reason') === 'Changed my mind' ? 'selected' : '' }}>Changed my mind</option>
-                            <option value="Wrong item ordered" {{ old('cancel_reason') === 'Wrong item ordered' ? 'selected' : '' }}>Wrong item ordered</option>
-                            <option value="Found it cheaper" {{ old('cancel_reason') === 'Found it cheaper' ? 'selected' : '' }}>Found it cheaper</option>
-                            <option value="Duplicate order" {{ old('cancel_reason') === 'Duplicate order' ? 'selected' : '' }}>Duplicate order</option>
-                            <option value="Taking too long" {{ old('cancel_reason') === 'Taking too long' ? 'selected' : '' }}>Taking too long</option>
-                            <option value="Need to change address" {{ old('cancel_reason') === 'Need to change address' ? 'selected' : '' }}>Need to change address</option>
-                            <option value="Incorrect address provided" {{ old('cancel_reason') === 'Incorrect address provided' ? 'selected' : '' }}>Incorrect address provided</option>
-                            <option value="Want to change items" {{ old('cancel_reason') === 'Want to change items' ? 'selected' : '' }}>Want to change items</option>
-                            <option value="Other" {{ old('cancel_reason') === 'Other' ? 'selected' : '' }}>Other</option>
-                        </select>
-                    </div>
-
-                    <div id="cancel-reason-other-wrap" class="mb-4 hidden">
-                        <label for="cancel_reason_other" class="block text-sm font-medium text-gray-700 mb-2">Please specify</label>
-                        <input id="cancel_reason_other" type="text" maxlength="255" value="{{ old('cancel_reason_other') }}" placeholder="Please specify" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent text-sm text-gray-800">
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Additional notes (optional)</label>
-                        <textarea id="cancel_notes" name="cancel_notes" rows="4" maxlength="500" placeholder="Tell us more..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent resize-none">{{ old('cancel_notes') }}</textarea>
-                    </div>
-
-                    <div class="flex justify-end gap-2">
-                        <button type="button" id="cancel-next-btn" class="px-6 py-3 bg-[#800000] text-white font-semibold rounded-lg hover:bg-[#600000] transition-all">Next</button>
-                    </div>
-                </div>
-
-                <div id="cancel-step-2" class="hidden">
-                    <h4 class="text-xl font-bold text-gray-900 mb-2">Cancel this order?</h4>
-                    <p class="text-sm text-gray-600 mb-4">Your cancellation request will be reviewed by admin before final approval.</p>
-
-                    <div class="border border-gray-200 rounded-xl p-4 mb-4 space-y-2">
-                        @php
-                            $refundTarget = strtolower((string) ($order->payment_method ?? '')) === 'gcash' ? 'GCash' : ucfirst(str_replace('_', ' ', (string) ($order->payment_method ?? 'Paymongo')));
-                            $refundAmount = (float) ($order->final_price ?? $order->estimated_price ?? 0);
-                        @endphp
-                        <div class="flex justify-between text-sm"><span class="text-gray-600">Order</span><span class="font-semibold text-gray-900">{{ $order->display_ref }}</span></div>
-                        <div class="flex justify-between text-sm"><span class="text-gray-600">Item</span><span class="font-semibold text-gray-900">{{ $order->product_name ?? 'Custom order items' }}</span></div>
-                        <div class="flex justify-between text-sm"><span class="text-gray-600">Refund amount</span><span class="font-semibold text-[#0b57d0]">₱{{ number_format($refundAmount, 2) }}</span></div>
-                        <div class="flex justify-between text-sm"><span class="text-gray-600">Refund to</span><span class="font-semibold text-gray-900">{{ $refundTarget }}</span></div>
-                    </div>
-
-                    <div class="flex items-center justify-between gap-2">
-                        <button type="button" id="cancel-back-btn" class="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all">Go back</button>
-                        <button type="button" id="cancel-submit-btn" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all">Yes, request cancellation</button>
-                    </div>
-                </div>
-            </form>
-
-            <div id="cancel-confirm-modal" class="fixed inset-0 z-50 hidden">
-                <div class="absolute inset-0 bg-black/40" id="cancel-confirm-backdrop"></div>
-                <div class="absolute inset-0 flex items-center justify-center p-4">
-                    <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-200 p-6">
-                        <h4 class="text-xl font-bold text-gray-900 mb-2">Submit cancellation request?</h4>
-                        <p class="text-sm text-gray-600 mb-5">This will send your request to admin for review. The order will not be cancelled immediately.</p>
-                        <div class="flex items-center justify-end gap-2">
-                            <button type="button" id="cancel-confirm-no" class="px-5 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all">Go back</button>
-                            <button type="button" id="cancel-confirm-yes" class="px-5 py-2.5 bg-[#800000] text-white font-semibold rounded-lg hover:bg-[#600000] transition-all">Submit Request</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        @endif
-
         @php
             $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
             $showDeliveryBanner = false;
@@ -2498,6 +2419,85 @@
                 </a>
                 @endif
             </div>
+
+            <!-- Cancel Order Form (appears when Cancel Order button is clicked) -->
+            @if($canCancelOrder)
+            <div id="cancel-order-card" class="mt-6 bg-white rounded-xl shadow-md p-6 border border-gray-200 {{ $showCancelForm ? '' : 'hidden' }}">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Request Cancellation</h3>
+                <form id="cancel-order-form" method="POST" action="{{ route('custom_orders.cancel', ['order' => $order, 'auth_token' => $authToken]) }}">
+                    @csrf
+                    <input type="hidden" name="cancel_reason" id="cancel_reason_input" value="{{ old('cancel_reason') }}">
+                    <input type="hidden" name="cancel_reason_other" id="cancel_reason_other_input" value="{{ old('cancel_reason_other') }}">
+
+                    <div id="cancel-step-1">
+                        <p class="text-sm font-semibold text-gray-700 mb-2">Why do you want to cancel?</p>
+                        <div class="mb-4">
+                            <select id="cancel_reason_select" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent text-sm text-gray-800">
+                                <option value="">Select a reason</option>
+                                <option value="Changed my mind" {{ old('cancel_reason') === 'Changed my mind' ? 'selected' : '' }}>Changed my mind</option>
+                                <option value="Wrong item ordered" {{ old('cancel_reason') === 'Wrong item ordered' ? 'selected' : '' }}>Wrong item ordered</option>
+                                <option value="Found it cheaper" {{ old('cancel_reason') === 'Found it cheaper' ? 'selected' : '' }}>Found it cheaper</option>
+                                <option value="Duplicate order" {{ old('cancel_reason') === 'Duplicate order' ? 'selected' : '' }}>Duplicate order</option>
+                                <option value="Taking too long" {{ old('cancel_reason') === 'Taking too long' ? 'selected' : '' }}>Taking too long</option>
+                                <option value="Need to change address" {{ old('cancel_reason') === 'Need to change address' ? 'selected' : '' }}>Need to change address</option>
+                                <option value="Incorrect address provided" {{ old('cancel_reason') === 'Incorrect address provided' ? 'selected' : '' }}>Incorrect address provided</option>
+                                <option value="Want to change items" {{ old('cancel_reason') === 'Want to change items' ? 'selected' : '' }}>Want to change items</option>
+                                <option value="Other" {{ old('cancel_reason') === 'Other' ? 'selected' : '' }}>Other</option>
+                            </select>
+                        </div>
+
+                        <div id="cancel-reason-other-wrap" class="mb-4 hidden">
+                            <label for="cancel_reason_other" class="block text-sm font-medium text-gray-700 mb-2">Please specify</label>
+                            <input id="cancel_reason_other" type="text" maxlength="255" value="{{ old('cancel_reason_other') }}" placeholder="Please specify" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent text-sm text-gray-800">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Additional notes (optional)</label>
+                            <textarea id="cancel_notes" name="cancel_notes" rows="4" maxlength="500" placeholder="Tell us more..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent resize-none">{{ old('cancel_notes') }}</textarea>
+                        </div>
+
+                        <div class="flex justify-end gap-2">
+                            <button type="button" id="cancel-next-btn" class="px-6 py-3 bg-[#800000] text-white font-semibold rounded-lg hover:bg-[#600000] transition-all">Next</button>
+                        </div>
+                    </div>
+
+                    <div id="cancel-step-2" class="hidden">
+                        <h4 class="text-xl font-bold text-gray-900 mb-2">Cancel this order?</h4>
+                        <p class="text-sm text-gray-600 mb-4">Your cancellation request will be reviewed by admin before final approval.</p>
+
+                        <div class="border border-gray-200 rounded-xl p-4 mb-4 space-y-2">
+                            @php
+                                $refundTarget = strtolower((string) ($order->payment_method ?? '')) === 'gcash' ? 'GCash' : ucfirst(str_replace('_', ' ', (string) ($order->payment_method ?? 'Paymongo')));
+                                $refundAmount = (float) ($order->final_price ?? $order->estimated_price ?? 0);
+                            @endphp
+                            <div class="flex justify-between text-sm"><span class="text-gray-600">Order</span><span class="font-semibold text-gray-900">{{ $order->display_ref }}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-600">Item</span><span class="font-semibold text-gray-900">{{ $order->product_name ?? 'Custom order items' }}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-600">Refund amount</span><span class="font-semibold text-[#0b57d0]">₱{{ number_format($refundAmount, 2) }}</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-600">Refund to</span><span class="font-semibold text-gray-900">{{ $refundTarget }}</span></div>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-2">
+                            <button type="button" id="cancel-back-btn" class="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all">Go back</button>
+                            <button type="button" id="cancel-submit-btn" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all">Yes, request cancellation</button>
+                        </div>
+                    </div>
+                </form>
+
+                <div id="cancel-confirm-modal" class="fixed inset-0 z-50 hidden">
+                    <div class="absolute inset-0 bg-black/40" id="cancel-confirm-backdrop"></div>
+                    <div class="absolute inset-0 flex items-center justify-center p-4">
+                        <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-200 p-6">
+                            <h4 class="text-xl font-bold text-gray-900 mb-2">Submit cancellation request?</h4>
+                            <p class="text-sm text-gray-600 mb-5">This will send your request to admin for review. The order will not be cancelled immediately.</p>
+                            <div class="flex items-center justify-end gap-2">
+                                <button type="button" id="cancel-confirm-no" class="px-5 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all">Go back</button>
+                                <button type="button" id="cancel-confirm-yes" class="px-5 py-2.5 bg-[#800000] text-white font-semibold rounded-lg hover:bg-[#600000] transition-all">Submit Request</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
         </div>
 
     </div>
