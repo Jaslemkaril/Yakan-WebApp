@@ -264,8 +264,8 @@ class ReviewController extends Controller
 
                         $message = 'Review updated successfully!';
 
-                        return redirect()->to($reviewSectionUrl)
-                            ->with('success', $message);
+                        return redirect()->to(route('welcome') . '#testimonials')
+                            ->with('success', $message . ' Your review is now visible on our homepage!');
                     }
                 }
 
@@ -316,8 +316,9 @@ class ReviewController extends Controller
             }
         }
 
-        return redirect()->to($reviewSectionUrl)
-            ->with('success', $message);
+        // Redirect to home page to show review in "What Our Customers Say" section
+        return redirect()->to(route('welcome') . '#testimonials')
+            ->with('success', $message . ' Your review is now visible on our homepage!');
     }
 
     /**

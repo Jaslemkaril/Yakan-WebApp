@@ -556,7 +556,7 @@
     </section>
 
     <!-- Testimonials -->
-    <section class="py-12 md:py-16 lg:py-20 bg-gray-50 yakan-pattern-bg">
+    <section id="testimonials" class="py-12 md:py-16 lg:py-20 bg-gray-50 yakan-pattern-bg">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-10 md:mb-14">
                 <h2 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gradient mb-3 md:mb-4">What Our Customers Say</h2>
