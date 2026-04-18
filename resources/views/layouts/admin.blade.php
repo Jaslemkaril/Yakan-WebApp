@@ -924,14 +924,14 @@
                    || request()->is('admin/dashboard*')
                    || request()->is('staff/dashboard*');
                $isOrdersRoute = request()->routeIs('admin.regular.*') || request()->is('admin/orders*');
+               $isPostOrderRequestsActive = request()->routeIs('staff.orders.refund_requests', 'admin.orders.refund_requests.*')
+                   || request()->is('staff/orders/refund-requests*')
+                   || request()->is('admin/orders/refund-requests*');
                $isCancelledOrdersActive = request()->routeIs('staff.orders.cancelled')
                    || ($isOrdersRoute && $currentOrderStatusFilter === 'cancelled');
                $isRefundedOrdersActive = request()->routeIs('staff.orders.refunded')
                    || ($isOrdersRoute && $currentOrderStatusFilter === 'refunded');
-               $isOrdersActive = $isOrdersRoute && !$isCancelledOrdersActive && !$isRefundedOrdersActive;
-               $isPostOrderRequestsActive = request()->routeIs('staff.orders.refund_requests', 'admin.orders.refund_requests.*')
-                   || request()->is('staff/orders/refund-requests*')
-                   || request()->is('admin/orders/refund-requests*');
+               $isOrdersActive = $isOrdersRoute && !$isCancelledOrdersActive && !$isRefundedOrdersActive && !$isPostOrderRequestsActive;
                $isCustomOrdersActive = request()->routeIs('admin.custom-orders.*') || request()->is('admin/custom-orders*');
            @endphp
 
