@@ -1353,6 +1353,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 refundEvidenceModalImage.src = '';
             }
             let fallbackTried = false;
+            let metadataLoaded = false;
+            let fallbackTimer = null;
             const setVideoSource = function(videoSrc) {
                 refundEvidenceModalVideoSource.src = videoSrc;
                 refundEvidenceModalVideo.load();
@@ -1364,7 +1366,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             };
 
+            const clearFallbackTimer = function() {
+                if (fallbackTimer) {
+                    clearTimeout(fallbackTimer);
+                    fallbackTimer = null;
+                }
+            };
+
+            const tryFallbackIfNeeded = function() {
+                if (!metadataLoaded && !fallbackTried && fallbackSrc && fallbackSrc !== src) {
+                    fallbackTried = true;
+                    setVideoSource(fallbackSrc);
+                }
+            };
+
+            refundEvidenceModalVideo.onloadedmetadata = function() {
+                metadataLoaded = true;
+                clearFallbackTimer();
+            };
+
             refundEvidenceModalVideo.onerror = function() {
+                clearFallbackTimer();
                 if (!fallbackTried && fallbackSrc && fallbackSrc !== src) {
                     fallbackTried = true;
                     setVideoSource(fallbackSrc);
@@ -1373,6 +1395,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             refundEvidenceModalVideo.classList.remove('hidden');
             setVideoSource(src);
+            clearFallbackTimer();
+            fallbackTimer = setTimeout(tryFallbackIfNeeded, 2500);
             return;
         }
 
@@ -1380,6 +1404,7 @@ document.addEventListener('DOMContentLoaded', function() {
             refundEvidenceModalVideo.pause();
             refundEvidenceModalVideo.classList.add('hidden');
             refundEvidenceModalVideo.onerror = null;
+            refundEvidenceModalVideo.onloadedmetadata = null;
             refundEvidenceModalVideoSource.src = '';
             refundEvidenceModalVideo.load();
         }

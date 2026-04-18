@@ -422,6 +422,8 @@
                 imagePreviewEl.src = '';
 
                 let fallbackTried = false;
+                let metadataLoaded = false;
+                let fallbackTimer = null;
                 const setVideoSource = function(videoSrc) {
                     videoPreviewSource.src = videoSrc;
                     videoPreviewEl.load();
@@ -433,7 +435,27 @@
                     }
                 };
 
+                const clearFallbackTimer = function () {
+                    if (fallbackTimer) {
+                        clearTimeout(fallbackTimer);
+                        fallbackTimer = null;
+                    }
+                };
+
+                const tryFallbackIfNeeded = function () {
+                    if (!metadataLoaded && !fallbackTried && fallbackSrc && fallbackSrc !== src) {
+                        fallbackTried = true;
+                        setVideoSource(fallbackSrc);
+                    }
+                };
+
+                videoPreviewEl.onloadedmetadata = function () {
+                    metadataLoaded = true;
+                    clearFallbackTimer();
+                };
+
                 videoPreviewEl.onerror = function () {
+                    clearFallbackTimer();
                     if (!fallbackTried && fallbackSrc && fallbackSrc !== src) {
                         fallbackTried = true;
                         setVideoSource(fallbackSrc);
@@ -442,6 +464,8 @@
 
                 videoPreviewEl.classList.remove('hidden');
                 setVideoSource(src);
+                clearFallbackTimer();
+                fallbackTimer = setTimeout(tryFallbackIfNeeded, 2500);
                 return;
             }
 
@@ -449,6 +473,7 @@
                 videoPreviewEl.pause();
                 videoPreviewEl.classList.add('hidden');
                 videoPreviewEl.onerror = null;
+                videoPreviewEl.onloadedmetadata = null;
                 videoPreviewSource.src = '';
                 videoPreviewEl.load();
             }
@@ -473,6 +498,7 @@
                 videoPreviewEl.pause();
                 videoPreviewEl.classList.add('hidden');
                 videoPreviewEl.onerror = null;
+                videoPreviewEl.onloadedmetadata = null;
                 videoPreviewSource.src = '';
                 videoPreviewEl.load();
             }
@@ -620,8 +646,8 @@
                         + '</a>';
                 }
                 if (item.is_video) {
-                    const videoSrc = item.url;
-                    const videoFallback = item.open_url || item.preview_url || item.fallback_url || item.url;
+                    const videoSrc = item.open_url || item.preview_url || item.url;
+                    const videoFallback = item.url || item.fallback_url || item.open_url || item.preview_url;
                     return '<button type="button" data-preview-type="video" data-preview-src="' + videoSrc + '" data-preview-fallback="' + videoFallback + '" class="refund-evidence-preview relative inline-block mr-2 mb-2 w-24 h-20 rounded-lg overflow-hidden border border-blue-300 bg-blue-50" title="Play video">'
                         + '<video class="w-full h-full object-cover bg-black" muted playsinline preload="metadata"><source src="' + videoSrc + '"></video>'
                         + '<span class="absolute inset-0 flex items-center justify-center bg-black/25"><span class="inline-flex items-center px-2 py-0.5 rounded bg-white/90 text-[10px] font-semibold text-blue-700">Play</span></span>'

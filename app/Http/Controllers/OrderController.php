@@ -958,17 +958,33 @@ class OrderController extends Controller
                 $candidatePath = str_replace('\\', '/', trim((string) $candidatePath, '/'));
 
                 if (Storage::disk('public')->exists($candidatePath)) {
-                    return Storage::disk('public')->response($candidatePath);
+                    $absolutePath = Storage::disk('public')->path($candidatePath);
+                    $mimeType = Storage::disk('public')->mimeType($candidatePath) ?: 'application/octet-stream';
+                    return response()->file($absolutePath, [
+                        'Content-Type' => $mimeType,
+                        'Content-Disposition' => 'inline; filename="' . basename($absolutePath) . '"',
+                        'X-Content-Type-Options' => 'nosniff',
+                    ]);
                 }
 
                 if (Storage::disk('local')->exists($candidatePath)) {
-                    return Storage::disk('local')->response($candidatePath);
+                    $absolutePath = Storage::disk('local')->path($candidatePath);
+                    $mimeType = Storage::disk('local')->mimeType($candidatePath) ?: 'application/octet-stream';
+                    return response()->file($absolutePath, [
+                        'Content-Type' => $mimeType,
+                        'Content-Disposition' => 'inline; filename="' . basename($absolutePath) . '"',
+                        'X-Content-Type-Options' => 'nosniff',
+                    ]);
                 }
 
                 $publicStorageRelative = ltrim(str_replace(['public/', 'storage/'], '', $candidatePath), '/');
                 $publicStoragePath = public_path('storage/' . $publicStorageRelative);
                 if (is_file($publicStoragePath)) {
-                    return redirect()->to(asset('storage/' . $publicStorageRelative));
+                    return response()->file($publicStoragePath, [
+                        'Content-Type' => mime_content_type($publicStoragePath) ?: 'application/octet-stream',
+                        'Content-Disposition' => 'inline; filename="' . basename($publicStoragePath) . '"',
+                        'X-Content-Type-Options' => 'nosniff',
+                    ]);
                 }
             }
 
