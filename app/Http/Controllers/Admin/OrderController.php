@@ -392,8 +392,34 @@ class OrderController extends Controller
                         default => Str::headline($normalizedStatus),
                     };
 
-                    // Calculate order amount: use ?: so 0/"0.00" values are skipped
-                    $orderAmount = (float) ($refundRequest->refund_amount ?: $refundRequest->approved_amount ?: $refundRequest->recommended_refund_amount ?: $order->total_amount ?: $order->total ?: (($order->subtotal ?? 0) + ($order->shipping_fee ?? 0)));
+                    // Calculate order amount with proper zero-skipping
+                    $orderAmount = 0;
+                    foreach ([
+                        $refundRequest->refund_amount,
+                        $refundRequest->approved_amount,
+                        $refundRequest->recommended_refund_amount,
+                        $order->total_amount,
+                        $order->total,
+                        (($order->subtotal ?? 0) + ($order->shipping_fee ?? 0)),
+                    ] as $candidate) {
+                        if ((float) $candidate > 0) {
+                            $orderAmount = (float) $candidate;
+                            break;
+                        }
+                    }
+
+                    Log::info('Refund amount debug', [
+                        'refund_id' => $refundRequest->id,
+                        'order_id' => $order->id,
+                        'refund_amount' => $refundRequest->refund_amount,
+                        'approved_amount' => $refundRequest->approved_amount,
+                        'recommended' => $refundRequest->recommended_refund_amount,
+                        'total_amount' => $order->total_amount,
+                        'total' => $order->total,
+                        'subtotal' => $order->subtotal,
+                        'shipping_fee' => $order->shipping_fee,
+                        'final_amount' => $orderAmount,
+                    ]);
 
                     $modalPayload = [
                         'refund_id' => (string) ($refundRequest->refund_reference ?: ('RF-' . str_pad((string) $refundRequest->id, 4, '0', STR_PAD_LEFT))),
