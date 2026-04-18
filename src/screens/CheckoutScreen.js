@@ -592,7 +592,11 @@ const CheckoutScreen = ({ navigation }) => {
       total: actualTotal,
       total_amount: actualTotal,
       payment_option: effectivePaymentOption,
-      downpayment_rate: effectiveDownpaymentRate,
+      // Backend validates downpayment_rate with max:99 — omit when full payment
+      // (100) to avoid validation failure on the order creation endpoint.
+      ...(effectivePaymentOption === 'downpayment'
+        ? { downpayment_rate: effectiveDownpaymentRate }
+        : {}),
       downpayment_amount: actualDownpaymentAmount,
       remaining_balance: actualRemainingBalance,
       notes: `Order from mobile app [checkout_ref:${checkoutReference}]`,
