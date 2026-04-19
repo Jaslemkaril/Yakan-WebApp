@@ -732,6 +732,27 @@ class ChatController extends Controller
      */
     public function store(Request $request)
     {
+        if (!auth()->check()) {
+            \Log::warning('ChatController store: unauthenticated request', [
+                'has_auth_token' => $request->has('auth_token') || $request->has('auth-token'),
+                'ip' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 180),
+            ]);
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Session expired. Please log in again and retry.',
+                    'redirect_url' => route('login.user.form'),
+                ], 401);
+            }
+
+            return $this->redirectWithToken('login.user.form')
+                ->with('error', 'Session expired. Please log in again and retry.');
+        }
+
+        $authUser = auth()->user();
+
         $validated = $request->validate([
             'subject' => 'required|string|max:255',
             'message' => 'required|string',
@@ -739,10 +760,10 @@ class ChatController extends Controller
         ]);
 
         $chat = Chat::create([
-            'user_id' => auth()->id(),
-            'user_name' => auth()->user()->name,
-            'user_email' => auth()->user()->email,
-            'user_phone' => auth()->user()->phone ?? '',
+            'user_id' => $authUser->id,
+            'user_name' => $authUser->name,
+            'user_email' => $authUser->email,
+            'user_phone' => $authUser->phone ?? '',
             'subject' => $validated['subject'],
             'status' => 'open',
         ]);
@@ -750,7 +771,7 @@ class ChatController extends Controller
         // Store first message
         $messageData = [
             'chat_id' => $chat->id,
-            'user_id' => auth()->id(),
+            'user_id' => $authUser->id,
             'sender_type' => 'user',
             'message' => $validated['message'],
         ];
@@ -801,7 +822,7 @@ class ChatController extends Controller
                 \Log::error('Chat image upload failed on chat creation', [
                     'error' => $e->getMessage(),
                     'chat_id' => $chat->id,
-                    'user_id' => auth()->id(),
+                    'user_id' => $authUser->id,
                 ]);
                 // Still create chat even if image upload fails
             }
@@ -810,7 +831,7 @@ class ChatController extends Controller
         ChatMessage::create($messageData);
 
         if ($request->expectsJson() || $request->ajax()) {
-            $redirectUrl = $this->redirectWithToken('chats.show', $chat)->getTargetUrl();
+            $redirectUrl = $this->redirectWithToken('chats.show', ['chat' => $chat->id])->getTargetUrl();
             return response()->json([
                 'success' => true,
                 'message' => 'Chat created successfully!',
@@ -819,7 +840,7 @@ class ChatController extends Controller
             ]);
         }
 
-        return $this->redirectWithToken('chats.show', $chat)->with('success', 'Chat created successfully!');
+        return $this->redirectWithToken('chats.show', ['chat' => $chat->id])->with('success', 'Chat created successfully!');
     }
 
     /**

@@ -53,6 +53,9 @@
         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
             <form id="createChatForm" action="{{ route('chats.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
+                @if(request()->get('auth_token') || session('auth_token'))
+                    <input type="hidden" name="auth_token" value="{{ request()->get('auth_token') ?? session('auth_token') }}">
+                @endif
 
                 <!-- Subject -->
                 <div class="mb-8">
@@ -145,7 +148,7 @@
     const imageDropZone = document.getElementById('imageDropZone');
     const imageInput = document.getElementById('image');
 
-    // AJAX Form Submission
+    // Form Submission State
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('createChatForm');
         const submitButton = document.getElementById('submitButton');
@@ -155,44 +158,11 @@
 
         if (form) {
             form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                // Disable form during submission
+                // Let Laravel handle normal redirect flow; just prevent double submit.
                 submitButton.disabled = true;
                 sendIcon.classList.add('hidden');
                 sendingIcon.classList.remove('hidden');
                 submitText.textContent = 'Sending...';
-                
-                const formData = new FormData(form);
-                
-                fetch(form.action, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.redirect_url) {
-                        // Smooth redirect without white screen
-                        window.location.href = data.redirect_url;
-                    } else {
-                        alert(data.message || 'Failed to create chat');
-                        submitButton.disabled = false;
-                        sendIcon.classList.remove('hidden');
-                        sendingIcon.classList.add('hidden');
-                        submitText.textContent = 'Send Design Brief';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Failed to create chat. Please try again.');
-                    submitButton.disabled = false;
-                    sendIcon.classList.remove('hidden');
-                    sendingIcon.classList.add('hidden');
-                    submitText.textContent = 'Send Design Brief';
-                });
             });
         }
     });
