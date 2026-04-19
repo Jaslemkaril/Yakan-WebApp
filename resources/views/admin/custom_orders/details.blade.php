@@ -1240,20 +1240,41 @@
                             <p class="text-sm font-semibold text-gray-900">Customer {{ ucfirst($latestCustomRefundRequest->request_type) }} Request</p>
                             @php
                                 $customAdminRefundStatusMap = [
+                                    'pending_review' => 'bg-yellow-100 text-yellow-800',
                                     'requested' => 'bg-yellow-100 text-yellow-800',
                                     'under_review' => 'bg-blue-100 text-blue-800',
+                                    'awaiting_return_shipment' => 'bg-orange-100 text-orange-800',
+                                    'return_in_transit' => 'bg-amber-100 text-amber-800',
+                                    'return_received' => 'bg-cyan-100 text-cyan-800',
+                                    'pending_payout' => 'bg-indigo-100 text-indigo-800',
                                     'approved' => 'bg-indigo-100 text-indigo-800',
                                     'processed' => 'bg-green-100 text-green-800',
                                     'rejected' => 'bg-red-100 text-red-800',
                                 ];
-                                $customAdminRefundClass = $customAdminRefundStatusMap[$latestCustomRefundRequest->status] ?? 'bg-gray-100 text-gray-800';
+                                $customAdminRefundCurrentStatus = $latestCustomRefundRequest->workflow_status ?: $latestCustomRefundRequest->status;
+                                $customAdminRefundClass = $customAdminRefundStatusMap[$customAdminRefundCurrentStatus] ?? 'bg-gray-100 text-gray-800';
                                 $customAdminRefundEvidence = is_array($latestCustomRefundRequest->evidence_paths ?? null) ? $latestCustomRefundRequest->evidence_paths : [];
                             @endphp
-                            <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $customAdminRefundClass }}">{{ ucfirst(str_replace('_', ' ', $latestCustomRefundRequest->status)) }}</span>
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $customAdminRefundClass }}">{{ ucfirst(str_replace('_', ' ', $customAdminRefundCurrentStatus)) }}</span>
                         </div>
                         <p class="text-xs text-gray-500 mb-2">Requested by {{ $latestCustomRefundRequest->user->name ?? 'Customer' }} on {{ optional($latestCustomRefundRequest->requested_at)->format('M d, Y h:i A') ?? $latestCustomRefundRequest->created_at->format('M d, Y h:i A') }}</p>
                         <p class="text-sm text-gray-700"><span class="font-semibold">Reason:</span> {{ $latestCustomRefundRequest->reason }}</p>
                         <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Details:</span> {{ $latestCustomRefundRequest->details }}</p>
+                        @if(!empty($latestCustomRefundRequest->recommended_decision))
+                            <p class="text-sm text-blue-700 mt-1"><span class="font-semibold">System Recommendation:</span> {{ strtoupper(str_replace('_', ' ', $latestCustomRefundRequest->recommended_decision)) }} @if(!is_null($latestCustomRefundRequest->recommended_refund_amount))(PHP {{ number_format((float) $latestCustomRefundRequest->recommended_refund_amount, 2) }})@endif</p>
+                        @endif
+                        @if(!empty($latestCustomRefundRequest->final_decision))
+                            <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Final Decision:</span> {{ strtoupper(str_replace('_', ' ', $latestCustomRefundRequest->final_decision)) }}</p>
+                        @endif
+                        @if(!is_null($latestCustomRefundRequest->refund_amount))
+                            <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Approved Refund:</span> PHP {{ number_format((float) $latestCustomRefundRequest->refund_amount, 2) }}</p>
+                        @endif
+                        @if(!empty($latestCustomRefundRequest->payout_status))
+                            <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Payout Status:</span> {{ ucfirst(str_replace('_', ' ', $latestCustomRefundRequest->payout_status)) }}</p>
+                        @endif
+                        @if(!empty($latestCustomRefundRequest->return_tracking_number))
+                            <p class="text-sm text-gray-700 mt-1"><span class="font-semibold">Return Tracking:</span> {{ $latestCustomRefundRequest->return_tracking_number }}</p>
+                        @endif
 
                         @if(!empty($customAdminRefundEvidence))
                             <div class="mt-3">
@@ -1305,17 +1326,44 @@
                         @endif
                     </div>
 
-                    @if(in_array($latestCustomRefundRequest->status, ['requested', 'under_review']))
+                    @if(in_array($customAdminRefundCurrentStatus, ['pending_review', 'under_review', 'requested']))
                     <form action="{{ route('admin.custom-orders.refund_requests.approve', $latestCustomRefundRequest->id) }}" method="POST" class="space-y-2">
                         @csrf
+                        <select name="admin_decision" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
+                            <option value="recommended" selected>Use system recommendation</option>
+                            <option value="FULL_REFUND">Approve Full Refund</option>
+                            <option value="PARTIAL_REFUND">Approve Partial Refund</option>
+                            <option value="RETURN_REQUIRED">Approve With Return Required</option>
+                        </select>
+                        <input type="number" step="0.01" min="0" name="approved_amount" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Refund amount (optional override)">
                         <textarea name="admin_note" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Optional note for customer"></textarea>
-                        <button type="submit" onclick="return confirm('Approve and process this request?');" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium flex items-center justify-center">Approve & Process {{ ucfirst($latestCustomRefundRequest->request_type) }}</button>
+                        <button type="submit" onclick="return confirm('Submit refund review decision?');" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium flex items-center justify-center">Save Review Decision</button>
                     </form>
 
                     <form action="{{ route('admin.custom-orders.refund_requests.reject', $latestCustomRefundRequest->id) }}" method="POST" class="space-y-2">
                         @csrf
                         <textarea name="admin_note" rows="2" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Reason for rejection (required)"></textarea>
                         <button type="submit" onclick="return confirm('Reject this request?');" class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium flex items-center justify-center">Reject {{ ucfirst($latestCustomRefundRequest->request_type) }} Request</button>
+                    </form>
+                    @elseif(in_array($customAdminRefundCurrentStatus, ['awaiting_return_shipment', 'return_in_transit']))
+                    <form action="{{ route('admin.custom-orders.refund_requests.return_received', $latestCustomRefundRequest->id) }}" method="POST" class="space-y-2">
+                        @csrf
+                        <textarea name="admin_note" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Optional note after return inspection"></textarea>
+                        <button type="submit" onclick="return confirm('Confirm that returned item has been received?');" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium flex items-center justify-center">Confirm Return Received</button>
+                    </form>
+                    @elseif(in_array($customAdminRefundCurrentStatus, ['pending_payout', 'return_received', 'approved']))
+                    <form action="{{ route('admin.custom-orders.refund_requests.execute_payout', $latestCustomRefundRequest->id) }}" method="POST" class="space-y-2">
+                        @csrf
+                        <select name="refund_channel" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="">Select payout channel</option>
+                            <option value="gcash">GCash</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="cash">Cash</option>
+                            <option value="paymongo_reverse">PayMongo Reverse</option>
+                        </select>
+                        <input type="text" name="refund_reference" required maxlength="120" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Payout reference number">
+                        <textarea name="admin_note" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Optional payout note"></textarea>
+                        <button type="submit" onclick="return confirm('Record payout and finalize this refund?');" class="w-full bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-800 transition-colors duration-200 font-medium flex items-center justify-center">Execute Payout & Finalize</button>
                     </form>
                     @endif
                     @endif

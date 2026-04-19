@@ -1285,6 +1285,8 @@ Route::middleware(['admin:admin,order_staff'])->prefix('admin')->name('admin.')-
         Route::post('/{order}/clear-delay', [AdminCustomOrderController::class, 'clearDelay'])->name('clearDelay');
         Route::post('/refund-requests/{refundRequest}/approve', [AdminCustomOrderController::class, 'approveRefundRequest'])->name('refund_requests.approve');
         Route::post('/refund-requests/{refundRequest}/reject', [AdminCustomOrderController::class, 'rejectRefundRequest'])->name('refund_requests.reject');
+        Route::post('/refund-requests/{refundRequest}/return-received', [AdminCustomOrderController::class, 'markRefundReturnReceived'])->name('refund_requests.return_received');
+        Route::post('/refund-requests/{refundRequest}/execute-payout', [AdminCustomOrderController::class, 'executeRefundPayout'])->name('refund_requests.execute_payout');
         Route::get('/refund-requests/{refundRequest}/evidence/{index}', [AdminCustomOrderController::class, 'viewRefundEvidence'])->whereNumber('index')->name('refund_evidence.view');
     });
 
