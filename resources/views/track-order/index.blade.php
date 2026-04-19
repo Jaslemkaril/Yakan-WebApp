@@ -123,7 +123,18 @@
                 @foreach($recentOrders as $order)
                     @php
                         $isCustom  = ($order->_order_type ?? '') === 'custom';
-                        $status    = $order->status;
+                        
+                        // Check for cancellation/refund for custom orders
+                        $orderRefundRequest = null;
+                        $isOrderCancelled = false;
+                        if ($isCustom) {
+                            $orderRefundRequest = \App\Models\CustomOrderRefundRequest::where('custom_order_id', $order->id)
+                                ->where('request_type', 'return')
+                                ->first();
+                            $isOrderCancelled = !empty($orderRefundRequest) && in_array($orderRefundRequest->status, ['approved', 'processed']);
+                        }
+                        
+                        $status    = $isOrderCancelled ? 'cancelled' : $order->status;
                         // Normalise label for display
                         $statusLabel = match($status) {
                             'pending_confirmation' => 'Pending Confirmation',
