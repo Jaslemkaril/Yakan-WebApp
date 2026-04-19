@@ -3102,12 +3102,14 @@ class CustomOrderController extends Controller
                 'matches' => $order->user_id === Auth::id()
             ]);
 
-            // Check ownership
-            if ($order->user_id !== Auth::id()) {
+            // Check ownership (use loose comparison to handle int vs string)
+            if ((int) $order->user_id !== (int) Auth::id()) {
                 \Log::warning('CustomOrder access denied - ownership mismatch', [
                     'order_id' => $order->id,
                     'order_user_id' => $order->user_id,
+                    'order_user_id_type' => gettype($order->user_id),
                     'authenticated_user_id' => Auth::id(),
+                    'auth_id_type' => gettype(Auth::id()),
                     'reason' => 'Order does not belong to authenticated user'
                 ]);
                 return redirect()->route('custom_orders.index')->with('error', 'You do not have permission to view this order.');
@@ -3169,9 +3171,10 @@ class CustomOrderController extends Controller
             \Log::error('CustomOrder show error', [
                 'order_id' => $id,
                 'error' => $e->getMessage(),
+                'file' => $e->getFile() . ':' . $e->getLine(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return redirect()->route('custom_orders.index')->with('error', 'An error occurred while loading the order.');
+            return redirect()->route('custom_orders.index')->with('error', 'Error loading order: ' . $e->getMessage());
         }
     }
 
