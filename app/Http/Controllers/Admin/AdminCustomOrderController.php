@@ -796,28 +796,49 @@ class AdminCustomOrderController extends Controller
 
                 if (Storage::disk('public')->exists($candidatePath)) {
                     $absolutePath = Storage::disk('public')->path($candidatePath);
-                    $mimeType = Storage::disk('public')->mimeType($candidatePath) ?: 'application/octet-stream';
+                    $mimeType = $this->resolveEvidenceMimeType(
+                        Storage::disk('public')->mimeType($candidatePath),
+                        $absolutePath,
+                        $path
+                    );
                     return response()->file($absolutePath, [
                         'Content-Type' => $mimeType,
                         'Content-Disposition' => 'inline; filename="' . basename($absolutePath) . '"',
                         'X-Content-Type-Options' => 'nosniff',
+                        'Accept-Ranges' => 'bytes',
                     ]);
                 }
 
                 if (Storage::disk('local')->exists($candidatePath)) {
                     $absolutePath = Storage::disk('local')->path($candidatePath);
-                    $mimeType = Storage::disk('local')->mimeType($candidatePath) ?: 'application/octet-stream';
+                    $mimeType = $this->resolveEvidenceMimeType(
+                        Storage::disk('local')->mimeType($candidatePath),
+                        $absolutePath,
+                        $path
+                    );
                     return response()->file($absolutePath, [
                         'Content-Type' => $mimeType,
                         'Content-Disposition' => 'inline; filename="' . basename($absolutePath) . '"',
                         'X-Content-Type-Options' => 'nosniff',
+                        'Accept-Ranges' => 'bytes',
                     ]);
                 }
 
                 $publicStorageRelative = ltrim(str_replace(['public/', 'storage/'], '', $candidatePath), '/');
                 $publicStoragePath = public_path('storage/' . $publicStorageRelative);
                 if (is_file($publicStoragePath)) {
-                    return redirect()->to(asset('storage/' . $publicStorageRelative));
+                    $mimeType = $this->resolveEvidenceMimeType(
+                        @mime_content_type($publicStoragePath),
+                        $publicStoragePath,
+                        $path
+                    );
+
+                    return response()->file($publicStoragePath, [
+                        'Content-Type' => $mimeType,
+                        'Content-Disposition' => 'inline; filename="' . basename($publicStoragePath) . '"',
+                        'X-Content-Type-Options' => 'nosniff',
+                        'Accept-Ranges' => 'bytes',
+                    ]);
                 }
             }
 
@@ -842,6 +863,47 @@ class AdminCustomOrderController extends Controller
             $transparentPixel = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
             return response($transparentPixel, 200)->header('Content-Type', 'image/png');
         }
+    }
+
+    /**
+     * Resolve evidence MIME type with extension-aware fallbacks.
+     */
+    private function resolveEvidenceMimeType(?string $detectedMimeType, string $absolutePath, string $sourcePath): string
+    {
+        $extensionSource = parse_url($sourcePath, PHP_URL_PATH);
+        $extension = strtolower((string) pathinfo(
+            is_string($extensionSource) && $extensionSource !== '' ? $extensionSource : $absolutePath,
+            PATHINFO_EXTENSION
+        ));
+
+        $mimeByExtension = [
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'pdf' => 'application/pdf',
+            'mp4' => 'video/mp4',
+            'mov' => 'video/quicktime',
+            'webm' => 'video/webm',
+        ];
+
+        if (isset($mimeByExtension[$extension])) {
+            return $mimeByExtension[$extension];
+        }
+
+        $normalizedDetected = strtolower(trim((string) $detectedMimeType));
+        $genericTypes = ['application/octet-stream', 'binary/octet-stream', 'text/plain', 'inode/x-empty', ''];
+
+        if (!in_array($normalizedDetected, $genericTypes, true)) {
+            return $normalizedDetected;
+        }
+
+        $fileInfoMime = strtolower(trim((string) (@mime_content_type($absolutePath) ?: '')));
+        if (!in_array($fileInfoMime, $genericTypes, true)) {
+            return $fileInfoMime;
+        }
+
+        return 'application/octet-stream';
     }
 
     /**
