@@ -973,6 +973,7 @@ Route::post('/api/custom-orders/{order}/initiate-payment', [\App\Http\Controller
     ->name('custom_orders.payment.initiate.ajax')
     ->withoutMiddleware(['auth']);
 
+}); // End of auth middleware group
 
 // Custom Orders Routes - Outside auth middleware to allow TokenAuth to work
 // Controllers verify ownership with auth()->id() checks
