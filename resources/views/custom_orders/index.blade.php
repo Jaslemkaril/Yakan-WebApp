@@ -14,6 +14,11 @@
                 {{ session('error') }}
             </div>
         @endif
+        @if(request('detail_error'))
+            <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                <strong>Could not open order:</strong> {{ request('detail_error') }}
+            </div>
+        @endif
         @if(session('success'))
             <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
                 {{ session('success') }}

@@ -3166,16 +3166,21 @@ class CustomOrderController extends Controller
                 'order_id' => $id,
                 'error' => $e->getMessage()
             ]);
-            return redirect()->route('custom_orders.index')->with('error', 'Custom order not found.');
-            
-        } catch (\Exception $e) {
+            return $this->redirectToRouteWithToken('custom_orders.index', [], [
+                'detail_error' => 'Custom order not found.'
+            ])->with('error', 'Custom order not found.');
+
+        } catch (\Throwable $e) {
             \Log::error('CustomOrder show error', [
                 'order_id' => $id,
                 'error' => $e->getMessage(),
                 'file' => $e->getFile() . ':' . $e->getLine(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return redirect()->route('custom_orders.index')->with('error', 'Error loading order: ' . $e->getMessage());
+            $errorDetail = $e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine();
+            return $this->redirectToRouteWithToken('custom_orders.index', [], [
+                'detail_error' => $errorDetail
+            ])->with('error', 'Error loading order: ' . $errorDetail);
         }
     }
 
