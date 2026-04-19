@@ -188,6 +188,13 @@
                                     }
                                 }
                                 $isGroupedSubmission = ($currentBatchMeta['item_count'] ?? 0) > 1;
+                                
+                                // Check for cancellation/refund request
+                                $orderRefundRequest = \App\Models\RefundRequest::where('order_id', $order->id)
+                                    ->where('order_type', 'custom')
+                                    ->where('request_type', 'return')
+                                    ->first();
+                                $isOrderCancelled = !empty($orderRefundRequest) && in_array($orderRefundRequest->status, ['approved', 'processed']);
                             @endphp
                             <tr class="hover:bg-red-50 transition-colors duration-150 order-row" data-status="{{ $order->status }}">
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -365,7 +372,9 @@
                                             ],
                                         ];
 
-                                        $config = $statusConfig[$order->status] ?? [
+                                        // Use cancellation-aware status
+                                        $effectiveOrderStatus = $isOrderCancelled ? 'cancelled' : $order->status;
+                                        $config = $statusConfig[$effectiveOrderStatus] ?? [
                                             'bg' => 'bg-gray-100',
                                             'text' => 'text-gray-800',
                                             'icon' => '',
@@ -388,7 +397,7 @@
                                                 <svg class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $config['icon'] }}"/>
                                                 </svg>
-                                                {{ ucfirst(str_replace('_', ' ', $order->status)) }}
+                                                {{ $isOrderCancelled ? 'Cancelled' : ucfirst(str_replace('_', ' ', $order->status)) }}
                                             </span>
                                             
                                             <!-- Tooltip -->
@@ -506,7 +515,7 @@
                                             @else
                                                 <span class="text-lg font-bold text-gray-900">₱{{ number_format($displayPrice, 0) }}</span>
                                             @endif
-                                            @if($order->payment_status)
+                                            @if($order->payment_status && !$isOrderCancelled)
                                                 @php
                                                     $paymentConfig = [
                                                         // Treat both 'pending' (DB default) and 'unpaid' as the same visual state
@@ -601,7 +610,7 @@
                                         
 
 
-                                        @if($order->status === 'approved' && !in_array($order->payment_status, ['paid', 'pending_verification']))
+                                        @if($order->status === 'approved' && !in_array($order->payment_status, ['paid', 'pending_verification']) && !$isOrderCancelled)
                                                         <a href="{{ route('custom_orders.payment', ['order' => $order->id, 'auth_token' => $authToken]) }}"
                                                class="inline-flex items-center px-3 py-2 bg-red-700 hover:bg-red-800 text-white text-sm font-medium rounded-lg transition-colors">
                                                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
