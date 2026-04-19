@@ -1084,14 +1084,43 @@ class OrderController extends Controller
 
             $evidencePaths = [];
             if ($request->hasFile('evidence')) {
+                $cloudinary = new \App\Services\CloudinaryService();
                 foreach ($request->file('evidence', []) as $file) {
                     if (!$file) {
                         continue;
                     }
 
+                    if ($cloudinary->isEnabled()) {
+                        $tempPath = $file->getRealPath();
+                        $result = $cloudinary->upload($tempPath, 'refunds/order-' . $order->id);
+                        if ($result && !empty($result['url'])) {
+                            $evidencePaths[] = $result['url'];
+                            \Log::info('Mobile refund evidence uploaded to Cloudinary', [
+                                'order' => $order->id,
+                                'url' => $result['url'],
+                            ]);
+                            continue;
+                        }
+
+                        \Log::error('Mobile refund evidence Cloudinary upload failed, falling back to local disk', [
+                            'order' => $order->id,
+                            'file' => $file->getClientOriginalName(),
+                        ]);
+                    } else {
+                        \Log::warning('Cloudinary not enabled for mobile refund evidence, using local disk', [
+                            'order' => $order->id,
+                        ]);
+                    }
+
                     $evidencePaths[] = $file->store('refunds/order-' . $order->id, 'public');
                 }
             }
+
+            \Log::info('Mobile refund evidence paths saved', [
+                'order' => $order->id,
+                'count' => count($evidencePaths),
+                'paths' => $evidencePaths,
+            ]);
 
             $validationSnapshot = $this->buildRefundValidationSnapshot($order, (int) $user->id);
             $recommendation = $this->buildRefundRecommendation(
