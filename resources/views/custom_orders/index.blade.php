@@ -253,9 +253,15 @@
                                     @if($order->design_upload)
                                         @php
                                             // Proper image path handling - prioritize uploaded design
+                                            // Handle comma-separated images (take first one for list view)
                                             $designPath = $order->design_upload;
+                                            if (str_contains($designPath, ',')) {
+                                                $designPath = explode(',', $designPath)[0];
+                                            }
+                                            $designPath = trim($designPath);
+                                            
                                             if (str_starts_with($designPath, 'http://') || str_starts_with($designPath, 'https://')) {
-                                                $imgSrc = $designPath; // Cloudinary URL
+                                                $imgSrc = $designPath; // Full URL (Cloudinary, asset(), etc.)
                                             } elseif (str_starts_with($designPath, 'data:image')) {
                                                 $imgSrc = $designPath; // Data URL
                                             } elseif (str_starts_with($designPath, 'storage/')) {
