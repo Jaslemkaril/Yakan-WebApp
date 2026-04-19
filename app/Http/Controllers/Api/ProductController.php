@@ -36,7 +36,7 @@ class ProductController extends Controller
 
         return $product->variants()
             ->where('is_active', true)
-            ->get(['id', 'product_id', 'size', 'color', 'price', 'stock', 'is_active']);
+            ->get(['id', 'product_id', 'sku', 'size', 'color', 'image', 'price', 'stock', 'is_active']);
     }
 
     private function formatVariant(Product $product, ProductVariant $variant): array
@@ -45,8 +45,11 @@ class ProductController extends Controller
 
         return [
             'id' => $variant->id,
+            'sku' => $variant->sku,
             'size' => $variant->size,
             'color' => $variant->color,
+            'image' => $variant->image,
+            'image_url' => $variant->image_src,
             'price' => $priceMeta['price'],
             'original_price' => $priceMeta['original_price'],
             'discount_amount' => $priceMeta['discount_amount'],
@@ -109,6 +112,8 @@ class ProductController extends Controller
         $product->setAttribute('has_product_discount', $priceMeta['has_product_discount']);
         $product->setAttribute('discount_type', $priceMeta['has_product_discount'] ? $product->discount_type : null);
         $product->setAttribute('discount_value', $priceMeta['has_product_discount'] ? (float) $product->discount_value : null);
+        $product->setAttribute('image_url', $product->image_url);
+        $product->setAttribute('image_src', $product->image_src);
         $product->setAttribute('has_variants', $hasVariants);
         $product->setAttribute('variant_count', $activeVariants->count());
 
@@ -135,7 +140,7 @@ class ProductController extends Controller
             $cacheKey = 'products:' . md5(json_encode($request->all()));
             
             $products = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 300), function () use ($request) {
-                $selectColumns = ['id', 'name', 'description', 'price', 'stock', 'category_id', 'image', 'status', 'sku', 'created_at'];
+                $selectColumns = ['id', 'name', 'description', 'price', 'stock', 'category_id', 'image', 'all_images', 'status', 'sku', 'created_at'];
                 if (Schema::hasColumns('products', ['discount_type', 'discount_value', 'discount_starts_at', 'discount_ends_at'])) {
                     array_splice($selectColumns, 4, 0, ['discount_type', 'discount_value', 'discount_starts_at', 'discount_ends_at']);
                 }
@@ -143,7 +148,7 @@ class ProductController extends Controller
                 $query = Product::select($selectColumns)->with([
                     'category:id,name,slug',
                     'inventory:product_id,quantity',
-                    'variants:id,product_id,size,color,price,stock,is_active',
+                    'variants:id,product_id,sku,size,color,image,price,stock,is_active',
                 ])->active(); // show all active products; out-of-stock handled in app
                 
                 if ($request->has('category')) {
@@ -210,7 +215,7 @@ class ProductController extends Controller
             $cacheKey = 'products:featured';
             
             $products = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 7200), function () use ($request) {
-                $selectColumns = ['id', 'name', 'description', 'price', 'stock', 'category_id', 'image', 'status'];
+                $selectColumns = ['id', 'name', 'description', 'price', 'stock', 'category_id', 'image', 'all_images', 'status'];
                 if (Schema::hasColumns('products', ['discount_type', 'discount_value', 'discount_starts_at', 'discount_ends_at'])) {
                     array_splice($selectColumns, 4, 0, ['discount_type', 'discount_value', 'discount_starts_at', 'discount_ends_at']);
                 }
@@ -219,7 +224,7 @@ class ProductController extends Controller
                 ->with([
                     'category:id,name,slug',
                     'inventory:product_id,quantity',
-                    'variants:id,product_id,size,color,price,stock,is_active',
+                    'variants:id,product_id,sku,size,color,image,price,stock,is_active',
                 ])
                 ->active()
                 ->where('featured', true)
@@ -264,7 +269,7 @@ class ProductController extends Controller
                 'category',
                 'orderItems',
                 'inventory',
-                'variants:id,product_id,size,color,price,stock,is_active',
+                'variants:id,product_id,sku,size,color,image,price,stock,is_active',
             ]);
 
             return $this->decorateProduct($productModel, true);
@@ -284,7 +289,7 @@ class ProductController extends Controller
             return Product::with([
                 'category',
                 'inventory:product_id,quantity',
-                'variants:id,product_id,size,color,price,stock,is_active',
+                'variants:id,product_id,sku,size,color,image,price,stock,is_active',
             ])
                 ->whereHas('category', function($query) use ($category) {
                     $query->where('slug', $category);

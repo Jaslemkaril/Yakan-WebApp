@@ -121,7 +121,17 @@ const ProductsScreen = ({ navigation }) => {
       
       // Transform API data to match app structure
       const transformedProducts = productsData.map(product => {
-        console.log(`[Product ${product.id}] Original image:`, product.image);
+        console.log(`[Product ${product.id}] Original image:`, product.image_url || product.image_src || product.image);
+        const allImages = Array.isArray(product.all_images)
+          ? product.all_images
+          : (typeof product.all_images === 'string'
+              ? (() => {
+                  try { return JSON.parse(product.all_images); } catch (_) { return []; }
+                })()
+              : []);
+        const firstGalleryImage = Array.isArray(allImages) && allImages.length > 0
+          ? (typeof allImages[0] === 'string' ? allImages[0] : (allImages[0]?.path || allImages[0]?.url || null))
+          : null;
         const price = parseFloat(product.price || 0);
         const originalPrice = parseFloat(product.original_price ?? product.price ?? 0);
         return {
@@ -132,7 +142,7 @@ const ProductsScreen = ({ navigation }) => {
           originalPrice,
           hasProductDiscount: !!product.has_product_discount && originalPrice > price,
           category: product.category?.name || product.category_name || 'Uncategorized',
-          image: product.image || null,
+          image: product.image_url || product.image_src || product.image || firstGalleryImage || null,
           stock: product.stock || 0,
           has_variants: !!product.has_variants,
           variants: Array.isArray(product.variants)

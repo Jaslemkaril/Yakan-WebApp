@@ -32,6 +32,32 @@ export default function HomeScreen({ navigation }) {
   const { theme } = useTheme();
   const styles = getStyles(theme);
 
+  const resolveImageValue = (value) => {
+    if (!value || typeof value !== 'string') {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:image')) {
+      return { uri: trimmed };
+    }
+
+    const baseUrl = API_CONFIG.API_BASE_URL.replace('/api/v1', '');
+    if (trimmed.startsWith('/uploads') || trimmed.startsWith('/storage')) {
+      return { uri: `${baseUrl}${trimmed}` };
+    }
+
+    if (trimmed.startsWith('uploads/') || trimmed.startsWith('storage/')) {
+      return { uri: `${baseUrl}/${trimmed}` };
+    }
+
+    return { uri: `${baseUrl}/uploads/products/${trimmed}` };
+  };
+
   // Fetch products on first mount
   useEffect(() => {
     fetchProducts();
@@ -71,6 +97,19 @@ export default function HomeScreen({ navigation }) {
 
   const transformProducts = (productsData) => {
     return productsData.map(product => {
+      const allImages = Array.isArray(product.all_images)
+        ? product.all_images
+        : (typeof product.all_images === 'string'
+            ? (() => {
+                try { return JSON.parse(product.all_images); } catch (_) { return []; }
+              })()
+            : []);
+      const firstGalleryImage = Array.isArray(allImages) && allImages.length > 0
+        ? (typeof allImages[0] === 'string' ? allImages[0] : (allImages[0]?.path || allImages[0]?.url || null))
+        : null;
+      const resolvedImage = [product.image_url, product.image_src, product.image, firstGalleryImage]
+        .map(resolveImageValue)
+        .find(Boolean);
       const price = parseFloat(product.price || 0);
       const originalPrice = parseFloat(product.original_price ?? product.price ?? 0);
       const hasProductDiscount = !!product.has_product_discount && originalPrice > price;
@@ -84,14 +123,7 @@ export default function HomeScreen({ navigation }) {
         hasProductDiscount,
         discountAmount: parseFloat(product.discount_amount || 0),
         category: product.category?.name || 'Uncategorized',
-        image: product.image 
-          ? { uri: product.image.startsWith('http') 
-              ? product.image 
-              : product.image.startsWith('/uploads') || product.image.startsWith('/storage')
-                ? `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}${product.image}`
-                : `${API_CONFIG.API_BASE_URL.replace('/api/v1', '')}/storage/products/${product.image}` 
-            }
-          : require('../assets/images/Saputangan.jpg'),
+        image: resolvedImage || require('../assets/images/Saputangan.jpg'),
         stock: product.stock || 0,
         has_variants: !!product.has_variants,
         variants: Array.isArray(product.variants) ? product.variants.map(variant => ({

@@ -92,12 +92,20 @@ export default function ProductDetailScreen({ route, navigation }) {
   };
 
   const resolvePrimaryProductImage = () => {
-    const directImage = resolveImageValue(currentProduct?.image);
-    if (directImage) {
-      return directImage;
+    const directResolved = [currentProduct?.image_url, currentProduct?.image_src, currentProduct?.image]
+      .map(resolveImageValue)
+      .find(Boolean);
+    if (directResolved) {
+      return directResolved;
     }
 
-    const allImages = Array.isArray(currentProduct?.all_images) ? currentProduct.all_images : [];
+    const allImages = Array.isArray(currentProduct?.all_images)
+      ? currentProduct.all_images
+      : (typeof currentProduct?.all_images === 'string'
+          ? (() => {
+              try { return JSON.parse(currentProduct.all_images); } catch (_) { return []; }
+            })()
+          : []);
     for (const img of allImages) {
       const candidate = typeof img === 'string' ? img : (img?.path || img?.url || img?.image);
       const resolved = resolveImageValue(candidate);
@@ -163,7 +171,7 @@ export default function ProductDetailScreen({ route, navigation }) {
 
   useEffect(() => {
     setImageLoadFailed(false);
-  }, [currentProduct?.id, currentProduct?.image]);
+  }, [currentProduct?.id, currentProduct?.image, currentProduct?.image_url, currentProduct?.image_src]);
 
   // Update isFavorite when product changes
   React.useEffect(() => {
@@ -296,7 +304,7 @@ export default function ProductDetailScreen({ route, navigation }) {
         original_price: effectiveOriginalPrice,
         has_product_discount: hasActiveDiscount,
         quantity: quantity,
-        image: currentProduct.image,
+        image: currentProduct.image_url || currentProduct.image_src || currentProduct.image,
         stock: effectiveStock,
       };
       setCheckoutItems([checkoutItem]);
@@ -338,7 +346,7 @@ export default function ProductDetailScreen({ route, navigation }) {
             resizeMode="cover"
             onError={(error) => {
               console.log('[ProductDetail] Image load error:', error);
-              console.log('[ProductDetail] Product image:', currentProduct.image);
+              console.log('[ProductDetail] Product image:', currentProduct.image_url || currentProduct.image_src || currentProduct.image);
               setImageLoadFailed(true);
             }}
           />
