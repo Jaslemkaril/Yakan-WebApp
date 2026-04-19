@@ -73,44 +73,25 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 12px;
     }
-    
+
     @media (min-width: 640px) {
         .product-image {
             height: 240px;
-            padding: 16px;
         }
     }
-    
+
     @media (min-width: 768px) {
         .product-image {
             height: 280px;
-            padding: 20px;
         }
     }
 
-    .product-image::before {
-        content: '📦';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 4rem;
-        opacity: 0.3;
-        transition: opacity 0.3s ease;
-    }
-
-    .product-card:hover .product-image::before {
-        opacity: 0.1;
-    }
-
     .product-image img {
-        max-width: 100%;
-        max-height: 100%;
-        width: auto;
-        height: auto;
-        object-fit: contain;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
         position: relative;
         transition: transform 0.4s ease;
     }
@@ -415,18 +396,10 @@
                     @foreach($products as $index => $product)
                         <div class="product-card animate-fade-in-up" style="animation-delay: {{ $index * 0.1 }}s">
                             <div class="product-image">
-                                @if($product->hasImage())
-                                    <img src="{{ $product->image_src }}" alt="{{ $product->name }}" 
-                                         class="w-full h-full object-cover"
-                                         onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200\'><div class=\'text-center\'><div class=\'text-6xl mb-2\'>🧵</div><div class=\'text-sm text-gray-500 font-semibold\'>{{ $product->name }}</div></div></div>';">
-                                @else
-                                    <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
-                                        <div class="text-center">
-                                            <div class="text-6xl mb-2">🧵</div>
-                                            <div class="text-sm text-gray-500 font-semibold">{{ $product->name }}</div>
-                                        </div>
-                                    </div>
-                                @endif
+                                <img src="{{ $product->image_src }}" alt="{{ $product->name }}"
+                                     class="w-full h-full object-cover"
+                                     onerror="this.onerror=null; this.src='{{ asset('images/YakanLogo.png') }}'; this.style.objectFit='contain'; this.style.padding='20px'; this.style.background='linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)';">
+
                                 
                                 <!-- Product Badge -->
                                 @php $availableStock = $product->available_stock; @endphp
