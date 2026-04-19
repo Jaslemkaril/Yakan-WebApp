@@ -1053,15 +1053,23 @@ class AdminCustomOrderController extends Controller
     {
         try {
             $rawEvidence = $refundRequest->evidence_paths;
-            if (is_string($rawEvidence) && $rawEvidence !== '') {
+            if (is_array($rawEvidence)) {
+                $evidence = $rawEvidence;
+            } elseif (is_string($rawEvidence) && trim($rawEvidence) !== '') {
                 $decoded = json_decode($rawEvidence, true);
                 if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                    $rawEvidence = $decoded;
+                    $evidence = $decoded;
+                } elseif (str_contains($rawEvidence, ',')) {
+                    $evidence = array_values(array_filter(array_map('trim', explode(',', $rawEvidence))));
+                } else {
+                    $evidence = [trim($rawEvidence)];
                 }
+            } else {
+                $evidence = [];
             }
 
             $evidence = array_values(array_filter(
-                is_array($rawEvidence) ? $rawEvidence : [],
+                is_array($evidence) ? $evidence : [],
                 static fn ($value) => $value !== null && $value !== ''
             ));
 
@@ -1072,28 +1080,66 @@ class AdminCustomOrderController extends Controller
                     'available_count' => count($evidence),
                 ]);
 
-                // Return transparent pixel for missing files
-                $transparentPixel = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
-                return response($transparentPixel, 200)->header('Content-Type', 'image/png');
+                return response('Evidence file not found.', 404)
+                    ->header('Content-Type', 'text/plain; charset=UTF-8');
             }
 
-            $path = str_replace('\\', '/', trim((string) $evidence[$index], " \t\n\r\0\x0B\"'"));
+            $entry = $evidence[$index];
+            if (is_array($entry)) {
+                $path = (string) ($entry['url'] ?? $entry['path'] ?? $entry['secure_url'] ?? '');
+            } else {
+                $path = (string) $entry;
+            }
+
+            $path = str_replace('\\/', '/', trim($path, " \t\n\r\0\x0B\"'"));
             if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
                 return redirect()->away($path);
             }
 
-            $normalizedPath = ltrim($path, '/');
-            if (str_starts_with($normalizedPath, 'storage/')) {
-                $normalizedPath = substr($normalizedPath, strlen('storage/'));
-            }
-            if (str_starts_with($normalizedPath, 'public/')) {
-                $normalizedPath = substr($normalizedPath, strlen('public/'));
+            if (str_starts_with($path, '//')) {
+                return redirect()->away('https:' . $path);
             }
 
+            $pathFromUrl = parse_url($path, PHP_URL_PATH);
+            $normalizedPath = ltrim(is_string($pathFromUrl) && $pathFromUrl !== '' ? $pathFromUrl : $path, '/');
+
+            $extractRelative = static function (string $candidate, string $needle): ?string {
+                $position = stripos($candidate, $needle);
+                if ($position === false) {
+                    return null;
+                }
+                $relative = substr($candidate, $position + strlen($needle));
+                return ltrim((string) $relative, '/');
+            };
+
+            $storageAppPublicRelative = $extractRelative($normalizedPath, 'storage/app/public/');
+            $publicStorageRelative = $extractRelative($normalizedPath, 'public/storage/');
+
+            $stripStoragePrefixes = static function (string $candidate): string {
+                $candidate = ltrim($candidate, '/');
+                if (str_starts_with($candidate, 'storage/')) {
+                    $candidate = substr($candidate, strlen('storage/'));
+                }
+                if (str_starts_with($candidate, 'public/')) {
+                    $candidate = substr($candidate, strlen('public/'));
+                }
+                if (str_starts_with($candidate, 'app/public/')) {
+                    $candidate = substr($candidate, strlen('app/public/'));
+                }
+                return ltrim($candidate, '/');
+            };
+
+            $decodedPath = urldecode($normalizedPath);
+
             $candidatePaths = array_values(array_unique(array_filter([
-                $normalizedPath,
-                ltrim($path, '/'),
-                'public/' . ltrim($normalizedPath, '/'),
+                $stripStoragePrefixes($normalizedPath),
+                $stripStoragePrefixes($decodedPath),
+                $stripStoragePrefixes((string) ltrim($path, '/')),
+                $stripStoragePrefixes((string) urldecode(ltrim($path, '/'))),
+                $storageAppPublicRelative ? $stripStoragePrefixes($storageAppPublicRelative) : null,
+                $publicStorageRelative ? $stripStoragePrefixes($publicStorageRelative) : null,
+                $stripStoragePrefixes('public/' . ltrim($normalizedPath, '/')),
+                $stripStoragePrefixes('storage/' . ltrim($normalizedPath, '/')),
             ], static fn ($value) => is_string($value) && $value !== '')));
 
             foreach ($candidatePaths as $candidatePath) {
@@ -1154,9 +1200,8 @@ class AdminCustomOrderController extends Controller
                 'candidate_paths' => $candidatePaths,
             ]);
 
-            // Return transparent pixel for missing files
-            $transparentPixel = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
-            return response($transparentPixel, 200)->header('Content-Type', 'image/png');
+            return response('Evidence file is unavailable.', 404)
+                ->header('Content-Type', 'text/plain; charset=UTF-8');
         } catch (\Throwable $exception) {
             Log::warning('Unable to serve custom-order refund evidence file for admin.', [
                 'refund_request_id' => $refundRequest->id,
@@ -1164,9 +1209,8 @@ class AdminCustomOrderController extends Controller
                 'error' => $exception->getMessage(),
             ]);
 
-            // Return transparent pixel for error cases
-            $transparentPixel = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
-            return response($transparentPixel, 200)->header('Content-Type', 'image/png');
+            return response('Evidence file is unavailable.', 404)
+                ->header('Content-Type', 'text/plain; charset=UTF-8');
         }
     }
 

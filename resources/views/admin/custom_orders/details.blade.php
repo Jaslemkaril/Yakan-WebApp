@@ -1290,6 +1290,17 @@
                                                 'index' => $loop->index,
                                                 'auth_token' => $customAdminAuthToken,
                                             ], fn ($value) => $value !== null && $value !== ''));
+
+                                            $customAdminIsRemoteUrl = is_string($evidencePath)
+                                                && (str_starts_with($evidencePath, 'http://') || str_starts_with($evidencePath, 'https://'));
+
+                                            if ($customAdminIsRemoteUrl) {
+                                                $customAdminDirectUrl = (string) $evidencePath;
+                                            } else {
+                                                $customAdminCleanPath = ltrim(str_replace(['public/', 'storage/', '\\'], ['', '', '/'], (string) $evidencePath), '/');
+                                                $customAdminDirectUrl = asset('storage/' . $customAdminCleanPath);
+                                            }
+
                                             $customAdminExt = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
                                             $customAdminIsImage = in_array($customAdminExt, ['jpg', 'jpeg', 'png', 'webp'], true);
                                             $customAdminIsVideo = in_array($customAdminExt, ['mp4', 'mov', 'webm'], true);
@@ -1300,21 +1311,22 @@
                                             };
                                         @endphp
                                         @if($customAdminIsImage)
-                                            <a href="{{ $customAdminEvidenceUrl }}" target="_blank" class="block rounded-lg overflow-hidden border border-gray-200 bg-white" title="Open full image">
-                                                <img src="{{ $customAdminEvidenceUrl }}" alt="Refund evidence" class="w-24 h-24 object-cover">
+                                            <a href="{{ $customAdminDirectUrl }}" target="_blank" class="block rounded-lg overflow-hidden border border-gray-200 bg-white" title="Open full image">
+                                                <img src="{{ $customAdminDirectUrl }}" onerror="this.onerror=null;this.src='{{ $customAdminEvidenceUrl }}';" alt="Refund evidence" class="w-24 h-24 object-cover">
                                             </a>
                                         @elseif($customAdminIsVideo)
                                             <div class="rounded-lg overflow-hidden border border-blue-200 bg-black">
                                                 <video controls preload="metadata" class="w-40 h-24 object-cover">
+                                                    <source src="{{ $customAdminDirectUrl }}" type="{{ $customAdminVideoMime }}">
                                                     <source src="{{ $customAdminEvidenceUrl }}" type="{{ $customAdminVideoMime }}">
                                                     Your browser does not support video playback.
                                                 </video>
                                                 <div class="px-2 py-1 bg-white border-t border-blue-100">
-                                                    <a href="{{ $customAdminEvidenceUrl }}" target="_blank" class="text-xs text-blue-700 hover:underline">Open video in new tab</a>
+                                                    <a href="{{ $customAdminDirectUrl }}" target="_blank" class="text-xs text-blue-700 hover:underline">Open video in new tab</a>
                                                 </div>
                                             </div>
                                         @else
-                                            <a href="{{ $customAdminEvidenceUrl }}" target="_blank" class="inline-flex items-center px-2 py-1 rounded border border-gray-300 text-xs text-gray-700 bg-white hover:bg-gray-100 transition-colors">View PDF</a>
+                                            <a href="{{ $customAdminDirectUrl }}" target="_blank" class="inline-flex items-center px-2 py-1 rounded border border-gray-300 text-xs text-gray-700 bg-white hover:bg-gray-100 transition-colors">View PDF</a>
                                         @endif
                                     @endforeach
                                 </div>
