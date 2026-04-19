@@ -1080,7 +1080,8 @@ Route::prefix('chats')->name('chats.')->group(function () {
     Route::get('/{chat}', [\App\Http\Controllers\ChatController::class, 'show'])->name('show');
     Route::post('/{chat}/message', [\App\Http\Controllers\ChatController::class, 'sendMessage'])->name('send-message');
     Route::post('/{chat}/close', [\App\Http\Controllers\ChatController::class, 'close'])->name('close');
-    Route::match(['get', 'post'], '/{chat}/respond-quote', [\App\Http\Controllers\ChatController::class, 'respondToQuote'])->name('respond-quote');
+    Route::post('/{chat}/accept-quote/{quoteMessage}', [\App\Http\Controllers\ChatController::class, 'acceptQuoteAndCheckout'])->name('accept-quote-checkout');
+    Route::post('/{chat}/respond-quote', [\App\Http\Controllers\ChatController::class, 'respondToQuote'])->name('respond-quote');
     Route::post('/{chat}/submit-form-response', [\App\Http\Controllers\ChatController::class, 'submitFormResponse'])->name('submit-form-response');
     
     // Payment routes for in-chat payments

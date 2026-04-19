@@ -669,14 +669,16 @@
                                     
                                     {{-- Accept/Decline Buttons --}}
                                     <div class="flex gap-2 mt-3 px-2">
-                                        <input type="hidden" id="acceptedDeliveryType-{{ $message->id }}" value="{{ $defaultQuoteDeliveryType }}">
-                                        <button
-                                            type="button"
-                                            onclick="return acceptQuoteAndCheckout('{{ route('chats.respond-quote', $chat) }}', '{{ $message->id }}', {{ $userDefaultAddress ? 'true' : 'false' }})"
-                                            class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm hover:shadow-md"
-                                        >
-                                            ✓ Accept Price
-                                        </button>
+                                        <form action="{{ route('chats.accept-quote-checkout', ['chat' => $chat->id, 'quoteMessage' => $message->id]) }}" method="POST" class="inline">
+                                            @csrf
+                                            @if(request()->get('auth_token') || session('auth_token'))
+                                                <input type="hidden" name="auth_token" value="{{ request()->get('auth_token') ?? session('auth_token') }}">
+                                            @endif
+                                            <input type="hidden" id="acceptedDeliveryType-{{ $message->id }}" name="delivery_type" value="{{ $defaultQuoteDeliveryType }}">
+                                            <button type="submit" onclick="return validateQuoteAcceptance('{{ $message->id }}', {{ $userDefaultAddress ? 'true' : 'false' }})" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm hover:shadow-md">
+                                                ✓ Accept Price
+                                            </button>
+                                        </form>
                                         <form action="{{ route('chats.respond-quote', $chat) }}" method="POST" class="inline">
                                             @csrf
                                             <input type="hidden" name="response" value="declined">
@@ -1458,29 +1460,6 @@
         return true;
     }
 
-    function acceptQuoteAndCheckout(baseUrl, messageId, hasDefaultAddress) {
-        if (!validateQuoteAcceptance(messageId, hasDefaultAddress)) {
-            return false;
-        }
-
-        const deliveryTypeInput = document.getElementById(`acceptedDeliveryType-${messageId}`);
-        const deliveryType = deliveryTypeInput ? deliveryTypeInput.value : 'delivery';
-        const params = new URLSearchParams({
-            response: 'accepted',
-            quote_message_id: String(messageId),
-            delivery_type: deliveryType,
-        });
-
-        const currentParams = new URLSearchParams(window.location.search);
-        const authToken = currentParams.get('auth_token') || '{{ request()->get('auth_token') ?? session('auth_token') ?? '' }}';
-        if (authToken) {
-            params.set('auth_token', authToken);
-        }
-
-        window.location.href = `${baseUrl}?${params.toString()}`;
-        return false;
-    }
-    
     // Payment Method Selection
     function selectPaymentMethod(orderId, method) {
         // Extract auth_token from URL

@@ -1173,6 +1173,104 @@ class ChatController extends Controller
 
         return $this->redirectWithToken('chats.show', $chat)->with('success', 'Response sent to admin!');
     }
+
+    /**
+     * Accept a chat quote and immediately redirect to checkout.
+     */
+    public function acceptQuoteAndCheckout(Request $request, Chat $chat, ChatMessage $quoteMessage)
+    {
+        if ($chat->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        if ((int) $quoteMessage->chat_id !== (int) $chat->id || $quoteMessage->sender_type !== 'admin') {
+            return $this->redirectWithToken('chats.show', $chat)
+                ->with('error', 'Invalid quote selected.');
+        }
+
+        if (!str_contains(strtoupper((string) $quoteMessage->message), 'PRICE QUOTE')) {
+            return $this->redirectWithToken('chats.show', $chat)
+                ->with('error', 'The selected message is not a valid price quote.');
+        }
+
+        $selectedDeliveryType = strtolower((string) $request->input('delivery_type', 'delivery'));
+        if (!in_array($selectedDeliveryType, ['delivery', 'pickup'], true)) {
+            $selectedDeliveryType = 'delivery';
+        }
+
+        $responseMessage = null;
+
+        try {
+            $order = $this->findLatestChatCustomOrder((int) $chat->id, (int) auth()->id());
+            if (!$order) {
+                $order = $this->createChatOrderFromQuote($chat, $quoteMessage, $selectedDeliveryType);
+            }
+
+            $quoteMeta = is_array($quoteMessage->form_data) ? $quoteMessage->form_data : [];
+            $quoteStatus = strtolower((string) ($quoteMeta['quote_status'] ?? 'active'));
+
+            if ($quoteStatus !== 'accepted') {
+                $responseMessage = ChatMessage::create([
+                    'chat_id' => $chat->id,
+                    'user_id' => auth()->id(),
+                    'sender_type' => 'user',
+                    'message' => "✅ Customer accepted the price quote.\n\nCustomer will proceed with the custom order.",
+                ]);
+
+                $responseMeta = is_array($responseMessage->form_data) ? $responseMessage->form_data : [];
+                $responseMeta['chat_order_id'] = $order->id;
+                $responseMeta['delivery_type'] = $selectedDeliveryType;
+                $responseMessage->form_data = $responseMeta;
+                $responseMessage->save();
+
+                $quoteMeta['quote_status'] = 'accepted';
+                $quoteMeta['responded_at'] = now()->toISOString();
+                $quoteMeta['response_message_id'] = $responseMessage->id;
+                $quoteMeta['responded_by_user_id'] = auth()->id();
+            }
+
+            $quoteMeta['accepted_delivery_type'] = $selectedDeliveryType;
+            $quoteMeta['chat_order_id'] = $order->id;
+            $quoteMessage->form_data = $quoteMeta;
+            $quoteMessage->save();
+
+            $chat->update(['updated_at' => now()]);
+
+            $paymentUrl = route('custom_orders.payment', ['order' => $order->id]);
+            $separator = str_contains($paymentUrl, '?') ? '&' : '?';
+            $paymentUrl .= $separator . 'auto_pay=1&from_chat=1';
+
+            $token = $request->input('auth_token') ?? $request->query('auth_token') ?? session('auth_token');
+            if ($token) {
+                $paymentUrl .= '&auth_token=' . urlencode((string) $token);
+            }
+
+            return redirect($paymentUrl)->with('success', 'Quote accepted. Redirecting you to secure checkout...');
+        } catch (\Throwable $e) {
+            if ($responseMessage && $responseMessage->exists) {
+                try {
+                    $responseMessage->delete();
+                } catch (\Throwable $rollbackError) {
+                    \Log::warning('Failed to rollback response message in acceptQuoteAndCheckout', [
+                        'chat_id' => $chat->id,
+                        'response_message_id' => $responseMessage->id,
+                        'error' => $rollbackError->getMessage(),
+                    ]);
+                }
+            }
+
+            \Log::error('acceptQuoteAndCheckout failed', [
+                'chat_id' => $chat->id,
+                'quote_message_id' => $quoteMessage->id,
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return $this->redirectWithToken('chats.show', $chat)
+                ->with('error', 'Unable to start checkout right now. Please try again.');
+        }
+    }
     
     /**
      * Set payment method for chat order
