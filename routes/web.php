@@ -974,8 +974,9 @@ Route::post('/api/custom-orders/{order}/initiate-payment', [\App\Http\Controller
     ->withoutMiddleware(['auth']);
 
 
-// Custom Orders (Enhanced) - Require Authentication
-Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->group(function () {
+// Custom Orders Routes - Outside auth middleware to allow TokenAuth to work
+// Controllers verify ownership with auth()->id() checks
+Route::prefix('custom-orders')->name('custom_orders.')->group(function () {
     Route::get('/', [\App\Http\Controllers\CustomOrderController::class, 'userIndex'])->name('index');
     
     // Redirect /create to fabric selection (step 1) — show loading screen
@@ -1067,8 +1068,6 @@ Route::middleware(['auth'])->prefix('custom-orders')->name('custom_orders.')->gr
     
     // Analytics for users
     Route::get('/analytics', [\App\Http\Controllers\CustomOrderController::class, 'userAnalytics'])->name('custom_orders.user_analytics');
-});
-
 });
 
 // Chat Routes - Outside auth middleware to allow TokenAuth to work
