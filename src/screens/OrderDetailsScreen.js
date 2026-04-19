@@ -14,6 +14,7 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import colors from '../constants/colors';
 import { trackingStages } from '../constants/tracking';
@@ -78,6 +79,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   const [selectedRefundReason, setSelectedRefundReason] = useState('');
   const [customRefundReason, setCustomRefundReason] = useState('');
   const [refundComment, setRefundComment] = useState('');
+  const [refundEvidence, setRefundEvidence] = useState([]);
   const [isRequestingRefund, setIsRequestingRefund] = useState(false);
   const scaleAnim = new Animated.Value(0);
   const slideAnim = new Animated.Value(100);
@@ -244,6 +246,9 @@ const OrderDetailsScreen = ({ navigation, route }) => {
 
   const latestRefundRequest = order?.latest_refund_request || null;
   const latestRefundWorkflow = (latestRefundRequest?.workflow_status || latestRefundRequest?.status || '').toLowerCase();
+  const latestRefundDecision = String(latestRefundRequest?.final_decision || latestRefundRequest?.recommended_decision || '').trim();
+  const latestRefundAmount = latestRefundRequest?.approved_amount ?? latestRefundRequest?.refund_amount ?? latestRefundRequest?.recommended_refund_amount;
+  const latestRefundEvidence = Array.isArray(latestRefundRequest?.evidence) ? latestRefundRequest.evidence : [];
   const refundRequestInProgress = Boolean(
     order?.refund_request_in_progress
     || ['requested', 'pending_review', 'under_review', 'awaiting_return_shipment', 'return_in_transit', 'pending_payout', 'approved'].includes(latestRefundWorkflow)
@@ -259,7 +264,99 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     setSelectedRefundReason('');
     setCustomRefundReason('');
     setRefundComment('');
+    setRefundEvidence([]);
     setShowRefundModal(true);
+  };
+
+  const formatRefundStatusLabel = (rawStatus) => {
+    const value = String(rawStatus || '').trim().toLowerCase();
+    const map = {
+      pending_review: 'Pending Review',
+      under_review: 'Under Review',
+      awaiting_return_shipment: 'Awaiting Return Shipment',
+      return_in_transit: 'Return In Transit',
+      return_received: 'Return Received',
+      pending_payout: 'Pending Payout',
+      approved: 'Approved',
+      processed: 'Processed',
+      rejected: 'Rejected',
+      requested: 'Requested',
+      completed: 'Completed',
+    };
+
+    if (!value) {
+      return 'Pending Review';
+    }
+
+    return map[value] || value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  const hasVideoEvidence = (items) => items.some((asset) => {
+    const type = String(asset?.type || '').toLowerCase();
+    const mimeType = String(asset?.mimeType || '').toLowerCase();
+    const name = String(asset?.fileName || asset?.uri || '').toLowerCase();
+
+    return type === 'video'
+      || mimeType.startsWith('video/')
+      || /\.(mp4|mov|webm)$/.test(name);
+  });
+
+  const pickRefundEvidence = async () => {
+    try {
+      if (refundEvidence.length >= 5) {
+        Alert.alert('Maximum Reached', 'You can upload up to 5 evidence files.');
+        return;
+      }
+
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please allow photo/video access to upload refund evidence.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        allowsMultipleSelection: true,
+        quality: 0.8,
+        selectionLimit: Math.max(1, 5 - refundEvidence.length),
+      });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const existing = new Set(refundEvidence.map((asset) => String(asset.uri)));
+      const nextEvidence = [...refundEvidence];
+
+      (result.assets || []).forEach((asset) => {
+        const uri = String(asset?.uri || '');
+        if (!uri || existing.has(uri) || nextEvidence.length >= 5) {
+          return;
+        }
+
+        const fileName = asset?.fileName || uri.split('/').pop() || `evidence_${Date.now()}`;
+        const lowerName = String(fileName).toLowerCase();
+        const inferredType = asset?.type || (/\.(mp4|mov|webm)$/.test(lowerName) ? 'video' : 'image');
+        const inferredMime = asset?.mimeType || (inferredType === 'video' ? 'video/mp4' : 'image/jpeg');
+
+        nextEvidence.push({
+          uri,
+          fileName,
+          mimeType: inferredMime,
+          type: inferredType,
+        });
+        existing.add(uri);
+      });
+
+      setRefundEvidence(nextEvidence);
+    } catch (error) {
+      console.error('Error selecting refund evidence:', error);
+      Alert.alert('Error', 'Failed to select evidence file.');
+    }
+  };
+
+  const removeRefundEvidence = (uri) => {
+    setRefundEvidence((prev) => prev.filter((asset) => String(asset.uri) !== String(uri)));
   };
 
   const confirmCancelOrder = async () => {
@@ -329,6 +426,16 @@ const OrderDetailsScreen = ({ navigation, route }) => {
       return;
     }
 
+    if (refundEvidence.length === 0) {
+      Alert.alert('Evidence Required', 'Please upload at least one photo or video of the product.');
+      return;
+    }
+
+    if (reason.toLowerCase() === 'damaged item' && !hasVideoEvidence(refundEvidence)) {
+      Alert.alert('Video Required', 'For damaged items, upload at least one opening/unboxing video.');
+      return;
+    }
+
     const backendId = order?.backendOrderId || order?.id;
     if (!backendId) {
       Alert.alert('Error', 'Order ID not found');
@@ -342,7 +449,7 @@ const OrderDetailsScreen = ({ navigation, route }) => {
         comment,
         details: comment,
         refund_type: reason.toLowerCase() === 'changed my mind' ? 'change_of_mind' : 'full',
-      });
+      }, refundEvidence);
 
       if (response?.success) {
         const refundRequest = response?.data?.data?.refund_request
@@ -515,14 +622,41 @@ const OrderDetailsScreen = ({ navigation, route }) => {
           </View>
         )}
 
-        {refundRequestInProgress && !isRefunded && (
+        {latestRefundRequest && (
           <View style={styles.refundNoticeCard}>
             <Ionicons name="refresh-circle" size={22} color="#7C3AED" />
             <View style={styles.cancelledNoticeContent}>
-              <Text style={[styles.cancelledNoticeTitle, { color: '#6D28D9' }]}>Refund Request In Progress</Text>
+              <Text style={[styles.cancelledNoticeTitle, { color: '#6D28D9' }]}>
+                {refundRequestInProgress ? 'Refund Request In Progress' : 'Refund Request Update'}
+              </Text>
               <Text style={[styles.cancelledNoticeText, { color: '#4C1D95' }]}>
                 {latestRefundRequest?.comment || latestRefundRequest?.details || 'Your refund request is pending admin review.'}
               </Text>
+              <View style={styles.refundMetaBlock}>
+                <Text style={styles.refundMetaText}>Status: {formatRefundStatusLabel(latestRefundRequest?.workflow_status || latestRefundRequest?.status)}</Text>
+                {latestRefundDecision ? (
+                  <Text style={styles.refundMetaText}>Decision: {String(latestRefundDecision).replace(/_/g, ' ').toUpperCase()}</Text>
+                ) : null}
+                {latestRefundAmount !== null && latestRefundAmount !== undefined ? (
+                  <Text style={styles.refundMetaText}>Approved Amount: PHP {Number(latestRefundAmount).toFixed(2)}</Text>
+                ) : null}
+                {latestRefundRequest?.payout_status ? (
+                  <Text style={styles.refundMetaText}>Payout Status: {formatRefundStatusLabel(latestRefundRequest?.payout_status)}</Text>
+                ) : null}
+                {latestRefundRequest?.admin_note ? (
+                  <Text style={styles.refundAdminNote}>Admin Response: {latestRefundRequest.admin_note}</Text>
+                ) : null}
+              </View>
+              {latestRefundEvidence.length > 0 ? (
+                <View style={styles.refundEvidenceList}>
+                  {latestRefundEvidence.map((item, index) => (
+                    <View key={`${item?.url || item?.path || 'evidence'}-${index}`} style={styles.refundEvidenceChip}>
+                      <Ionicons name={item?.is_video ? 'videocam-outline' : 'image-outline'} size={14} color="#6D28D9" />
+                      <Text style={styles.refundEvidenceChipText} numberOfLines={1}>Evidence {index + 1}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
             </View>
           </View>
         )}
@@ -887,6 +1021,41 @@ const OrderDetailsScreen = ({ navigation, route }) => {
               placeholderTextColor="#9CA3AF"
               multiline
             />
+
+            <TouchableOpacity
+              style={styles.refundEvidenceButton}
+              onPress={pickRefundEvidence}
+              disabled={isRequestingRefund}
+            >
+              <Ionicons name="images-outline" size={18} color="#6D28D9" />
+              <Text style={styles.refundEvidenceButtonText}>Add Photo/Video Proof ({refundEvidence.length}/5)</Text>
+            </TouchableOpacity>
+
+            {selectedRefundReason === 'Damaged item' && !hasVideoEvidence(refundEvidence) ? (
+              <Text style={styles.refundEvidenceHint}>Damaged item requires at least one video proof.</Text>
+            ) : null}
+
+            {refundEvidence.length > 0 ? (
+              <View style={styles.refundSelectedEvidenceList}>
+                {refundEvidence.map((asset, index) => (
+                  <View key={`${asset.uri}-${index}`} style={styles.refundSelectedEvidenceRow}>
+                    <View style={styles.refundSelectedEvidenceInfo}>
+                      <Ionicons
+                        name={hasVideoEvidence([asset]) ? 'videocam-outline' : 'image-outline'}
+                        size={16}
+                        color="#6D28D9"
+                      />
+                      <Text style={styles.refundSelectedEvidenceText} numberOfLines={1}>
+                        {asset.fileName || `Evidence ${index + 1}`}
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => removeRefundEvidence(asset.uri)} disabled={isRequestingRefund}>
+                      <Ionicons name="close-circle" size={18} color="#B91C1C" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            ) : null}
 
             <View style={styles.cancelModalActions}>
               <TouchableOpacity
@@ -1503,6 +1672,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
+  refundMetaBlock: {
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#DDD6FE',
+    paddingTop: 8,
+  },
+  refundMetaText: {
+    fontSize: 12,
+    color: '#5B21B6',
+    marginBottom: 2,
+    fontWeight: '600',
+  },
+  refundAdminNote: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#4C1D95',
+    lineHeight: 18,
+  },
+  refundEvidenceList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+  },
+  refundEvidenceChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EDE9FE',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    gap: 4,
+  },
+  refundEvidenceChipText: {
+    fontSize: 11,
+    color: '#5B21B6',
+    fontWeight: '700',
+    maxWidth: 110,
+  },
   cancelledNoticeContent: {
     flex: 1,
     marginLeft: 10,
@@ -1704,6 +1912,58 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     fontSize: 13,
     color: colors.text,
+  },
+  refundEvidenceButton: {
+    marginTop: 8,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#C4B5FD',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F5F3FF',
+    gap: 8,
+  },
+  refundEvidenceButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6D28D9',
+  },
+  refundEvidenceHint: {
+    fontSize: 11,
+    color: '#B91C1C',
+    marginBottom: 4,
+  },
+  refundSelectedEvidenceList: {
+    marginTop: 4,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    padding: 8,
+    gap: 6,
+  },
+  refundSelectedEvidenceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
+  },
+  refundSelectedEvidenceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+    marginRight: 8,
+  },
+  refundSelectedEvidenceText: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '600',
+    flex: 1,
   },
   cancelModalActions: {
     flexDirection: 'row',

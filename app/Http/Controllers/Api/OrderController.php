@@ -10,6 +10,7 @@ use App\Services\TransactionalMailService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class OrderController extends Controller
@@ -75,7 +76,7 @@ class OrderController extends Controller
 
     private function activeRefundStatuses(): array
     {
-        return ['requested', 'under_review', 'approved', 'processed'];
+        return ['requested', 'under_review', 'approved'];
     }
 
     private function activeRefundWorkflowStatuses(): array
@@ -88,7 +89,6 @@ class OrderController extends Controller
             'return_received',
             'pending_payout',
             'approved',
-            'processed',
         ];
     }
 
@@ -110,23 +110,80 @@ class OrderController extends Controller
             ->exists();
     }
 
+    private function resolveEvidencePublicUrl(string $path): string
+    {
+        if ($path === '') {
+            return '';
+        }
+
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $path;
+        }
+
+        $cleanPath = ltrim(str_replace(['public/', 'storage/', '\\'], ['', '', '/'], $path), '/');
+
+        try {
+            $storageUrl = Storage::disk('public')->url($cleanPath);
+        } catch (\Throwable $exception) {
+            $storageUrl = '/storage/' . $cleanPath;
+        }
+
+        if (Str::startsWith($storageUrl, ['http://', 'https://'])) {
+            return $storageUrl;
+        }
+
+        return url($storageUrl);
+    }
+
+    private function buildRefundEvidenceSummary($rawEvidence): array
+    {
+        $evidencePaths = array_values(array_filter(is_array($rawEvidence) ? $rawEvidence : [], fn ($value) => $value !== null && trim((string) $value) !== ''));
+
+        return array_values(array_map(function ($path) {
+            $evidencePath = (string) $path;
+            $parsedPath = (string) (parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath);
+            $extension = strtolower(pathinfo($parsedPath, PATHINFO_EXTENSION));
+            $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true);
+            $isVideo = in_array($extension, ['mp4', 'mov', 'webm'], true);
+
+            return [
+                'path' => $evidencePath,
+                'url' => $this->resolveEvidencePublicUrl($evidencePath),
+                'filename' => basename($parsedPath),
+                'extension' => $extension,
+                'is_image' => $isImage,
+                'is_video' => $isVideo,
+            ];
+        }, $evidencePaths));
+    }
+
     private function buildRefundRequestSummary(?OrderRefundRequest $refundRequest): ?array
     {
         if (!$refundRequest) {
             return null;
         }
 
+        $evidence = $this->buildRefundEvidenceSummary($refundRequest->evidence_paths);
+
         return [
             'id' => $refundRequest->id,
             'reason' => $refundRequest->reason,
+            'refund_type' => $refundRequest->refund_type,
             'comment' => $refundRequest->comment,
             'details' => $refundRequest->details,
             'status' => $refundRequest->status,
             'workflow_status' => $refundRequest->workflow_status,
+            'admin_note' => $refundRequest->admin_note,
             'final_decision' => $refundRequest->final_decision,
+            'recommended_decision' => $refundRequest->recommended_decision,
+            'recommended_refund_amount' => $refundRequest->recommended_refund_amount,
             'payout_status' => $refundRequest->payout_status,
             'refund_amount' => $refundRequest->refund_amount,
             'approved_amount' => $refundRequest->approved_amount,
+            'return_required' => $refundRequest->return_required,
+            'refund_reference' => $refundRequest->refund_reference,
+            'evidence_count' => count($evidence),
+            'evidence' => $evidence,
             'requested_at' => $refundRequest->requested_at?->toIso8601String(),
             'reviewed_at' => $refundRequest->reviewed_at?->toIso8601String(),
             'processed_at' => $refundRequest->processed_at?->toIso8601String(),
@@ -993,8 +1050,8 @@ class OrderController extends Controller
                 'specific_reason' => 'nullable|string|max:120',
                 'comment' => 'nullable|string|max:2000',
                 'details' => 'nullable|string|max:2000',
-                'evidence' => 'nullable|array|max:5',
-                'evidence.*' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf,mp4,mov,webm|max:20480',
+                'evidence' => 'required|array|min:1|max:5',
+                'evidence.*' => 'required|file|mimes:jpg,jpeg,png,webp,pdf,mp4,mov,webm|max:20480',
             ]);
 
             $baseComment = trim((string) ($validated['comment'] ?? $validated['details'] ?? ''));
@@ -1002,6 +1059,13 @@ class OrderController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Please provide a short explanation for your refund request.',
+                ], 422);
+            }
+
+            if (strtolower((string) $validated['reason']) === 'damaged item' && !$this->hasVideoEvidence($request->file('evidence', []))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'For damaged items, please upload at least one opening/unboxing video as proof.',
                 ], 422);
             }
 
@@ -1241,6 +1305,24 @@ class OrderController extends Controller
                 'error' => $exception->getMessage(),
             ]);
         }
+    }
+
+    private function hasVideoEvidence(array $evidenceFiles): bool
+    {
+        foreach ($evidenceFiles as $file) {
+            if (!$file) {
+                continue;
+            }
+
+            $mimeType = strtolower((string) $file->getMimeType());
+            $extension = strtolower((string) $file->getClientOriginalExtension());
+
+            if (Str::startsWith($mimeType, 'video/') || in_array($extension, ['mp4', 'mov', 'webm'], true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function normalizeRefundType(?string $refundType, string $reason): string

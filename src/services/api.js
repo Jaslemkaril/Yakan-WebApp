@@ -506,19 +506,45 @@ class ApiService {
       }
     });
 
-    files.forEach((fileUri, index) => {
-      const uri = String(fileUri);
-      const extension = (uri.split('.').pop() || 'jpg').toLowerCase();
-      const mime = ['jpg', 'jpeg', 'png', 'webp'].includes(extension)
-        ? `image/${extension === 'jpg' ? 'jpeg' : extension}`
-        : ['mp4', 'mov', 'webm'].includes(extension)
-          ? `video/${extension === 'mov' ? 'quicktime' : extension}`
-          : 'application/octet-stream';
+    files.forEach((fileItem, index) => {
+      const uri = typeof fileItem === 'string'
+        ? String(fileItem)
+        : String(fileItem?.uri || '');
+
+      if (!uri) {
+        return;
+      }
+
+      const providedName = typeof fileItem === 'object'
+        ? String(fileItem?.fileName || fileItem?.name || '')
+        : '';
+      const rawType = typeof fileItem === 'object'
+        ? String(fileItem?.mimeType || fileItem?.type || '').toLowerCase()
+        : '';
+
+      const extension = (
+        providedName.split('.').pop()
+        || uri.split('.').pop()
+        || (rawType === 'video' || rawType.startsWith('video/') ? 'mp4' : 'jpg')
+      ).toLowerCase();
+
+      let mime = rawType;
+      if (!mime || mime === 'image' || mime === 'video') {
+        mime = ['jpg', 'jpeg', 'png', 'webp'].includes(extension)
+          ? `image/${extension === 'jpg' ? 'jpeg' : extension}`
+          : ['mp4', 'mov', 'webm'].includes(extension)
+            ? `video/${extension === 'mov' ? 'quicktime' : extension}`
+            : (rawType === 'video' ? 'video/mp4' : 'application/octet-stream');
+      }
+
+      const generatedName = providedName && providedName.includes('.')
+        ? providedName
+        : `refund_evidence_${Date.now()}_${index}.${extension}`;
 
       formData.append('evidence[]', {
         uri,
         type: mime,
-        name: `refund_evidence_${Date.now()}_${index}.${extension}`,
+        name: generatedName,
       });
     });
 
