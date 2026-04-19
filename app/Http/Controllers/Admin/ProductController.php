@@ -852,6 +852,15 @@ class ProductController extends Controller
     private function ensureProductVariantsTableExists(): bool
     {
         if (Schema::hasTable('product_variants')) {
+            if (!Schema::hasColumn('product_variants', 'image')) {
+                try {
+                    Schema::table('product_variants', function (\Illuminate\Database\Schema\Blueprint $table) {
+                        $table->string('image')->nullable()->after('color');
+                    });
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
             return true;
         }
 
