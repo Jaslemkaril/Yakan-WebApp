@@ -669,16 +669,12 @@
                                     
                                     {{-- Accept/Decline Buttons --}}
                                     <div class="flex gap-2 mt-3 px-2">
-                                        <form action="{{ route('chats.accept-quote-checkout', ['chat' => $chat->id, 'quoteMessage' => $message->id]) }}" method="POST" class="inline">
-                                            @csrf
-                                            @if(request()->get('auth_token') || session('auth_token'))
-                                                <input type="hidden" name="auth_token" value="{{ request()->get('auth_token') ?? session('auth_token') }}">
-                                            @endif
-                                            <input type="hidden" id="acceptedDeliveryType-{{ $message->id }}" name="delivery_type" value="{{ $defaultQuoteDeliveryType }}">
-                                            <button type="submit" onclick="return validateQuoteAcceptance('{{ $message->id }}', {{ $userDefaultAddress ? 'true' : 'false' }})" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm hover:shadow-md">
-                                                ✓ Accept Price
-                                            </button>
-                                        </form>
+                                        <button type="button" 
+                                                onclick="acceptQuoteCheckout('{{ $chat->id }}', '{{ $message->id }}', {{ $userDefaultAddress ? 'true' : 'false' }})" 
+                                                id="acceptBtn-{{ $message->id }}"
+                                                class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-all shadow-sm hover:shadow-md">
+                                            ✓ Accept Price
+                                        </button>
                                         <form action="{{ route('chats.respond-quote', $chat) }}" method="POST" class="inline">
                                             @csrf
                                             <input type="hidden" name="response" value="declined">
@@ -1458,6 +1454,78 @@
         }
 
         return true;
+    }
+
+    // Accept Quote and Checkout
+    function acceptQuoteCheckout(chatId, messageId, hasDefaultAddress) {
+        // Validate delivery type and address
+        const selected = document.querySelector(`input[name="quote_delivery_type_${messageId}"]:checked`);
+        const deliveryType = selected ? selected.value : 'delivery';
+
+        if (deliveryType === 'delivery' && !hasDefaultAddress) {
+            alert('Please add or select a delivery address first, or choose Pick up.');
+            return;
+        }
+
+        // Disable the button to prevent double-clicks
+        const acceptBtn = document.getElementById(`acceptBtn-${messageId}`);
+        if (acceptBtn) {
+            acceptBtn.disabled = true;
+            acceptBtn.innerHTML = '<svg class="animate-spin h-4 w-4 inline-block mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...';
+        }
+
+        // Extract auth_token from URL or session
+        const urlParams = new URLSearchParams(window.location.search);
+        const authToken = urlParams.get('auth_token') || '{{ session("auth_token") }}' || '';
+
+        // Build the URL
+        let url = `/chats/${chatId}/accept-quote/${messageId}`;
+        if (authToken) {
+            url += `?auth_token=${encodeURIComponent(authToken)}`;
+        }
+
+        // Make AJAX request
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ 
+                delivery_type: deliveryType,
+                auth_token: authToken
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Failed to accept quote');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.redirect_url) {
+                // Redirect to payment page
+                window.location.href = data.redirect_url;
+            } else if (data.success) {
+                // Reload page to show updated state
+                window.location.reload();
+            } else {
+                throw new Error(data.message || 'Unknown error occurred');
+            }
+        })
+        .catch(error => {
+            console.error('Error accepting quote:', error);
+            alert('Error: ' + error.message);
+            
+            // Re-enable the button
+            if (acceptBtn) {
+                acceptBtn.disabled = false;
+                acceptBtn.innerHTML = '✓ Accept Price';
+            }
+        });
     }
 
     // Payment Method Selection

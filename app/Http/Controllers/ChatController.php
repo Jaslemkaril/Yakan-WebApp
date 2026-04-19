@@ -1197,17 +1197,28 @@ class ChatController extends Controller
     public function acceptQuoteAndCheckout(Request $request, Chat $chat, ChatMessage $quoteMessage)
     {
         if ($chat->user_id !== auth()->id()) {
+            if ($request->wantsJson() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+            }
             abort(403);
         }
 
         if ((int) $quoteMessage->chat_id !== (int) $chat->id || $quoteMessage->sender_type !== 'admin') {
+            $errorMsg = 'Invalid quote selected.';
+            if ($request->wantsJson() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $errorMsg], 400);
+            }
             return $this->redirectWithToken('chats.show', $chat)
-                ->with('error', 'Invalid quote selected.');
+                ->with('error', $errorMsg);
         }
 
         if (!str_contains(strtoupper((string) $quoteMessage->message), 'PRICE QUOTE')) {
+            $errorMsg = 'The selected message is not a valid price quote.';
+            if ($request->wantsJson() || $request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $errorMsg], 400);
+            }
             return $this->redirectWithToken('chats.show', $chat)
-                ->with('error', 'The selected message is not a valid price quote.');
+                ->with('error', $errorMsg);
         }
 
         $selectedDeliveryType = strtolower((string) $request->input('delivery_type', 'delivery'));
@@ -1262,6 +1273,16 @@ class ChatController extends Controller
                 $paymentUrl .= '&auth_token=' . urlencode((string) $token);
             }
 
+            // Return JSON for AJAX requests
+            if ($request->wantsJson() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Quote accepted. Redirecting you to secure checkout...',
+                    'redirect_url' => $paymentUrl,
+                    'order_id' => $order->id
+                ]);
+            }
+
             return redirect($paymentUrl)->with('success', 'Quote accepted. Redirecting you to secure checkout...');
         } catch (\Throwable $e) {
             if ($responseMessage && $responseMessage->exists) {
@@ -1284,8 +1305,18 @@ class ChatController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            $errorMsg = 'Unable to start checkout right now. Please try again. Error: ' . $e->getMessage();
+            
+            // Return JSON for AJAX requests
+            if ($request->wantsJson() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMsg
+                ], 500);
+            }
+
             return $this->redirectWithToken('chats.show', $chat)
-                ->with('error', 'Unable to start checkout right now. Please try again.');
+                ->with('error', $errorMsg);
         }
     }
     
