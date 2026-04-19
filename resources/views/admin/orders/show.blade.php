@@ -490,6 +490,18 @@
                                     @endif
                                 </div>
                                 <div class="ml-4">
+                                    @php
+                                        $variantSize = $item->variant_size ?: ($item->variant?->size ?? null);
+                                        $variantColor = $item->variant_color ?: ($item->variant?->color ?? null);
+                                        $variantSku = $item->variant?->sku ?? null;
+                                        $variantParts = array_filter([
+                                            $variantSize ? ('Size: ' . $variantSize) : null,
+                                            $variantColor ? ('Color: ' . $variantColor) : null,
+                                        ]);
+                                        $variantLabel = !empty($variantParts)
+                                            ? implode(' | ', $variantParts)
+                                            : (!empty($item->variant_id) ? ('Variant #' . $item->variant_id) : null);
+                                    @endphp
                                     <div class="text-sm font-medium text-gray-900">
                                         {{ $item->product->name ?? 'Deleted Product' }}
                                         @if($item->product && $item->product->is_bundle)
@@ -499,8 +511,9 @@
                                     @if($item->product && $item->product->category)
                                         <div class="text-sm text-gray-500">{{ $item->product->category->name ?? 'Uncategorized' }}</div>
                                     @endif
-                                    @if($item->product && $item->product->sku)
-                                        <div class="text-xs text-gray-400 font-mono mt-1">SKU: {{ $item->product->sku }}</div>
+                                    <div class="text-xs text-gray-400 font-mono mt-1">SKU: {{ $variantSku ?: ($item->product->sku ?? 'N/A') }}</div>
+                                    @if($variantLabel)
+                                        <div class="text-xs text-gray-500 mt-1">Variant: {{ $variantLabel }}</div>
                                     @endif
                                     @if($item->product && $item->product->is_bundle && $item->product->bundleItems && $item->product->bundleItems->count() > 0)
                                         <div class="admin-bundle-toggle" onclick="toggleAdminBundleItems({{ $item->id }})">

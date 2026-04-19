@@ -817,13 +817,28 @@
 
                                 <!-- Product Details -->
                                 <div class="flex-1">
+                                    @php
+                                        $variantSize = $item->variant_size ?: ($item->variant?->size ?? null);
+                                        $variantColor = $item->variant_color ?: ($item->variant?->color ?? null);
+                                        $variantSku = $item->variant?->sku ?? null;
+                                        $variantParts = array_filter([
+                                            $variantSize ? ('Size: ' . $variantSize) : null,
+                                            $variantColor ? ('Color: ' . $variantColor) : null,
+                                        ]);
+                                        $variantLabel = !empty($variantParts)
+                                            ? implode(' | ', $variantParts)
+                                            : (!empty($item->variant_id) ? ('Variant #' . $item->variant_id) : null);
+                                    @endphp
                                     <h3 class="font-bold text-gray-900">
                                         {{ $item->product->name ?? 'Product' }}
                                         @if($item->product && $item->product->is_bundle)
                                             <span class="user-bundle-badge">Bundle</span>
                                         @endif
                                     </h3>
-                                    <p class="text-sm text-gray-600 mt-1">SKU: <span class="font-medium">{{ $item->product->sku ?? 'N/A' }}</span></p>
+                                    <p class="text-sm text-gray-600 mt-1">SKU: <span class="font-medium">{{ $variantSku ?: ($item->product->sku ?? 'N/A') }}</span></p>
+                                    @if($variantLabel)
+                                        <p class="text-sm text-gray-600 mt-1">Variant: <span class="font-medium">{{ $variantLabel }}</span></p>
+                                    @endif
 
                                     @if($item->product && $item->product->is_bundle && $item->product->bundleItems->isNotEmpty())
                                         <div class="user-bundle-toggle" onclick="toggleUserBundleItems({{ $item->id }})">
