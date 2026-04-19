@@ -298,42 +298,17 @@ class Product extends Model
      */
     public function getImageUrlAttribute(): string
     {
-        if (!$this->image) {
+        $candidates = $this->getImagePathCandidates();
+        if (empty($candidates)) {
             return '';
         }
 
-        $imagePath = $this->image;
-        
-        // If it's already a full URL (Cloudinary or other CDN), return as is
-        if (str_starts_with($imagePath, 'http')) {
-            return $imagePath;
+        $resolved = $this->resolveBestImageUrl();
+        if ($resolved !== null) {
+            return $resolved;
         }
-        
-        // Remove 'storage/' prefix if present
-        if (strpos($imagePath, 'storage/') === 0) {
-            $imagePath = str_replace('storage/', '', $imagePath);
-        }
-        
-        // Add 'products/' prefix if not present
-        if (strpos($imagePath, 'products/') !== 0 && strpos($imagePath, 'public/') !== 0) {
-            $imagePath = 'products/' . $imagePath;
-        }
-        
-        // Generate full absolute URL for API/mobile access
-        $baseUrl = config('app.url');
-        
-        // Check if file exists in uploads directory
-        if (file_exists(public_path('uploads/' . $imagePath))) {
-            return $baseUrl . '/uploads/' . $imagePath;
-        }
-        
-        // Check if file exists in storage directory
-        if (file_exists(public_path('storage/' . $imagePath))) {
-            return $baseUrl . '/storage/' . $imagePath;
-        }
-        
-        // File doesn't exist anywhere - return placeholder
-        return $baseUrl . '/images/no-image.svg';
+
+        return rtrim((string) config('app.url'), '/') . '/images/no-image.svg';
     }
 
     /**
@@ -343,23 +318,7 @@ class Product extends Model
      */
     public function getImageSrcAttribute(): string
     {
-        if (!$this->image) {
-            return asset('images/no-image.svg');
-        }
-
-        // If it's a full URL (Cloudinary), return as is
-        if (str_starts_with($this->image, 'http')) {
-            return $this->image;
-        }
-
-        // Local file: check if it actually exists, otherwise show placeholder
-        $localPath = public_path('uploads/products/' . $this->image);
-        if (file_exists($localPath)) {
-            return asset('uploads/products/' . $this->image);
-        }
-
-        // File doesn't exist (Railway ephemeral filesystem) - show placeholder
-        return asset('images/no-image.svg');
+        return $this->resolveBestImageUrl() ?? asset('images/no-image.svg');
     }
 
     /**
@@ -367,15 +326,7 @@ class Product extends Model
      */
     public function hasImage(): bool
     {
-        if (empty($this->image)) {
-            return false;
-        }
-        // Cloudinary URLs are always accessible
-        if (str_starts_with($this->image, 'http')) {
-            return true;
-        }
-        // Local files: check existence
-        return file_exists(public_path('uploads/products/' . $this->image));
+        return $this->resolveBestImageUrl() !== null;
     }
 
     /**
@@ -383,14 +334,102 @@ class Product extends Model
      */
     public function getNeedsImageUploadAttribute(): bool
     {
-        if (empty($this->image)) {
-            return true;
+        return !$this->hasImage();
+    }
+
+    /**
+     * Collect possible image path candidates from primary image and gallery images.
+     */
+    private function getImagePathCandidates(): array
+    {
+        $candidates = [];
+
+        if (!empty($this->image)) {
+            $candidates[] = (string) $this->image;
         }
-        // Already on Cloudinary
-        if (str_starts_with($this->image, 'http')) {
-            return false;
+
+        $galleryImages = $this->all_images;
+        if (is_string($galleryImages)) {
+            $decoded = json_decode($galleryImages, true);
+            $galleryImages = is_array($decoded) ? $decoded : [];
         }
-        // Has a local path but file doesn't exist
-        return !file_exists(public_path('uploads/products/' . $this->image));
+
+        if (is_array($galleryImages)) {
+            foreach ($galleryImages as $entry) {
+                if (is_array($entry) && !empty($entry['path'])) {
+                    $candidates[] = (string) $entry['path'];
+                } elseif (is_string($entry) && trim($entry) !== '') {
+                    $candidates[] = $entry;
+                }
+            }
+        }
+
+        $normalized = array_map(function ($value) {
+            return trim(str_replace('\\', '/', (string) $value));
+        }, $candidates);
+
+        $filtered = array_values(array_filter($normalized, fn($value) => $value !== ''));
+
+        return array_values(array_unique($filtered));
+    }
+
+    /**
+     * Resolve any supported image path format into a publicly accessible URL.
+     */
+    private function resolveImagePathToUrl(string $rawPath): ?string
+    {
+        if (str_starts_with($rawPath, 'http://') || str_starts_with($rawPath, 'https://')) {
+            return $rawPath;
+        }
+
+        $path = ltrim($rawPath, '/');
+        if ($path === '') {
+            return null;
+        }
+
+        $candidates = [$path];
+
+        if (str_starts_with($path, 'public/')) {
+            $candidates[] = 'storage/' . substr($path, strlen('public/'));
+        }
+
+        if (str_starts_with($path, 'storage/')) {
+            $candidates[] = 'uploads/' . substr($path, strlen('storage/'));
+        }
+
+        if (str_starts_with($path, 'products/')) {
+            $candidates[] = 'uploads/' . $path;
+            $candidates[] = 'storage/' . $path;
+        }
+
+        if (!str_contains($path, '/')) {
+            $candidates[] = 'uploads/products/' . $path;
+            $candidates[] = 'storage/products/' . $path;
+            $candidates[] = 'products/' . $path;
+        }
+
+        foreach (array_values(array_unique($candidates)) as $candidate) {
+            $publicCandidate = ltrim($candidate, '/');
+            if (file_exists(public_path($publicCandidate))) {
+                return asset($publicCandidate);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve the best available image URL from known image candidates.
+     */
+    private function resolveBestImageUrl(): ?string
+    {
+        foreach ($this->getImagePathCandidates() as $candidate) {
+            $resolved = $this->resolveImagePathToUrl($candidate);
+            if ($resolved !== null) {
+                return $resolved;
+            }
+        }
+
+        return null;
     }
 }
