@@ -1028,6 +1028,23 @@ class ChatController extends Controller
             abort(403);
         }
 
+        // Backward-compatible path for stale cached chat pages still posting
+        // to respond-quote when user accepts. Force checkout handoff.
+        if (strtolower((string) $request->input('response')) === 'accepted') {
+            $quoteMessageId = (int) $request->input('quote_message_id');
+            $quoteMessage = ChatMessage::where('id', $quoteMessageId)
+                ->where('chat_id', $chat->id)
+                ->where('sender_type', 'admin')
+                ->first();
+
+            if (!$quoteMessage) {
+                return $this->redirectWithToken('chats.show', $chat)
+                    ->with('error', 'The selected quote is invalid.');
+            }
+
+            return $this->acceptQuoteAndCheckout($request, $chat, $quoteMessage);
+        }
+
         $validated = $request->validate([
             'response' => 'required|in:accepted,declined',
             'quote_message_id' => 'required|exists:chat_messages,id',
