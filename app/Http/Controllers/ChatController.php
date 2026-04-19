@@ -38,6 +38,25 @@ class ChatController extends Controller
         }
     }
 
+    private function buildInlineImageDataFromFile(string $filePath): ?string
+    {
+        if (!is_file($filePath)) {
+            return null;
+        }
+
+        $mime = @mime_content_type($filePath) ?: null;
+        if (!$mime || !str_starts_with($mime, 'image/')) {
+            return null;
+        }
+
+        $binary = @file_get_contents($filePath);
+        if ($binary === false) {
+            return null;
+        }
+
+        return 'data:' . $mime . ';base64,' . base64_encode($binary);
+    }
+
     private function calculateCanonicalShippingFeeFromAddress(?UserAddress $address): float
     {
         if (!$address) {
@@ -403,6 +422,14 @@ class ChatController extends Controller
                     }
                     $image->move($dir, $filename);
                     $storedPath = $this->buildChatImageUrl('chats', $filename);
+
+                    $inlineImageData = $this->buildInlineImageDataFromFile($dir . DIRECTORY_SEPARATOR . $filename);
+                    if ($inlineImageData) {
+                        $currentFormData = is_array($messageData['form_data'] ?? null) ? $messageData['form_data'] : [];
+                        $currentFormData['inline_image_data'] = $inlineImageData;
+                        $messageData['form_data'] = $currentFormData;
+                    }
+
                     \Log::info('Chat image uploaded to local storage', [
                         'url' => $storedPath,
                         'chat_id' => $chat->id,
@@ -495,6 +522,14 @@ class ChatController extends Controller
                     }
                     $image->move($dir, $filename);
                     $storedPath = $this->buildChatImageUrl('chats', $filename);
+
+                    $inlineImageData = $this->buildInlineImageDataFromFile($dir . DIRECTORY_SEPARATOR . $filename);
+                    if ($inlineImageData) {
+                        $currentFormData = is_array($messageData['form_data'] ?? null) ? $messageData['form_data'] : [];
+                        $currentFormData['inline_image_data'] = $inlineImageData;
+                        $messageData['form_data'] = $currentFormData;
+                    }
+
                     \Log::info('Chat image uploaded to local storage', [
                         'url' => $storedPath,
                         'chat_id' => $chat->id,
@@ -524,6 +559,10 @@ class ChatController extends Controller
         if ($request->expectsJson() || $request->ajax()) {
             // Format image_path to proper URL for JavaScript
             $imageUrl = null;
+            $formData = is_array($newMessage->form_data) ? $newMessage->form_data : [];
+            $imageInline = isset($formData['inline_image_data']) && is_string($formData['inline_image_data'])
+                ? $formData['inline_image_data']
+                : null;
             if ($newMessage->image_path) {
                 $imagePath = $newMessage->image_path;
                 if (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://')) {
@@ -547,6 +586,7 @@ class ChatController extends Controller
                     'id' => $newMessage->id,
                     'message' => $newMessage->message,
                     'image_path' => $imageUrl,
+                    'image_inline' => $imageInline,
                     'sender_type' => $newMessage->sender_type,
                     'created_at' => $newMessage->created_at->toISOString(),
                 ]

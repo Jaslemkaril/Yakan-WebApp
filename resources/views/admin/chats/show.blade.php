@@ -293,6 +293,14 @@
                             $initials = strtoupper(substr($parts[0], 0, 1) . (isset($parts[1]) ? substr($parts[1], 0, 1) : ''));
                         }
                         $imageUrl = null;
+                        $inlineImageData = null;
+                        if (is_array($message->form_data ?? null)) {
+                            $inlineCandidate = $message->form_data['inline_image_data'] ?? null;
+                            if (is_string($inlineCandidate) && str_starts_with($inlineCandidate, 'data:image')) {
+                                $inlineImageData = $inlineCandidate;
+                            }
+                        }
+
                         if ($message->image_path) {
                             $ip = $message->image_path;
                             if (str_starts_with($ip, 'http://') || str_starts_with($ip, 'https://') || str_starts_with($ip, 'data:image')) {
@@ -303,6 +311,9 @@
                                 $imageUrl = asset('storage/' . $ip);
                             }
                         }
+
+                        $displayImageUrl = $inlineImageData ?: $imageUrl;
+                        $imageLinkUrl = $imageUrl ?: $displayImageUrl;
                     @endphp
 
                     @if($showDateSep)
@@ -322,13 +333,14 @@
                             <div class="cs-msg-sender">{{ $isAdmin ? 'Admin' : ($message->user?->name ?? $chat->user_name ?? 'Customer') }}</div>
                             @endif
                             <div class="cs-msg-bubble{{ $isLastInGroup ? '' : ' no-tail' }}">
-                                @if($imageUrl)
-                                    <a href="{{ $imageUrl }}" target="_blank" style="display:block; margin-bottom:{{ $message->message ? '8px' : '0' }};">
-                                        <img src="{{ $imageUrl }}" alt="Chat image"
+                                @if($displayImageUrl)
+                                    <a href="{{ $imageLinkUrl }}" target="_blank" style="display:block; margin-bottom:{{ $message->message ? '8px' : '0' }};">
+                                        <img src="{{ $displayImageUrl }}" alt="Chat image"
                                              style="max-width:220px; max-height:180px; border-radius:10px; object-fit:cover; border:2px solid rgba(255,255,255,0.25); box-shadow:0 2px 6px rgba(0,0,0,0.12); transition:transform 0.2s; display:block;"
                                              onmouseover="this.style.transform='scale(1.02)'"
                                              onmouseout="this.style.transform='scale(1)'"
-                                             onerror="this.style.display='none'">
+                                             data-inline-image="{{ $inlineImageData ? e($inlineImageData) : '' }}"
+                                             onerror="const inline=this.dataset.inlineImage||''; if (inline.startsWith('data:image')) { this.src = inline; this.dataset.inlineImage=''; return; } this.style.display='none'">
                                     </a>
                                     @if(!$isAdmin && !$hasAcceptedQuote)
                                     <button type="button" class="cs-req-btn" onclick="requestCustomOrderDetails({{ $message->id }})">

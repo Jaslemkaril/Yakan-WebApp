@@ -217,35 +217,48 @@
                             <div class="rounded-2xl px-5 py-3 {{ $message->sender_type === 'user' ? 'message-user' : 'message-support' }}">
                                 @if($message->image_path)
                                     @php
+                                        $inlineImageData = null;
+                                        if (is_array($message->form_data ?? null)) {
+                                            $inlineCandidate = $message->form_data['inline_image_data'] ?? null;
+                                            if (is_string($inlineCandidate) && str_starts_with($inlineCandidate, 'data:image')) {
+                                                $inlineImageData = $inlineCandidate;
+                                            }
+                                        }
+
                                         // Handle different image path formats
                                         $imagePath = $message->image_path;
+                                        $resolvedImageUrl = null;
                                         if (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://')) {
                                             // Full URL (Cloudinary or external)
-                                            $chatImageUrl = $imagePath;
+                                            $resolvedImageUrl = $imagePath;
                                         } elseif (str_starts_with($imagePath, 'data:image')) {
                                             // Base64 data URL
-                                            $chatImageUrl = $imagePath;
+                                            $resolvedImageUrl = $imagePath;
                                         } elseif (str_starts_with($imagePath, 'storage/')) {
                                             // Storage path
-                                            $chatImageUrl = asset($imagePath);
+                                            $resolvedImageUrl = asset($imagePath);
                                         } elseif (str_starts_with($imagePath, 'chat_images/')) {
                                             // Old chat images format
-                                            $chatImageUrl = asset('storage/' . $imagePath);
+                                            $resolvedImageUrl = asset('storage/' . $imagePath);
                                         } else {
                                             // Default fallback - try as asset
-                                            $chatImageUrl = asset('storage/' . $imagePath);
+                                            $resolvedImageUrl = asset('storage/' . $imagePath);
                                         }
+
+                                        $chatImageUrl = $inlineImageData ?: $resolvedImageUrl;
+                                        $chatImageLink = $resolvedImageUrl ?: $chatImageUrl;
                                     @endphp
-                                    <a href="{{ $chatImageUrl }}" target="_blank" class="block mb-3">
+                                    <a href="{{ $chatImageLink }}" target="_blank" class="block mb-3">
                                         <img src="{{ $chatImageUrl }}" 
                                              alt="Attached image" 
                                              class="max-w-full rounded-xl shadow-md border-2 {{ $message->sender_type === 'user' ? 'border-white/30' : 'border-gray-200' }}"
                                              style="max-height: 250px; object-fit: contain; cursor: pointer; display: block;"
                                              loading="lazy"
-                                             onerror="console.error('Image failed to load:', this.src); this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                             data-inline-image="{{ $inlineImageData ? e($inlineImageData) : '' }}"
+                                             onerror="console.error('Image failed to load:', this.src); const inline=this.dataset.inlineImage||''; if (inline.startsWith('data:image')) { this.src = inline; this.dataset.inlineImage = ''; return; } this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                         <div class="hidden items-center gap-2 px-4 py-3 bg-red-50 rounded-lg text-red-700 text-sm">
                                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                                            🖼️ Image unavailable (URL: <code style="font-size: 10px; word-break: break-all;">{{ substr($chatImageUrl, 0, 50) }}...</code>)
+                                            🖼️ Image unavailable (URL: <code style="font-size: 10px; word-break: break-all;">{{ substr((string) ($chatImageLink ?? $chatImageUrl), 0, 50) }}...</code>)
                                         </div>
                                     </a>
                                 @endif
@@ -1228,10 +1241,11 @@
             html += `<p class="text-sm leading-relaxed whitespace-pre-wrap break-words">${escapeHtml(message.message)}</p>`;
         }
         
-        if (message.image_path) {
+        const displayImageUrl = message.image_inline || message.image_path;
+        if (displayImageUrl) {
             html += `
                 <div class="mt-3">
-                    <img src="${escapeHtml(message.image_path)}" alt="Chat image" class="max-w-full rounded-lg shadow-md border-2 border-white/30" style="max-height: 300px;">
+                    <img src="${escapeHtml(displayImageUrl)}" alt="Chat image" class="max-w-full rounded-lg shadow-md border-2 border-white/30" style="max-height: 300px;" onerror="if (this.dataset.inlineImage) { this.src = this.dataset.inlineImage; this.dataset.inlineImage=''; return; } this.style.display='none';" data-inline-image="${escapeHtml(message.image_inline || '')}">
                 </div>
             `;
         }

@@ -38,6 +38,25 @@ class ChatPaymentController extends Controller
         }
     }
 
+    private function buildInlineImageDataFromFile(string $filePath): ?string
+    {
+        if (!is_file($filePath)) {
+            return null;
+        }
+
+        $mime = @mime_content_type($filePath) ?: null;
+        if (!$mime || !str_starts_with($mime, 'image/')) {
+            return null;
+        }
+
+        $binary = @file_get_contents($filePath);
+        if ($binary === false) {
+            return null;
+        }
+
+        return 'data:' . $mime . ';base64,' . base64_encode($binary);
+    }
+
     /**
      * Admin sends payment request to user in chat
      */
@@ -117,6 +136,9 @@ class ChatPaymentController extends Controller
                     }
                     $file->move($dir, $filename);
                     $storedPath = $this->buildChatImageUrl('payments', $filename);
+
+                    $inlineImageData = $this->buildInlineImageDataFromFile($dir . DIRECTORY_SEPARATOR . $filename);
+
                     \Log::info('Payment proof uploaded to local storage', [
                         'url' => $storedPath,
                         'payment_id' => $payment->id,
@@ -136,6 +158,9 @@ class ChatPaymentController extends Controller
                     'sender_type' => 'user',
                     'message' => "Payment proof uploaded for Payment ID: #" . $payment->id . "\n\nPayment Method: PayMongo",
                     'image_path' => $storedPath,
+                    'form_data' => !empty($inlineImageData)
+                        ? ['inline_image_data' => $inlineImageData]
+                        : null,
                 ]);
             } catch (\Exception $e) {
                 \Log::error('Chat payment proof upload failed', [
