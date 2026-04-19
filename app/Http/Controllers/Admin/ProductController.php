@@ -916,7 +916,7 @@ class ProductController extends Controller
         $redirectUrl = $authToken ? $base . '?auth_token=' . urlencode($authToken) : $base;
 
         if ($product->variants()->exists()) {
-            return redirect($redirectUrl)->with('error', 'This product uses variants. Update stock per variant in the product edit form.');
+            return redirect($redirectUrl)->with('error', 'This product uses variants. Update stock per variant in the Product Variants section, then click Update Product.');
         }
 
         // Capture stock before change
@@ -975,7 +975,7 @@ class ProductController extends Controller
         $redirectUrl = $authToken ? $base . '?auth_token=' . urlencode($authToken) : $base;
 
         if ($product->variants()->exists()) {
-            return redirect($redirectUrl)->with('error', 'This product uses variants. Update stock per variant in the product edit form.');
+            return redirect($redirectUrl)->with('error', 'This product uses variants. Update stock per variant in the Product Variants section, then click Update Product.');
         }
 
         // Capture stock before change

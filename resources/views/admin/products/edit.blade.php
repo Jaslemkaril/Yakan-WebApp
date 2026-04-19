@@ -1258,6 +1258,17 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && isse
         <i class="fas fa-boxes mr-2 text-[#800000]"></i>Stock History — {{ $product->name }}
     </h2>
 
+    @php
+        $hasVariants = $product->variants->isNotEmpty();
+    @endphp
+
+    @if($hasVariants)
+    <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
+        <p class="font-semibold">Stock in/out is disabled for products with variants.</p>
+        <p class="text-sm mt-1">Update stock per variant in the Product Variants section above, then click <strong>Update Product</strong>.</p>
+    </div>
+    @else
+
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <form action="{{ route('admin.products.stockIn', $product->id) }}" method="POST" class="rounded-lg border border-green-200 bg-green-50 p-4">
             @csrf
@@ -1309,6 +1320,7 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && isse
             </div>
         </form>
     </div>
+    @endif
 
     {{-- Summary cards --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
