@@ -1085,23 +1085,53 @@ class AdminCustomOrderController extends Controller
             }
 
             $entry = $evidence[$index];
+            $entryCandidates = [];
             if (is_array($entry)) {
-                $path = (string) ($entry['url'] ?? $entry['path'] ?? $entry['secure_url'] ?? '');
-            } else {
-                $path = (string) $entry;
+                foreach (['url', 'path', 'secure_url', 'open_url', 'preview_url', 'fallback_url', 'src', 'file', 'value'] as $key) {
+                    $candidateValue = $entry[$key] ?? null;
+                    if (is_string($candidateValue) && trim($candidateValue) !== '') {
+                        $entryCandidates[] = trim($candidateValue);
+                    }
+                }
+            } elseif (is_string($entry) && trim($entry) !== '') {
+                $entryCandidates[] = trim($entry);
             }
 
-            $path = str_replace('\\/', '/', trim($path, " \t\n\r\0\x0B\"'"));
-            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-                return redirect()->away($path);
+            foreach ($entryCandidates as $entryCandidate) {
+                $entryCandidate = str_replace('\\/', '/', trim($entryCandidate, " \t\n\r\0\x0B\"'"));
+                if (str_starts_with($entryCandidate, 'http://') || str_starts_with($entryCandidate, 'https://')) {
+                    return redirect()->away($entryCandidate);
+                }
+
+                if (str_starts_with($entryCandidate, '//')) {
+                    return redirect()->away('https:' . $entryCandidate);
+                }
             }
 
-            if (str_starts_with($path, '//')) {
-                return redirect()->away('https:' . $path);
+            $path = '';
+            $normalizedPath = '';
+            foreach ($entryCandidates as $entryCandidate) {
+                $entryCandidate = str_replace('\\/', '/', trim($entryCandidate, " \t\n\r\0\x0B\"'"));
+                $pathFromUrl = parse_url($entryCandidate, PHP_URL_PATH);
+                $candidateNormalizedPath = ltrim(is_string($pathFromUrl) && $pathFromUrl !== '' ? $pathFromUrl : $entryCandidate, '/');
+                if ($candidateNormalizedPath !== '') {
+                    $path = $entryCandidate;
+                    $normalizedPath = $candidateNormalizedPath;
+                    break;
+                }
             }
 
-            $pathFromUrl = parse_url($path, PHP_URL_PATH);
-            $normalizedPath = ltrim(is_string($pathFromUrl) && $pathFromUrl !== '' ? $pathFromUrl : $path, '/');
+            if ($normalizedPath === '') {
+                Log::warning('Admin custom-order refund evidence entry has no usable path', [
+                    'refund_request_id' => $refundRequest->id,
+                    'requested_index' => $index,
+                    'entry_type' => gettype($entry),
+                    'entry_preview' => is_scalar($entry) ? (string) $entry : json_encode($entry),
+                ]);
+
+                return response('Evidence file is unavailable.', 404)
+                    ->header('Content-Type', 'text/plain; charset=UTF-8');
+            }
 
             $extractRelative = static function (string $candidate, string $needle): ?string {
                 $position = stripos($candidate, $needle);

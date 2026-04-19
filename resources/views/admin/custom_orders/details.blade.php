@@ -1285,22 +1285,33 @@
                                     @endphp
                                     @foreach($customAdminRefundEvidence as $evidencePath)
                                         @php
+                                            $customAdminRawEvidencePath = $evidencePath;
+                                            if (is_array($evidencePath)) {
+                                                foreach (['url', 'path', 'secure_url', 'open_url', 'preview_url', 'fallback_url', 'src', 'file', 'value'] as $candidateKey) {
+                                                    $candidateValue = $evidencePath[$candidateKey] ?? null;
+                                                    if (is_string($candidateValue) && trim($candidateValue) !== '') {
+                                                        $customAdminRawEvidencePath = trim($candidateValue);
+                                                        break;
+                                                    }
+                                                }
+                                            }
+
                                             $customAdminEvidenceUrl = route('admin.custom-orders.refund_evidence.view', array_filter([
                                                 'refundRequest' => $latestCustomRefundRequest->id,
                                                 'index' => $loop->index,
                                                 'auth_token' => $customAdminAuthToken,
                                             ], fn ($value) => $value !== null && $value !== ''));
 
-                                            $customAdminIsRemoteUrl = is_string($evidencePath)
-                                                && (str_starts_with($evidencePath, 'http://') || str_starts_with($evidencePath, 'https://'));
+                                            $customAdminIsRemoteUrl = is_string($customAdminRawEvidencePath)
+                                                && (str_starts_with($customAdminRawEvidencePath, 'http://') || str_starts_with($customAdminRawEvidencePath, 'https://'));
 
                                             $customAdminOpenUrl = $customAdminIsRemoteUrl
-                                                ? (string) $evidencePath
+                                                ? (string) $customAdminRawEvidencePath
                                                 : $customAdminEvidenceUrl;
 
                                             $customAdminPreviewUrl = $customAdminOpenUrl;
 
-                                            $customAdminExt = strtolower(pathinfo(parse_url($evidencePath, PHP_URL_PATH) ?? $evidencePath, PATHINFO_EXTENSION));
+                                            $customAdminExt = strtolower(pathinfo(parse_url($customAdminRawEvidencePath, PHP_URL_PATH) ?? (string) $customAdminRawEvidencePath, PATHINFO_EXTENSION));
                                             $customAdminIsImage = in_array($customAdminExt, ['jpg', 'jpeg', 'png', 'webp'], true);
                                             $customAdminIsVideo = in_array($customAdminExt, ['mp4', 'mov', 'webm'], true);
                                             $customAdminVideoMime = match ($customAdminExt) {
