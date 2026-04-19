@@ -5,8 +5,12 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Schema;
 use App\Models\Order;
 use App\Models\Chat;
+use App\Models\CustomOrder;
+use App\Models\OrderRefundRequest;
+use App\Models\CustomOrderRefundRequest;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,14 +32,42 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
 
-        // Share pending orders count with admin layout
+        // Share notification counts with admin layout
         View::composer('layouts.admin', function ($view) {
             try {
+                // Pending regular orders
                 $pendingOrdersCount = Order::whereRaw('LOWER(status) = ?', ['pending'])->count();
-                $view->with('pendingOrdersCount', $pendingOrdersCount);
+                
+                // Post-Order Requests: Pending cancellation and refund requests
+                $postOrderRequestsCount = 0;
+                if (Schema::hasTable('order_refund_requests')) {
+                    $postOrderRequestsCount += OrderRefundRequest::whereIn('status', ['requested', 'under_review'])->count();
+                }
+                if (Schema::hasTable('custom_order_refund_requests')) {
+                    $postOrderRequestsCount += CustomOrderRefundRequest::whereIn('status', ['requested', 'under_review'])->count();
+                }
+                
+                // Custom Orders: Pending quotes + pending cancellation/refund requests
+                $customOrdersCount = 0;
+                if (Schema::hasTable('custom_orders')) {
+                    $customOrdersCount = CustomOrder::where('status', 'pending')->count();
+                }
+                if (Schema::hasTable('custom_order_refund_requests')) {
+                    $customOrdersCount += CustomOrderRefundRequest::whereIn('status', ['requested', 'under_review'])->count();
+                }
+                
+                $view->with([
+                    'pendingOrdersCount' => $pendingOrdersCount,
+                    'postOrderRequestsCount' => $postOrderRequestsCount,
+                    'customOrdersCount' => $customOrdersCount,
+                ]);
             } catch (\Throwable $e) {
-                \Log::error('View composer error (pendingOrdersCount): ' . $e->getMessage());
-                $view->with('pendingOrdersCount', 0);
+                \Log::error('View composer error (admin counts): ' . $e->getMessage());
+                $view->with([
+                    'pendingOrdersCount' => 0,
+                    'postOrderRequestsCount' => 0,
+                    'customOrdersCount' => 0,
+                ]);
             }
         });
 

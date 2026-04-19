@@ -949,9 +949,14 @@
         @endif
     </a>
 
-    <a href="{{ $isOrderStaff ? route('staff.orders.post_order_requests') : route('admin.orders.post_order_requests.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ $isPostOrderRequestsActive ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+    <a href="{{ $isOrderStaff ? route('staff.orders.post_order_requests') : route('admin.orders.post_order_requests.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ $isPostOrderRequestsActive ? 'nav-link-active' : '' }}" style="color: white; position: relative;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
         <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Post-Order Request</span>
+        @if($postOrderRequestsCount > 0)
+            <span style="position: absolute; top: -8px; right: -8px; background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%); color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 12px; min-width: 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3); z-index: 10; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;">
+                {{ $postOrderRequestsCount > 9 ? '9+' : $postOrderRequestsCount }}
+            </span>
+        @endif
     </a>
 
     @if(!$isOrderStaff)
@@ -985,9 +990,14 @@
     </div>
     @endif
 
-    <a href="{{ route('admin.custom-orders.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ $isCustomOrdersActive ? 'nav-link-active' : '' }}" style="color: white;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+    <a href="{{ route('admin.custom-orders.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ $isCustomOrdersActive ? 'nav-link-active' : '' }}" style="color: white; position: relative;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
         <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
         <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Custom Orders</span>
+        @if($customOrdersCount > 0)
+            <span style="position: absolute; top: -8px; right: -8px; background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%); color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 12px; min-width: 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3); z-index: 10; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;">
+                {{ $customOrdersCount > 9 ? '9+' : $customOrdersCount }}
+            </span>
+        @endif
     </a>
 
     @if(!$isOrderStaff)
