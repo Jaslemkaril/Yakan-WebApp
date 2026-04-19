@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ChatMessage;
 use App\Models\CustomOrder;
 use App\Models\CustomOrderRefundRequest;
 use App\Services\Payment\PayMongoCheckoutService;
@@ -226,6 +227,154 @@ class AdminCustomOrderController extends Controller
         return $quotedSubtotal + $this->calculateBatchSharedShipping($orders);
     }
 
+    private function normalizeOrderReferenceImage(string $rawValue): ?string
+    {
+        $candidate = trim($rawValue);
+        if ($candidate === '' || strtolower($candidate) === 'null' || $candidate === '-') {
+            return null;
+        }
+
+        if (
+            str_starts_with($candidate, 'http://') ||
+            str_starts_with($candidate, 'https://') ||
+            str_starts_with($candidate, 'data:image')
+        ) {
+            return $candidate;
+        }
+
+        $candidate = ltrim($candidate, '/');
+        if ($candidate === '') {
+            return null;
+        }
+
+        if (str_starts_with($candidate, 'storage/')) {
+            return asset($candidate);
+        }
+
+        if (str_starts_with($candidate, 'chat-image/')) {
+            return url('/' . $candidate);
+        }
+
+        if (str_starts_with($candidate, 'chats/') || str_starts_with($candidate, 'payments/')) {
+            return url('/chat-image/' . $candidate);
+        }
+
+        return asset('storage/' . $candidate);
+    }
+
+    private function extractReferenceImagesFromSpecifications(?string $rawSpecifications): array
+    {
+        if (empty($rawSpecifications)) {
+            return [];
+        }
+
+        $lines = preg_split('/\r\n|\r|\n/', (string) $rawSpecifications) ?: [];
+        $images = [];
+
+        foreach ($lines as $line) {
+            $trimmed = trim((string) $line);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            if (preg_match('/^-\s*image\s*\d*\s*:\s*(.+)$/i', $trimmed, $matches)) {
+                $candidate = trim((string) ($matches[1] ?? ''));
+                if ($candidate !== '') {
+                    $images[] = $candidate;
+                }
+            }
+        }
+
+        return $images;
+    }
+
+    private function resolveOrderReferenceImages(CustomOrder $order): array
+    {
+        $candidates = [];
+
+        if (!empty($order->design_upload)) {
+            $rawUploads = is_string($order->design_upload)
+                ? explode(',', $order->design_upload)
+                : (array) $order->design_upload;
+
+            foreach ($rawUploads as $upload) {
+                $value = trim((string) $upload);
+                if ($value !== '') {
+                    $candidates[] = $value;
+                }
+            }
+        }
+
+        $candidates = array_merge(
+            $candidates,
+            $this->extractReferenceImagesFromSpecifications($order->specifications ?? null)
+        );
+
+        $resolved = [];
+        $seen = [];
+
+        $appendImage = function (string $candidate) use (&$resolved, &$seen) {
+            $normalized = $this->normalizeOrderReferenceImage($candidate);
+            if (!$normalized) {
+                return;
+            }
+
+            if (isset($seen[$normalized])) {
+                return;
+            }
+
+            $seen[$normalized] = true;
+            $resolved[] = $normalized;
+        };
+
+        foreach ($candidates as $candidate) {
+            $appendImage((string) $candidate);
+        }
+
+        // Fallback for old chat-generated orders with empty/invalid design_upload.
+        if (empty($resolved) && !empty($order->chat_id)) {
+            $chatImageMessages = ChatMessage::query()
+                ->where('chat_id', $order->chat_id)
+                ->where('sender_type', 'user')
+                ->whereNotNull('image_path')
+                ->where(function ($query) {
+                    $query->whereNull('message')
+                        ->orWhere('message', 'not like', '%Payment proof%');
+                })
+                ->orderBy('id')
+                ->get(['image_path', 'form_data', 'created_at']);
+
+            foreach ($chatImageMessages as $chatImageMessage) {
+                if (
+                    $order->created_at &&
+                    $chatImageMessage->created_at &&
+                    $chatImageMessage->created_at->gt($order->created_at->copy()->addMinutes(10))
+                ) {
+                    continue;
+                }
+
+                $formData = is_array($chatImageMessage->form_data) ? $chatImageMessage->form_data : [];
+                $inlineImage = $formData['inline_image_data'] ?? null;
+                if (is_string($inlineImage) && $inlineImage !== '') {
+                    $appendImage($inlineImage);
+                }
+
+                $appendImage((string) $chatImageMessage->image_path);
+            }
+        }
+
+        return array_values(array_slice($resolved, 0, 6));
+    }
+
+    private function attachResolvedReferenceImages(\Illuminate\Support\Collection $orders): void
+    {
+        $orders->each(function (CustomOrder $order) {
+            $resolvedImages = $this->resolveOrderReferenceImages($order);
+            $order->setAttribute('resolved_reference_images', $resolvedImages);
+            $order->setAttribute('resolved_reference_image', $resolvedImages[0] ?? null);
+        });
+    }
+
     private function resolveBatchOrders(CustomOrder $order): \Illuminate\Support\Collection
     {
         $hasBatchColumn = \Schema::hasColumn('custom_orders', 'batch_order_number');
@@ -368,6 +517,7 @@ class AdminCustomOrderController extends Controller
             }
 
             $orders = $query->paginate($request->get('per_page', 20))->withQueryString();
+            $this->attachResolvedReferenceImages($orders->getCollection());
 
             // Build batch metadata map for all named batches on this page.
             $batchCountMap    = [];
@@ -420,6 +570,7 @@ class AdminCustomOrderController extends Controller
     public function show(CustomOrder $order)
     {
         $order->load(['user', 'product']);
+        $this->attachResolvedReferenceImages(collect([$order]));
 
         $latestCustomRefundRequest = null;
         if (Schema::hasTable('custom_order_refund_requests')) {
@@ -458,6 +609,10 @@ class AdminCustomOrderController extends Controller
                 $batchOrders = $batchOrdersQuery->orderBy('id')->get();
                 $isImplicitBatchGroup = $batchOrders->isNotEmpty();
             }
+        }
+
+        if ($batchOrders->isNotEmpty()) {
+            $this->attachResolvedReferenceImages($batchOrders);
         }
 
         return view('admin.custom_orders.details', compact('order', 'batchOrders', 'isImplicitBatchGroup', 'latestCustomRefundRequest'));
@@ -2177,6 +2332,7 @@ class AdminCustomOrderController extends Controller
 
             $perPage = $request->get('per_page', 20);
             $orders = $query->paginate($perPage);
+            $this->attachResolvedReferenceImages($orders->getCollection());
 
             // Build maps for named batches on this page
             $batchCountMap = [];

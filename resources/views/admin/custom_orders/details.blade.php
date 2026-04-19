@@ -272,17 +272,29 @@
                                 $itemCustomization = $item->customization_settings;
                             }
 
-                            $previewImageUrls = [];
-                            if (!empty($item->design_upload)) {
+                            $previewImageUrls = is_array($item->resolved_reference_images ?? null)
+                                ? array_values(array_filter($item->resolved_reference_images))
+                                : [];
+
+                            if (empty($previewImageUrls) && !empty($item->design_upload)) {
                                 $rawUploads = is_string($item->design_upload) ? explode(',', $item->design_upload) : [$item->design_upload];
                                 foreach ($rawUploads as $upload) {
                                     $cleanUpload = trim((string) $upload);
                                     if ($cleanUpload === '') {
                                         continue;
                                     }
-                                    $previewImageUrls[] = (str_starts_with($cleanUpload, 'http://') || str_starts_with($cleanUpload, 'https://') || str_starts_with($cleanUpload, 'data:image'))
-                                        ? $cleanUpload
-                                        : asset('storage/' . ltrim($cleanUpload, '/'));
+
+                                    if (str_starts_with($cleanUpload, 'http://') || str_starts_with($cleanUpload, 'https://') || str_starts_with($cleanUpload, 'data:image')) {
+                                        $previewImageUrls[] = $cleanUpload;
+                                    } elseif (str_starts_with($cleanUpload, 'storage/')) {
+                                        $previewImageUrls[] = asset($cleanUpload);
+                                    } elseif (str_starts_with($cleanUpload, 'chat-image/')) {
+                                        $previewImageUrls[] = url('/' . ltrim($cleanUpload, '/'));
+                                    } elseif (str_starts_with($cleanUpload, 'chats/') || str_starts_with($cleanUpload, 'payments/')) {
+                                        $previewImageUrls[] = url('/chat-image/' . ltrim($cleanUpload, '/'));
+                                    } else {
+                                        $previewImageUrls[] = asset('storage/' . ltrim($cleanUpload, '/'));
+                                    }
                                 }
                             }
                         @endphp
@@ -466,7 +478,7 @@
                     @endif
                 @endif
             </div>
-            @elseif($order->design_upload)
+            @elseif(!empty($order->resolved_reference_images) || $order->design_upload)
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                     <svg class="w-6 h-6 text-[#800000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -477,9 +489,31 @@
 
                 <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border-2 border-red-200">
                     @php
-                        // Handle multiple images (comma-separated)
-                        $designImages = is_string($order->design_upload) ? explode(',', $order->design_upload) : [$order->design_upload];
-                        $designImages = array_filter(array_map('trim', $designImages));
+                        $designImages = is_array($order->resolved_reference_images ?? null)
+                            ? array_values(array_filter($order->resolved_reference_images))
+                            : [];
+
+                        if (empty($designImages) && !empty($order->design_upload)) {
+                            $rawDesignUploads = is_string($order->design_upload) ? explode(',', $order->design_upload) : [$order->design_upload];
+                            foreach ($rawDesignUploads as $upload) {
+                                $cleanUpload = trim((string) $upload);
+                                if ($cleanUpload === '') {
+                                    continue;
+                                }
+
+                                if (str_starts_with($cleanUpload, 'http://') || str_starts_with($cleanUpload, 'https://') || str_starts_with($cleanUpload, 'data:image')) {
+                                    $designImages[] = $cleanUpload;
+                                } elseif (str_starts_with($cleanUpload, 'storage/')) {
+                                    $designImages[] = asset($cleanUpload);
+                                } elseif (str_starts_with($cleanUpload, 'chat-image/')) {
+                                    $designImages[] = url('/' . ltrim($cleanUpload, '/'));
+                                } elseif (str_starts_with($cleanUpload, 'chats/') || str_starts_with($cleanUpload, 'payments/')) {
+                                    $designImages[] = url('/chat-image/' . ltrim($cleanUpload, '/'));
+                                } else {
+                                    $designImages[] = asset('storage/' . ltrim($cleanUpload, '/'));
+                                }
+                            }
+                        }
                     @endphp
 
                     @if(count($designImages) > 1)
@@ -600,7 +634,8 @@
                             return $lower === 'custom fabric order'
                                 || str_starts_with($lower, 'fabric type:')
                                 || str_starts_with($lower, 'quantity:')
-                                || str_starts_with($lower, 'intended use:');
+                                || str_starts_with($lower, 'intended use:')
+                                || preg_match('/^-\s*image\s*\d*\s*:\s*$/i', $line);
                         })
                         ->values();
                     $hasMeaningfulSpecifications = $meaningfulSpecLines->isNotEmpty();

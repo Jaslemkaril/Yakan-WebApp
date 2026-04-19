@@ -398,15 +398,19 @@
                                         {!! $patternModel->getSvgContent() !!}
                                     </div>
                                 </div>
-                            @elseif($order->design_upload)
+                            @elseif(!empty($order->resolved_reference_image) || $order->design_upload)
                                 @php
-                                    $designPath = $order->design_upload;
+                                    $designPath = $order->resolved_reference_image ?: $order->design_upload;
                                     if (str_starts_with($designPath, 'http://') || str_starts_with($designPath, 'https://')) {
                                         $imgSrc = $designPath;
                                     } elseif (str_starts_with($designPath, 'data:image')) {
                                         $imgSrc = $designPath;
                                     } elseif (str_starts_with($designPath, 'storage/')) {
                                         $imgSrc = asset($designPath);
+                                    } elseif (str_starts_with($designPath, 'chat-image/')) {
+                                        $imgSrc = url('/' . ltrim($designPath, '/'));
+                                    } elseif (str_starts_with($designPath, 'chats/') || str_starts_with($designPath, 'payments/')) {
+                                        $imgSrc = url('/chat-image/' . ltrim($designPath, '/'));
                                     } else {
                                         $imgSrc = asset('storage/' . $designPath);
                                     }

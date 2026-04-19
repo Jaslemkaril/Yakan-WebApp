@@ -741,6 +741,50 @@ class ChatController extends Controller
             } catch (\Exception $e) {
                 \Log::warning('reference_images column might not exist yet', ['error' => $e->getMessage()]);
             }
+
+            if (!is_array($designImages)) {
+                $designImages = [$designImages];
+            }
+
+            $designImages = collect($designImages)
+                ->map(fn($url) => trim((string) $url))
+                ->filter(fn($url) => $url !== '' && strtolower($url) !== 'null')
+                ->unique()
+                ->values()
+                ->all();
+
+            // Older quote payloads may miss reference_images; recover from prior user chat images.
+            if (empty($designImages)) {
+                $fallbackImageMessages = ChatMessage::query()
+                    ->where('chat_id', $chat->id)
+                    ->where('sender_type', 'user')
+                    ->whereNotNull('image_path')
+                    ->where(function ($query) {
+                        $query->whereNull('message')
+                            ->orWhere('message', 'not like', '%Payment proof%');
+                    })
+                    ->orderBy('id')
+                    ->get(['image_path', 'form_data']);
+
+                foreach ($fallbackImageMessages as $fallbackImageMessage) {
+                    $inlineImage = data_get($fallbackImageMessage->form_data, 'inline_image_data');
+                    if (is_string($inlineImage) && str_starts_with($inlineImage, 'data:image')) {
+                        $designImages[] = $inlineImage;
+                    }
+
+                    $imagePath = trim((string) ($fallbackImageMessage->image_path ?? ''));
+                    if ($imagePath !== '') {
+                        $designImages[] = $imagePath;
+                    }
+                }
+
+                $designImages = collect($designImages)
+                    ->map(fn($url) => trim((string) $url))
+                    ->filter(fn($url) => $url !== '' && strtolower($url) !== 'null')
+                    ->unique()
+                    ->values()
+                    ->all();
+            }
             
             // Get form response data from chat messages
             $formResponseMessage = ChatMessage::where('chat_id', $chat->id)
