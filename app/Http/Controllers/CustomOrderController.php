@@ -635,26 +635,27 @@ class CustomOrderController extends Controller
         }
 
         if (empty($resolved) && !empty($order->chat_id)) {
-            $chatImageMessages = ChatMessage::query()
+            $chatImageQuery = ChatMessage::query()
                 ->where('chat_id', $order->chat_id)
                 ->where('sender_type', 'user')
                 ->whereNotNull('image_path')
+                ->where('image_path', '!=', '')
                 ->where(function ($query) {
                     $query->whereNull('message')
                         ->orWhere('message', 'not like', '%Payment proof%');
-                })
-                ->orderBy('id')
+                });
+
+            // Restrict to messages created before the order + 10 min to avoid huge sort
+            if ($order->created_at) {
+                $chatImageQuery->where('created_at', '<=', $order->created_at->copy()->addMinutes(10));
+            }
+
+            $chatImageMessages = $chatImageQuery
+                ->orderByDesc('id')
+                ->limit(20)
                 ->get(['image_path', 'form_data', 'created_at']);
 
             foreach ($chatImageMessages as $chatImageMessage) {
-                if (
-                    $order->created_at &&
-                    $chatImageMessage->created_at &&
-                    $chatImageMessage->created_at->gt($order->created_at->copy()->addMinutes(10))
-                ) {
-                    continue;
-                }
-
                 $inlineImage = data_get($chatImageMessage->form_data, 'inline_image_data');
                 if (is_string($inlineImage) && $inlineImage !== '') {
                     $appendImage($inlineImage);
