@@ -274,6 +274,7 @@ class ChatController extends Controller
                     $query->whereNull('message')
                         ->orWhere('message', 'not like', '%Payment proof%');
                 })
+                ->orderBy('created_at', 'desc')
                 ->limit(10) // Limit to 10 images to avoid memory issues
                 ->get(['image_path', 'form_data']);
 
@@ -284,7 +285,11 @@ class ChatController extends Controller
                 }
 
                 $imagePath = trim((string) ($fallbackImageMessage->image_path ?? ''));
-                if ($imagePath !== '') {
+                if ($imagePath !== '' && strtolower($imagePath) !== 'null') {
+                    // Convert relative path to full URL if needed
+                    if (!str_starts_with($imagePath, 'http') && !str_starts_with($imagePath, 'data:')) {
+                        $imagePath = asset($imagePath);
+                    }
                     $designImages[] = $imagePath;
                 }
             }
@@ -448,14 +453,23 @@ class ChatController extends Controller
 
         // Safety check: Limit design_upload field to prevent database errors with large base64 images
         if (isset($payload['design_upload']) && strlen($payload['design_upload']) > 60000) {
-            // If design_upload is too large (base64 images), only keep URLs
+            // If design_upload is too large (base64 images), only keep actual file URLs/paths
             $keptImages = array_filter($designImages, function($img) {
-                return !str_starts_with($img, 'data:image') && strlen($img) < 500;
+                // Keep all non-base64 images (URLs, file paths, etc.)
+                return !str_starts_with($img, 'data:image');
             });
-            $payload['design_upload'] = !empty($keptImages) ? implode(',', $keptImages) : 'Images uploaded via chat';
+            
+            if (!empty($keptImages)) {
+                $payload['design_upload'] = implode(',', $keptImages);
+            } else {
+                // If only base64 images exist, log warning but keep the field null
+                $payload['design_upload'] = null;
+            }
+            
             \Log::warning('Design upload truncated - base64 images too large', [
                 'chat_id' => $chat->id,
-                'image_count' => count($designImages)
+                'image_count' => count($designImages),
+                'kept_images' => count($keptImages)
             ]);
         }
 
