@@ -15,10 +15,26 @@ use Illuminate\Support\Str;
 
 class ChatController extends Controller
 {
+    private const MESSAGE_WINDOW = 250;
+
     private function generateSafeUploadFilename($file, string $prefix = 'chat'): string
     {
         $extension = strtolower((string) ($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg'));
         return $prefix . '_' . now()->format('YmdHis') . '_' . Str::random(16) . '.' . $extension;
+    }
+
+    /**
+     * Load a bounded, chronological message list to avoid DB sort-memory errors.
+     */
+    private function loadRecentMessages(int $chatId)
+    {
+        return ChatMessage::query()
+            ->where('chat_id', $chatId)
+            ->orderByDesc('id')
+            ->limit(self::MESSAGE_WINDOW)
+            ->get()
+            ->sortBy('id')
+            ->values();
     }
 
     private function buildChatImageUrl(string $folder, string $filename): string
@@ -646,7 +662,7 @@ class ChatController extends Controller
                 ->where('is_read', false)
                 ->update(['is_read' => true]);
 
-            $messages = $chat->messages()->get();
+            $messages = $this->loadRecentMessages($chat->id);
 
             // Keep pending chat-order totals aligned with canonical shipping zones.
             $userDefaultAddress = UserAddress::where('user_id', auth()->id())

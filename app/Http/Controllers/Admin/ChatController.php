@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 
 class ChatController extends Controller
 {
+    private const MESSAGE_WINDOW = 250;
+
     /**
      * Show all chats
      */
@@ -59,10 +61,24 @@ class ChatController extends Controller
             ->where('is_read', false)
             ->update(['is_read' => true]);
 
-        $messages = $chat->messages()->get();
+        $messages = $this->loadRecentMessages($chat->id);
         $hasAcceptedQuote = $chat->hasAcceptedQuote();
 
         return view('admin.chats.show', compact('chat', 'messages', 'hasAcceptedQuote'));
+    }
+
+    /**
+     * Load a bounded, chronological message list to avoid DB sort-memory errors.
+     */
+    private function loadRecentMessages(int $chatId)
+    {
+        return ChatMessage::query()
+            ->where('chat_id', $chatId)
+            ->orderByDesc('id')
+            ->limit(self::MESSAGE_WINDOW)
+            ->get()
+            ->sortBy('id')
+            ->values();
     }
 
     /**
