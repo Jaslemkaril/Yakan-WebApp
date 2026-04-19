@@ -425,7 +425,10 @@
                                     'description' => 'Order was cancelled'
                                 ]
                             ];
-                            $config = $statusConfig[$order->status] ?? ['bg' => 'bg-gray-100', 'text' => 'text-gray-800', 'border' => 'border-gray-300', 'icon' => '', 'description' => 'Unknown status'];
+                            
+                            // Use cancellation-aware status for display
+                            $effectiveStatus = $isCancellationApproved ? 'cancelled' : $order->status;
+                            $config = $statusConfig[$effectiveStatus] ?? ['bg' => 'bg-gray-100', 'text' => 'text-gray-800', 'border' => 'border-gray-300', 'icon' => '', 'description' => 'Unknown status'];
                             
                             $paymentConfig = [
                                 'paid' => [
@@ -458,12 +461,14 @@
                             $payConfig = $paymentConfig[$order->payment_status ?? 'pending'] ?? ['bg' => 'bg-gray-100', 'text' => 'text-gray-800', 'icon' => '', 'label' => 'Unpaid'];
                         @endphp
                         <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold {{ $config['bg'] }} {{ $config['text'] }}">
-                            {{ ucfirst(str_replace('_', ' ', $order->status)) }}
+                            {{ $displayOrderStatus }}
                         </span>
                         @if(in_array($order->status, ['approved', 'processing', 'in_production', 'completed']) || $order->payment_status)
+                            @if(!$isCancellationApproved)
                             <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold {{ $payConfig['bg'] }} {{ $payConfig['text'] }}">
                                 {{ $payConfig['label'] }}
                             </span>
+                            @endif
                         @endif
                     </div>
                     <p class="text-xs text-gray-600">{{ $config['description'] }}</p>
@@ -1253,8 +1258,9 @@
                                 'cancelled' => ['bg' => 'bg-red-100', 'text' => 'text-red-800'],
                                 'rejected' => ['bg' => 'bg-red-100', 'text' => 'text-red-800']
                             ];
-                            $config = $statusConfig[$order->status] ?? ['bg' => 'bg-gray-100', 'text' => 'text-gray-800'];
-                            $displayStatusLabel = $order->status === 'completed' ? 'Delivered' : ucfirst(str_replace('_', ' ', $order->status));
+                            $effectiveStatusSidebar = $isCancellationApproved ? 'cancelled' : $order->status;
+                            $config = $statusConfig[$effectiveStatusSidebar] ?? ['bg' => 'bg-gray-100', 'text' => 'text-gray-800'];
+                            $displayStatusLabel = $isCancellationApproved ? 'Cancelled' : ($order->status === 'completed' ? 'Delivered' : ucfirst(str_replace('_', ' ', $order->status)));
                         @endphp
                             <span class="px-3 py-1 rounded-full text-xs font-semibold {{ $config['bg'] }} {{ $config['text'] }}">
                                 {{ $displayStatusLabel }}
@@ -1262,6 +1268,7 @@
                         </div>
 
                         <!-- Payment Status -->
+                        @if(!$isCancellationApproved)
                         <div class="flex items-center justify-between pb-3 border-b border-gray-200">
                             <span class="text-sm font-medium text-gray-600">Payment</span>
                             @php
@@ -1277,6 +1284,7 @@
                                 {{ $payConfig['label'] }}
                             </span>
                         </div>
+                        @endif
 
                         @php
                             $deliveryType = $order->delivery_type ?? ($order->delivery_address ? 'delivery' : 'pickup');
