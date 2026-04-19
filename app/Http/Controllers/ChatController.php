@@ -1108,6 +1108,7 @@ class ChatController extends Controller
         $quoteMessage->save();
 
         // If accepted, create order (Pending Payment status)
+        $acceptedOrder = null;
         if ($response === 'accepted') {
             $selectedDeliveryType = strtolower((string) ($validated['delivery_type'] ?? 'delivery'));
             if (!in_array($selectedDeliveryType, ['delivery', 'pickup'], true)) {
@@ -1138,6 +1139,7 @@ class ChatController extends Controller
                 $quoteMessage->save();
 
                 $chat->update(['updated_at' => now()]);
+                $acceptedOrder = $order;
             } catch (\Throwable $e) {
                 $this->rollbackQuoteAcceptance($quoteMessage, $responseMessage);
 
@@ -1154,6 +1156,19 @@ class ChatController extends Controller
             }
         } else {
             $chat->update(['updated_at' => now()]);
+        }
+
+        if ($response === 'accepted' && $acceptedOrder) {
+            $paymentUrl = route('custom_orders.payment', ['order' => $acceptedOrder->id]);
+            $separator = str_contains($paymentUrl, '?') ? '&' : '?';
+            $paymentUrl .= $separator . 'auto_pay=1&from_chat=1';
+
+            $token = $request->input('auth_token') ?? $request->query('auth_token') ?? session('auth_token');
+            if ($token) {
+                $paymentUrl .= '&auth_token=' . urlencode((string) $token);
+            }
+
+            return redirect($paymentUrl)->with('success', 'Quote accepted. Redirecting you to secure checkout...');
         }
 
         return $this->redirectWithToken('chats.show', $chat)->with('success', 'Response sent to admin!');

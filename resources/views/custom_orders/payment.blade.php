@@ -1104,6 +1104,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const continueBtn = document.getElementById('continuePaymentBtn');
     const loadingOverlay = document.getElementById('paymentLoadingOverlay');
     const paymentForm = document.getElementById('customPaymentForm');
+    const params = new URLSearchParams(window.location.search);
+    const shouldAutoPay = params.get('auto_pay') === '1';
+    let autoPayTriggered = false;
     
     if (continueBtn && paymentForm) {
         continueBtn.addEventListener('click', async function(e) {
@@ -1165,6 +1168,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('Connection error. Please check your internet and try again.');
             }
         });
+
+        // If user came from chat quote acceptance, auto-start checkout.
+        if (shouldAutoPay && !autoPayTriggered) {
+            autoPayTriggered = true;
+            setTimeout(() => {
+                continueBtn.click();
+            }, 80);
+        }
     }
 });
 </script>
