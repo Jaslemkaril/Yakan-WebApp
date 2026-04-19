@@ -265,27 +265,35 @@ class ChatController extends Controller
             return $designImages;
         }
 
-        $fallbackImageMessages = ChatMessage::query()
-            ->where('chat_id', $chat->id)
-            ->where('sender_type', 'user')
-            ->whereNotNull('image_path')
-            ->where(function ($query) {
-                $query->whereNull('message')
-                    ->orWhere('message', 'not like', '%Payment proof%');
-            })
-            ->orderBy('id')
-            ->get(['image_path', 'form_data']);
+        try {
+            $fallbackImageMessages = ChatMessage::query()
+                ->where('chat_id', $chat->id)
+                ->where('sender_type', 'user')
+                ->whereNotNull('image_path')
+                ->where(function ($query) {
+                    $query->whereNull('message')
+                        ->orWhere('message', 'not like', '%Payment proof%');
+                })
+                ->limit(10) // Limit to 10 images to avoid memory issues
+                ->get(['image_path', 'form_data']);
 
-        foreach ($fallbackImageMessages as $fallbackImageMessage) {
-            $inlineImage = data_get($fallbackImageMessage->form_data, 'inline_image_data');
-            if (is_string($inlineImage) && str_starts_with($inlineImage, 'data:image')) {
-                $designImages[] = $inlineImage;
-            }
+            foreach ($fallbackImageMessages as $fallbackImageMessage) {
+                $inlineImage = data_get($fallbackImageMessage->form_data, 'inline_image_data');
+                if (is_string($inlineImage) && str_starts_with($inlineImage, 'data:image')) {
+                    $designImages[] = $inlineImage;
+                }
 
-            $imagePath = trim((string) ($fallbackImageMessage->image_path ?? ''));
-            if ($imagePath !== '') {
-                $designImages[] = $imagePath;
+                $imagePath = trim((string) ($fallbackImageMessage->image_path ?? ''));
+                if ($imagePath !== '') {
+                    $designImages[] = $imagePath;
+                }
             }
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to collect fallback design images', [
+                'chat_id' => $chat->id,
+                'error' => $e->getMessage()
+            ]);
+            // Continue without fallback images if query fails
         }
 
         return collect($designImages)
