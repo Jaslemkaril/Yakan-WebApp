@@ -302,11 +302,14 @@
     $orderStatusLower = strtolower((string) ($order->status ?? ''));
     $hasCancellationRequest = !empty($customRefundRequest) && $customRefundRequest->request_type === 'return';
     $isCancellationRequested = $hasCancellationRequest && in_array($customRefundRequest->status, ['requested', 'under_review']);
+    $isCancellationApproved = $hasCancellationRequest && in_array($customRefundRequest->status, ['approved', 'processed']);
     $canCancelOrder = in_array($orderStatusLower, ['pending', 'price_quoted', 'approved', 'processing'], true) && !$hasCancellationRequest;
     $showCancelForm = $errors->has('cancel_reason') || !empty(old('cancel_reason'));
     
     if ($isCancellationRequested) {
         $displayOrderStatus = 'Cancellation Pending';
+    } elseif ($isCancellationApproved) {
+        $displayOrderStatus = 'Cancelled';
     } else {
         $displayOrderStatus = ucfirst(str_replace('_', ' ', $orderStatusLower));
     }
@@ -1677,7 +1680,28 @@
                     <div class="p-6">
                         <div class="space-y-4">
                             @php
-                                $timelineStatuses = ['pending', 'price_quoted', 'approved', 'in_production', 'production_complete', 'out_for_delivery', 'delivered'];
+                                // Check if this is a chat-based order
+                                $isChatBasedOrder = !empty($order->chat_id);
+                                
+                                // Base timeline statuses
+                                $timelineStatuses = ['pending'];
+                                
+                                // Only add chat-specific statuses for chat-based orders
+                                if ($isChatBasedOrder) {
+                                    $timelineStatuses[] = 'price_quoted';
+                                    $timelineStatuses[] = 'approved';
+                                }
+                                
+                                // Continue with regular statuses
+                                $timelineStatuses = array_merge($timelineStatuses, ['in_production', 'production_complete', 'out_for_delivery', 'delivered']);
+                                
+                                // Add cancelled and refunded if applicable
+                                if ($isCancellationApproved) {
+                                    $timelineStatuses[] = 'cancelled';
+                                    if (in_array($customRefundRequest->status, ['processed'])) {
+                                        $timelineStatuses[] = 'refunded';
+                                    }
+                                }
 
                                 // Normalize runtime order states to timeline stages.
                                 $displayStatus = $order->status;
@@ -1685,23 +1709,46 @@
                                     $displayStatus = 'delivered';
                                 } elseif ($displayStatus === 'processing') {
                                     // Paid/processing means payment accepted but admin may not have started production yet.
-                                    $displayStatus = 'approved';
+                                    $displayStatus = $isChatBasedOrder ? 'approved' : 'pending';
                                 } elseif ($displayStatus === 'approved' && ($order->payment_status ?? null) === 'paid') {
-                                    $displayStatus = 'approved';
+                                    $displayStatus = $isChatBasedOrder ? 'approved' : 'pending';
+                                }
+                                
+                                // If cancelled, set display status to cancelled or refunded
+                                if ($isCancellationApproved) {
+                                    if (in_array($customRefundRequest->status, ['processed'])) {
+                                        $displayStatus = 'refunded';
+                                    } else {
+                                        $displayStatus = 'cancelled';
+                                    }
                                 }
 
                                 if (!in_array($displayStatus, $timelineStatuses, true)) {
-                                    $displayStatus = ($order->payment_status ?? null) === 'paid' ? 'approved' : 'pending';
+                                    $displayStatus = ($order->payment_status ?? null) === 'paid' ? ($isChatBasedOrder ? 'approved' : 'pending') : 'pending';
                                 }
 
                                 $currentTimelineIndex = array_search($displayStatus, $timelineStatuses, true);
                                 if ($currentTimelineIndex === false) {
                                     $currentTimelineIndex = 0;
                                 }
+                                
+                                // Define labels for all possible statuses
+                                $statusLabels = [
+                                    'pending' => 'Order Placed',
+                                    'price_quoted' => 'Price Quoted',
+                                    'approved' => 'Quote Accepted',
+                                    'in_production' => 'In Production',
+                                    'production_complete' => 'Production Complete',
+                                    'out_for_delivery' => 'Out for Delivery',
+                                    'delivered' => 'Delivered',
+                                    'cancelled' => 'Cancelled',
+                                    'refunded' => 'Refunded'
+                                ];
                             @endphp
 
-                            @foreach(['pending' => 'Order Placed', 'price_quoted' => 'Price Quoted', 'approved' => 'Quote Accepted', 'in_production' => 'In Production', 'production_complete' => 'Production Complete', 'out_for_delivery' => 'Out for Delivery', 'delivered' => 'Delivered'] as $status => $label)
+                            @foreach($timelineStatuses as $status)
                                 @php
+                                    $label = $statusLabels[$status] ?? ucfirst(str_replace('_', ' ', $status));
                                     $statusIndex = array_search($status, $timelineStatuses, true);
                                     $isActive = $statusIndex <= $currentTimelineIndex;
                                     $isCurrent = $status === $displayStatus;
@@ -1753,7 +1800,7 @@
                 </div>
 
             {{-- Price Quoted Status - Show Quote for Acceptance --}}
-            @elseif($order->status === 'price_quoted' && $order->final_price)
+            @elseif($order->status === 'price_quoted' && $order->final_price && !$isCancellationApproved)
                 <div class="w-full rounded-2xl border-2 p-8 shadow-xl" style="background-color:#fff5f5; border-color:#c08080;">
                     <div class="text-center mb-6">
                         <div class="w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center shadow-lg" style="background-color:#800000;">
@@ -1881,7 +1928,7 @@
                 </div>
             
             {{-- Approved Status - Waiting for Payment --}}
-            @elseif($order->status === 'approved' && !in_array($order->payment_status, ['paid', 'pending_verification']))
+            @elseif($order->status === 'approved' && !in_array($order->payment_status, ['paid', 'pending_verification']) && !$isCancellationApproved)
                 <div class="w-full rounded-2xl p-8 shadow-2xl border-2" style="background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%); border-color:#800000;">
                     <div class="w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg animate-pulse" style="background: linear-gradient(135deg, #800000 0%, #600000 100%);">
                         <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
