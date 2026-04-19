@@ -190,8 +190,7 @@
                                 $isGroupedSubmission = ($currentBatchMeta['item_count'] ?? 0) > 1;
                                 
                                 // Check for cancellation/refund request
-                                $orderRefundRequest = \App\Models\RefundRequest::where('order_id', $order->id)
-                                    ->where('order_type', 'custom')
+                                $orderRefundRequest = \App\Models\CustomOrderRefundRequest::where('custom_order_id', $order->id)
                                     ->where('request_type', 'return')
                                     ->first();
                                 $isOrderCancelled = !empty($orderRefundRequest) && in_array($orderRefundRequest->status, ['approved', 'processed']);
