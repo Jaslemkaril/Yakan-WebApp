@@ -4982,7 +4982,7 @@ class CustomOrderController extends Controller
     /**
      * Show payment page for a custom order
      */
-    public function payment($id)
+    public function payment(Request $request, $id)
     {
         try {
             \Log::info('Payment method called', [
@@ -5018,6 +5018,56 @@ class CustomOrderController extends Controller
                     'order_owner_check' => $order->user_id !== auth()->id()
                 ]);
                 abort(403, 'Unauthorized');
+            }
+
+            // Server-side checkout handoff for chat acceptance flow.
+            // This avoids relying solely on frontend JS auto-redirect.
+            if ((string) $request->query('auto_pay') === '1') {
+                $authToken = $request->input('auth_token') ?? $request->query('auth_token') ?? session('auth_token');
+
+                $autoPayload = [
+                    'payment_method' => 'paymongo',
+                    'shipping_fee' => (float) ($order->shipping_fee ?? 0),
+                    'delivery_city' => (string) ($order->delivery_city ?? ''),
+                    'delivery_province' => (string) ($order->delivery_province ?? ''),
+                ];
+
+                if (!empty($authToken)) {
+                    $autoPayload['auth_token'] = $authToken;
+                }
+
+                $autoRequest = Request::create(
+                    '/api/custom-orders/' . $order->id . '/initiate-payment',
+                    'POST',
+                    $autoPayload
+                );
+
+                if (!empty($authToken)) {
+                    $autoRequest->headers->set('X-Auth-Token', (string) $authToken);
+                }
+
+                $autoResponse = $this->initiatePaymentAjax($autoRequest, $order->id);
+                $autoData = method_exists($autoResponse, 'getData')
+                    ? (array) $autoResponse->getData(true)
+                    : (json_decode((string) $autoResponse->getContent(), true) ?? []);
+
+                if (($autoData['success'] ?? false) && !empty($autoData['redirect_url'])) {
+                    return redirect()->away((string) $autoData['redirect_url']);
+                }
+
+                $errorMessage = (string) ($autoData['error'] ?? 'Unable to start checkout automatically. Please tap Continue to Payment.');
+                \Log::warning('Server-side auto checkout handoff failed', [
+                    'order_id' => $order->id,
+                    'user_id' => auth()->id(),
+                    'error' => $errorMessage,
+                ]);
+
+                $fallbackUrl = route('custom_orders.payment', ['order' => $order->id]);
+                if (!empty($authToken)) {
+                    $fallbackUrl .= '?auth_token=' . urlencode((string) $authToken);
+                }
+
+                return redirect($fallbackUrl)->with('error', $errorMessage);
             }
 
             \Log::info('Authentication passed, calling showPayment', [
