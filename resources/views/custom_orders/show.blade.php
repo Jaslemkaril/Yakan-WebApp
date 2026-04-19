@@ -644,8 +644,16 @@
                                         @php
                                             $itemDesignUrl = $item->display_primary_reference_image ?? null;
                                             if (!$itemDesignUrl && !empty($item->design_upload)) {
+                                                // Handle comma-separated images from chat (take first one)
                                                 $itemDesignPath = $item->design_upload;
-                                                if (str_starts_with($itemDesignPath, 'http://') || str_starts_with($itemDesignPath, 'https://') || str_starts_with($itemDesignPath, 'data:image')) {
+                                                if (str_contains($itemDesignPath, ',')) {
+                                                    $itemDesignPath = explode(',', $itemDesignPath)[0];
+                                                }
+                                                $itemDesignPath = trim($itemDesignPath);
+                                                
+                                                if (str_starts_with($itemDesignPath, 'http://') || str_starts_with($itemDesignPath, 'https://')) {
+                                                    $itemDesignUrl = $itemDesignPath;
+                                                } elseif (str_starts_with($itemDesignPath, 'data:image')) {
                                                     $itemDesignUrl = $itemDesignPath;
                                                 } elseif (str_starts_with($itemDesignPath, 'storage/')) {
                                                     $itemDesignUrl = asset($itemDesignPath);
@@ -719,8 +727,16 @@
                                                 @php
                                                     $detailDesignUrl = $item->display_primary_reference_image ?? null;
                                                     if (!$detailDesignUrl) {
+                                                        // Handle comma-separated images from chat (take first one)
                                                         $detailDesignPath = $item->design_upload;
-                                                        if ($detailDesignPath && (str_starts_with($detailDesignPath, 'http://') || str_starts_with($detailDesignPath, 'https://') || str_starts_with($detailDesignPath, 'data:image'))) {
+                                                        if ($detailDesignPath && str_contains($detailDesignPath, ',')) {
+                                                            $detailDesignPath = explode(',', $detailDesignPath)[0];
+                                                        }
+                                                        $detailDesignPath = $detailDesignPath ? trim($detailDesignPath) : null;
+                                                        
+                                                        if ($detailDesignPath && (str_starts_with($detailDesignPath, 'http://') || str_starts_with($detailDesignPath, 'https://'))) {
+                                                            $detailDesignUrl = $detailDesignPath;
+                                                        } elseif ($detailDesignPath && str_starts_with($detailDesignPath, 'data:image')) {
                                                             $detailDesignUrl = $detailDesignPath;
                                                         } elseif ($detailDesignPath && str_starts_with($detailDesignPath, 'storage/')) {
                                                             $detailDesignUrl = asset($detailDesignPath);
@@ -868,8 +884,16 @@
                                 @php
                                     $singleDesignUrl = $order->display_primary_reference_image ?? null;
                                     if (!$singleDesignUrl && !empty($order->design_upload)) {
+                                        // Handle comma-separated images from chat (take first one)
                                         $singleDesignPath = $order->design_upload;
-                                        if (str_starts_with($singleDesignPath, 'http://') || str_starts_with($singleDesignPath, 'https://') || str_starts_with($singleDesignPath, 'data:image')) {
+                                        if (str_contains($singleDesignPath, ',')) {
+                                            $singleDesignPath = explode(',', $singleDesignPath)[0];
+                                        }
+                                        $singleDesignPath = trim($singleDesignPath);
+                                        
+                                        if (str_starts_with($singleDesignPath, 'http://') || str_starts_with($singleDesignPath, 'https://')) {
+                                            $singleDesignUrl = $singleDesignPath;
+                                        } elseif (str_starts_with($singleDesignPath, 'data:image')) {
                                             $singleDesignUrl = $singleDesignPath;
                                         } elseif (str_starts_with($singleDesignPath, 'storage/')) {
                                             $singleDesignUrl = asset($singleDesignPath);
@@ -933,8 +957,16 @@
                                         @php
                                             $singleDetailDesignUrl = $order->display_primary_reference_image ?? null;
                                             if (!$singleDetailDesignUrl) {
+                                                // Handle comma-separated images from chat (take first one)
                                                 $singleDetailDesignPath = $order->design_upload;
-                                                if ($singleDetailDesignPath && (str_starts_with($singleDetailDesignPath, 'http://') || str_starts_with($singleDetailDesignPath, 'https://') || str_starts_with($singleDetailDesignPath, 'data:image'))) {
+                                                if ($singleDetailDesignPath && str_contains($singleDetailDesignPath, ',')) {
+                                                    $singleDetailDesignPath = explode(',', $singleDetailDesignPath)[0];
+                                                }
+                                                $singleDetailDesignPath = $singleDetailDesignPath ? trim($singleDetailDesignPath) : null;
+                                                
+                                                if ($singleDetailDesignPath && (str_starts_with($singleDetailDesignPath, 'http://') || str_starts_with($singleDetailDesignPath, 'https://'))) {
+                                                    $singleDetailDesignUrl = $singleDetailDesignPath;
+                                                } elseif ($singleDetailDesignPath && str_starts_with($singleDetailDesignPath, 'data:image')) {
                                                     $singleDetailDesignUrl = $singleDetailDesignPath;
                                                 } elseif ($singleDetailDesignPath && str_starts_with($singleDetailDesignPath, 'storage/')) {
                                                     $singleDetailDesignUrl = asset($singleDetailDesignPath);
@@ -1190,7 +1222,13 @@
                         @php
                             $fullDesignUrl = $order->display_primary_reference_image ?? null;
                             if (!$fullDesignUrl && !empty($order->design_upload)) {
+                                // Handle comma-separated images from chat (take first one)
                                 $designPath = $order->design_upload;
+                                if (str_contains($designPath, ',')) {
+                                    $designPath = explode(',', $designPath)[0];
+                                }
+                                $designPath = trim($designPath);
+                                
                                 if (str_starts_with($designPath, 'http://') || str_starts_with($designPath, 'https://')) {
                                     $fullDesignUrl = $designPath;
                                 } elseif (str_starts_with($designPath, 'data:image')) {
