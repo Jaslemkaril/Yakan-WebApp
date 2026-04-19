@@ -152,13 +152,21 @@ Route::get('/debug/cookies', function (\Illuminate\Http\Request $request) {
 
 // Fallback route for storage files when symlink doesn't exist
 Route::get('/storage/{path}', function ($path) {
-    $filePath = storage_path('app/public/' . $path);
-    
-    if (!file_exists($filePath)) {
-        abort(404);
+    $safePath = ltrim((string) $path, '/\\');
+
+    if ($safePath === '' || str_contains($safePath, '..') || str_contains($safePath, "\0")) {
+        return response('File not found', 404)
+            ->header('Content-Type', 'text/plain; charset=UTF-8');
     }
-    
-    $mimeType = mime_content_type($filePath);
+
+    $filePath = storage_path('app/public/' . $safePath);
+
+    if (!is_file($filePath)) {
+        return response('File not found', 404)
+            ->header('Content-Type', 'text/plain; charset=UTF-8');
+    }
+
+    $mimeType = @mime_content_type($filePath) ?: 'application/octet-stream';
     return response()->file($filePath, [
         'Content-Type' => $mimeType,
         'Cache-Control' => 'public, max-age=31536000',
