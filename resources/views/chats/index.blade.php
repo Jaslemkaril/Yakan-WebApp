@@ -164,7 +164,7 @@
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2h-3l-4 4z"/>
                                         </svg>
-                                        @php $msgCount = $chat->messages()->count(); @endphp
+                                        @php $msgCount = (int) ($chat->messages_count_cached ?? $chat->messages()->count()); @endphp
                                         {{ $msgCount }} message{{ $msgCount !== 1 ? 's' : '' }}
                                     </span>
                                 </div>
@@ -179,9 +179,10 @@
                                 </span>
 
                                 <!-- Unread Badge -->
-                                @if($chat->unreadCount() > 0)
+                                @php $unreadCount = (int) ($chat->unread_count_cached ?? $chat->unreadCount()); @endphp
+                                @if($unreadCount > 0)
                                     <span class="inline-flex items-center justify-center bg-[#800000] text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md">
-                                        {{ $chat->unreadCount() }} new
+                                        {{ $unreadCount }} new
                                     </span>
                                 @else
                                     <span class="text-gray-400 text-xs">Updated {{ $chat->updated_at?->diffForHumans() ?? 'N/A' }}</span>

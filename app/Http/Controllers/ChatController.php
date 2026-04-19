@@ -539,11 +539,42 @@ class ChatController extends Controller
             ]);
             
             $chats = Chat::where('user_id', auth()->id())
-                ->with(['messages' => function($query) {
-                    $query->latest('created_at')->limit(1);
-                }])
                 ->orderBy('updated_at', 'desc')
                 ->paginate(10);
+
+            $chatIds = $chats->getCollection()->pluck('id')->all();
+
+            if (!empty($chatIds)) {
+                $latestMessageIds = ChatMessage::whereIn('chat_id', $chatIds)
+                    ->selectRaw('MAX(id) as id')
+                    ->groupBy('chat_id')
+                    ->pluck('id');
+
+                $latestMessagesByChat = ChatMessage::whereIn('id', $latestMessageIds)
+                    ->get()
+                    ->keyBy('chat_id');
+
+                $messageCountsByChat = ChatMessage::whereIn('chat_id', $chatIds)
+                    ->selectRaw('chat_id, COUNT(*) as total_count')
+                    ->groupBy('chat_id')
+                    ->pluck('total_count', 'chat_id');
+
+                $unreadCountsByChat = ChatMessage::whereIn('chat_id', $chatIds)
+                    ->where('is_read', false)
+                    ->where('sender_type', 'user')
+                    ->selectRaw('chat_id, COUNT(*) as unread_count')
+                    ->groupBy('chat_id')
+                    ->pluck('unread_count', 'chat_id');
+
+                $chats->getCollection()->transform(function (Chat $chat) use ($latestMessagesByChat, $messageCountsByChat, $unreadCountsByChat) {
+                    $latestMessage = $latestMessagesByChat->get($chat->id);
+                    $chat->setRelation('messages', $latestMessage ? collect([$latestMessage]) : collect());
+                    $chat->setAttribute('messages_count_cached', (int) ($messageCountsByChat[$chat->id] ?? 0));
+                    $chat->setAttribute('unread_count_cached', (int) ($unreadCountsByChat[$chat->id] ?? 0));
+
+                    return $chat;
+                });
+            }
 
             \Log::info('ChatController index: Chats loaded successfully', ['count' => $chats->count()]);
 
