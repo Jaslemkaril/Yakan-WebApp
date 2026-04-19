@@ -785,7 +785,7 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && isse
 
             <div id="variantRowsContainer" class="space-y-2">
                 @foreach($initialVariantRows as $variantIndex => $variantRow)
-                    <div class="variant-row grid grid-cols-12 gap-2 items-center rounded-lg bg-white border border-[#800000]/10 p-2">
+                    <div class="variant-row grid grid-cols-14 gap-2 items-center rounded-lg bg-white border border-[#800000]/10 p-2">
                         <div class="col-span-2">
                             <input type="text" name="variant_rows[{{ $variantIndex }}][sku]" value="{{ $variantRow['sku'] ?? '' }}" placeholder="SKU" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
                         </div>
@@ -800,6 +800,13 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && isse
                         </div>
                         <div class="col-span-2">
                             <input type="number" min="0" name="variant_rows[{{ $variantIndex }}][stock]" value="{{ $variantRow['stock'] ?? '' }}" placeholder="Stock" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                        </div>
+                        <div class="col-span-2">
+                            <input type="hidden" name="variant_rows[{{ $variantIndex }}][existing_image]" value="{{ $variantRow['image'] ?? '' }}">
+                            <input type="file" name="variant_rows[{{ $variantIndex }}][image]" accept="image/*" class="w-full border rounded px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                            @if(!empty($variantRow['image']))
+                                <p class="text-[11px] text-gray-500 mt-1">Current image kept unless replaced</p>
+                            @endif
                         </div>
                         <div class="col-span-1 text-center">
                             <input type="hidden" name="variant_rows[{{ $variantIndex }}][is_active]" value="0">
@@ -1064,7 +1071,7 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && isse
                 }
 
                 const wrapper = document.createElement('div');
-                wrapper.className = 'variant-row grid grid-cols-12 gap-2 items-center rounded-lg bg-white border border-[#800000]/10 p-2';
+                wrapper.className = 'variant-row grid grid-cols-14 gap-2 items-center rounded-lg bg-white border border-[#800000]/10 p-2';
                 wrapper.innerHTML = `
                     <div class="col-span-2">
                         <input type="text" name="variant_rows[${variantIndex}][sku]" placeholder="SKU" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
@@ -1080,6 +1087,10 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && isse
                     </div>
                     <div class="col-span-2">
                         <input type="number" min="0" name="variant_rows[${variantIndex}][stock]" placeholder="Stock" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                    </div>
+                    <div class="col-span-2">
+                        <input type="hidden" name="variant_rows[${variantIndex}][existing_image]" value="">
+                        <input type="file" name="variant_rows[${variantIndex}][image]" accept="image/*" class="w-full border rounded px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#800000]">
                     </div>
                     <div class="col-span-1 text-center">
                         <input type="hidden" name="variant_rows[${variantIndex}][is_active]" value="0">

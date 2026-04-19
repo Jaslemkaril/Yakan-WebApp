@@ -801,8 +801,8 @@
                                 <!-- Product Image -->
                                 <div class="flex-shrink-0 w-20 h-20 bg-gray-200 rounded-lg overflow-hidden border border-gray-300">
                                     @php
-                                        // Prefer accessor that handles full URLs, storage, or uploads
-                                        $imageUrl = $item->product?->image_url ?? '';
+                                        // Prefer variant image when available; fallback to product image.
+                                        $imageUrl = $item->variant?->image_src ?: ($item->product?->image_url ?? '');
                                     @endphp
                                     @if($imageUrl)
                                         <img src="{{ $imageUrl }}" alt="{{ $item->product->name ?? 'Product' }}" class="w-full h-full object-cover">
@@ -1119,8 +1119,11 @@
                         {{-- Item header --}}
                         <div class="flex items-center gap-4 px-6 py-4 bg-gray-50 border-b border-gray-200">
                             <div class="w-12 h-12 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                                @if($item->product?->image_url)
-                                    <img src="{{ $item->product->image_url }}" alt="{{ $item->product->name }}" class="w-full h-full object-cover">
+                                @php
+                                    $itemImageUrl = $item->variant?->image_src ?: ($item->product?->image_url ?? '');
+                                @endphp
+                                @if($itemImageUrl)
+                                    <img src="{{ $itemImageUrl }}" alt="{{ $item->product->name }}" class="w-full h-full object-cover">
                                 @endif
                             </div>
                             <div>

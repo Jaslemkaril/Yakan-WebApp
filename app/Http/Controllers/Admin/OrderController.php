@@ -23,7 +23,7 @@ class OrderController extends Controller
     // Show all orders
     public function index(Request $request)
     {
-        $query = Order::with(['user', 'orderItems.product'])->orderByDesc('created_at');
+        $query = Order::with(['user', 'orderItems.product', 'orderItems.variant'])->orderByDesc('created_at');
 
         // Advanced filtering
         if ($request->filled('status')) {
@@ -106,7 +106,7 @@ class OrderController extends Controller
     // Show single order
     public function show(Order $order)
     {
-        $order->load('user', 'userAddress', 'orderItems.product.category', 'orderItems.product.bundleItems.componentProduct');
+        $order->load('user', 'userAddress', 'orderItems.product.category', 'orderItems.product.bundleItems.componentProduct', 'orderItems.variant');
 
         $latestRefundRequest = null;
         if (Schema::hasTable('order_refund_requests')) {

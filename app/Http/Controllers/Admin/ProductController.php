@@ -137,6 +137,8 @@ class ProductController extends Controller
             'variant_rows.*.sku' => 'nullable|string|max:100',
             'variant_rows.*.size' => 'nullable|string|max:50',
             'variant_rows.*.color' => 'nullable|string|max:50',
+            'variant_rows.*.existing_image' => 'nullable|string',
+            'variant_rows.*.image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'variant_rows.*.price' => 'nullable|numeric|min:0',
             'variant_rows.*.stock' => 'nullable|integer|min:0',
             'variant_rows.*.is_active' => 'nullable|boolean',
@@ -161,7 +163,7 @@ class ProductController extends Controller
             : [];
         $this->validateBundleItems($bundleItems, $isBundle);
 
-        $variantRows = $this->sanitizeVariantRows($request->input('variant_rows', []));
+        $variantRows = $this->sanitizeVariantRows($request);
         $this->validateVariantRows($variantRows);
 
         // Handle multiple image uploads with color associations
@@ -343,6 +345,7 @@ class ProductController extends Controller
                     'sku' => $variant->sku,
                     'size' => $variant->size,
                     'color' => $variant->color,
+                    'image' => $variant->image,
                     'price' => (float) $variant->price,
                     'stock' => (int) $variant->stock,
                     'is_active' => (bool) $variant->is_active,
@@ -417,6 +420,8 @@ class ProductController extends Controller
             'variant_rows.*.sku' => 'nullable|string|max:100',
             'variant_rows.*.size' => 'nullable|string|max:50',
             'variant_rows.*.color' => 'nullable|string|max:50',
+            'variant_rows.*.existing_image' => 'nullable|string',
+            'variant_rows.*.image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'variant_rows.*.price' => 'nullable|numeric|min:0',
             'variant_rows.*.stock' => 'nullable|integer|min:0',
             'variant_rows.*.is_active' => 'nullable|boolean',
@@ -441,7 +446,7 @@ class ProductController extends Controller
             : [];
         $this->validateBundleItems($bundleItems, $isBundle, $product->id);
 
-        $variantRows = $this->sanitizeVariantRows($request->input('variant_rows', []));
+        $variantRows = $this->sanitizeVariantRows($request);
         $this->validateVariantRows($variantRows);
 
         // Handle image deletions
@@ -756,15 +761,23 @@ class ProductController extends Controller
         ProductBundleItem::insert($rows);
     }
 
-    private function sanitizeVariantRows(array $rawRows): array
+    private function sanitizeVariantRows(Request $request): array
     {
+        $rawRows = $request->input('variant_rows', []);
+        $variantFiles = $request->file('variant_rows', []);
+
         return collect($rawRows)
             ->filter(fn($row) => is_array($row))
-            ->map(function ($row) {
+            ->map(function ($row, $index) use ($variantFiles) {
+                $fileRow = is_array($variantFiles) ? ($variantFiles[$index] ?? []) : [];
+                $imageFile = is_array($fileRow) ? ($fileRow['image'] ?? null) : null;
+
                 return [
                     'sku' => trim((string) ($row['sku'] ?? '')) ?: null,
                     'size' => trim((string) ($row['size'] ?? '')) ?: null,
                     'color' => trim((string) ($row['color'] ?? '')) ?: null,
+                    'existing_image' => trim((string) ($row['existing_image'] ?? '')) ?: null,
+                    'image_file' => $imageFile,
                     'price' => isset($row['price']) && $row['price'] !== '' ? (float) $row['price'] : null,
                     'stock' => isset($row['stock']) && $row['stock'] !== '' ? (int) $row['stock'] : null,
                     'is_active' => filter_var($row['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true,
@@ -811,11 +824,17 @@ class ProductController extends Controller
 
         $now = now();
         $rows = collect($variantRows)->map(function ($row) use ($product, $now) {
+            $imagePath = $row['existing_image'] ?? null;
+            if (!empty($row['image_file']) && method_exists($row['image_file'], 'isValid') && $row['image_file']->isValid()) {
+                $imagePath = $this->storeVariantImage($row['image_file']) ?? $imagePath;
+            }
+
             return [
                 'product_id' => $product->id,
                 'sku' => $row['sku'],
                 'size' => $row['size'],
                 'color' => $row['color'],
+                'image' => $imagePath,
                 'price' => $row['price'],
                 'stock' => $row['stock'],
                 'is_active' => $row['is_active'],
@@ -843,6 +862,7 @@ class ProductController extends Controller
                 $table->string('sku')->nullable();
                 $table->string('size')->nullable();
                 $table->string('color')->nullable();
+                $table->string('image')->nullable();
                 $table->decimal('price', 10, 2);
                 $table->integer('stock')->default(0);
                 $table->boolean('is_active')->default(true);
@@ -856,7 +876,39 @@ class ProductController extends Controller
             report($e);
         }
 
+        if (Schema::hasTable('product_variants') && !Schema::hasColumn('product_variants', 'image')) {
+            try {
+                Schema::table('product_variants', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->string('image')->nullable()->after('color');
+                });
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
         return Schema::hasTable('product_variants');
+    }
+
+    private function storeVariantImage($image): ?string
+    {
+        $cloudinary = new CloudinaryService();
+
+        if ($cloudinary->isEnabled()) {
+            $result = $cloudinary->uploadFile($image, 'product-variants');
+            if ($result && !empty($result['url'])) {
+                return $result['url'];
+            }
+        }
+
+        $uploadDir = public_path('uploads/variants');
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0777, true);
+        }
+
+        $imageName = time() . '_' . uniqid() . '_' . preg_replace('/\s+/', '_', $image->getClientOriginalName());
+        $image->move($uploadDir, $imageName);
+
+        return 'variants/' . $imageName;
     }
 
     /**

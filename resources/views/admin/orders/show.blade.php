@@ -477,8 +477,11 @@
                         <td class="px-6 py-4">
                             <div class="flex items-center">
                                 <div class="flex-shrink-0 h-16 w-16">
-                                    @if($item->product && $item->product->image)
-                                        <img src="{{ $item->product->image_src }}" 
+                                    @php
+                                        $itemImageSrc = $item->variant?->image_src ?: ($item->product?->image_src ?? null);
+                                    @endphp
+                                    @if($itemImageSrc)
+                                        <img src="{{ $itemImageSrc }}" 
                                              alt="{{ $item->product->name }}" 
                                              class="h-16 w-16 rounded-lg object-cover border border-gray-200">
                                     @else

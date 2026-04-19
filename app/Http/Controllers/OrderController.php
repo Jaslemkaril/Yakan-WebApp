@@ -33,14 +33,14 @@ class OrderController extends Controller
 {
     private function orderRelationsForUserViews(): array
     {
-        $relations = ['orderItems.product', 'user'];
+        $relations = ['orderItems.product', 'orderItems.variant', 'user'];
 
         if (Schema::hasTable('order_refund_requests')) {
             $relations[] = 'refundRequests';
         }
 
         if (Schema::hasTable('product_bundle_items')) {
-            $relations = ['orderItems.product.bundleItems.componentProduct', 'user'];
+            $relations = ['orderItems.product.bundleItems.componentProduct', 'orderItems.variant', 'user'];
 
             if (Schema::hasTable('order_refund_requests')) {
                 $relations[] = 'refundRequests';

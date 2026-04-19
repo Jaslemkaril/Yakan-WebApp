@@ -197,6 +197,7 @@
                                     'size' => (string) ($variant->size ?? ''),
                                     'color' => (string) ($variant->color ?? ''),
                                     'sku' => (string) ($variant->sku ?? ''),
+                                    'image_src' => (string) ($variant->image_src ?? ''),
                                     'stock' => (int) ($variant->stock ?? 0),
                                     'price' => round($variantDisplayPrice, 2),
                                     'original_price' => round($variantBasePrice, 2),
@@ -713,6 +714,7 @@ function applyVariantFromSelector() {
     const addToCartBtn = document.querySelector('#addToCartForm button[type="submit"]');
     const buyNowBtn = document.getElementById('buyNowBtn');
     const buyNowBtnText = document.getElementById('buyNowBtnText');
+    const mainImage = document.getElementById('mainProductImage');
 
     const variantPrice = Number(variant.price || 0);
     const variantOriginal = Number(variant.original_price || variantPrice);
@@ -770,6 +772,10 @@ function applyVariantFromSelector() {
     }
     if (buyNowBtnText) {
         buyNowBtnText.textContent = variantStock > 0 ? 'Buy Now' : 'Out of Stock';
+    }
+
+    if (mainImage && variant.image_src) {
+        mainImage.src = variant.image_src;
     }
 
     updateHiddenInputs();
