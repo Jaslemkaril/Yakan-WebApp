@@ -334,7 +334,7 @@ class Product extends Model
      */
     public function getImageSrcAttribute(): string
     {
-        return $this->resolveBestImageUrl() ?? asset('images/no-image.svg');
+        return $this->resolveBestImageUrl() ?? asset('images/YakanLogo.png');
     }
 
     /**
@@ -529,20 +529,6 @@ class Product extends Model
         foreach (array_values(array_unique($candidates)) as $candidate) {
             $publicCandidate = ltrim($candidate, '/');
             if (file_exists(public_path($publicCandidate))) {
-                return asset($publicCandidate);
-            }
-        }
-
-        // Some deployments can serve files that are not directly visible to PHP via file_exists().
-        foreach (array_values(array_unique($candidates)) as $candidate) {
-            $publicCandidate = ltrim($candidate, '/');
-            if (
-                str_starts_with($publicCandidate, 'uploads/')
-                || str_starts_with($publicCandidate, 'storage/')
-                || str_starts_with($publicCandidate, 'products/')
-                || str_starts_with($publicCandidate, 'variants/')
-                || str_starts_with($publicCandidate, 'product-variants/')
-            ) {
                 return asset($publicCandidate);
             }
         }

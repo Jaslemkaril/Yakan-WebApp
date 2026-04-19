@@ -17,7 +17,7 @@
         <!-- Product Images -->
         <div class="space-y-4">
             <div class="aspect-square bg-gray-100 rounded-2xl overflow-hidden shadow-lg">
-                @if($product->image)
+                @if($product->hasImage())
                     <img id="mainProductImage" src="{{ $product->image_src }}" alt="{{ $product->name }}" 
                          class="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                          onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200\'><div class=\'text-8xl opacity-20\'>📦</div></div>';">
@@ -51,7 +51,7 @@
                         </div>
                     @endforeach
                 @else
-                    @if($product->image)
+                    @if($product->hasImage())
                         <div class="thumbnail-item w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden cursor-pointer border-2 border-red-500"
                              onclick="changeMainImage('{{ $product->image_src }}', this)">
                             <img src="{{ $product->image_src }}" alt="Thumbnail" class="w-full h-full object-cover"

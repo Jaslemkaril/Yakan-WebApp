@@ -116,7 +116,7 @@
                             <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
                                 <a href="{{ route('products.show', $product) }}">
                                     <div class="relative h-64 bg-gray-200">
-                                        @if($product->image)
+                                        @if($product->hasImage())
                                             <img src="{{ $product->image_src }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
                                         @else
                                             <div class="w-full h-full flex items-center justify-center">
