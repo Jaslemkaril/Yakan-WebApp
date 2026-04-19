@@ -198,20 +198,39 @@ Route::get('/setup/create-sessions-table', function () {
 
 // Dedicated route for chat images (must be available in production)
 Route::get('/chat-image/{folder}/{filename}', function ($folder, $filename) {
-    $filePath = storage_path('app/public/' . $folder . '/' . $filename);
-    \Log::info('Chat image request', [
-        'folder' => $folder,
-        'filename' => $filename,
-        'full_path' => $filePath,
-        'exists' => file_exists($filePath),
-    ]);
+    $safeFolder = in_array((string) $folder, ['chats', 'payments'], true) ? (string) $folder : null;
+    $safeFilename = ltrim((string) $filename, '/\\');
 
-    if (!file_exists($filePath)) {
-        \Log::error('Chat image not found', ['path' => $filePath]);
-        abort(404, 'Image not found: ' . $filePath);
+    if (
+        !$safeFolder ||
+        $safeFilename === '' ||
+        str_contains($safeFilename, '..') ||
+        str_contains($safeFilename, "\0")
+    ) {
+        \Log::warning('Rejected invalid chat image path', [
+            'folder' => $folder,
+            'filename' => $filename,
+        ]);
+        return response('Image not found', 404)
+            ->header('Content-Type', 'text/plain; charset=UTF-8');
     }
 
-    $mimeType = mime_content_type($filePath);
+    $filePath = storage_path('app/public/' . $safeFolder . '/' . $safeFilename);
+    \Log::info('Chat image request', [
+        'folder' => $safeFolder,
+        'filename' => $safeFilename,
+        'full_path' => $filePath,
+        'exists' => is_file($filePath),
+    ]);
+
+    if (!is_file($filePath)) {
+        \Log::warning('Chat image not found', ['path' => $filePath]);
+        // Return a normal 404 response instead of abort() to avoid debug stack pages.
+        return response('Image not found', 404)
+            ->header('Content-Type', 'text/plain; charset=UTF-8');
+    }
+
+    $mimeType = @mime_content_type($filePath) ?: 'application/octet-stream';
     return response()->file($filePath, [
         'Content-Type' => $mimeType,
         'Cache-Control' => 'public, max-age=31536000',
