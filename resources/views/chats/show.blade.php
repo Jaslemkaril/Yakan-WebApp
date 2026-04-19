@@ -693,11 +693,43 @@
                             {{-- Payment Method Selection after Quote Accepted --}}
                             @if($message->sender_type === 'user' && (str_contains(strtolower($message->message), 'accepted the price quote') || str_contains(strtolower($message->message), 'customer accepted')))
                                 @php
-                                    // Find the custom order created for this chat
-                                    $chatOrder = \App\Models\CustomOrder::where('chat_id', $chat->id)
-                                        ->where('user_id', auth()->id())
-                                        ->orderBy('created_at', 'desc')
-                                        ->first();
+                                    // Find the custom order created for this chat with backward-compatible fallbacks.
+                                    $chatOrder = null;
+                                    $messageOrderId = (int) data_get($message->form_data, 'chat_order_id', 0);
+
+                                    if ($messageOrderId > 0) {
+                                        $chatOrder = \App\Models\CustomOrder::where('id', $messageOrderId)
+                                            ->where('user_id', auth()->id())
+                                            ->first();
+                                    }
+
+                                    if (!$chatOrder && \Illuminate\Support\Facades\Schema::hasColumn('custom_orders', 'chat_id')) {
+                                        $chatOrder = \App\Models\CustomOrder::where('chat_id', $chat->id)
+                                            ->where('user_id', auth()->id())
+                                            ->orderBy('created_at', 'desc')
+                                            ->first();
+                                    }
+
+                                    if (!$chatOrder) {
+                                        $chatNeedle = 'Custom order from chat ID: ' . $chat->id;
+                                        $chatOrder = \App\Models\CustomOrder::where('user_id', auth()->id())
+                                            ->where('specifications', 'like', '%' . $chatNeedle . '%')
+                                            ->orderBy('created_at', 'desc')
+                                            ->first();
+
+                                        if ($chatOrder && \Illuminate\Support\Facades\Schema::hasColumn('custom_orders', 'chat_id') && empty($chatOrder->chat_id)) {
+                                            try {
+                                                $chatOrder->chat_id = $chat->id;
+                                                $chatOrder->save();
+                                            } catch (\Throwable $e) {
+                                                \Log::warning('Unable to backfill chat_id in chat view fallback', [
+                                                    'custom_order_id' => $chatOrder->id,
+                                                    'chat_id' => $chat->id,
+                                                    'error' => $e->getMessage(),
+                                                ]);
+                                            }
+                                        }
+                                    }
 
                                     $shippingFee = $chatOrder ? (float) ($chatOrder->shipping_fee ?? 0) : 0;
                                     $acceptedTotal = $chatOrder

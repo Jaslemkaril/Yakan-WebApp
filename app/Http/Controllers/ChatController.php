@@ -9,6 +9,7 @@ use App\Models\UserAddress;
 use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -157,10 +158,7 @@ class ChatController extends Controller
             }
         }
 
-        $order = CustomOrder::where('chat_id', $chatId)
-            ->where('user_id', $userId)
-            ->latest('id')
-            ->first();
+        $order = $this->findLatestChatCustomOrder($chatId, $userId);
 
         if ($order) {
             $optionLabel = $this->normalizePaymentTypeLabel((string) ($order->payment_option ?? ''));
@@ -175,6 +173,326 @@ class ChatController extends Controller
         }
 
         return null;
+    }
+
+    private function findLatestChatCustomOrder(int $chatId, int $userId): ?CustomOrder
+    {
+        $order = null;
+        $hasChatIdColumn = Schema::hasColumn('custom_orders', 'chat_id');
+
+        if ($hasChatIdColumn) {
+            $order = CustomOrder::where('chat_id', $chatId)
+                ->where('user_id', $userId)
+                ->latest('id')
+                ->first();
+        }
+
+        if ($order) {
+            return $order;
+        }
+
+        $chatNeedle = 'Custom order from chat ID: ' . $chatId;
+        $order = CustomOrder::where('user_id', $userId)
+            ->where('specifications', 'like', '%' . $chatNeedle . '%')
+            ->latest('id')
+            ->first();
+
+        if ($order && $hasChatIdColumn && empty($order->chat_id)) {
+            try {
+                $order->chat_id = $chatId;
+                $order->save();
+            } catch (\Throwable $exception) {
+                \Log::warning('Unable to backfill chat_id on recovered custom order', [
+                    'custom_order_id' => $order->id,
+                    'chat_id' => $chatId,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        return $order;
+    }
+
+    private function extractQuotedPriceFromMessage(ChatMessage $quoteMessage): float
+    {
+        if (preg_match('/Total:\s*₱?([\d,]+\.?\d*)/i', (string) $quoteMessage->message, $matches)) {
+            return (float) str_replace(',', '', (string) ($matches[1] ?? '0'));
+        }
+
+        return 0.0;
+    }
+
+    private function collectQuoteDesignImages(Chat $chat, ChatMessage $quoteMessage): array
+    {
+        $designImages = [];
+
+        try {
+            if (method_exists($quoteMessage, 'getAttribute')) {
+                $designImages = $quoteMessage->reference_images ?? [];
+            }
+        } catch (\Exception $e) {
+            \Log::warning('reference_images column might not exist yet', ['error' => $e->getMessage()]);
+        }
+
+        if (!is_array($designImages)) {
+            $designImages = [$designImages];
+        }
+
+        $designImages = collect($designImages)
+            ->map(fn($url) => trim((string) $url))
+            ->filter(fn($url) => $url !== '' && strtolower($url) !== 'null')
+            ->unique()
+            ->values()
+            ->all();
+
+        if (!empty($designImages)) {
+            return $designImages;
+        }
+
+        $fallbackImageMessages = ChatMessage::query()
+            ->where('chat_id', $chat->id)
+            ->where('sender_type', 'user')
+            ->whereNotNull('image_path')
+            ->where(function ($query) {
+                $query->whereNull('message')
+                    ->orWhere('message', 'not like', '%Payment proof%');
+            })
+            ->orderBy('id')
+            ->get(['image_path', 'form_data']);
+
+        foreach ($fallbackImageMessages as $fallbackImageMessage) {
+            $inlineImage = data_get($fallbackImageMessage->form_data, 'inline_image_data');
+            if (is_string($inlineImage) && str_starts_with($inlineImage, 'data:image')) {
+                $designImages[] = $inlineImage;
+            }
+
+            $imagePath = trim((string) ($fallbackImageMessage->image_path ?? ''));
+            if ($imagePath !== '') {
+                $designImages[] = $imagePath;
+            }
+        }
+
+        return collect($designImages)
+            ->map(fn($url) => trim((string) $url))
+            ->filter(fn($url) => $url !== '' && strtolower($url) !== 'null')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function filterCustomOrderPayloadForExistingColumns(array $payload): array
+    {
+        try {
+            if (!Schema::hasTable('custom_orders')) {
+                return $payload;
+            }
+
+            $columns = Schema::getColumnListing('custom_orders');
+            if (empty($columns)) {
+                return $payload;
+            }
+
+            $allowed = array_flip($columns);
+            return array_intersect_key($payload, $allowed);
+        } catch (\Throwable $exception) {
+            \Log::warning('Unable to filter custom order payload by table columns', [
+                'error' => $exception->getMessage(),
+            ]);
+
+            return $payload;
+        }
+    }
+
+    private function createChatOrderFromQuote(Chat $chat, ChatMessage $quoteMessage, string $selectedDeliveryType): CustomOrder
+    {
+        $selectedDeliveryType = strtolower(trim($selectedDeliveryType));
+        if (!in_array($selectedDeliveryType, ['delivery', 'pickup'], true)) {
+            $selectedDeliveryType = 'delivery';
+        }
+
+        $authUser = auth()->user();
+        if (!$authUser) {
+            throw new \RuntimeException('Please log in again and retry quote acceptance.');
+        }
+
+        $quotedPrice = $this->extractQuotedPriceFromMessage($quoteMessage);
+
+        $userAddress = UserAddress::where('user_id', $authUser->id)
+            ->where('is_default', true)
+            ->first();
+
+        if ($selectedDeliveryType === 'delivery' && !$userAddress) {
+            throw new \RuntimeException('Please add a delivery address first, or choose Pick up.');
+        }
+
+        $shippingFee = $selectedDeliveryType === 'pickup'
+            ? 0.0
+            : $this->calculateCanonicalShippingFeeFromAddress($userAddress);
+
+        $totalAmount = $quotedPrice + $shippingFee;
+
+        $formattedAddress = $selectedDeliveryType === 'pickup'
+            ? 'Tuwas Yakan Weaving Center, Yakan Village, Upper Calarian, Labuan-Limpapa Road, National Road, Zamboanga City, Philippines 7000'
+            : ($userAddress ? $userAddress->formatted_address : 'Address not provided');
+
+        $designImages = $this->collectQuoteDesignImages($chat, $quoteMessage);
+
+        $formResponseMessage = ChatMessage::where('chat_id', $chat->id)
+            ->where('sender_type', 'user')
+            ->where('message_type', 'form_response')
+            ->latest()
+            ->first();
+
+        $formData = [];
+        $orderName = null;
+        $quantityMeters = 1;
+        $fabricType = null;
+        $customerNotes = null;
+
+        if ($formResponseMessage && !empty($formResponseMessage->form_data['responses'])) {
+            $formData = $formResponseMessage->form_data['responses'];
+            $orderName = $formData['order_name'] ?? null;
+            $quantityMeters = $formData['meters'] ?? ($formData['quantity_meters'] ?? 1);
+            $fabricType = $formData['fabric_type'] ?? null;
+            $customerNotes = $formData['additional_notes'] ?? null;
+        }
+
+        $orderNotes = 'Custom order from chat ID: ' . $chat->id;
+
+        if ($orderName) {
+            $orderNotes .= "\n\nOrder Name: " . $orderName;
+        }
+
+        if ($quantityMeters) {
+            $orderNotes .= "\nQuantity: " . $quantityMeters . " meters";
+        }
+
+        if ($fabricType) {
+            $orderNotes .= "\nFabric Type: " . $fabricType;
+        }
+
+        if (!empty($designImages)) {
+            $orderNotes .= "\n\nDesign References:\n";
+            foreach ($designImages as $index => $imageUrl) {
+                $orderNotes .= '- Image ' . ($index + 1) . ': ' . $imageUrl . "\n";
+            }
+        }
+
+        $payload = [
+            'user_id' => $authUser->id,
+            'chat_id' => $chat->id,
+            'specifications' => $orderNotes,
+            'quantity' => (int) $quantityMeters ?: 1,
+            'product_type' => $fabricType,
+            'estimated_price' => $quotedPrice,
+            'final_price' => $totalAmount,
+            'shipping_fee' => $shippingFee,
+            'delivery_address' => $formattedAddress,
+            'delivery_city' => $selectedDeliveryType === 'pickup' ? null : ($userAddress->city ?? null),
+            'delivery_province' => $selectedDeliveryType === 'pickup' ? null : ($userAddress->province ?? $userAddress->region ?? null),
+            'delivery_type' => $selectedDeliveryType,
+            'phone' => $userAddress ? ($userAddress->phone_number ?? ($authUser->phone ?? '')) : ($authUser->phone ?? ''),
+            'email' => $authUser->email,
+            'payment_status' => 'pending',
+            'status' => 'approved',
+            'approved_at' => now(),
+            'additional_notes' => ($customerNotes ? 'Customer Notes: ' . $customerNotes . "\n\n" : '')
+                . 'Delivery Type: ' . ucfirst($selectedDeliveryType)
+                . "\nShipping Fee: ₱" . number_format($shippingFee, 2)
+                . "\nQuoted Price: ₱" . number_format($quotedPrice, 2)
+                . "\nTotal: ₱" . number_format($totalAmount, 2),
+            'design_upload' => !empty($designImages) ? implode(',', $designImages) : null,
+        ];
+
+        $payload = $this->filterCustomOrderPayloadForExistingColumns($payload);
+
+        return CustomOrder::create($payload);
+    }
+
+    private function rollbackQuoteAcceptance(ChatMessage $quoteMessage, ?ChatMessage $responseMessage): void
+    {
+        if ($responseMessage && $responseMessage->exists) {
+            try {
+                $responseMessage->delete();
+            } catch (\Throwable $exception) {
+                \Log::warning('Unable to delete response message during quote rollback', [
+                    'message_id' => $responseMessage->id,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        try {
+            $quoteMeta = is_array($quoteMessage->form_data) ? $quoteMessage->form_data : [];
+            $quoteMeta['quote_status'] = 'active';
+            unset(
+                $quoteMeta['responded_at'],
+                $quoteMeta['response_message_id'],
+                $quoteMeta['responded_by_user_id'],
+                $quoteMeta['accepted_delivery_type'],
+                $quoteMeta['chat_order_id']
+            );
+            $quoteMessage->form_data = $quoteMeta;
+            $quoteMessage->save();
+        } catch (\Throwable $exception) {
+            \Log::warning('Unable to rollback quote message metadata', [
+                'quote_message_id' => $quoteMessage->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    private function attemptRecoverMissingOrderFromAcceptedQuote(Chat $chat): ?CustomOrder
+    {
+        $acceptedQuote = ChatMessage::where('chat_id', $chat->id)
+            ->where('sender_type', 'admin')
+            ->where('message', 'like', '%PRICE QUOTE%')
+            ->orderByDesc('created_at')
+            ->get()
+            ->first(function (ChatMessage $message) {
+                $meta = is_array($message->form_data) ? $message->form_data : [];
+                return strtolower((string) ($meta['quote_status'] ?? '')) === 'accepted';
+            });
+
+        if (!$acceptedQuote) {
+            return null;
+        }
+
+        $quoteMeta = is_array($acceptedQuote->form_data) ? $acceptedQuote->form_data : [];
+        $selectedDeliveryType = strtolower((string) ($quoteMeta['accepted_delivery_type'] ?? ''));
+
+        if (!in_array($selectedDeliveryType, ['delivery', 'pickup'], true)) {
+            $hasDefaultAddress = UserAddress::where('user_id', auth()->id())
+                ->where('is_default', true)
+                ->exists();
+            $selectedDeliveryType = $hasDefaultAddress ? 'delivery' : 'pickup';
+        }
+
+        try {
+            $order = $this->createChatOrderFromQuote($chat, $acceptedQuote, $selectedDeliveryType);
+            $quoteMeta['accepted_delivery_type'] = $selectedDeliveryType;
+            $quoteMeta['chat_order_id'] = $order->id;
+            $acceptedQuote->form_data = $quoteMeta;
+            $acceptedQuote->save();
+
+            \Log::info('Recovered missing custom order from accepted quote', [
+                'chat_id' => $chat->id,
+                'quote_message_id' => $acceptedQuote->id,
+                'custom_order_id' => $order->id,
+                'user_id' => auth()->id(),
+            ]);
+
+            return $order;
+        } catch (\Throwable $exception) {
+            \Log::warning('Unable to recover missing custom order from accepted quote', [
+                'chat_id' => $chat->id,
+                'quote_message_id' => $acceptedQuote->id,
+                'user_id' => auth()->id(),
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 
     /**
@@ -294,10 +612,16 @@ class ChatController extends Controller
 
             if ($userDefaultAddress) {
                 $shippingFee = $this->calculateCanonicalShippingFeeFromAddress($userDefaultAddress);
-                $pendingOrders = CustomOrder::where('chat_id', $chat->id)
-                    ->where('user_id', auth()->id())
-                    ->where('payment_status', 'pending')
-                    ->get();
+                $pendingOrdersQuery = CustomOrder::where('user_id', auth()->id())
+                    ->where('payment_status', 'pending');
+
+                if (Schema::hasColumn('custom_orders', 'chat_id')) {
+                    $pendingOrdersQuery->where('chat_id', $chat->id);
+                } else {
+                    $pendingOrdersQuery->where('specifications', 'like', '%Custom order from chat ID: ' . $chat->id . '%');
+                }
+
+                $pendingOrders = $pendingOrdersQuery->get();
 
                 foreach ($pendingOrders as $pendingOrder) {
                     $estimatedPrice = (float) ($pendingOrder->estimated_price ?? 0);
@@ -314,6 +638,11 @@ class ChatController extends Controller
                         ]);
                     }
                 }
+            }
+
+            $resolvedChatOrder = $this->findLatestChatCustomOrder((int) $chat->id, (int) auth()->id());
+            if (!$resolvedChatOrder) {
+                $this->attemptRecoverMissingOrderFromAcceptedQuote($chat);
             }
 
             \Log::info('ChatController show: Messages loaded', ['count' => $messages->count()]);
@@ -704,173 +1033,45 @@ class ChatController extends Controller
             if (!in_array($selectedDeliveryType, ['delivery', 'pickup'], true)) {
                 $selectedDeliveryType = 'delivery';
             }
-            
-            // Extract quoted price from message
-            $quotedPrice = 0;
-            if (preg_match('/Total:\s*₱?([\d,]+\.?\d*)/i', $quoteMessage->message, $matches)) {
-                $quotedPrice = floatval(str_replace(',', '', $matches[1]));
-            }
-            
-            // Get user's default address for shipping calculation
-            $userAddress = UserAddress::where('user_id', auth()->id())
-                ->where('is_default', true)
-                ->first();
 
-            if ($selectedDeliveryType === 'delivery' && !$userAddress) {
-                return $this->redirectWithToken('chats.show', $chat)
-                    ->with('error', 'Please add a delivery address first, or choose Pick up.');
-            }
-
-            $shippingFee = $selectedDeliveryType === 'pickup'
-                ? 0.0
-                : $this->calculateCanonicalShippingFeeFromAddress($userAddress);
-            
-            $totalAmount = $quotedPrice + $shippingFee;
-            
-            // Get formatted address
-            $formattedAddress = $selectedDeliveryType === 'pickup'
-                ? 'Tuwas Yakan Weaving Center, Yakan Village, Upper Calarian, Labuan-Limpapa Road, National Road, Zamboanga City, Philippines 7000'
-                : ($userAddress ? $userAddress->formatted_address : 'Address not provided');
-            
-            // Get design images from quote message (only if column exists)
-            $designImages = [];
             try {
-                if (method_exists($quoteMessage, 'getAttribute')) {
-                    $designImages = $quoteMessage->reference_images ?? [];
-                }
-            } catch (\Exception $e) {
-                \Log::warning('reference_images column might not exist yet', ['error' => $e->getMessage()]);
-            }
-
-            if (!is_array($designImages)) {
-                $designImages = [$designImages];
-            }
-
-            $designImages = collect($designImages)
-                ->map(fn($url) => trim((string) $url))
-                ->filter(fn($url) => $url !== '' && strtolower($url) !== 'null')
-                ->unique()
-                ->values()
-                ->all();
-
-            // Older quote payloads may miss reference_images; recover from prior user chat images.
-            if (empty($designImages)) {
-                $fallbackImageMessages = ChatMessage::query()
-                    ->where('chat_id', $chat->id)
-                    ->where('sender_type', 'user')
-                    ->whereNotNull('image_path')
-                    ->where(function ($query) {
-                        $query->whereNull('message')
-                            ->orWhere('message', 'not like', '%Payment proof%');
-                    })
-                    ->orderBy('id')
-                    ->get(['image_path', 'form_data']);
-
-                foreach ($fallbackImageMessages as $fallbackImageMessage) {
-                    $inlineImage = data_get($fallbackImageMessage->form_data, 'inline_image_data');
-                    if (is_string($inlineImage) && str_starts_with($inlineImage, 'data:image')) {
-                        $designImages[] = $inlineImage;
-                    }
-
-                    $imagePath = trim((string) ($fallbackImageMessage->image_path ?? ''));
-                    if ($imagePath !== '') {
-                        $designImages[] = $imagePath;
-                    }
+                $order = $this->findLatestChatCustomOrder((int) $chat->id, (int) auth()->id());
+                if (!$order) {
+                    $order = $this->createChatOrderFromQuote($chat, $quoteMessage, $selectedDeliveryType);
+                    \Log::info('Chat custom order created successfully', [
+                        'custom_order_id' => $order->id,
+                        'chat_id' => $chat->id,
+                        'user_id' => auth()->id(),
+                    ]);
                 }
 
-                $designImages = collect($designImages)
-                    ->map(fn($url) => trim((string) $url))
-                    ->filter(fn($url) => $url !== '' && strtolower($url) !== 'null')
-                    ->unique()
-                    ->values()
-                    ->all();
-            }
-            
-            // Get form response data from chat messages
-            $formResponseMessage = ChatMessage::where('chat_id', $chat->id)
-                ->where('sender_type', 'user')
-                ->where('message_type', 'form_response')
-                ->latest()
-                ->first();
-            
-            $formData = [];
-            $orderName = null;
-            $quantityMeters = 1;
-            $fabricType = null;
-            $customerNotes = null;
-            
-            if ($formResponseMessage && !empty($formResponseMessage->form_data['responses'])) {
-                $formData = $formResponseMessage->form_data['responses'];
-                $orderName = $formData['order_name'] ?? null;
-                $quantityMeters = $formData['meters'] ?? ($formData['quantity_meters'] ?? 1);
-                $fabricType = $formData['fabric_type'] ?? null;
-                $customerNotes = $formData['additional_notes'] ?? null;
-            }
-            
-            // Build detailed specifications
-            $orderNotes = 'Custom order from chat ID: ' . $chat->id;
-            
-            if ($orderName) {
-                $orderNotes .= "\n\nOrder Name: " . $orderName;
-            }
-            
-            if ($quantityMeters) {
-                $orderNotes .= "\nQuantity: " . $quantityMeters . " meters";
-            }
-            
-            if ($fabricType) {
-                $orderNotes .= "\nFabric Type: " . $fabricType;
-            }
-            
-            if (!empty($designImages)) {
-                $orderNotes .= "\n\nDesign References:\n";
-                foreach ($designImages as $index => $imageUrl) {
-                    $orderNotes .= "- Image " . ($index + 1) . ": " . $imageUrl . "\n";
-                }
-            }
-            
-            // Create custom order in custom_orders table
-            try {
-                $order = CustomOrder::create([
-                    'user_id' => auth()->id(),
-                    'chat_id' => $chat->id,
-                    'specifications' => $orderNotes,
-                    'quantity' => (int)$quantityMeters ?: 1,
-                    'product_type' => $fabricType,
-                    'estimated_price' => $quotedPrice,
-                    'final_price' => $totalAmount,
-                    'shipping_fee' => $shippingFee,
-                    'delivery_address' => $formattedAddress,
-                    'delivery_city' => $selectedDeliveryType === 'pickup' ? null : ($userAddress->city ?? null),
-                    'delivery_province' => $selectedDeliveryType === 'pickup' ? null : ($userAddress->province ?? $userAddress->region ?? null),
-                    'delivery_type' => $selectedDeliveryType,
-                    'phone' => $userAddress ? ($userAddress->phone_number ?? (auth()->user()->phone ?? '')) : (auth()->user()->phone ?? ''),
-                    'email' => auth()->user()->email,
-                    'payment_status' => 'pending',
-                    'status' => 'approved',
-                    'approved_at' => now(),
-                    'additional_notes' => ($customerNotes ? "Customer Notes: " . $customerNotes . "\n\n" : '') . 'Delivery Type: ' . ucfirst($selectedDeliveryType) . "\nShipping Fee: ₱" . number_format($shippingFee, 2) . "\nQuoted Price: ₱" . number_format($quotedPrice, 2) . "\nTotal: ₱" . number_format($totalAmount, 2),
-                    'design_upload' => !empty($designImages) ? (is_array($designImages) ? implode(',', $designImages) : $designImages) : null,
-                ]);
-                
-                \Log::info('Chat custom order created successfully', [
-                    'custom_order_id' => $order->id,
-                    'chat_id' => $chat->id,
-                    'user_id' => auth()->id()
-                ]);
-            } catch (\Exception $e) {
-                \Log::error('Failed to create chat custom order', [
+                $responseMeta = is_array($responseMessage->form_data) ? $responseMessage->form_data : [];
+                $responseMeta['chat_order_id'] = $order->id;
+                $responseMeta['delivery_type'] = $selectedDeliveryType;
+                $responseMessage->form_data = $responseMeta;
+                $responseMessage->save();
+
+                $quoteMeta = is_array($quoteMessage->form_data) ? $quoteMessage->form_data : [];
+                $quoteMeta['accepted_delivery_type'] = $selectedDeliveryType;
+                $quoteMeta['chat_order_id'] = $order->id;
+                $quoteMessage->form_data = $quoteMeta;
+                $quoteMessage->save();
+
+                $chat->update(['updated_at' => now()]);
+            } catch (\Throwable $e) {
+                $this->rollbackQuoteAcceptance($quoteMessage, $responseMessage);
+
+                \Log::error('Failed to create or recover chat custom order after quote acceptance', [
                     'error' => $e->getMessage(),
                     'chat_id' => $chat->id,
+                    'quote_message_id' => $quoteMessage->id,
                     'user_id' => auth()->id(),
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ]);
-                
-                // Show the actual error to user for debugging
-                return $this->redirectWithToken('chats.show', $chat)->with('error', 'Database Error: ' . $e->getMessage());
+
+                return $this->redirectWithToken('chats.show', $chat)
+                    ->with('error', 'Unable to create custom order right now. Please try accepting the quote again.');
             }
-            
-            $chat->update(['updated_at' => now()]);
         } else {
             $chat->update(['updated_at' => now()]);
         }
