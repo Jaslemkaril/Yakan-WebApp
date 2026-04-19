@@ -10,9 +10,16 @@ use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ChatPaymentController extends Controller
 {
+    private function generateSafeUploadFilename($file, string $prefix = 'payment_proof'): string
+    {
+        $extension = strtolower((string) ($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg'));
+        return $prefix . '_' . now()->format('YmdHis') . '_' . Str::random(16) . '.' . $extension;
+    }
+
     private function buildChatImageUrl(string $folder, string $filename): string
     {
         $folder = trim($folder, '/');
@@ -103,7 +110,7 @@ class ChatPaymentController extends Controller
                 
                 // Fallback to local storage
                 if (!$storedPath) {
-                    $filename = 'payment_proof_' . $payment->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+                    $filename = $this->generateSafeUploadFilename($file, 'payment_' . $payment->id);
                     $dir = storage_path('app/public/payments');
                     if (!is_dir($dir)) {
                         mkdir($dir, 0755, true);

@@ -10,9 +10,16 @@ use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ChatController extends Controller
 {
+    private function generateSafeUploadFilename($file, string $prefix = 'chat'): string
+    {
+        $extension = strtolower((string) ($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg'));
+        return $prefix . '_' . now()->format('YmdHis') . '_' . Str::random(16) . '.' . $extension;
+    }
+
     private function buildChatImageUrl(string $folder, string $filename): string
     {
         $folder = trim($folder, '/');
@@ -389,7 +396,7 @@ class ChatController extends Controller
                 
                 // Fallback to local storage
                 if (!$storedPath) {
-                    $filename = time() . '_' . $image->getClientOriginalName();
+                    $filename = $this->generateSafeUploadFilename($image, 'chat_msg');
                     $dir = storage_path('app/public/chats');
                     if (!is_dir($dir)) {
                         mkdir($dir, 0755, true);
@@ -481,7 +488,7 @@ class ChatController extends Controller
                 
                 // Fallback to local storage
                 if (!$storedPath) {
-                    $filename = time() . '_' . $image->getClientOriginalName();
+                    $filename = $this->generateSafeUploadFilename($image, 'chat_msg');
                     $dir = storage_path('app/public/chats');
                     if (!is_dir($dir)) {
                         mkdir($dir, 0755, true);
