@@ -38,6 +38,10 @@ class ProductVariant extends Model
             return $rawPath;
         }
 
+        if (str_starts_with($rawPath, '//')) {
+            return 'https:' . $rawPath;
+        }
+
         $path = ltrim(str_replace('\\', '/', $rawPath), '/');
         $candidates = [$path];
 
@@ -78,6 +82,19 @@ class ProductVariant extends Model
         foreach (array_values(array_unique($candidates)) as $candidate) {
             $publicCandidate = ltrim($candidate, '/');
             if (file_exists(public_path($publicCandidate))) {
+                return asset($publicCandidate);
+            }
+        }
+
+        foreach (array_values(array_unique($candidates)) as $candidate) {
+            $publicCandidate = ltrim($candidate, '/');
+            if (
+                str_starts_with($publicCandidate, 'uploads/')
+                || str_starts_with($publicCandidate, 'storage/')
+                || str_starts_with($publicCandidate, 'products/')
+                || str_starts_with($publicCandidate, 'variants/')
+                || str_starts_with($publicCandidate, 'product-variants/')
+            ) {
                 return asset($publicCandidate);
             }
         }

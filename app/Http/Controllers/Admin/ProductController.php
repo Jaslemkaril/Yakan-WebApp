@@ -274,7 +274,7 @@ class ProductController extends Controller
         
         // Store all images with color associations in JSON column
         if (!empty($allImages)) {
-            $product->update(['all_images' => json_encode($allImages)]);
+            $product->update(['all_images' => $allImages]);
         }
 
         $this->syncVariantRows($product, $variantRows);
@@ -474,15 +474,23 @@ class ProductController extends Controller
         if (!empty($imagesToDelete)) {
             // Remove deleted images from array and delete files
             $allImages = array_filter($allImages, function($img) use ($imagesToDelete, $cloudinary) {
-                if (in_array($img['path'], $imagesToDelete)) {
+                $imagePath = null;
+
+                if (is_array($img) && !empty($img['path'])) {
+                    $imagePath = (string) $img['path'];
+                } elseif (is_string($img) && trim($img) !== '') {
+                    $imagePath = trim($img);
+                }
+
+                if ($imagePath !== null && in_array($imagePath, $imagesToDelete, true)) {
                     // Delete from Cloudinary or local
-                    if (str_contains($img['path'], 'cloudinary.com')) {
+                    if (str_contains($imagePath, 'cloudinary.com')) {
                         // Extract public_id from Cloudinary URL for deletion
-                        if (preg_match('/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z]+)?$/', $img['path'], $matches)) {
+                        if (preg_match('/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z]+)?$/', $imagePath, $matches)) {
                             $cloudinary->delete($matches[1]);
                         }
                     } else {
-                        $filePath = public_path('uploads/products/' . $img['path']);
+                        $filePath = public_path('uploads/products/' . ltrim($imagePath, '/'));
                         if (file_exists($filePath)) {
                             @unlink($filePath);
                         }
@@ -548,8 +556,22 @@ class ProductController extends Controller
         
         // If main image was deleted and no new images, set first remaining image as main
         // BUT: Don't override if bundle photo was intentionally removed
-        if (!$bundlePhotoRemoved && !empty($allImages) && (in_array($imagePath, $imagesToDelete) || !$imagePath)) {
-            $imagePath = $allImages[0]['path'];
+        $firstRemainingImage = collect($allImages)
+            ->map(function ($img) {
+                if (is_array($img) && !empty($img['path'])) {
+                    return (string) $img['path'];
+                }
+
+                if (is_string($img) && trim($img) !== '') {
+                    return trim($img);
+                }
+
+                return null;
+            })
+            ->first(fn($path) => !empty($path));
+
+        if (!$bundlePhotoRemoved && !empty($firstRemainingImage) && (in_array($imagePath, $imagesToDelete, true) || !$imagePath)) {
+            $imagePath = $firstRemainingImage;
         }
 
         // Parse sizes and colors JSON (kept for backward compatibility if no variants are defined)
@@ -599,7 +621,7 @@ class ProductController extends Controller
             'image' => $imagePath,
             'available_sizes' => $sizes,
             'available_colors' => $colors,
-            'all_images' => !empty($allImages) ? json_encode($allImages) : null,
+            'all_images' => !empty($allImages) ? $allImages : null,
         ];
 
         if ($supportsProductDiscounts) {

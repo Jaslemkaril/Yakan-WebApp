@@ -26,9 +26,13 @@ class Product extends Model
         // Auto-repair: if image is null but all_images has entries, set image from first all_images entry
         static::retrieved(function ($product) {
             if (empty($product->image) && !empty($product->all_images)) {
-                $allImages = is_string($product->all_images) ? json_decode($product->all_images, true) : $product->all_images;
-                if (!empty($allImages) && is_array($allImages) && !empty($allImages[0]['path'])) {
-                    $product->image = $allImages[0]['path'];
+                $allImages = $product->all_images;
+                $firstPath = collect($allImages)
+                    ->map(fn($entry) => $product->extractImagePathFromGalleryEntry($entry))
+                    ->first(fn($path) => !empty($path));
+
+                if (!empty($firstPath)) {
+                    $product->image = $firstPath;
                     // Persist the fix silently so it doesn't need repair again
                     static::withoutEvents(function () use ($product) {
                         $product->updateQuietly(['image' => $product->image]);
@@ -63,8 +67,20 @@ class Product extends Model
         'discount_ends_at' => 'datetime',
         'available_sizes' => 'array',
         'available_colors' => 'array',
-        'all_images' => 'array',
     ];
+
+    public function getAllImagesAttribute($value): array
+    {
+        return $this->normalizeImageGalleryValue($value);
+    }
+
+    public function setAllImagesAttribute($value): void
+    {
+        $normalized = $this->normalizeImageGalleryValue($value);
+        $this->attributes['all_images'] = empty($normalized)
+            ? null
+            : json_encode($normalized, JSON_UNESCAPED_SLASHES);
+    }
 
     public function hasActiveProductDiscount(?Carbon $at = null): bool
     {
@@ -349,17 +365,12 @@ class Product extends Model
         }
 
         $galleryImages = $this->all_images;
-        if (is_string($galleryImages)) {
-            $decoded = json_decode($galleryImages, true);
-            $galleryImages = is_array($decoded) ? $decoded : [];
-        }
 
         if (is_array($galleryImages)) {
             foreach ($galleryImages as $entry) {
-                if (is_array($entry) && !empty($entry['path'])) {
-                    $candidates[] = (string) $entry['path'];
-                } elseif (is_string($entry) && trim($entry) !== '') {
-                    $candidates[] = $entry;
+                $path = $this->extractImagePathFromGalleryEntry($entry);
+                if (!empty($path)) {
+                    $candidates[] = $path;
                 }
             }
         }
@@ -377,16 +388,28 @@ class Product extends Model
         }
 
         $variants = $this->relationLoaded('variants')
-            ? $this->variants->where('is_active', true)->values()
+            ? $this->variants->values()
             : $this->variants()
-                ->where('is_active', true)
                 ->get(['id', 'product_id', 'image', 'is_active']);
 
-        $candidates = $variants
+        if ($variants->isEmpty()) {
+            return [];
+        }
+
+        $activeCandidates = $variants
+            ->where('is_active', true)
             ->pluck('image')
             ->filter(fn($value) => !empty($value))
             ->values()
             ->all();
+
+        $candidates = !empty($activeCandidates)
+            ? $activeCandidates
+            : $variants
+                ->pluck('image')
+                ->filter(fn($value) => !empty($value))
+                ->values()
+                ->all();
 
         return $this->normalizeImageCandidates($candidates);
     }
@@ -417,17 +440,12 @@ class Product extends Model
             }
 
             $componentGallery = $component->all_images;
-            if (is_string($componentGallery)) {
-                $decoded = json_decode($componentGallery, true);
-                $componentGallery = is_array($decoded) ? $decoded : [];
-            }
 
             if (is_array($componentGallery)) {
                 foreach ($componentGallery as $entry) {
-                    if (is_array($entry) && !empty($entry['path'])) {
-                        $candidates[] = (string) $entry['path'];
-                    } elseif (is_string($entry) && trim($entry) !== '') {
-                        $candidates[] = $entry;
+                    $path = $this->extractImagePathFromGalleryEntry($entry);
+                    if (!empty($path)) {
+                        $candidates[] = $path;
                     }
                 }
             }
@@ -460,6 +478,10 @@ class Product extends Model
     {
         if (str_starts_with($rawPath, 'http://') || str_starts_with($rawPath, 'https://')) {
             return $rawPath;
+        }
+
+        if (str_starts_with($rawPath, '//')) {
+            return 'https:' . $rawPath;
         }
 
         $path = ltrim($rawPath, '/');
@@ -508,6 +530,82 @@ class Product extends Model
             $publicCandidate = ltrim($candidate, '/');
             if (file_exists(public_path($publicCandidate))) {
                 return asset($publicCandidate);
+            }
+        }
+
+        // Some deployments can serve files that are not directly visible to PHP via file_exists().
+        foreach (array_values(array_unique($candidates)) as $candidate) {
+            $publicCandidate = ltrim($candidate, '/');
+            if (
+                str_starts_with($publicCandidate, 'uploads/')
+                || str_starts_with($publicCandidate, 'storage/')
+                || str_starts_with($publicCandidate, 'products/')
+                || str_starts_with($publicCandidate, 'variants/')
+                || str_starts_with($publicCandidate, 'product-variants/')
+            ) {
+                return asset($publicCandidate);
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeImageGalleryValue($value): array
+    {
+        $decoded = $value;
+
+        for ($i = 0; $i < 3 && is_string($decoded); $i++) {
+            $trimmed = trim($decoded);
+            if ($trimmed === '' || strtolower($trimmed) === 'null') {
+                return [];
+            }
+
+            $jsonDecoded = json_decode($trimmed, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                break;
+            }
+
+            $decoded = $jsonDecoded;
+        }
+
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($decoded as $entry) {
+            $path = $this->extractImagePathFromGalleryEntry($entry);
+            if (empty($path)) {
+                continue;
+            }
+
+            $normalized[] = [
+                'path' => $path,
+                'color' => is_array($entry) ? ($entry['color'] ?? null) : null,
+                'sort_order' => is_array($entry) && isset($entry['sort_order'])
+                    ? (int) $entry['sort_order']
+                    : count($normalized),
+            ];
+        }
+
+        return $normalized;
+    }
+
+    private function extractImagePathFromGalleryEntry($entry): ?string
+    {
+        if (is_string($entry)) {
+            $path = trim($entry);
+            return $path !== '' ? $path : null;
+        }
+
+        if (!is_array($entry)) {
+            return null;
+        }
+
+        foreach (['path', 'image_path', 'url', 'image_url', 'src'] as $key) {
+            if (!empty($entry[$key]) && is_string($entry[$key])) {
+                return trim($entry[$key]);
             }
         }
 
