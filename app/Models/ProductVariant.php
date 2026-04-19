@@ -43,9 +43,12 @@ class ProductVariant extends Model
 
         if (!str_contains($path, '/')) {
             $candidates[] = 'uploads/variants/' . $path;
+            $candidates[] = 'uploads/product-variants/' . $path;
             $candidates[] = 'uploads/products/' . $path;
             $candidates[] = 'storage/variants/' . $path;
+            $candidates[] = 'storage/product-variants/' . $path;
             $candidates[] = 'storage/products/' . $path;
+            $candidates[] = 'product-variants/' . $path;
         }
 
         if (str_starts_with($path, 'public/')) {
@@ -59,6 +62,12 @@ class ProductVariant extends Model
         if (str_starts_with($path, 'variants/')) {
             $candidates[] = 'uploads/' . $path;
             $candidates[] = 'storage/' . $path;
+        }
+
+        if (str_starts_with($path, 'product-variants/')) {
+            $candidates[] = 'uploads/' . $path;
+            $candidates[] = 'storage/' . $path;
+            $candidates[] = 'variants/' . substr($path, strlen('product-variants/'));
         }
 
         if (str_starts_with($path, 'products/')) {

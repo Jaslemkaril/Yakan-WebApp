@@ -364,6 +364,86 @@ class Product extends Model
             }
         }
 
+        return $this->normalizeImageCandidates($candidates);
+    }
+
+    /**
+     * Collect candidate image paths from active variants.
+     */
+    private function getVariantImagePathCandidates(): array
+    {
+        if (!Schema::hasTable('product_variants')) {
+            return [];
+        }
+
+        $variants = $this->relationLoaded('variants')
+            ? $this->variants->where('is_active', true)->values()
+            : $this->variants()
+                ->where('is_active', true)
+                ->get(['id', 'product_id', 'image', 'is_active']);
+
+        $candidates = $variants
+            ->pluck('image')
+            ->filter(fn($value) => !empty($value))
+            ->values()
+            ->all();
+
+        return $this->normalizeImageCandidates($candidates);
+    }
+
+    /**
+     * Collect candidate image paths from bundle component products.
+     */
+    private function getBundleComponentImagePathCandidates(): array
+    {
+        if (!Schema::hasTable('product_bundle_items')) {
+            return [];
+        }
+
+        $bundleItems = $this->relationLoaded('bundleItems')
+            ? $this->bundleItems
+            : $this->bundleItems()->with(['componentProduct:id,image,all_images'])->get();
+
+        $candidates = [];
+
+        foreach ($bundleItems as $bundleItem) {
+            $component = $bundleItem->componentProduct;
+            if (!$component) {
+                continue;
+            }
+
+            if (!empty($component->image)) {
+                $candidates[] = (string) $component->image;
+            }
+
+            $componentGallery = $component->all_images;
+            if (is_string($componentGallery)) {
+                $decoded = json_decode($componentGallery, true);
+                $componentGallery = is_array($decoded) ? $decoded : [];
+            }
+
+            if (is_array($componentGallery)) {
+                foreach ($componentGallery as $entry) {
+                    if (is_array($entry) && !empty($entry['path'])) {
+                        $candidates[] = (string) $entry['path'];
+                    } elseif (is_string($entry) && trim($entry) !== '') {
+                        $candidates[] = $entry;
+                    }
+                }
+            }
+
+            // If component has variant-only images, include those as fallback too.
+            $candidates = array_merge($candidates, $component->getVariantImagePathCandidates());
+        }
+
+        return $this->normalizeImageCandidates($candidates);
+    }
+
+    /**
+     * Normalize and deduplicate image candidates.
+     */
+    private function normalizeImageCandidates(array $candidates): array
+    {
         $normalized = array_map(function ($value) {
             return trim(str_replace('\\', '/', (string) $value));
         }, $candidates);
@@ -402,10 +482,26 @@ class Product extends Model
             $candidates[] = 'storage/' . $path;
         }
 
+        if (str_starts_with($path, 'variants/')) {
+            $candidates[] = 'uploads/' . $path;
+            $candidates[] = 'storage/' . $path;
+        }
+
+        if (str_starts_with($path, 'product-variants/')) {
+            $candidates[] = 'uploads/' . $path;
+            $candidates[] = 'storage/' . $path;
+        }
+
         if (!str_contains($path, '/')) {
             $candidates[] = 'uploads/products/' . $path;
+            $candidates[] = 'uploads/variants/' . $path;
+            $candidates[] = 'uploads/product-variants/' . $path;
             $candidates[] = 'storage/products/' . $path;
+            $candidates[] = 'storage/variants/' . $path;
+            $candidates[] = 'storage/product-variants/' . $path;
             $candidates[] = 'products/' . $path;
+            $candidates[] = 'variants/' . $path;
+            $candidates[] = 'product-variants/' . $path;
         }
 
         foreach (array_values(array_unique($candidates)) as $candidate) {
@@ -424,6 +520,20 @@ class Product extends Model
     private function resolveBestImageUrl(): ?string
     {
         foreach ($this->getImagePathCandidates() as $candidate) {
+            $resolved = $this->resolveImagePathToUrl($candidate);
+            if ($resolved !== null) {
+                return $resolved;
+            }
+        }
+
+        foreach ($this->getVariantImagePathCandidates() as $candidate) {
+            $resolved = $this->resolveImagePathToUrl($candidate);
+            if ($resolved !== null) {
+                return $resolved;
+            }
+        }
+
+        foreach ($this->getBundleComponentImagePathCandidates() as $candidate) {
             $resolved = $this->resolveImagePathToUrl($candidate);
             if ($resolved !== null) {
                 return $resolved;
