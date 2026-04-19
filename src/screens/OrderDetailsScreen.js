@@ -254,6 +254,16 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     || ['requested', 'pending_review', 'under_review', 'awaiting_return_shipment', 'return_in_transit', 'pending_payout', 'approved'].includes(latestRefundWorkflow)
   );
 
+  const effectiveRefundReason = selectedRefundReason === 'Other'
+    ? customRefundReason.trim()
+    : selectedRefundReason;
+  const canSubmitRefund = Boolean(
+    effectiveRefundReason
+    && refundComment.trim().length > 0
+    && refundEvidence.length > 0
+    && (selectedRefundReason !== 'Damaged item' || hasVideoEvidence(refundEvidence))
+  );
+
   const openCancelModal = () => {
     setSelectedCancelReason('');
     setCustomCancelReason('');
@@ -1022,14 +1032,43 @@ const OrderDetailsScreen = ({ navigation, route }) => {
               multiline
             />
 
+            <Text style={styles.refundEvidenceLabel}>
+              Photo / Video Proof <Text style={styles.refundEvidenceLabelRequired}>*Required</Text>
+            </Text>
+            <Text style={styles.refundEvidenceSubLabel}>
+              Attach at least one photo or video of the product so admin can review your request.
+            </Text>
+
             <TouchableOpacity
-              style={styles.refundEvidenceButton}
+              style={[
+                styles.refundEvidenceButton,
+                refundEvidence.length === 0 && styles.refundEvidenceButtonRequired,
+              ]}
               onPress={pickRefundEvidence}
               disabled={isRequestingRefund}
             >
-              <Ionicons name="images-outline" size={18} color="#6D28D9" />
-              <Text style={styles.refundEvidenceButtonText}>Add Photo/Video Proof ({refundEvidence.length}/5)</Text>
+              <Ionicons
+                name="images-outline"
+                size={18}
+                color={refundEvidence.length === 0 ? '#B91C1C' : '#6D28D9'}
+              />
+              <Text
+                style={[
+                  styles.refundEvidenceButtonText,
+                  refundEvidence.length === 0 && styles.refundEvidenceButtonTextRequired,
+                ]}
+              >
+                {refundEvidence.length === 0
+                  ? 'Tap to Add Photo/Video Proof (0/5)'
+                  : `Add Photo/Video Proof (${refundEvidence.length}/5)`}
+              </Text>
             </TouchableOpacity>
+
+            {refundEvidence.length === 0 ? (
+              <Text style={styles.refundEvidenceHint}>
+                You must upload at least one photo or video before you can submit this refund request.
+              </Text>
+            ) : null}
 
             {selectedRefundReason === 'Damaged item' && !hasVideoEvidence(refundEvidence) ? (
               <Text style={styles.refundEvidenceHint}>Damaged item requires at least one video proof.</Text>
@@ -1066,9 +1105,12 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 <Text style={styles.cancelModalSecondaryText}>Close</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.refundModalPrimaryButton, isRequestingRefund && styles.cancelOrderButtonDisabled]}
+                style={[
+                  styles.refundModalPrimaryButton,
+                  (isRequestingRefund || !canSubmitRefund) && styles.cancelOrderButtonDisabled,
+                ]}
                 onPress={confirmRefundRequest}
-                disabled={isRequestingRefund}
+                disabled={isRequestingRefund || !canSubmitRefund}
               >
                 <Text style={styles.cancelModalPrimaryText}>{isRequestingRefund ? 'Submitting...' : 'Submit'}</Text>
               </TouchableOpacity>
@@ -1913,6 +1955,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text,
   },
+  refundEvidenceLabel: {
+    marginTop: 10,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  refundEvidenceLabelRequired: {
+    color: '#B91C1C',
+    fontWeight: '700',
+  },
+  refundEvidenceSubLabel: {
+    marginTop: 2,
+    fontSize: 11,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
   refundEvidenceButton: {
     marginTop: 8,
     marginBottom: 4,
@@ -1927,10 +1985,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F3FF',
     gap: 8,
   },
+  refundEvidenceButtonRequired: {
+    borderColor: '#B91C1C',
+    borderWidth: 2,
+    backgroundColor: '#FEF2F2',
+  },
   refundEvidenceButtonText: {
     fontSize: 12,
     fontWeight: '700',
     color: '#6D28D9',
+  },
+  refundEvidenceButtonTextRequired: {
+    color: '#B91C1C',
   },
   refundEvidenceHint: {
     fontSize: 11,
