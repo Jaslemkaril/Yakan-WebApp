@@ -18,8 +18,13 @@
         };
 
         $regularOrdersUrl = route('admin.regular.index') . ($authToken ? ('?auth_token=' . $authToken) : '');
+        $doneOrdersUrl = route('admin.regular.index') . '?' . http_build_query(array_filter([
+            'status' => 'done',
+            'auth_token' => $authToken,
+        ]));
         $customDashboardUrl = route('admin.orders.index') . ($authToken ? ('?auth_token=' . $authToken) : '');
         $customOrdersUrl = route('admin.custom-orders.index') . ($authToken ? ('?auth_token=' . $authToken) : '');
+        $chatInboxUrl = route('admin.chats.index') . ($authToken ? ('?auth_token=' . $authToken) : '');
     @endphp
 
     <div class="bg-[#8b1d1d] rounded-2xl p-8 text-white shadow-xl">
@@ -27,7 +32,7 @@
         <p class="text-red-100 text-lg">Process orders, update status, and confirm refunds.</p>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
         <a href="{{ $dashboardUrl('pending_confirmation') }}" class="group bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:border-[#8b1d1d] hover:shadow-xl transition-all duration-200">
             <p class="text-sm text-gray-600 font-medium">Pending Confirmation</p>
             <p class="text-3xl font-bold text-[#8b1d1d] mt-2">{{ $pendingConfirmationCount }}</p>
@@ -51,6 +56,12 @@
             <p class="text-3xl font-bold text-[#8b1d1d] mt-2">{{ $refundedTodayCount }}</p>
             <p class="text-xs text-gray-400 mt-3 group-hover:text-[#8b1d1d]">Click to view matching orders</p>
         </a>
+
+        <a href="{{ $dashboardUrl('done_orders') }}" class="group bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:border-[#8b1d1d] hover:shadow-xl transition-all duration-200">
+            <p class="text-sm text-gray-600 font-medium">Done Orders</p>
+            <p class="text-3xl font-bold text-[#8b1d1d] mt-2">{{ $doneOrdersCount }}</p>
+            <p class="text-xs text-gray-400 mt-3 group-hover:text-[#8b1d1d]">Delivered + completed orders</p>
+        </a>
     </div>
 
     <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-4">
@@ -70,6 +81,9 @@
             <a href="{{ $dashboardUrl('refunded_today') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ $activeScope === 'refunded_today' ? 'bg-[#8b1d1d] text-white' : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-[#8b1d1d]' }}">
                 Refunded Today
             </a>
+            <a href="{{ $dashboardUrl('done_orders') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ $activeScope === 'done_orders' ? 'bg-[#8b1d1d] text-white' : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-[#8b1d1d]' }}">
+                Done Orders
+            </a>
         </div>
     </div>
 
@@ -87,6 +101,14 @@
             <a href="{{ $customOrdersUrl }}"
                class="px-4 py-2 border border-[#8b1d1d] text-[#8b1d1d] rounded-lg hover:bg-red-50 transition-colors">
                 Open Custom Orders List
+            </a>
+            <a href="{{ $doneOrdersUrl }}"
+               class="px-4 py-2 bg-[#8b1d1d] text-white rounded-lg hover:bg-[#6f1717] transition-colors">
+                Handle Done Orders
+            </a>
+            <a href="{{ $chatInboxUrl }}"
+               class="px-4 py-2 border border-[#8b1d1d] text-[#8b1d1d] rounded-lg hover:bg-red-50 transition-colors">
+                Open Chat Inbox
             </a>
         </div>
     </div>

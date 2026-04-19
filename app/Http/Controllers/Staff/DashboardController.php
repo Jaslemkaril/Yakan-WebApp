@@ -16,6 +16,7 @@ class DashboardController extends Controller
             'processing_shipping',
             'refund_eligible',
             'refunded_today',
+            'done_orders',
         ];
 
         $activeScope = (string) $request->query('scope', 'recent');
@@ -27,6 +28,7 @@ class DashboardController extends Controller
         $processingCount = Order::whereIn('status', ['confirmed', 'processing', 'shipped'])->count();
         $readyForRefundCount = Order::whereIn('status', ['delivered', 'completed'])->count();
         $refundedTodayCount = Order::where('status', 'refunded')->whereDate('updated_at', today())->count();
+        $doneOrdersCount = Order::whereIn('status', ['delivered', 'completed'])->count();
 
         $ordersQuery = Order::with('user');
         $ordersTitle = 'Recent Orders';
@@ -60,6 +62,13 @@ class DashboardController extends Controller
                 $ordersTitle = 'Refunded Today';
                 break;
 
+            case 'done_orders':
+                $ordersQuery->whereIn('status', ['delivered', 'completed'])
+                    ->orderByDesc('updated_at')
+                    ->orderByDesc('created_at');
+                $ordersTitle = 'Done Orders';
+                break;
+
             case 'recent':
             default:
                 $ordersQuery->orderByDesc('created_at');
@@ -73,6 +82,7 @@ class DashboardController extends Controller
             'processingCount',
             'readyForRefundCount',
             'refundedTodayCount',
+            'doneOrdersCount',
             'recentOrders',
             'activeScope',
             'ordersTitle'

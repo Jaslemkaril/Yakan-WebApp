@@ -929,6 +929,7 @@
                    || request()->is('admin/orders/post-order-requests*');
                $isOrdersActive = $isOrdersRoute && !$isPostOrderRequestsActive;
                $isCustomOrdersActive = request()->routeIs('admin.custom-orders.*') || request()->is('admin/custom-orders*');
+               $isChatsActive = request()->routeIs('admin.chats.*') || request()->is('admin/chats*');
            @endphp
 
            <!-- Navigation -->
@@ -1021,7 +1022,9 @@
         <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Users</span>
     </a>
 
-    <a href="{{ route('admin.chats.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ request()->routeIs('admin.chats.*') ? 'nav-link-active' : '' }}" style="color: white; position: relative;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+    @endif
+
+    <a href="{{ route('admin.chats.index') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg group {{ $isChatsActive ? 'nav-link-active' : '' }}" style="color: white; position: relative;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
         <svg class="w-5 h-5 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: rgba(255,255,255,0.7);" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.7)'"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
         <span class="sidebar-text font-medium" style="color: rgba(255,255,255,0.9);">Chat</span>
         @php
@@ -1035,7 +1038,6 @@
             </span>
         @endif
     </a>
-    @endif
 
     <!-- <a href="{{ route('admin.analytics') }}" class="menu-item nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-100 group {{ request()->routeIs('admin.analytics') ? 'nav-link-active' : '' }}">
         <i class="fas fa-chart-line w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0"></i>

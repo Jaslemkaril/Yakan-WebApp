@@ -27,7 +27,12 @@ class OrderController extends Controller
 
         // Advanced filtering
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $statusFilter = strtolower(trim((string) $request->status));
+            if ($statusFilter === 'done') {
+                $query->whereIn('status', ['delivered', 'completed']);
+            } else {
+                $query->where('status', $request->status);
+            }
         }
 
         if ($request->filled('payment_status')) {

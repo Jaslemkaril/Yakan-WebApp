@@ -258,7 +258,9 @@
                         <option value="pending" {{ $activeStatusFilter === 'pending' ? 'selected' : '' }}>Pending</option>
                         <option value="processing" {{ $activeStatusFilter === 'processing' ? 'selected' : '' }}>Processing</option>
                         <option value="shipped" {{ $activeStatusFilter === 'shipped' ? 'selected' : '' }}>Shipped</option>
+                        <option value="done" {{ $activeStatusFilter === 'done' ? 'selected' : '' }}>Done (Delivered + Completed)</option>
                         <option value="delivered" {{ $activeStatusFilter === 'delivered' ? 'selected' : '' }}>Delivered</option>
+                        <option value="completed" {{ $activeStatusFilter === 'completed' ? 'selected' : '' }}>Completed</option>
                         <option value="cancellation_requested" {{ $activeStatusFilter === 'cancellation_requested' ? 'selected' : '' }}>Cancel Requested</option>
                         <option value="cancelled" {{ $activeStatusFilter === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                         <option value="refunded" {{ $activeStatusFilter === 'refunded' ? 'selected' : '' }}>Refunded</option>
