@@ -1683,48 +1683,72 @@
                                 // Check if this is a chat-based order
                                 $isChatBasedOrder = !empty($order->chat_id);
                                 
-                                // Base timeline statuses
-                                $timelineStatuses = ['pending'];
+                                // Get the actual order status (where it was before cancellation)
+                                $actualOrderStatus = $order->status;
                                 
-                                // Only add chat-specific statuses for chat-based orders
-                                if ($isChatBasedOrder) {
-                                    $timelineStatuses[] = 'price_quoted';
-                                    $timelineStatuses[] = 'approved';
+                                // Normalize runtime order states to timeline stages
+                                $normalizedStatus = $actualOrderStatus;
+                                if ($normalizedStatus === 'completed') {
+                                    $normalizedStatus = 'delivered';
+                                } elseif ($normalizedStatus === 'processing') {
+                                    $normalizedStatus = $isChatBasedOrder ? 'approved' : 'pending';
                                 }
                                 
-                                // Continue with regular statuses
-                                $timelineStatuses = array_merge($timelineStatuses, ['in_production', 'production_complete', 'out_for_delivery', 'delivered']);
+                                // Define the full progression timeline
+                                $fullTimeline = ['pending'];
+                                if ($isChatBasedOrder) {
+                                    $fullTimeline[] = 'price_quoted';
+                                    $fullTimeline[] = 'approved';
+                                }
+                                $fullTimeline = array_merge($fullTimeline, ['in_production', 'production_complete', 'out_for_delivery', 'delivered']);
                                 
-                                // Add cancelled and refunded if applicable
+                                // Build timeline based on cancellation status
                                 if ($isCancellationApproved) {
+                                    // For cancelled orders, only show milestones up to where it was cancelled
+                                    $timelineStatuses = ['pending'];
+                                    
+                                    // Add chat milestones if applicable and if order reached them
+                                    if ($isChatBasedOrder) {
+                                        if (in_array($actualOrderStatus, ['price_quoted', 'approved', 'processing', 'in_production', 'production_complete', 'out_for_delivery', 'delivered', 'completed'])) {
+                                            $timelineStatuses[] = 'price_quoted';
+                                        }
+                                        if (in_array($actualOrderStatus, ['approved', 'processing', 'in_production', 'production_complete', 'out_for_delivery', 'delivered', 'completed'])) {
+                                            $timelineStatuses[] = 'approved';
+                                        }
+                                    }
+                                    
+                                    // Add production milestones only if order actually reached them
+                                    if (in_array($actualOrderStatus, ['in_production', 'production_complete', 'out_for_delivery', 'delivered', 'completed'])) {
+                                        $timelineStatuses[] = 'in_production';
+                                    }
+                                    if (in_array($actualOrderStatus, ['production_complete', 'out_for_delivery', 'delivered', 'completed'])) {
+                                        $timelineStatuses[] = 'production_complete';
+                                    }
+                                    if (in_array($actualOrderStatus, ['out_for_delivery', 'delivered', 'completed'])) {
+                                        $timelineStatuses[] = 'out_for_delivery';
+                                    }
+                                    if (in_array($actualOrderStatus, ['delivered', 'completed'])) {
+                                        $timelineStatuses[] = 'delivered';
+                                    }
+                                    
+                                    // Add cancelled milestone
                                     $timelineStatuses[] = 'cancelled';
+                                    
+                                    // Add refunded if applicable
                                     if (in_array($customRefundRequest->status, ['processed'])) {
                                         $timelineStatuses[] = 'refunded';
                                     }
-                                }
-
-                                // Normalize runtime order states to timeline stages.
-                                $displayStatus = $order->status;
-                                if ($displayStatus === 'completed') {
-                                    $displayStatus = 'delivered';
-                                } elseif ($displayStatus === 'processing') {
-                                    // Paid/processing means payment accepted but admin may not have started production yet.
-                                    $displayStatus = $isChatBasedOrder ? 'approved' : 'pending';
-                                } elseif ($displayStatus === 'approved' && ($order->payment_status ?? null) === 'paid') {
-                                    $displayStatus = $isChatBasedOrder ? 'approved' : 'pending';
-                                }
-                                
-                                // If cancelled, set display status to cancelled or refunded
-                                if ($isCancellationApproved) {
-                                    if (in_array($customRefundRequest->status, ['processed'])) {
-                                        $displayStatus = 'refunded';
-                                    } else {
-                                        $displayStatus = 'cancelled';
+                                    
+                                    // Current status is cancelled or refunded
+                                    $displayStatus = in_array($customRefundRequest->status, ['processed']) ? 'refunded' : 'cancelled';
+                                } else {
+                                    // Normal flow - show all milestones
+                                    $timelineStatuses = $fullTimeline;
+                                    $displayStatus = $normalizedStatus;
+                                    
+                                    if (!in_array($displayStatus, $timelineStatuses, true)) {
+                                        $displayStatus = ($order->payment_status ?? null) === 'paid' ? ($isChatBasedOrder ? 'approved' : 'pending') : 'pending';
                                     }
-                                }
-
-                                if (!in_array($displayStatus, $timelineStatuses, true)) {
-                                    $displayStatus = ($order->payment_status ?? null) === 'paid' ? ($isChatBasedOrder ? 'approved' : 'pending') : 'pending';
                                 }
 
                                 $currentTimelineIndex = array_search($displayStatus, $timelineStatuses, true);
