@@ -21,13 +21,30 @@ class AuthController extends Controller
         $startTime = microtime(true);
         
         try {
-            // Simplified validation for better performance
+            // Validation aligned with web register (RegisteredUserController)
             $validated = $request->validate([
                 'first_name' => 'required|string|max:255',
                 'last_name' => 'required|string|max:255',
                 'middle_initial' => 'nullable|string|max:255',
+                'birth_date' => 'required|date|before_or_equal:' . now()->subYears(18)->toDateString(),
                 'email' => 'required|string|email|max:255|unique:users,email',
-                'password' => 'required|string|min:8|confirmed',
+                'password' => [
+                    'required',
+                    'string',
+                    'min:8',
+                    'confirmed',
+                    'regex:/[a-z]/',
+                    'regex:/[A-Z]/',
+                    'regex:/[0-9]/',
+                    'regex:/[@$!%*#?&]/',
+                ],
+            ], [
+                'birth_date.required' => 'Birth date is required.',
+                'birth_date.date' => 'Please enter a valid birth date.',
+                'birth_date.before_or_equal' => 'You must be at least 18 years old to create an account.',
+                'password.regex' => 'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character (@$!%*#?&).',
+                'password.min' => 'Password must be at least 8 characters long.',
+                'password.confirmed' => 'Password confirmation does not match.',
             ]);
 
             $validationTime = microtime(true);
@@ -37,7 +54,10 @@ class AuthController extends Controller
                            ($middlePart ? $middlePart . ' ' : '') . 
                            $validated['last_name']);
 
-            $user = \App\Models\User::create([
+            $supportsBirthDate = \Illuminate\Support\Facades\Schema::hasTable('users')
+                && \Illuminate\Support\Facades\Schema::hasColumn('users', 'birth_date');
+
+            $userPayload = [
                 'name' => $fullName,
                 'first_name' => $validated['first_name'],
                 'last_name' => $validated['last_name'],
@@ -45,7 +65,15 @@ class AuthController extends Controller
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
                 'role' => 'user',
-            ]);
+            ];
+
+            if ($supportsBirthDate) {
+                $userPayload['birth_date'] = $validated['birth_date'];
+            } else {
+                \Log::warning('users.birth_date column missing during API registration; continuing without persisting birth_date.');
+            }
+
+            $user = \App\Models\User::create($userPayload);
             
             $createUserTime = microtime(true);
 

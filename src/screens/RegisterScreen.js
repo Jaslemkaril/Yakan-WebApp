@@ -47,17 +47,20 @@ export default function RegisterScreen({ navigation }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [middleName, setMiddleName] = useState('');
+  const [birthDate, setBirthDate] = useState(''); // mm/dd/yyyy
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const [firstFocused, setFirstFocused] = useState(false);
   const [lastFocused, setLastFocused] = useState(false);
   const [middleFocused, setMiddleFocused] = useState(false);
+  const [dobFocused, setDobFocused] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passFocused, setPassFocused] = useState(false);
   const [confirmFocused, setConfirmFocused] = useState(false);
@@ -109,18 +112,101 @@ export default function RegisterScreen({ navigation }) {
     }
   };
 
+  const passwordChecks = {
+    length: password.length >= 8,
+    lower: /[a-z]/.test(password),
+    upper: /[A-Z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[@$!%*#?&]/.test(password),
+  };
+  const passwordIsValid = Object.values(passwordChecks).every(Boolean);
+
   const getPasswordStrength = () => {
     if (password.length === 0) return null;
-    if (password.length < 6) return 'weak';
-    if (password.length < 10 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) return 'medium';
+    const passed = Object.values(passwordChecks).filter(Boolean).length;
+    if (passed <= 2) return 'weak';
+    if (passed <= 4) return 'medium';
     return 'strong';
   };
 
   const strength = getPasswordStrength();
 
+  // Auto-format mm/dd/yyyy as the user types.
+  const handleBirthDateChange = (text) => {
+    const digits = String(text || '').replace(/\D/g, '').slice(0, 8);
+    let formatted = digits;
+    if (digits.length >= 5) {
+      formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    } else if (digits.length >= 3) {
+      formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    }
+    setBirthDate(formatted);
+  };
+
+  // Parse mm/dd/yyyy into a Date, or null if invalid.
+  const parseBirthDate = (value) => {
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(value || ''));
+    if (!match) return null;
+    const month = parseInt(match[1], 10);
+    const day = parseInt(match[2], 10);
+    const year = parseInt(match[3], 10);
+    if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1900) return null;
+    const dt = new Date(year, month - 1, day);
+    if (
+      dt.getFullYear() !== year
+      || dt.getMonth() !== month - 1
+      || dt.getDate() !== day
+    ) return null;
+    return dt;
+  };
+
+  const birthDateObj = parseBirthDate(birthDate);
+  const eighteenYearsAgo = (() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setFullYear(d.getFullYear() - 18);
+    return d;
+  })();
+  const birthDateIsValid = birthDateObj && birthDateObj <= eighteenYearsAgo;
+
+  const formatBirthDateForApi = (dt) => {
+    if (!dt) return '';
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const d = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const openLegalLink = async (path) => {
+    try {
+      await WebBrowser.openBrowserAsync(`${BACKEND_URL}${path}`);
+    } catch (err) {
+      Alert.alert('Unable to open link', 'Please check your internet connection.');
+    }
+  };
+
+  const canSubmit = Boolean(
+    firstName.trim()
+    && lastName.trim()
+    && birthDateIsValid
+    && email.trim()
+    && passwordIsValid
+    && password === confirmPassword
+    && agreedToTerms
+    && !isLoading
+  );
+
   const handleRegister = async () => {
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    if (!birthDateIsValid) {
+      Alert.alert(
+        'Invalid Birth Date',
+        'Please enter a valid date of birth (mm/dd/yyyy). You must be at least 18 years old to create an account.'
+      );
       return;
     }
 
@@ -135,8 +221,19 @@ export default function RegisterScreen({ navigation }) {
       return;
     }
 
-    if (password.length < 8) {
-      Alert.alert('Weak Password', 'Password must be at least 8 characters.');
+    if (!passwordIsValid) {
+      Alert.alert(
+        'Weak Password',
+        'Password must be at least 8 characters and include one lowercase letter, one uppercase letter, one number, and one special character (@$!%*#?&).'
+      );
+      return;
+    }
+
+    if (!agreedToTerms) {
+      Alert.alert(
+        'Terms Required',
+        'Please agree to the Terms of Service and Privacy Policy to continue.'
+      );
       return;
     }
 
@@ -148,7 +245,8 @@ export default function RegisterScreen({ navigation }) {
         middleName.trim(),
         normalizedEmail,
         password,
-        confirmPassword
+        confirmPassword,
+        formatBirthDateForApi(birthDateObj)
       );
 
       if (result.success && result.requiresOtp) {
@@ -270,6 +368,28 @@ export default function RegisterScreen({ navigation }) {
                 />
               </View>
 
+              {/* Date of Birth */}
+              <View style={[styles.inputGroup, dobFocused && styles.inputGroupFocused]}>
+                <MaterialIcons name="event" size={20} color={dobFocused ? '#dc2626' : '#9ca3af'} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Date of Birth (mm/dd/yyyy) *"
+                  placeholderTextColor="#9ca3af"
+                  value={birthDate}
+                  onChangeText={handleBirthDateChange}
+                  keyboardType="number-pad"
+                  maxLength={10}
+                  editable={!isLoading}
+                  onFocus={() => setDobFocused(true)}
+                  onBlur={() => setDobFocused(false)}
+                />
+              </View>
+              {birthDate.length > 0 && !birthDateIsValid ? (
+                <Text style={styles.fieldError}>
+                  You must be at least 18 years old to create an account.
+                </Text>
+              ) : null}
+
               {/* Email */}
               <View style={[styles.inputGroup, emailFocused && styles.inputGroupFocused]}>
                 <MaterialIcons name="email" size={20} color={emailFocused ? '#dc2626' : '#9ca3af'} style={styles.inputIcon} />
@@ -328,6 +448,10 @@ export default function RegisterScreen({ navigation }) {
                 </View>
               )}
 
+              <Text style={styles.passwordHint}>
+                Must contain: 8+ chars, 1 uppercase, 1 lowercase, 1 number, 1 special (@$!%*#?&)
+              </Text>
+
               {/* Confirm Password */}
               <View style={[styles.inputGroup, confirmFocused && styles.inputGroupFocused]}>
                 <MaterialIcons name="lock-outline" size={20} color={confirmFocused ? '#dc2626' : '#9ca3af'} style={styles.inputIcon} />
@@ -347,11 +471,36 @@ export default function RegisterScreen({ navigation }) {
                 </TouchableOpacity>
               </View>
 
+              {/* Terms of Service & Privacy Policy */}
+              <TouchableOpacity
+                style={styles.termsRow}
+                onPress={() => setAgreedToTerms((prev) => !prev)}
+                activeOpacity={0.8}
+                disabled={isLoading}
+              >
+                <Ionicons
+                  name={agreedToTerms ? 'checkbox' : 'square-outline'}
+                  size={22}
+                  color={agreedToTerms ? '#dc2626' : '#9ca3af'}
+                  style={styles.termsCheckbox}
+                />
+                <Text style={styles.termsText}>
+                  I agree to the{' '}
+                  <Text style={styles.termsLink} onPress={() => openLegalLink('/terms-of-service')}>
+                    Terms of Service
+                  </Text>{' '}
+                  and{' '}
+                  <Text style={styles.termsLink} onPress={() => openLegalLink('/privacy-policy')}>
+                    Privacy Policy
+                  </Text>
+                </Text>
+              </TouchableOpacity>
+
               {/* Register Button */}
               <TouchableOpacity
-                style={[styles.registerButton, isLoading && styles.buttonDisabled]}
+                style={[styles.registerButton, (!canSubmit || isLoading) && styles.buttonDisabled]}
                 onPress={handleRegister}
-                disabled={isLoading}
+                disabled={!canSubmit || isLoading}
               >
                 {isLoading ? (
                   <ActivityIndicator color="#fff" />
@@ -556,6 +705,41 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     minWidth: 45,
+  },
+  passwordHint: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: -4,
+    marginBottom: 14,
+    lineHeight: 16,
+  },
+  fieldError: {
+    fontSize: 12,
+    color: '#dc2626',
+    fontWeight: '600',
+    marginTop: -8,
+    marginBottom: 12,
+  },
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 18,
+    paddingRight: 4,
+  },
+  termsCheckbox: {
+    marginRight: 10,
+    marginTop: 1,
+  },
+  termsText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#374151',
+    lineHeight: 18,
+  },
+  termsLink: {
+    color: '#dc2626',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
   registerButton: {
     backgroundColor: '#dc2626',

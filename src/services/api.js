@@ -230,11 +230,12 @@ class ApiService {
   /**
    * Register new user
    */
-  async register(firstName, lastName, middleName, email, password, confirmPassword) {
+  async register(firstName, lastName, middleName, email, password, confirmPassword, birthDate) {
     const response = await this.request('POST', API_CONFIG.ENDPOINTS.AUTH.REGISTER, {
       first_name: firstName,
       last_name: lastName,
       middle_initial: middleName || null,
+      birth_date: birthDate,
       email,
       password,
       password_confirmation: confirmPassword,

@@ -383,8 +383,8 @@ export const CartProvider = ({ children }) => {
     setUserInfo(null);
   };
 
-  const registerWithBackend = async (firstName, lastName, middleName, email, password, confirmPassword) => {
-    const response = await ApiService.register(firstName, lastName, middleName, email, password, confirmPassword);
+  const registerWithBackend = async (firstName, lastName, middleName, email, password, confirmPassword, birthDate) => {
+    const response = await ApiService.register(firstName, lastName, middleName, email, password, confirmPassword, birthDate);
     console.log('[CartContext] Register response:', response);
     
     if (response.success) {
