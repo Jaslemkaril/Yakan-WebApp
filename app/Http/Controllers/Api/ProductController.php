@@ -112,8 +112,49 @@ class ProductController extends Controller
         $product->setAttribute('has_product_discount', $priceMeta['has_product_discount']);
         $product->setAttribute('discount_type', $priceMeta['has_product_discount'] ? $product->discount_type : null);
         $product->setAttribute('discount_value', $priceMeta['has_product_discount'] ? (float) $product->discount_value : null);
-        $product->setAttribute('image_url', $product->image_url);
-        $product->setAttribute('image_src', $product->image_src);
+        $productHasOwnImage = method_exists($product, 'hasImage') ? $product->hasImage() : !empty($product->image);
+        $imageUrl = $product->image_url;
+        $imageSrc = $product->image_src;
+        $fallbackImagePath = null;
+
+        if (!$productHasOwnImage) {
+            // Variant products: fall back to first active variant's image
+            if ($hasVariants) {
+                $variantWithImage = $activeVariants->first(function ($v) {
+                    return !empty($v->image);
+                });
+                if ($variantWithImage) {
+                    $variantResolved = $variantWithImage->image_src;
+                    if ($variantResolved) {
+                        $imageUrl = $variantResolved;
+                        $imageSrc = $variantResolved;
+                        $fallbackImagePath = $variantWithImage->image;
+                    }
+                }
+            }
+
+            // Bundle products: fall back to first component product's image
+            if (!$fallbackImagePath
+                && Schema::hasTable('product_bundle_items')
+                && $product->bundleItems()->exists()) {
+                $firstBundleItem = $product->bundleItems()->with('componentProduct')->first();
+                $componentProduct = $firstBundleItem?->componentProduct;
+                if ($componentProduct) {
+                    $componentResolved = $componentProduct->image_url;
+                    if (!empty($componentResolved)) {
+                        $imageUrl = $componentResolved;
+                        $imageSrc = $componentProduct->image_src;
+                        $fallbackImagePath = $componentProduct->image;
+                    }
+                }
+            }
+        }
+
+        if ($fallbackImagePath && empty($product->image)) {
+            $product->setAttribute('image', $fallbackImagePath);
+        }
+        $product->setAttribute('image_url', $imageUrl);
+        $product->setAttribute('image_src', $imageSrc);
         $product->setAttribute('has_variants', $hasVariants);
         $product->setAttribute('variant_count', $activeVariants->count());
 
