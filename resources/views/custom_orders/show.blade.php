@@ -632,15 +632,22 @@
                                                 {!! $firstPattern->getSvgContent() !!}
                                             </div>
                                         </div>
-                                    @elseif(!empty($item->design_upload))
+                                    @elseif(!empty($item->display_primary_reference_image) || !empty($item->design_upload))
                                         @php
-                                            $itemDesignPath = $item->design_upload;
-                                            if (str_starts_with($itemDesignPath, 'http://') || str_starts_with($itemDesignPath, 'https://') || str_starts_with($itemDesignPath, 'data:image')) {
-                                                $itemDesignUrl = $itemDesignPath;
-                                            } elseif (str_starts_with($itemDesignPath, 'storage/')) {
-                                                $itemDesignUrl = asset($itemDesignPath);
-                                            } else {
-                                                $itemDesignUrl = asset('storage/' . ltrim($itemDesignPath, '/'));
+                                            $itemDesignUrl = $item->display_primary_reference_image ?? null;
+                                            if (!$itemDesignUrl && !empty($item->design_upload)) {
+                                                $itemDesignPath = $item->design_upload;
+                                                if (str_starts_with($itemDesignPath, 'http://') || str_starts_with($itemDesignPath, 'https://') || str_starts_with($itemDesignPath, 'data:image')) {
+                                                    $itemDesignUrl = $itemDesignPath;
+                                                } elseif (str_starts_with($itemDesignPath, 'storage/')) {
+                                                    $itemDesignUrl = asset($itemDesignPath);
+                                                } elseif (str_starts_with($itemDesignPath, 'chat-image/')) {
+                                                    $itemDesignUrl = url('/' . ltrim($itemDesignPath, '/'));
+                                                } elseif (str_starts_with($itemDesignPath, 'chats/') || str_starts_with($itemDesignPath, 'payments/')) {
+                                                    $itemDesignUrl = url('/chat-image/' . ltrim($itemDesignPath, '/'));
+                                                } else {
+                                                    $itemDesignUrl = asset('storage/' . ltrim($itemDesignPath, '/'));
+                                                }
                                             }
                                         @endphp
                                         <img src="{{ $itemDesignUrl }}" alt="Order #{{ $item->id }} preview" class="mt-2 w-16 h-16 rounded-md border object-cover" style="border-color:#e0b0b0;" />
@@ -649,7 +656,7 @@
 
                                 <div>
                                     <p class="text-xs text-gray-500 mb-0.5">Fabric Type</p>
-                                    <p class="font-semibold text-gray-900">{{ $item->fabric_type_name ?? ($item->fabric_type ?? 'N/A') }}</p>
+                                    <p class="font-semibold text-gray-900">{{ $item->display_fabric_label ?? ($item->fabric_type_name ?? ($item->fabric_type ?? 'N/A')) }}</p>
                                 </div>
                                 <div>
                                     <p class="text-xs text-gray-500 mb-0.5">Intended Use</p>
@@ -657,7 +664,7 @@
                                 </div>
                                 <div>
                                     <p class="text-xs text-gray-500 mb-0.5">Quantity</p>
-                                    <p class="font-semibold text-gray-900">{{ $item->formatted_fabric_quantity ?? (($item->quantity ?? 1) . ' unit' . (($item->quantity ?? 1) > 1 ? 's' : '')) }}</p>
+                                    <p class="font-semibold text-gray-900">{{ $item->display_quantity_label ?? ($item->formatted_fabric_quantity ?? (($item->quantity ?? 1) . ' unit' . (($item->quantity ?? 1) > 1 ? 's' : ''))) }}</p>
                                 </div>
                                 <div>
                                     <p class="text-xs text-gray-500 mb-0.5">Est. Price</p>
@@ -702,15 +709,20 @@
                                                 </div>
                                             @else
                                                 @php
-                                                    $detailDesignPath = $item->design_upload;
-                                                    if ($detailDesignPath && (str_starts_with($detailDesignPath, 'http://') || str_starts_with($detailDesignPath, 'https://') || str_starts_with($detailDesignPath, 'data:image'))) {
-                                                        $detailDesignUrl = $detailDesignPath;
-                                                    } elseif ($detailDesignPath && str_starts_with($detailDesignPath, 'storage/')) {
-                                                        $detailDesignUrl = asset($detailDesignPath);
-                                                    } elseif ($detailDesignPath) {
-                                                        $detailDesignUrl = asset('storage/' . ltrim($detailDesignPath, '/'));
-                                                    } else {
-                                                        $detailDesignUrl = null;
+                                                    $detailDesignUrl = $item->display_primary_reference_image ?? null;
+                                                    if (!$detailDesignUrl) {
+                                                        $detailDesignPath = $item->design_upload;
+                                                        if ($detailDesignPath && (str_starts_with($detailDesignPath, 'http://') || str_starts_with($detailDesignPath, 'https://') || str_starts_with($detailDesignPath, 'data:image'))) {
+                                                            $detailDesignUrl = $detailDesignPath;
+                                                        } elseif ($detailDesignPath && str_starts_with($detailDesignPath, 'storage/')) {
+                                                            $detailDesignUrl = asset($detailDesignPath);
+                                                        } elseif ($detailDesignPath && str_starts_with($detailDesignPath, 'chat-image/')) {
+                                                            $detailDesignUrl = url('/' . ltrim($detailDesignPath, '/'));
+                                                        } elseif ($detailDesignPath && (str_starts_with($detailDesignPath, 'chats/') || str_starts_with($detailDesignPath, 'payments/'))) {
+                                                            $detailDesignUrl = url('/chat-image/' . ltrim($detailDesignPath, '/'));
+                                                        } elseif ($detailDesignPath) {
+                                                            $detailDesignUrl = asset('storage/' . ltrim($detailDesignPath, '/'));
+                                                        }
                                                     }
                                                 @endphp
                                                 @if($detailDesignUrl)
@@ -844,15 +856,22 @@
                                         {!! $singlePrimaryPattern->getSvgContent() !!}
                                     </div>
                                 </div>
-                            @elseif(!empty($order->design_upload))
+                            @elseif(!empty($order->display_primary_reference_image) || !empty($order->design_upload))
                                 @php
-                                    $singleDesignPath = $order->design_upload;
-                                    if (str_starts_with($singleDesignPath, 'http://') || str_starts_with($singleDesignPath, 'https://') || str_starts_with($singleDesignPath, 'data:image')) {
-                                        $singleDesignUrl = $singleDesignPath;
-                                    } elseif (str_starts_with($singleDesignPath, 'storage/')) {
-                                        $singleDesignUrl = asset($singleDesignPath);
-                                    } else {
-                                        $singleDesignUrl = asset('storage/' . ltrim($singleDesignPath, '/'));
+                                    $singleDesignUrl = $order->display_primary_reference_image ?? null;
+                                    if (!$singleDesignUrl && !empty($order->design_upload)) {
+                                        $singleDesignPath = $order->design_upload;
+                                        if (str_starts_with($singleDesignPath, 'http://') || str_starts_with($singleDesignPath, 'https://') || str_starts_with($singleDesignPath, 'data:image')) {
+                                            $singleDesignUrl = $singleDesignPath;
+                                        } elseif (str_starts_with($singleDesignPath, 'storage/')) {
+                                            $singleDesignUrl = asset($singleDesignPath);
+                                        } elseif (str_starts_with($singleDesignPath, 'chat-image/')) {
+                                            $singleDesignUrl = url('/' . ltrim($singleDesignPath, '/'));
+                                        } elseif (str_starts_with($singleDesignPath, 'chats/') || str_starts_with($singleDesignPath, 'payments/')) {
+                                            $singleDesignUrl = url('/chat-image/' . ltrim($singleDesignPath, '/'));
+                                        } else {
+                                            $singleDesignUrl = asset('storage/' . ltrim($singleDesignPath, '/'));
+                                        }
                                     }
                                 @endphp
                                 <img src="{{ $singleDesignUrl }}" alt="Order #{{ $order->id }} preview" class="mt-2 w-16 h-16 rounded-md border object-cover" style="border-color:#e0b0b0;" />
@@ -861,11 +880,11 @@
 
                         <div>
                             <p class="text-xs text-gray-500 mb-0.5">Fabric Type</p>
-                            <p class="font-semibold text-gray-900">{{ $order->fabric_type_name ?? ($order->fabric_type ?? 'N/A') }}</p>
+                            <p class="font-semibold text-gray-900">{{ $order->display_fabric_label ?? ($order->fabric_type_name ?? ($order->fabric_type ?? 'N/A')) }}</p>
                         </div>
                         <div>
                             <p class="text-xs text-gray-500 mb-0.5">Quantity</p>
-                            <p class="font-semibold text-gray-900">{{ $order->formatted_fabric_quantity ?? (($order->quantity ?? 1) . ' unit' . (($order->quantity ?? 1) > 1 ? 's' : '')) }}</p>
+                            <p class="font-semibold text-gray-900">{{ $order->display_quantity_label ?? ($order->formatted_fabric_quantity ?? (($order->quantity ?? 1) . ' unit' . (($order->quantity ?? 1) > 1 ? 's' : ''))) }}</p>
                         </div>
                         <div>
                             <p class="text-xs text-gray-500 mb-0.5">Est. Price</p>
@@ -904,15 +923,20 @@
                                         </div>
                                     @else
                                         @php
-                                            $singleDetailDesignPath = $order->design_upload;
-                                            if ($singleDetailDesignPath && (str_starts_with($singleDetailDesignPath, 'http://') || str_starts_with($singleDetailDesignPath, 'https://') || str_starts_with($singleDetailDesignPath, 'data:image'))) {
-                                                $singleDetailDesignUrl = $singleDetailDesignPath;
-                                            } elseif ($singleDetailDesignPath && str_starts_with($singleDetailDesignPath, 'storage/')) {
-                                                $singleDetailDesignUrl = asset($singleDetailDesignPath);
-                                            } elseif ($singleDetailDesignPath) {
-                                                $singleDetailDesignUrl = asset('storage/' . ltrim($singleDetailDesignPath, '/'));
-                                            } else {
-                                                $singleDetailDesignUrl = null;
+                                            $singleDetailDesignUrl = $order->display_primary_reference_image ?? null;
+                                            if (!$singleDetailDesignUrl) {
+                                                $singleDetailDesignPath = $order->design_upload;
+                                                if ($singleDetailDesignPath && (str_starts_with($singleDetailDesignPath, 'http://') || str_starts_with($singleDetailDesignPath, 'https://') || str_starts_with($singleDetailDesignPath, 'data:image'))) {
+                                                    $singleDetailDesignUrl = $singleDetailDesignPath;
+                                                } elseif ($singleDetailDesignPath && str_starts_with($singleDetailDesignPath, 'storage/')) {
+                                                    $singleDetailDesignUrl = asset($singleDetailDesignPath);
+                                                } elseif ($singleDetailDesignPath && str_starts_with($singleDetailDesignPath, 'chat-image/')) {
+                                                    $singleDetailDesignUrl = url('/' . ltrim($singleDetailDesignPath, '/'));
+                                                } elseif ($singleDetailDesignPath && (str_starts_with($singleDetailDesignPath, 'chats/') || str_starts_with($singleDetailDesignPath, 'payments/'))) {
+                                                    $singleDetailDesignUrl = url('/chat-image/' . ltrim($singleDetailDesignPath, '/'));
+                                                } elseif ($singleDetailDesignPath) {
+                                                    $singleDetailDesignUrl = asset('storage/' . ltrim($singleDetailDesignPath, '/'));
+                                                }
                                             }
                                         @endphp
                                         @if($singleDetailDesignUrl)
@@ -1142,7 +1166,7 @@
                 @endif
 
                 <!-- Design Upload Card -->
-                @if(!$isBatchOrder && $order->design_upload)
+                @if(!$isBatchOrder && (!empty($order->display_primary_reference_image) || $order->design_upload))
                 <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 hover:shadow-2xl transition-shadow duration-300">
                     <div class="px-6 py-4" style="background-color:#800000;">
                         <h2 class="text-xl font-bold text-white flex items-center">
@@ -1156,15 +1180,22 @@
                     </div>
                     <div class="p-6">
                         @php
-                            $designPath = $order->design_upload;
-                            if (str_starts_with($designPath, 'http://') || str_starts_with($designPath, 'https://')) {
-                                $fullDesignUrl = $designPath; // Cloudinary URL
-                            } elseif (str_starts_with($designPath, 'data:image')) {
-                                $fullDesignUrl = $designPath; // Data URL
-                            } elseif (str_starts_with($designPath, 'storage/')) {
-                                $fullDesignUrl = asset($designPath); // Already has storage/ prefix
-                            } else {
-                                $fullDesignUrl = asset('storage/' . ltrim($designPath, '/')); // Add storage/ prefix
+                            $fullDesignUrl = $order->display_primary_reference_image ?? null;
+                            if (!$fullDesignUrl && !empty($order->design_upload)) {
+                                $designPath = $order->design_upload;
+                                if (str_starts_with($designPath, 'http://') || str_starts_with($designPath, 'https://')) {
+                                    $fullDesignUrl = $designPath;
+                                } elseif (str_starts_with($designPath, 'data:image')) {
+                                    $fullDesignUrl = $designPath;
+                                } elseif (str_starts_with($designPath, 'storage/')) {
+                                    $fullDesignUrl = asset($designPath);
+                                } elseif (str_starts_with($designPath, 'chat-image/')) {
+                                    $fullDesignUrl = url('/' . ltrim($designPath, '/'));
+                                } elseif (str_starts_with($designPath, 'chats/') || str_starts_with($designPath, 'payments/')) {
+                                    $fullDesignUrl = url('/chat-image/' . ltrim($designPath, '/'));
+                                } else {
+                                    $fullDesignUrl = asset('storage/' . ltrim($designPath, '/'));
+                                }
                             }
                         @endphp
                         <img src="{{ $fullDesignUrl }}" 
@@ -2038,16 +2069,22 @@
                     </div>
                 </div>
 
-            {{-- Delivered Status - Waiting for Customer Confirmation --}}
-            @elseif($order->status === 'delivered')
+            {{-- Delivered/Out For Delivery - Waiting for Customer Confirmation --}}
+            @elseif(in_array($order->status, ['out_for_delivery', 'delivered'], true))
                 <div class="w-full rounded-2xl p-8 text-center shadow-lg border-2" style="background-color:#fff5f5; border-color:#e0b0b0;">
                     <div class="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center shadow-md" style="background-color:#800000;">
                         <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
                         </svg>
                     </div>
-                    <h3 class="text-2xl font-bold mb-2" style="color:#800000;">📦 Order Delivered!</h3>
-                    <p class="text-gray-700 mb-6 max-w-md mx-auto">Your order has been delivered. Please confirm that you've received it.</p>
+                    <h3 class="text-2xl font-bold mb-2" style="color:#800000;">
+                        {{ $order->status === 'out_for_delivery' ? '🚚 Out for Delivery' : '📦 Order Delivered!' }}
+                    </h3>
+                    <p class="text-gray-700 mb-6 max-w-md mx-auto">
+                        {{ $order->status === 'out_for_delivery'
+                            ? 'If you already received your custom order, please confirm below so the order can be completed.'
+                            : "Your order has been delivered. Please confirm that you've received it." }}
+                    </p>
                     @if($order->final_price)
                     <div class="bg-white rounded-xl p-4 border-2 mb-6 inline-block" style="border-color:#e0b0b0;">
                         <p class="text-sm text-gray-600 mb-1">Total Paid</p>
@@ -2063,7 +2100,7 @@
                             Confirm Order Received
                         </button>
                     </form>
-                    <p class="mt-4 text-xs text-gray-600">Click to confirm you've received your order</p>
+                    <p class="mt-4 text-xs text-gray-600">Confirming receipt marks this order complete and enables refund request options.</p>
                 </div>
 
             {{-- Completed Status - Order Received by Customer --}}
@@ -2155,7 +2192,7 @@
                     @endif
                 </div>
             </div>
-            @elseif($order->status === 'completed')
+            @elseif(in_array($order->status, ['completed', 'delivered', 'out_for_delivery'], true))
             <div id="custom-refund-section" class="mt-8 bg-white rounded-xl shadow-md border border-gray-200 p-6">
                 <div class="flex items-center gap-3 mb-4">
                     <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color:#800000;">
@@ -2379,6 +2416,11 @@
                         <p class="text-sm font-semibold text-red-700">Refund/return window expired</p>
                         <p class="text-sm text-red-700 mt-1">Requests are only allowed within {{ $customRefundWarrantyDays ?? 7 }} days after completion.</p>
                     </div>
+                @else
+                    <div class="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                        <p class="text-sm font-semibold text-blue-800">Refund request unlocks after receipt confirmation</p>
+                        <p class="text-sm text-blue-700 mt-1">Please click <span class="font-semibold">Confirm Order Received</span> first, then the refund request button will appear here just like product orders.</p>
+                    </div>
                 @endif
             </div>
             @endif
@@ -2400,15 +2442,21 @@
                     </svg>
                     Back to Orders
                 </a>
-                @if($order->design_upload)
+                @if(!empty($order->display_primary_reference_image) || $order->design_upload)
                 @php
-                    // Use same logic for download button
-                    if (str_starts_with($order->design_upload, 'data:image')) {
-                        $downloadUrl = $order->design_upload;
-                    } elseif (str_starts_with($order->design_upload, 'custom_orders/')) {
-                        $downloadUrl = asset('uploads/' . $order->design_upload);
-                    } else {
-                        $downloadUrl = asset('storage/' . $order->design_upload);
+                    $downloadUrl = $order->display_primary_reference_image ?? null;
+                    if (!$downloadUrl && !empty($order->design_upload)) {
+                        if (str_starts_with($order->design_upload, 'data:image')) {
+                            $downloadUrl = $order->design_upload;
+                        } elseif (str_starts_with($order->design_upload, 'chat-image/')) {
+                            $downloadUrl = url('/' . ltrim($order->design_upload, '/'));
+                        } elseif (str_starts_with($order->design_upload, 'chats/') || str_starts_with($order->design_upload, 'payments/')) {
+                            $downloadUrl = url('/chat-image/' . ltrim($order->design_upload, '/'));
+                        } elseif (str_starts_with($order->design_upload, 'custom_orders/')) {
+                            $downloadUrl = asset('uploads/' . $order->design_upload);
+                        } else {
+                            $downloadUrl = asset('storage/' . $order->design_upload);
+                        }
                     }
                 @endphp
                 <a href="{{ $downloadUrl }}" 

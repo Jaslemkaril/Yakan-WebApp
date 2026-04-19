@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Mail\CustomOrder\PaymentReceipt as CustomOrderPaymentReceipt;
+use App\Models\ChatMessage;
 use App\Models\CustomOrder;
 use App\Models\CustomOrderRefundRequest;
 use App\Models\Product;
@@ -512,6 +513,220 @@ class CustomOrderController extends Controller
         return $orders->isNotEmpty()
             ? $orders
             : CustomOrder::where('id', $order->id)->get();
+    }
+
+    private function normalizeCustomOrderReferenceImage(string $rawValue): ?string
+    {
+        $candidate = trim($rawValue);
+        if ($candidate === '' || strtolower($candidate) === 'null' || $candidate === '-') {
+            return null;
+        }
+
+        if (
+            str_starts_with($candidate, 'http://') ||
+            str_starts_with($candidate, 'https://') ||
+            str_starts_with($candidate, 'data:image')
+        ) {
+            return $candidate;
+        }
+
+        $candidate = ltrim($candidate, '/');
+        if ($candidate === '') {
+            return null;
+        }
+
+        if (str_starts_with($candidate, 'chat-image/')) {
+            return url('/' . $candidate);
+        }
+
+        if (str_starts_with($candidate, 'chats/') || str_starts_with($candidate, 'payments/')) {
+            return url('/chat-image/' . $candidate);
+        }
+
+        if (str_starts_with($candidate, 'storage/')) {
+            return asset($candidate);
+        }
+
+        if (str_starts_with($candidate, 'custom_orders/') || str_starts_with($candidate, 'custom_designs/')) {
+            return asset('storage/' . $candidate);
+        }
+
+        return asset('storage/' . $candidate);
+    }
+
+    private function extractCustomOrderSpecField(?string $specifications, string $field): ?string
+    {
+        if (empty($specifications)) {
+            return null;
+        }
+
+        $pattern = '/^\s*' . preg_quote($field, '/') . '\s*:\s*(.+)$/mi';
+        if (preg_match($pattern, (string) $specifications, $matches)) {
+            $value = trim((string) ($matches[1] ?? ''));
+            return $value !== '' ? $value : null;
+        }
+
+        return null;
+    }
+
+    private function extractReferenceImagesFromSpecifications(?string $specifications): array
+    {
+        if (empty($specifications)) {
+            return [];
+        }
+
+        $lines = preg_split('/\r\n|\r|\n/', (string) $specifications) ?: [];
+        $images = [];
+
+        foreach ($lines as $line) {
+            $trimmed = trim((string) $line);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            if (preg_match('/^-\s*image\s*\d*\s*:\s*(.+)$/i', $trimmed, $matches)) {
+                $candidate = trim((string) ($matches[1] ?? ''));
+                if ($candidate !== '') {
+                    $images[] = $candidate;
+                }
+            }
+        }
+
+        return $images;
+    }
+
+    private function resolveCustomOrderReferenceImages(CustomOrder $order): array
+    {
+        $candidates = [];
+
+        if (!empty($order->design_upload)) {
+            $rawUploads = is_string($order->design_upload)
+                ? explode(',', $order->design_upload)
+                : (array) $order->design_upload;
+
+            foreach ($rawUploads as $upload) {
+                $candidate = trim((string) $upload);
+                if ($candidate !== '') {
+                    $candidates[] = $candidate;
+                }
+            }
+        }
+
+        $candidates = array_merge(
+            $candidates,
+            $this->extractReferenceImagesFromSpecifications($order->specifications ?? null)
+        );
+
+        $resolved = [];
+        $seen = [];
+
+        $appendImage = function (string $candidate) use (&$resolved, &$seen) {
+            $normalized = $this->normalizeCustomOrderReferenceImage($candidate);
+            if (!$normalized || isset($seen[$normalized])) {
+                return;
+            }
+
+            $seen[$normalized] = true;
+            $resolved[] = $normalized;
+        };
+
+        foreach ($candidates as $candidate) {
+            $appendImage((string) $candidate);
+        }
+
+        if (empty($resolved) && !empty($order->chat_id)) {
+            $chatImageMessages = ChatMessage::query()
+                ->where('chat_id', $order->chat_id)
+                ->where('sender_type', 'user')
+                ->whereNotNull('image_path')
+                ->where(function ($query) {
+                    $query->whereNull('message')
+                        ->orWhere('message', 'not like', '%Payment proof%');
+                })
+                ->orderBy('id')
+                ->get(['image_path', 'form_data', 'created_at']);
+
+            foreach ($chatImageMessages as $chatImageMessage) {
+                if (
+                    $order->created_at &&
+                    $chatImageMessage->created_at &&
+                    $chatImageMessage->created_at->gt($order->created_at->copy()->addMinutes(10))
+                ) {
+                    continue;
+                }
+
+                $inlineImage = data_get($chatImageMessage->form_data, 'inline_image_data');
+                if (is_string($inlineImage) && $inlineImage !== '') {
+                    $appendImage($inlineImage);
+                }
+
+                $imagePath = trim((string) ($chatImageMessage->image_path ?? ''));
+                if ($imagePath !== '') {
+                    $appendImage($imagePath);
+                }
+            }
+        }
+
+        return array_values(array_slice($resolved, 0, 6));
+    }
+
+    private function resolveCustomOrderFabricLabel(CustomOrder $order): string
+    {
+        $relationshipName = $order->fabricType?->name;
+        if (is_string($relationshipName) && trim($relationshipName) !== '') {
+            return $relationshipName;
+        }
+
+        $fabricTypeName = (string) ($order->fabric_type_name ?? '');
+        if ($fabricTypeName !== '' && strtolower($fabricTypeName) !== 'unknown') {
+            return $fabricTypeName;
+        }
+
+        $specFabricType = $this->extractCustomOrderSpecField($order->specifications ?? null, 'Fabric Type');
+        if (!empty($specFabricType)) {
+            return $specFabricType;
+        }
+
+        if (!empty($order->product_type)) {
+            return ucwords(str_replace('_', ' ', (string) $order->product_type));
+        }
+
+        return 'Unknown';
+    }
+
+    private function resolveCustomOrderQuantityLabel(CustomOrder $order): string
+    {
+        $meters = (float) ($order->fabric_quantity_meters ?? 0);
+        if ($meters > 0) {
+            return number_format($meters, 2) . ' meters';
+        }
+
+        $specQuantity = $this->extractCustomOrderSpecField($order->specifications ?? null, 'Quantity');
+        if (!empty($specQuantity)) {
+            return $specQuantity;
+        }
+
+        $quantity = (int) ($order->quantity ?? 0);
+        if ($quantity > 0) {
+            if (!empty($order->chat_id)) {
+                return number_format((float) $quantity, 2) . ' meters';
+            }
+
+            return $quantity . ' unit' . ($quantity > 1 ? 's' : '');
+        }
+
+        return 'N/A';
+    }
+
+    private function attachCustomOrderDisplayMetadata(\Illuminate\Support\Collection $orders): void
+    {
+        $orders->each(function (CustomOrder $item) {
+            $images = $this->resolveCustomOrderReferenceImages($item);
+            $item->setAttribute('display_reference_images', $images);
+            $item->setAttribute('display_primary_reference_image', $images[0] ?? null);
+            $item->setAttribute('display_fabric_label', $this->resolveCustomOrderFabricLabel($item));
+            $item->setAttribute('display_quantity_label', $this->resolveCustomOrderQuantityLabel($item));
+        });
     }
 
     /**
@@ -2905,6 +3120,9 @@ class CustomOrderController extends Controller
             $this->autoConfirmPatternOrders($batchOrders);
             $order->refresh();
             $batchOrders = $this->getUserBatchOrders($order, Auth::id());
+
+            $this->attachCustomOrderDisplayMetadata(collect([$order]));
+            $this->attachCustomOrderDisplayMetadata($batchOrders);
 
             $isBatchOrder = $batchOrders->count() > 1;
             $batchPaymentTotal = $this->calculateOrdersTotalWithShipping(
@@ -5388,17 +5606,19 @@ class CustomOrderController extends Controller
             abort(403, 'Unauthorized action.');
         }
         
-        // Check if order is delivered
-        if ($order->status !== 'delivered') {
+        // Check if order has reached customer-delivery stage
+        if (!in_array($order->status, ['out_for_delivery', 'delivered'], true)) {
             return $this->redirectToRouteWithToken('custom_orders.show', $order)
-                ->with('error', 'This order is not marked as delivered yet.');
+                ->with('error', 'This order is not ready for receipt confirmation yet.');
         }
         
         try {
+            if (empty($order->delivered_at)) {
+                $order->delivered_at = now();
+            }
+
             // Update status to completed
             $order->status = 'completed';
-            // Note: delivered_at was already set when admin marked it as delivered
-            // We could add a separate completed_at field, but for now we'll just update status
             $order->save();
             
             \Log::info('Customer confirmed order received', [
