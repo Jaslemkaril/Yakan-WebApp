@@ -13,6 +13,24 @@ use Illuminate\Support\Facades\Storage;
 
 class ChatPaymentController extends Controller
 {
+    private function buildChatImageUrl(string $folder, string $filename): string
+    {
+        $folder = trim($folder, '/');
+        $filename = ltrim($filename, '/');
+
+        try {
+            return route('chat.image', ['folder' => $folder, 'filename' => $filename]);
+        } catch (\Throwable $e) {
+            \Log::warning('chat.image route unavailable, using direct URL fallback', [
+                'folder' => $folder,
+                'filename' => $filename,
+                'error' => $e->getMessage(),
+            ]);
+
+            return url('/chat-image/' . rawurlencode($folder) . '/' . rawurlencode($filename));
+        }
+    }
+
     /**
      * Admin sends payment request to user in chat
      */
@@ -91,7 +109,7 @@ class ChatPaymentController extends Controller
                         mkdir($dir, 0755, true);
                     }
                     $file->move($dir, $filename);
-                    $storedPath = route('chat.image', ['folder' => 'payments', 'filename' => $filename]);
+                    $storedPath = $this->buildChatImageUrl('payments', $filename);
                     \Log::info('Payment proof uploaded to local storage', [
                         'url' => $storedPath,
                         'payment_id' => $payment->id,

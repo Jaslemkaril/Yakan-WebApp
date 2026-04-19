@@ -13,6 +13,24 @@ use Illuminate\Support\Facades\Storage;
 
 class ChatController extends Controller
 {
+    private function buildChatImageUrl(string $folder, string $filename): string
+    {
+        $folder = trim($folder, '/');
+        $filename = ltrim($filename, '/');
+
+        try {
+            return route('chat.image', ['folder' => $folder, 'filename' => $filename]);
+        } catch (\Throwable $e) {
+            \Log::warning('chat.image route unavailable, using direct URL fallback', [
+                'folder' => $folder,
+                'filename' => $filename,
+                'error' => $e->getMessage(),
+            ]);
+
+            return url('/chat-image/' . rawurlencode($folder) . '/' . rawurlencode($filename));
+        }
+    }
+
     private function calculateCanonicalShippingFeeFromAddress(?UserAddress $address): float
     {
         if (!$address) {
@@ -377,7 +395,7 @@ class ChatController extends Controller
                         mkdir($dir, 0755, true);
                     }
                     $image->move($dir, $filename);
-                    $storedPath = route('chat.image', ['folder' => 'chats', 'filename' => $filename]);
+                    $storedPath = $this->buildChatImageUrl('chats', $filename);
                     \Log::info('Chat image uploaded to local storage', [
                         'url' => $storedPath,
                         'chat_id' => $chat->id,
@@ -469,7 +487,7 @@ class ChatController extends Controller
                         mkdir($dir, 0755, true);
                     }
                     $image->move($dir, $filename);
-                    $storedPath = route('chat.image', ['folder' => 'chats', 'filename' => $filename]);
+                    $storedPath = $this->buildChatImageUrl('chats', $filename);
                     \Log::info('Chat image uploaded to local storage', [
                         'url' => $storedPath,
                         'chat_id' => $chat->id,
