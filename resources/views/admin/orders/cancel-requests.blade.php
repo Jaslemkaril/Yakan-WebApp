@@ -46,6 +46,22 @@
     .cancel-badge-rejected {
         @apply bg-rose-100 text-rose-700;
     }
+
+    .payment-badge {
+        @apply px-3 py-1 rounded-full text-xs font-semibold;
+    }
+
+    .payment-badge-paid {
+        @apply bg-emerald-100 text-emerald-700;
+    }
+
+    .payment-badge-pending {
+        @apply bg-orange-100 text-orange-700;
+    }
+
+    .payment-badge-unpaid {
+        @apply bg-gray-100 text-gray-600;
+    }
 </style>
 @endpush
 
@@ -132,6 +148,7 @@
                             <th class="px-4 py-3 text-left font-semibold text-gray-600">Order</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-600">Customer</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-600">Amount</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-600">Payment Status</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-600">Reason</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-600">Date</th>
                             <th class="px-4 py-3 text-left font-semibold text-gray-600">Status</th>
@@ -179,6 +196,8 @@
                                     'customer' => $order->user->name ?? $order->customer_name ?? 'N/A',
                                     'refund_amount' => number_format((float) ($order->total_amount ?? $order->total ?? 0), 2),
                                     'payment_method' => ucfirst(str_replace('_', ' ', (string) ($order->payment_method ?? 'N/A'))),
+                                    'payment_status' => $paymentBadgeText,
+                                    'payment_status_class' => $paymentBadgeClass,
                                     'order_status' => ucfirst(str_replace('_', ' ', (string) ($order->status ?? 'N/A'))),
                                     'cancel_reason' => $reason,
                                     'customer_note' => $customerNote !== '' ? $customerNote : 'No customer note provided.',
@@ -187,11 +206,27 @@
                                     'approve_url' => route('admin.orders.cancel_requests.approve', $order),
                                     'reject_url' => route('admin.orders.cancel_requests.reject', $order),
                                 ];
+
+                                // Determine payment status badge
+                                $paymentStatus = strtolower((string) ($order->payment_status ?? 'pending'));
+                                $paymentBadgeClass = 'payment-badge-pending';
+                                $paymentBadgeText = 'Pending';
+                                
+                                if (in_array($paymentStatus, ['paid', 'completed', 'verified'], true)) {
+                                    $paymentBadgeClass = 'payment-badge-paid';
+                                    $paymentBadgeText = 'Paid';
+                                } elseif (in_array($paymentStatus, ['unpaid', 'failed', 'cancelled'], true)) {
+                                    $paymentBadgeClass = 'payment-badge-unpaid';
+                                    $paymentBadgeText = 'Unpaid';
+                                }
                             @endphp
                             <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-4 py-3 font-semibold text-[#800000]">{{ $order->order_ref ?? ('#' . $order->id) }}</td>
                                 <td class="px-4 py-3">{{ $order->user->name ?? $order->customer_name ?? 'N/A' }}</td>
                                 <td class="px-4 py-3">P{{ number_format((float) ($order->total_amount ?? $order->total ?? 0), 2) }}</td>
+                                <td class="px-4 py-3">
+                                    <span class="payment-badge {{ $paymentBadgeClass }}">{{ $paymentBadgeText }}</span>
+                                </td>
                                 <td class="px-4 py-3" title="{{ $reason }}">{{ $reason }}</td>
                                 <td class="px-4 py-3">{{ optional($order->updated_at)->format('M d') }}</td>
                                 <td class="px-4 py-3">
@@ -215,7 +250,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-4 py-8 text-center text-gray-500">No cancellation requests found.</td>
+                                <td colspan="8" class="px-4 py-8 text-center text-gray-500">No cancellation requests found.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -254,6 +289,10 @@
                 <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
                     <p class="text-sm text-gray-500">Payment method</p>
                     <p id="modalPaymentMethod" class="text-lg font-semibold text-gray-900"></p>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <p class="text-sm text-gray-500">Payment status</p>
+                    <div id="modalPaymentStatus"></div>
                 </div>
                 <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
                     <p class="text-sm text-gray-500">Order status</p>
@@ -303,6 +342,7 @@
         const customerEl = document.getElementById('modalCustomer');
         const refundAmountEl = document.getElementById('modalRefundAmount');
         const paymentMethodEl = document.getElementById('modalPaymentMethod');
+        const paymentStatusEl = document.getElementById('modalPaymentStatus');
         const orderStatusEl = document.getElementById('modalOrderStatus');
         const cancelReasonEl = document.getElementById('modalCancelReason');
         const customerNoteEl = document.getElementById('modalCustomerNote');
@@ -336,6 +376,12 @@
             customerEl.textContent = payload.customer || 'N/A';
             refundAmountEl.textContent = 'P' + (payload.refund_amount || '0.00');
             paymentMethodEl.textContent = payload.payment_method || 'N/A';
+            
+            // Set payment status badge
+            const paymentStatusClass = payload.payment_status_class || 'payment-badge-pending';
+            const paymentStatusText = payload.payment_status || 'Pending';
+            paymentStatusEl.innerHTML = '<span class="payment-badge ' + paymentStatusClass + '">' + paymentStatusText + '</span>';
+            
             orderStatusEl.textContent = payload.order_status || 'N/A';
             cancelReasonEl.textContent = payload.cancel_reason || 'N/A';
             customerNoteEl.textContent = payload.customer_note || 'No customer note provided.';
