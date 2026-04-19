@@ -543,12 +543,6 @@
                             <a href="{{ route('password.request') }}" class="text-red-600 hover:text-red-700 font-medium text-sm link-hover inline-block">
                                 Forgot your password?
                             </a>
-                            <div class="mt-2 text-xs text-gray-500">
-                                Order staff?
-                                <a href="{{ route('staff.login.form') }}" class="text-red-600 hover:text-red-700 font-semibold">
-                                    Use staff login
-                                </a>
-                            </div>
                         </div>
 
                         <!-- Sign Up Link -->
@@ -571,6 +565,13 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 16l-4-4m4 4l4-4m-4 4V4M4 20h16" />
                                 </svg>
                                 Download Yakan Mobile App
+                            </a>
+                            <a href="{{ config('app.mobile_test_url') }}"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="download-app-btn mt-3"
+                               style="background: linear-gradient(135deg, #4b5563 0%, #374151 100%);">
+                                Open Preview Test Page
                             </a>
                             <p class="text-xs text-gray-400 mt-2">Free &bull; Android APK &bull; {{ config('app.mobile_app_version') }}</p>
                         </div>
