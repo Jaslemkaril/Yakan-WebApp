@@ -395,10 +395,19 @@ class ChatController extends Controller
             $orderNotes .= "\nFabric Type: " . $fabricType;
         }
 
+        // Only include actual URLs in specifications (not base64 data), to avoid exceeding column size
         if (!empty($designImages)) {
-            $orderNotes .= "\n\nDesign References:\n";
-            foreach ($designImages as $index => $imageUrl) {
-                $orderNotes .= '- Image ' . ($index + 1) . ': ' . $imageUrl . "\n";
+            $urlOnlyImages = array_filter($designImages, function($img) {
+                return !str_starts_with($img, 'data:image');
+            });
+            
+            if (!empty($urlOnlyImages)) {
+                $orderNotes .= "\n\nDesign References:\n";
+                foreach ($urlOnlyImages as $index => $imageUrl) {
+                    $orderNotes .= '- Image ' . ($index + 1) . ': ' . $imageUrl . "\n";
+                }
+            } else {
+                $orderNotes .= "\n\nDesign References: " . count($designImages) . " image(s) uploaded";
             }
         }
 
@@ -427,6 +436,28 @@ class ChatController extends Controller
                 . "\nTotal: ₱" . number_format($totalAmount, 2),
             'design_upload' => !empty($designImages) ? implode(',', $designImages) : null,
         ];
+
+        // Safety check: Truncate specifications if too long to prevent database errors
+        if (isset($payload['specifications']) && strlen($payload['specifications']) > 5000) {
+            $payload['specifications'] = substr($payload['specifications'], 0, 4950) . '... (truncated)';
+            \Log::warning('Order specifications truncated due to length', [
+                'chat_id' => $chat->id,
+                'original_length' => strlen($orderNotes)
+            ]);
+        }
+
+        // Safety check: Limit design_upload field to prevent database errors with large base64 images
+        if (isset($payload['design_upload']) && strlen($payload['design_upload']) > 60000) {
+            // If design_upload is too large (base64 images), only keep URLs
+            $keptImages = array_filter($designImages, function($img) {
+                return !str_starts_with($img, 'data:image') && strlen($img) < 500;
+            });
+            $payload['design_upload'] = !empty($keptImages) ? implode(',', $keptImages) : 'Images uploaded via chat';
+            \Log::warning('Design upload truncated - base64 images too large', [
+                'chat_id' => $chat->id,
+                'image_count' => count($designImages)
+            ]);
+        }
 
         $payload = $this->filterCustomOrderPayloadForExistingColumns($payload);
 
