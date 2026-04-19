@@ -91,6 +91,10 @@
 
 <!-- Hero Header -->
 <div class="chat-header-gradient py-16 relative">
+    @php
+        $chatAuthToken = request()->get('auth_token') ?? session('auth_token');
+        $createChatUrl = route('chats.create') . ($chatAuthToken ? '?auth_token=' . urlencode($chatAuthToken) : '');
+    @endphp
     <div class="max-w-6xl mx-auto px-4 relative z-10">
         <div class="flex justify-between items-center gap-6">
             <div class="flex items-center gap-4">
@@ -104,7 +108,7 @@
                     <p class="text-white/80 text-base">Bring your design ideas to life.</p>
                 </div>
             </div>
-            <a href="{{ route('chats.create') }}" class="bg-white text-[#800000] px-7 py-3.5 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl hover:scale-105">
+            <a href="{{ $createChatUrl }}" class="bg-white text-[#800000] px-7 py-3.5 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl hover:scale-105">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -117,11 +121,25 @@
 <!-- Chats Content -->
 <div class="bg-gray-50 min-h-screen py-12">
     <div class="max-w-6xl mx-auto px-4">
+        @if(session('error'))
+            <div class="bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-3 mb-6">
+                {{ session('error') }}
+            </div>
+        @endif
+        @if(session('success'))
+            <div class="bg-green-50 border border-green-200 text-green-800 rounded-lg px-4 py-3 mb-6">
+                {{ session('success') }}
+            </div>
+        @endif
+
         <!-- Chats List -->
         @if($chats->count() > 0)
             <div class="grid gap-5">
                 @foreach($chats as $chat)
-                    <a href="{{ route('chats.show', $chat) }}" class="group block chat-card transition-all duration-300 p-6">
+                    @php
+                        $chatShowUrl = route('chats.show', ['chat' => $chat->id]) . ($chatAuthToken ? '?auth_token=' . urlencode($chatAuthToken) : '');
+                    @endphp
+                    <a href="{{ $chatShowUrl }}" class="group block chat-card transition-all duration-300 p-6">
                         <div class="flex justify-between items-start gap-6">
                             <div class="flex-1 min-w-0">
                                 <!-- Chat Title -->
@@ -211,7 +229,7 @@
                 </div>
                 <h3 class="text-2xl font-bold text-gray-900 mb-3">No chats yet</h3>
                 <p class="text-gray-600 mb-8 text-base max-w-md mx-auto">Start a conversation to shape your custom order with us.</p>
-                <a href="{{ route('chats.create') }}" class="inline-flex items-center gap-2 maroon-btn px-8 py-4 rounded-xl font-semibold shadow-lg">
+                <a href="{{ $createChatUrl }}" class="inline-flex items-center gap-2 maroon-btn px-8 py-4 rounded-xl font-semibold shadow-lg">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                     </svg>

@@ -610,6 +610,16 @@ class ChatController extends Controller
      */
     public function show(Chat $chat)
     {
+        if (!auth()->check()) {
+            \Log::warning('ChatController show: unauthenticated access attempt', [
+                'chat_id' => $chat->id,
+                'has_token' => request()->has('auth_token') || session()->has('auth_token'),
+            ]);
+
+            return $this->redirectWithToken('login.user.form')
+                ->with('error', 'Please log in to open this chat.');
+        }
+
         try {
             \Log::info('ChatController show: Starting', [
                 'chat_id' => $chat->id,
@@ -625,7 +635,9 @@ class ChatController extends Controller
                     'auth_user_id' => auth()->id(),
                     'chat_user_id' => $chat->user_id
                 ]);
-                abort(403);
+
+                return $this->redirectWithToken('chats.index')
+                    ->with('error', 'You are not authorized to open that chat.');
             }
 
             // Mark messages as read
