@@ -881,9 +881,6 @@
                                 <!-- Price -->
                                 <div class="text-right flex-shrink-0">
                                     <p class="text-xs text-gray-600 mb-1">Subtotal</p>
-                                    @if($item->original_price && $item->original_price > $item->price)
-                                        <p class="text-sm text-gray-500 line-through">₱{{ number_format($item->original_price * $item->quantity, 2) }}</p>
-                                    @endif
                                     <p class="text-xl font-bold text-[#800000]">₱{{ number_format($item->price * $item->quantity, 2) }}</p>
                                 </div>
                             </div>
