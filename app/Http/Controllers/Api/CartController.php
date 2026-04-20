@@ -190,10 +190,18 @@ class CartController extends Controller
                                         'product_id' => $bundleItem->product_id,
                                         'quantity' => $bundleItem->quantity,
                                         'product' => [
-                            'id' => $bundleItem->componentProduct->id,
-                            'name' => $bundleItem->componentProduct->name,
-                            'image' => $bundleItem->componentProduct->image,
-                            'price' => (float) $bundleItem->componentProduct->price,
+                                            'id' => $bundleItem->componentProduct->id,
+                                            'name' => $bundleItem->componentProduct->name,
+                                            'image' => $bundleItem->componentProduct->image,
+                                            'price' => (float) $bundleItem->componentProduct->price,
+                                        ],
+                                    ];
+                                });
+                            }
+
+                            return [
+                                'id' => $item->id,
+                                'product_id' => $item->product_id,
                                 'variant_id' => $variant?->id,
                                 'quantity' => $item->quantity,
                                 'variant' => $variant ? [

@@ -246,7 +246,18 @@ class PaymongoPaymentController extends Controller
 
             if (!is_null($clientRequestedAmount)) {
                 $cap = $orderTotal > 0 ? $orderTotal : $clientRequestedAmount;
+                $originalClientAmount = $clientRequestedAmount;
                 $clientRequestedAmount = max(0, min($cap, $clientRequestedAmount));
+
+                if (abs($originalClientAmount - $clientRequestedAmount) > 0.01) {
+                    \Log::warning('[PaymongoCheckout] Client amount capped by server order total — possible price mismatch', [
+                        'order_id' => $order->id,
+                        'client_requested' => $originalClientAmount,
+                        'server_order_total' => $orderTotal,
+                        'capped_to' => $clientRequestedAmount,
+                        'client_total_amount' => $validated['total_amount'] ?? null,
+                    ]);
+                }
             }
 
             $isRequestedDownpayment = $requestedPaymentOption === 'downpayment';
