@@ -15,8 +15,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
-import API_CONFIG from '../config/config';
 import ApiService from '../services/api';
+import { getProductImageSource, pickProductImageValue } from '../utils/imageResolver';
 
 const { width } = Dimensions.get('window');
 
@@ -57,64 +57,8 @@ export default function ProductDetailScreen({ route, navigation }) {
   const hasActiveDiscount = effectiveOriginalPrice > effectivePrice;
   const effectiveStock = activeVariant ? Number(activeVariant.stock || 0) : Number(currentProduct?.stock || 0);
 
-  const resolveImageValue = (value) => {
-    if (!value) {
-      return null;
-    }
-
-    if (typeof value === 'object' && value.uri) {
-      return value;
-    }
-
-    if (typeof value !== 'string') {
-      return null;
-    }
-
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return null;
-    }
-
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:image')) {
-      return { uri: trimmed };
-    }
-
-    const baseUrl = API_CONFIG.API_BASE_URL.replace('/api/v1', '');
-    if (trimmed.startsWith('/uploads') || trimmed.startsWith('/storage')) {
-      return { uri: `${baseUrl}${trimmed}` };
-    }
-
-    if (trimmed.startsWith('uploads/') || trimmed.startsWith('storage/')) {
-      return { uri: `${baseUrl}/${trimmed}` };
-    }
-
-    return { uri: `${baseUrl}/uploads/products/${trimmed}` };
-  };
-
   const resolvePrimaryProductImage = () => {
-    const directResolved = [currentProduct?.image_url, currentProduct?.image_src, currentProduct?.image]
-      .map(resolveImageValue)
-      .find(Boolean);
-    if (directResolved) {
-      return directResolved;
-    }
-
-    const allImages = Array.isArray(currentProduct?.all_images)
-      ? currentProduct.all_images
-      : (typeof currentProduct?.all_images === 'string'
-          ? (() => {
-              try { return JSON.parse(currentProduct.all_images); } catch (_) { return []; }
-            })()
-          : []);
-    for (const img of allImages) {
-      const candidate = typeof img === 'string' ? img : (img?.path || img?.url || img?.image);
-      const resolved = resolveImageValue(candidate);
-      if (resolved) {
-        return resolved;
-      }
-    }
-
-    return null;
+    return getProductImageSource(currentProduct, selectedVariant || activeVariant || null);
   };
 
   const productImageSource = !imageLoadFailed
@@ -171,7 +115,7 @@ export default function ProductDetailScreen({ route, navigation }) {
 
   useEffect(() => {
     setImageLoadFailed(false);
-  }, [currentProduct?.id, currentProduct?.image, currentProduct?.image_url, currentProduct?.image_src]);
+  }, [currentProduct?.id, currentProduct?.image, currentProduct?.image_url, currentProduct?.image_src, selectedVariantId]);
 
   // Update isFavorite when product changes
   React.useEffect(() => {
@@ -262,7 +206,16 @@ export default function ProductDetailScreen({ route, navigation }) {
     }
 
     try {
-      await addToCart(currentProduct, quantity, selectedVariant);
+      const preferredImageValue = pickProductImageValue(currentProduct, selectedVariant || activeVariant || null);
+      const preferredImageUri = typeof preferredImageValue === 'object'
+        ? preferredImageValue?.uri
+        : preferredImageValue;
+      const productForCart = {
+        ...currentProduct,
+        image: preferredImageUri || currentProduct?.image,
+      };
+
+      await addToCart(productForCart, quantity, selectedVariant);
       Alert.alert('Success', `${currentProduct.name} added to cart!`, [
         { text: 'Continue Shopping', onPress: () => navigation.goBack() },
         { text: 'View Cart', onPress: () => navigation.navigate('Cart') },
@@ -292,6 +245,11 @@ export default function ProductDetailScreen({ route, navigation }) {
     }
 
     try {
+      const preferredImageValue = pickProductImageValue(currentProduct, selectedVariant || activeVariant || null);
+      const preferredImageUri = typeof preferredImageValue === 'object'
+        ? preferredImageValue?.uri
+        : preferredImageValue;
+
       // Set checkout items directly (bypasses cart), then go straight to Checkout
       const checkoutItem = {
         id: `buy-now-${currentProduct.id}-${selectedVariant?.id || 'base'}`,
@@ -304,7 +262,7 @@ export default function ProductDetailScreen({ route, navigation }) {
         original_price: effectiveOriginalPrice,
         has_product_discount: hasActiveDiscount,
         quantity: quantity,
-        image: currentProduct.image_url || currentProduct.image_src || currentProduct.image,
+        image: preferredImageUri || currentProduct.image_url || currentProduct.image_src || currentProduct.image,
         stock: effectiveStock,
       };
       setCheckoutItems([checkoutItem]);
@@ -346,7 +304,7 @@ export default function ProductDetailScreen({ route, navigation }) {
             resizeMode="cover"
             onError={(error) => {
               console.log('[ProductDetail] Image load error:', error);
-              console.log('[ProductDetail] Product image:', currentProduct.image_url || currentProduct.image_src || currentProduct.image);
+              console.log('[ProductDetail] Product image:', pickProductImageValue(currentProduct, selectedVariant || activeVariant || null));
               setImageLoadFailed(true);
             }}
           />

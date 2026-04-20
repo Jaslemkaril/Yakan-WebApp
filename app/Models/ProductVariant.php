@@ -88,14 +88,22 @@ class ProductVariant extends Model
 
         foreach (array_values(array_unique($candidates)) as $candidate) {
             $publicCandidate = ltrim($candidate, '/');
+            $normalizedCandidate = $publicCandidate;
+
+            // Public assets are served from /uploads or /storage, not bare /variants.
+            if (str_starts_with($normalizedCandidate, 'variants/')) {
+                $normalizedCandidate = 'uploads/' . $normalizedCandidate;
+            } elseif (str_starts_with($normalizedCandidate, 'product-variants/')) {
+                $normalizedCandidate = 'uploads/' . $normalizedCandidate;
+            } elseif (str_starts_with($normalizedCandidate, 'products/')) {
+                $normalizedCandidate = 'uploads/' . $normalizedCandidate;
+            }
+
             if (
-                str_starts_with($publicCandidate, 'uploads/')
-                || str_starts_with($publicCandidate, 'storage/')
-                || str_starts_with($publicCandidate, 'products/')
-                || str_starts_with($publicCandidate, 'variants/')
-                || str_starts_with($publicCandidate, 'product-variants/')
+                str_starts_with($normalizedCandidate, 'uploads/')
+                || str_starts_with($normalizedCandidate, 'storage/')
             ) {
-                return asset($publicCandidate);
+                return asset($normalizedCandidate);
             }
         }
 

@@ -14,6 +14,36 @@ use Illuminate\Support\Facades\Schema;
 
 class ProductController extends Controller
 {
+    private function isPlaceholderImage(?string $value): bool
+    {
+        if (!is_string($value) || trim($value) === '') {
+            return false;
+        }
+
+        $normalized = strtolower(trim($value));
+        return str_contains($normalized, '/images/no-image.svg')
+            || str_contains($normalized, '\\images\\no-image.svg')
+            || str_contains($normalized, '/images/yakanlogo.png')
+            || str_contains($normalized, '\\images\\yakanlogo.png');
+    }
+
+    private function resolveVariantImageUrl(ProductVariant $variant): ?string
+    {
+        $resolved = trim((string) ($variant->image_src ?? ''));
+
+        if ($resolved === '' || $this->isPlaceholderImage($resolved)) {
+            $rawPath = trim((string) ($variant->image ?? ''));
+            $fallback = $rawPath !== '' ? trim((string) storageAsset($rawPath)) : '';
+            if ($fallback !== '' && !$this->isPlaceholderImage($fallback)) {
+                $resolved = $fallback;
+            } else {
+                $resolved = '';
+            }
+        }
+
+        return $resolved !== '' ? $resolved : null;
+    }
+
     private function buildPriceMeta(Product $product, float $basePrice): array
     {
         $basePrice = max(0, $basePrice);
@@ -42,6 +72,7 @@ class ProductController extends Controller
     private function formatVariant(Product $product, ProductVariant $variant): array
     {
         $priceMeta = $this->buildPriceMeta($product, (float) $variant->price);
+        $variantImageUrl = $this->resolveVariantImageUrl($variant);
 
         return [
             'id' => $variant->id,
@@ -49,7 +80,8 @@ class ProductController extends Controller
             'size' => $variant->size,
             'color' => $variant->color,
             'image' => $variant->image,
-            'image_url' => $variant->image_src,
+            'image_url' => $variantImageUrl,
+            'image_src' => $variantImageUrl,
             'price' => $priceMeta['price'],
             'original_price' => $priceMeta['original_price'],
             'discount_amount' => $priceMeta['discount_amount'],
@@ -114,17 +146,23 @@ class ProductController extends Controller
         $product->setAttribute('discount_value', $priceMeta['has_product_discount'] ? (float) $product->discount_value : null);
         $productHasOwnImage = method_exists($product, 'hasImage') ? $product->hasImage() : !empty($product->image);
         $imageUrl = $product->image_url;
+        if ($this->isPlaceholderImage($imageUrl)) {
+            $imageUrl = null;
+        }
         $imageSrc = $product->image_src;
+        if ($this->isPlaceholderImage($imageSrc)) {
+            $imageSrc = null;
+        }
         $fallbackImagePath = null;
 
-        if (!$productHasOwnImage) {
+        if (!$productHasOwnImage || empty($imageUrl)) {
             // Variant products: fall back to first active variant's image
             if ($hasVariants) {
                 $variantWithImage = $activeVariants->first(function ($v) {
                     return !empty($v->image);
                 });
                 if ($variantWithImage) {
-                    $variantResolved = $variantWithImage->image_src;
+                    $variantResolved = $this->resolveVariantImageUrl($variantWithImage);
                     if ($variantResolved) {
                         $imageUrl = $variantResolved;
                         $imageSrc = $variantResolved;
@@ -141,13 +179,27 @@ class ProductController extends Controller
                 $componentProduct = $firstBundleItem?->componentProduct;
                 if ($componentProduct) {
                     $componentResolved = $componentProduct->image_url;
+                    if ($this->isPlaceholderImage($componentResolved)) {
+                        $componentResolved = $componentProduct->image_src;
+                    }
+                    if ($this->isPlaceholderImage($componentResolved)) {
+                        $componentResolved = null;
+                    }
                     if (!empty($componentResolved)) {
                         $imageUrl = $componentResolved;
-                        $imageSrc = $componentProduct->image_src;
+                        $imageSrc = $componentResolved;
                         $fallbackImagePath = $componentProduct->image;
                     }
                 }
             }
+        }
+
+        if (empty($imageUrl) && !empty($imageSrc)) {
+            $imageUrl = $imageSrc;
+        }
+
+        if (empty($imageSrc) && !empty($imageUrl)) {
+            $imageSrc = $imageUrl;
         }
 
         if ($fallbackImagePath && empty($product->image)) {

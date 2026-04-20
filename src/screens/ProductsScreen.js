@@ -14,11 +14,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import { useFocusEffect } from '@react-navigation/native';
 import ApiService from '../services/api';
-import API_CONFIG from '../config/config';
 import BottomNav from '../components/BottomNav';
 import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../context/ThemeContext';
 import colors from '../constants/colors';
+import { pickProductImageValue, resolveImageValueToSource } from '../utils/imageResolver';
 
 const ProductsScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,44 +60,6 @@ const ProductsScreen = ({ navigation }) => {
     return [];
   };
 
-  const resolveImageSource = (imageValue, productId) => {
-    if (failedProductImages[productId]) {
-      return require('../assets/images/Saputangan.jpg');
-    }
-
-    if (!imageValue) {
-      return require('../assets/images/Saputangan.jpg');
-    }
-
-    if (typeof imageValue === 'object' && imageValue.uri) {
-      return imageValue;
-    }
-
-    if (typeof imageValue !== 'string') {
-      return require('../assets/images/Saputangan.jpg');
-    }
-
-    const trimmed = imageValue.trim();
-    if (!trimmed) {
-      return require('../assets/images/Saputangan.jpg');
-    }
-
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:image')) {
-      return { uri: trimmed };
-    }
-
-    const baseUrl = API_CONFIG.API_BASE_URL.replace('/api/v1', '');
-    if (trimmed.startsWith('/uploads') || trimmed.startsWith('/storage')) {
-      return { uri: `${baseUrl}${trimmed}` };
-    }
-
-    if (trimmed.startsWith('uploads/') || trimmed.startsWith('storage/')) {
-      return { uri: `${baseUrl}/${trimmed}` };
-    }
-
-    return { uri: `${baseUrl}/uploads/products/${trimmed}` };
-  };
-
   const fetchProducts = async () => {
     try {
       setLoading(true);
@@ -121,17 +83,8 @@ const ProductsScreen = ({ navigation }) => {
       
       // Transform API data to match app structure
       const transformedProducts = productsData.map(product => {
-        console.log(`[Product ${product.id}] Original image:`, product.image_url || product.image_src || product.image);
-        const allImages = Array.isArray(product.all_images)
-          ? product.all_images
-          : (typeof product.all_images === 'string'
-              ? (() => {
-                  try { return JSON.parse(product.all_images); } catch (_) { return []; }
-                })()
-              : []);
-        const firstGalleryImage = Array.isArray(allImages) && allImages.length > 0
-          ? (typeof allImages[0] === 'string' ? allImages[0] : (allImages[0]?.path || allImages[0]?.url || null))
-          : null;
+        const bestImageValue = pickProductImageValue(product);
+        console.log(`[Product ${product.id}] Best image candidate:`, bestImageValue);
         const price = parseFloat(product.price || 0);
         const originalPrice = parseFloat(product.original_price ?? product.price ?? 0);
         return {
@@ -142,7 +95,7 @@ const ProductsScreen = ({ navigation }) => {
           originalPrice,
           hasProductDiscount: !!product.has_product_discount && originalPrice > price,
           category: product.category?.name || product.category_name || 'Uncategorized',
-          image: product.image_url || product.image_src || product.image || firstGalleryImage || null,
+          image: bestImageValue || null,
           stock: product.stock || 0,
           has_variants: !!product.has_variants,
           variants: Array.isArray(product.variants)
@@ -304,13 +257,17 @@ const ProductsScreen = ({ navigation }) => {
               >
                 <View style={styles.productImageContainer}>
                   <Image 
-                    source={resolveImageSource(product.image, product.id)}
+                    source={
+                      failedProductImages[product.id]
+                        ? require('../assets/images/Saputangan.jpg')
+                        : (resolveImageValueToSource(product.image) || require('../assets/images/Saputangan.jpg'))
+                    }
                     style={styles.productImage}
                     resizeMode="cover"
                     onError={() => {
                       console.log('[ProductsScreen] Image load error for:', product.name);
                       console.log('[ProductsScreen] Image path:', product.image);
-                      const resolvedImage = resolveImageSource(product.image, product.id);
+                      const resolvedImage = resolveImageValueToSource(product.image);
                       const attemptedUrl = resolvedImage && resolvedImage.uri ? resolvedImage.uri : String(resolvedImage || 'fallback');
                       console.log('[ProductsScreen] Attempted URL:', attemptedUrl);
                       setFailedProductImages(prev => ({ ...prev, [product.id]: true }));
