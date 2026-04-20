@@ -171,7 +171,14 @@ class ProductController extends Controller
         $allImages = [];
         $imageColors = $request->input('image_colors', []);
         $cloudinary = new CloudinaryService();
-        
+
+        \Log::info('[product-store] images upload start', [
+            'is_bundle' => $isBundle,
+            'has_images_file' => $request->hasFile('images'),
+            'images_count' => $request->hasFile('images') ? count((array) $request->file('images')) : 0,
+            'cloudinary_enabled' => $cloudinary->isEnabled(),
+        ]);
+
         if ($request->hasFile('images')) {
             $imageIndex = 0;
             
@@ -185,6 +192,11 @@ class ProductController extends Controller
                         if ($result) {
                             $storedPath = $result['url'];
                         }
+                        \Log::info('[product-store] cloudinary attempt', [
+                            'index' => $index,
+                            'success' => (bool) $result,
+                            'url' => $result['url'] ?? null,
+                        ]);
                     }
                     
                     // Fallback to local storage
@@ -196,6 +208,10 @@ class ProductController extends Controller
                         $imageName = time() . '_' . $imageIndex . '_' . $image->getClientOriginalName();
                         $image->move($uploadDir, $imageName);
                         $storedPath = $imageName;
+                        \Log::warning('[product-store] fell back to local storage (ephemeral on Railway)', [
+                            'index' => $index,
+                            'stored_path' => $storedPath,
+                        ]);
                     }
                     
                     $allImages[] = [
@@ -210,9 +226,21 @@ class ProductController extends Controller
                     }
                     
                     $imageIndex++;
+                } else {
+                    \Log::warning('[product-store] image file invalid or missing', [
+                        'index' => $index,
+                        'is_uploaded' => $image ? true : false,
+                        'is_valid' => $image && method_exists($image, 'isValid') ? $image->isValid() : null,
+                        'error' => $image && method_exists($image, 'getError') ? $image->getError() : null,
+                    ]);
                 }
             }
         }
+
+        \Log::info('[product-store] images upload done', [
+            'main_image_path' => $imagePath,
+            'all_images_count' => count($allImages),
+        ]);
 
         // Parse sizes and colors JSON (kept for backward compatibility if no variants are defined)
         $sizes = $request->available_sizes ? json_decode($request->available_sizes, true) : null;
@@ -788,6 +816,12 @@ class ProductController extends Controller
         $rawRows = $request->input('variant_rows', []);
         $variantFiles = $request->file('variant_rows', []);
 
+        \Log::info('[variant-sanitize] incoming', [
+            'raw_rows_count' => is_array($rawRows) ? count($rawRows) : 0,
+            'raw_rows_keys' => is_array($rawRows) ? array_keys($rawRows) : [],
+            'file_rows_keys' => is_array($variantFiles) ? array_keys($variantFiles) : [],
+        ]);
+
         return collect($rawRows)
             ->filter(fn($row) => is_array($row))
             ->map(function ($row, $index) use ($variantFiles) {
@@ -835,20 +869,49 @@ class ProductController extends Controller
     private function syncVariantRows(Product $product, array $variantRows): void
     {
         if (!$this->ensureProductVariantsTableExists()) {
+            \Log::warning('[variant-sync] product_variants table missing; skipping', [
+                'product_id' => $product->id,
+            ]);
             return;
         }
 
         ProductVariant::where('product_id', $product->id)->delete();
+
+        \Log::info('[variant-sync] start', [
+            'product_id' => $product->id,
+            'rows_count' => count($variantRows),
+        ]);
 
         if (empty($variantRows)) {
             return;
         }
 
         $now = now();
-        $rows = collect($variantRows)->map(function ($row) use ($product, $now) {
+        $rows = collect($variantRows)->map(function ($row, $rowIndex) use ($product, $now) {
             $imagePath = $row['existing_image'] ?? null;
-            if (!empty($row['image_file']) && method_exists($row['image_file'], 'isValid') && $row['image_file']->isValid()) {
-                $imagePath = $this->storeVariantImage($row['image_file']) ?? $imagePath;
+            $hasFile = !empty($row['image_file']);
+            $isValid = $hasFile && method_exists($row['image_file'], 'isValid') && $row['image_file']->isValid();
+            if ($hasFile && $isValid) {
+                $uploaded = $this->storeVariantImage($row['image_file']);
+                $imagePath = $uploaded ?? $imagePath;
+                \Log::info('[variant-sync] image uploaded', [
+                    'product_id' => $product->id,
+                    'row_index' => $rowIndex,
+                    'size' => $row['size'] ?? null,
+                    'color' => $row['color'] ?? null,
+                    'stored_path' => $uploaded,
+                ]);
+            } else {
+                \Log::info('[variant-sync] no image uploaded for row', [
+                    'product_id' => $product->id,
+                    'row_index' => $rowIndex,
+                    'size' => $row['size'] ?? null,
+                    'color' => $row['color'] ?? null,
+                    'has_file' => $hasFile,
+                    'is_valid' => $isValid,
+                    'existing_image' => $row['existing_image'] ?? null,
+                    'error_code' => $hasFile && method_exists($row['image_file'], 'getError') ? $row['image_file']->getError() : null,
+                ]);
             }
 
             return [
@@ -927,8 +990,16 @@ class ProductController extends Controller
         if ($cloudinary->isEnabled()) {
             $result = $cloudinary->uploadFile($image, 'product-variants');
             if ($result && !empty($result['url'])) {
+                \Log::info('[variant-image] stored via Cloudinary', ['url' => $result['url']]);
                 return $result['url'];
             }
+            \Log::warning('[variant-image] Cloudinary upload failed; falling back to local', [
+                'original_name' => $image->getClientOriginalName(),
+            ]);
+        } else {
+            \Log::info('[variant-image] Cloudinary disabled; using local storage', [
+                'original_name' => $image->getClientOriginalName(),
+            ]);
         }
 
         $uploadDir = public_path('uploads/variants');
@@ -938,6 +1009,10 @@ class ProductController extends Controller
 
         $imageName = time() . '_' . uniqid() . '_' . preg_replace('/\s+/', '_', $image->getClientOriginalName());
         $image->move($uploadDir, $imageName);
+
+        \Log::warning('[variant-image] stored locally (ephemeral on Railway)', [
+            'path' => 'variants/' . $imageName,
+        ]);
 
         return 'variants/' . $imageName;
     }
