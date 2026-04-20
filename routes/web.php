@@ -1648,6 +1648,54 @@ if (config('app.debug')) {
     });
 }
 
+// ============================================================
+// Upload diagnostics (token-gated so it works in production)
+// Hit: /upload-diag?token=yakan-diag-2026
+// After confirming the problem, delete this block.
+// ============================================================
+Route::get('/upload-diag', function (Request $request) {
+    if ($request->get('token') !== 'yakan-diag-2026') {
+        abort(404);
+    }
+
+    $cloudinary = new \App\Services\CloudinaryService();
+
+    // Latest few products to inspect what was actually saved
+    $recentProducts = \App\Models\Product::orderByDesc('id')
+        ->take(5)
+        ->get(['id', 'name', 'image', 'all_images', 'created_at']);
+
+    return response()->json([
+        'php_ini' => [
+            'loaded_file' => php_ini_loaded_file(),
+            'scanned_inis' => php_ini_scanned_files(),
+            'post_max_size' => ini_get('post_max_size'),
+            'upload_max_filesize' => ini_get('upload_max_filesize'),
+            'max_file_uploads' => ini_get('max_file_uploads'),
+            'memory_limit' => ini_get('memory_limit'),
+            'max_execution_time' => ini_get('max_execution_time'),
+        ],
+        'cloudinary' => [
+            'enabled' => $cloudinary->isEnabled(),
+            'cloud_name_set' => (bool) env('CLOUDINARY_CLOUD_NAME'),
+            'api_key_set' => (bool) env('CLOUDINARY_API_KEY'),
+            'api_secret_set' => (bool) env('CLOUDINARY_API_SECRET'),
+        ],
+        'recent_products' => $recentProducts->map(function ($p) {
+            return [
+                'id' => $p->id,
+                'name' => $p->name,
+                'image' => $p->image,
+                'all_images_count' => is_array($p->all_images) ? count($p->all_images) : 0,
+                'variants' => \App\Models\ProductVariant::where('product_id', $p->id)
+                    ->get(['id', 'size', 'color', 'image', 'is_active'])
+                    ->toArray(),
+                'created_at' => $p->created_at?->toDateTimeString(),
+            ];
+        }),
+    ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+});
+
 // Fallback 404
 Route::fallback(function () {
     return response()->view('errors.404', [], 404);
