@@ -158,6 +158,7 @@
                 <a href="{{ request()->fullUrlWithQuery(['type' => 'refund', 'status' => 'rejected', 'page' => null]) }}" class="kpi-stat-btn bg-gray-50 border border-gray-200 rounded-lg py-2 {{ $refundRejectedActive ? 'kpi-active' : '' }}">
                     <div class="text-xl font-bold text-red-600">{{ $stats['refund']['rejected'] ?? 0 }}</div>
                     <div class="text-xs text-gray-500">Rejected</div>
+                </a>
                 </div>
             </div>
         </div>
