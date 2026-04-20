@@ -47,12 +47,16 @@ export default function ProductDetailScreen({ route, navigation }) {
   const fallbackVariant = variantOptions.find(v => Number(v?.stock || 0) > 0) || variantOptions[0] || null;
   const activeVariant = selectedVariant || fallbackVariant;
   const displayName = currentProduct?.name || currentProduct?.product_name || currentProduct?.title || 'Yakan Product';
-  const displayDescription = (
+  const rawDescription = (
     currentProduct?.description
     || currentProduct?.product_description
     || currentProduct?.details
-    || 'No description available yet for this product.'
+    || ''
   );
+  const hasRealDescription = Boolean(String(rawDescription || '').trim());
+  const displayDescription = hasRealDescription
+    ? String(rawDescription).trim()
+    : 'No description available yet for this product.';
   const effectivePrice = activeVariant ? parseFloat(activeVariant.price || 0) : parseFloat(currentProduct?.price || 0);
   const effectiveOriginalPrice = activeVariant
     ? parseFloat(activeVariant.original_price ?? activeVariant.price ?? 0)
@@ -338,6 +342,24 @@ export default function ProductDetailScreen({ route, navigation }) {
         {/* Product Info */}
         <View style={styles.infoContainer}>
           <Text style={styles.productName}>{displayName}</Text>
+          {isBundleProduct && (
+            <View style={{
+              alignSelf: 'flex-start',
+              backgroundColor: '#FEF3C7',
+              borderRadius: 999,
+              paddingVertical: 4,
+              paddingHorizontal: 10,
+              marginTop: 6,
+              marginBottom: 2,
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}>
+              <MaterialCommunityIcons name="package-variant-closed" size={14} color="#B45309" style={{ marginRight: 4 }} />
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#92400E', letterSpacing: 0.4 }}>
+                PRODUCT BUNDLE
+              </Text>
+            </View>
+          )}
           <View style={styles.productPriceRow}>
             <Text style={styles.productPrice}>₱{effectivePrice.toFixed(2)}</Text>
             {hasActiveDiscount ? (
@@ -430,9 +452,9 @@ export default function ProductDetailScreen({ route, navigation }) {
           {/* Bundle Contents */}
           {isBundleProduct && bundleItems.length > 0 && (
             <View style={styles.section}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
                 <MaterialCommunityIcons name="package-variant-closed" size={20} color={theme.primary} style={{ marginRight: 6 }} />
-                <Text style={styles.sectionTitle}>What's in this bundle ({bundleItems.length})</Text>
+                <Text style={styles.sectionTitle}>Included in this bundle ({bundleItems.length})</Text>
               </View>
               {bundleItems.map((item, idx) => {
                 const itemImage = getProductImageSource(item?.product, null);
@@ -475,13 +497,19 @@ export default function ProductDetailScreen({ route, navigation }) {
           {/* Description */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.description}>{displayDescription}</Text>
-            <Text style={styles.descriptionExtra}>
-              This traditional Yakan weaving represents centuries of cultural heritage. 
-              Each piece is handwoven by skilled artisans using traditional techniques 
-              passed down through generations. The intricate patterns and vibrant colors 
-              make each fabric unique and special.
-            </Text>
+            {hasRealDescription ? (
+              <Text style={styles.description}>{displayDescription}</Text>
+            ) : (
+              <>
+                <Text style={styles.description}>No description provided for this product.</Text>
+                <Text style={styles.descriptionExtra}>
+                  This traditional Yakan weaving represents centuries of cultural heritage.
+                  Each piece is handwoven by skilled artisans using traditional techniques
+                  passed down through generations. The intricate patterns and vibrant colors
+                  make each fabric unique and special.
+                </Text>
+              </>
+            )}
           </View>
 
           {/* Quantity Selector */}
