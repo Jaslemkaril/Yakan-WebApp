@@ -165,8 +165,16 @@ class CloudinaryService
      */
     protected function generateSignature(array $params): string
     {
-        // Remove file and api_key from signature params
-        unset($params['file'], $params['api_key'], $params['signature']);
+        // Cloudinary signature excludes these special params per their API spec.
+        // Including `resource_type` breaks signature verification (HTTP 401) even
+        // though Cloudinary still accepts it as a POST field / URL segment.
+        unset(
+            $params['file'],
+            $params['api_key'],
+            $params['signature'],
+            $params['resource_type'],
+            $params['cloud_name']
+        );
 
         // Sort by key
         ksort($params);
