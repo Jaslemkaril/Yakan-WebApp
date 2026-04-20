@@ -867,13 +867,23 @@
 
                                     <div class="flex items-center gap-3 mt-3">
                                         <span class="inline-block px-3 py-1 bg-[#fef2f2] text-[#800000] text-xs font-semibold rounded-lg">Qty: {{ $item->quantity }}</span>
-                                        <span class="inline-block px-3 py-1 bg-[#fef2f2] text-[#800000] text-xs font-semibold rounded-lg">₱{{ number_format($item->price, 2) }} each</span>
+                                        @if($item->original_price && $item->original_price > $item->price)
+                                            <div class="flex items-center gap-2">
+                                                <span class="inline-block px-3 py-1 bg-gray-200 text-gray-500 text-xs font-semibold rounded-lg line-through">₱{{ number_format($item->original_price, 2) }} each</span>
+                                                <span class="inline-block px-3 py-1 bg-[#fef2f2] text-[#800000] text-xs font-semibold rounded-lg">₱{{ number_format($item->price, 2) }} each</span>
+                                            </div>
+                                        @else
+                                            <span class="inline-block px-3 py-1 bg-[#fef2f2] text-[#800000] text-xs font-semibold rounded-lg">₱{{ number_format($item->price, 2) }} each</span>
+                                        @endif
                                     </div>
                                 </div>
 
                                 <!-- Price -->
                                 <div class="text-right flex-shrink-0">
                                     <p class="text-xs text-gray-600 mb-1">Subtotal</p>
+                                    @if($item->original_price && $item->original_price > $item->price)
+                                        <p class="text-sm text-gray-500 line-through">₱{{ number_format($item->original_price * $item->quantity, 2) }}</p>
+                                    @endif
                                     <p class="text-xl font-bold text-[#800000]">₱{{ number_format($item->price * $item->quantity, 2) }}</p>
                                 </div>
                             </div>

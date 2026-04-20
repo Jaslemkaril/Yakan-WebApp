@@ -775,8 +775,20 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                     
                     {/* Price Info */}
                     <View style={styles.itemPriceSection}>
-                      <Text style={styles.itemPrice}>₱{(parseFloat(item.price) || 0).toFixed(2)}</Text>
-                      <Text style={styles.itemPriceLabel}>₱{(parseFloat(item.price) || 0).toFixed(2)} each</Text>
+                      {item.original_price && parseFloat(item.original_price) > parseFloat(item.price) ? (
+                        <>
+                          <Text style={[styles.itemPrice, { textDecorationLine: 'line-through', color: '#999', fontSize: 12 }]}>
+                            ₱{(parseFloat(item.original_price) || 0).toFixed(2)}
+                          </Text>
+                          <Text style={styles.itemPrice}>₱{(parseFloat(item.price) || 0).toFixed(2)}</Text>
+                          <Text style={styles.itemPriceLabel}>₱{(parseFloat(item.price) || 0).toFixed(2)} each</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Text style={styles.itemPrice}>₱{(parseFloat(item.price) || 0).toFixed(2)}</Text>
+                          <Text style={styles.itemPriceLabel}>₱{(parseFloat(item.price) || 0).toFixed(2)} each</Text>
+                        </>
+                      )}
                     </View>
                   </View>
                 </View>
