@@ -417,31 +417,21 @@ export default function PaymentScreen({ navigation, route }) {
         return;
       }
 
-      // If we only have a local checkout_reference (never confirmed by the
-      // server in a resync) and no real backendId/order_ref, the order was
-      // never actually persisted. Forcing the PayMongo call here would match
-      // a wrong/stale order via the backend heuristic. Send the user back to
-      // re-create the order properly.
-      if (isPaymongo && !backendId && !fallbackOrderRef && fallbackCheckoutReference) {
-        setIsProcessing(false);
-        Alert.alert(
-          'Order Not Found',
-          'We could not find a saved order for this payment. Please return to checkout and place your order again.',
-          [
-            {
-              text: 'Return to Checkout',
-              onPress: () => {
-                try {
-                  navigation.navigate('Checkout');
-                } catch (navError) {
-                  navigation.goBack();
-                }
-              },
-            },
-          ]
-        );
-        return;
-      }
+      // Previously we hard-blocked here when only a local checkout_reference
+      // was available (no backendId / order_ref). That path reliably fires
+      // for bundle orders: the backend creates the order fine, but the
+      // mobile `createOrder` response + `getOrders()` recovery sometimes
+      // fails to surface the id for bundles. Since the PayMongo backend
+      // already resolves the order from the checkout reference
+      // (tag-and-continue) we now allow the flow to continue and let the
+      // backend match by checkout_reference. Regular and variant orders
+      // are unaffected because they normally have backendId set well
+      // before reaching this point.
+      console.log('[Payment] identity summary', {
+        backendId,
+        fallbackOrderRef,
+        fallbackCheckoutReference,
+      });
 
       if (isPaymongo && !hasPaymongoIdentity) {
         Alert.alert('Missing Order', 'This payment cannot continue because order identity is missing. Please place the order again.');
