@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Staff;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
@@ -24,10 +25,18 @@ class DashboardController extends Controller
             $activeScope = 'recent';
         }
 
+        $refundEligibleOrdersQuery = $this->refundEligibleOrdersQuery();
+
         $pendingConfirmationCount = Order::whereIn('status', ['pending_confirmation', 'pending'])->count();
         $processingCount = Order::whereIn('status', ['confirmed', 'processing', 'shipped'])->count();
-        $readyForRefundCount = Order::whereIn('status', ['delivered', 'completed'])->count();
-        $refundedTodayCount = Order::where('status', 'refunded')->whereDate('updated_at', today())->count();
+        $readyForRefundCount = (clone $refundEligibleOrdersQuery)->count();
+
+        $refundedDateColumn = Schema::hasColumn('orders', 'refunded_at') ? 'refunded_at' : 'updated_at';
+        $refundedTodayCount = Order::where(function ($query) {
+            $query->where('status', 'refunded')
+                ->orWhereRaw('LOWER(COALESCE(payment_status, "")) = ?', ['refunded']);
+        })->whereDate($refundedDateColumn, today())->count();
+
         $doneOrdersCount = Order::whereIn('status', ['delivered', 'completed'])->count();
 
         $ordersQuery = Order::with('user');
@@ -48,7 +57,7 @@ class DashboardController extends Controller
                 break;
 
             case 'refund_eligible':
-                $ordersQuery->whereIn('status', ['delivered', 'completed'])
+                $ordersQuery->whereIn('id', (clone $refundEligibleOrdersQuery)->select('id'))
                     ->orderByDesc('updated_at')
                     ->orderByDesc('created_at');
                 $ordersTitle = 'Refund-Eligible Orders';
@@ -136,5 +145,41 @@ class DashboardController extends Controller
         $orders = $query->paginate(20)->withQueryString();
 
         return view('staff.orders.refunded', compact('orders'));
+    }
+
+    private function refundEligibleOrdersQuery()
+    {
+        $query = Order::query()
+            ->whereIn('status', ['delivered', 'completed'])
+            ->whereRaw('LOWER(COALESCE(payment_status, "")) IN (?, ?, ?)', ['paid', 'verified', 'completed']);
+
+        $refundWindowDays = max(1, (int) config('orders.refund_warranty_days', 7));
+        $eligibleStartCutoff = now()->subDays($refundWindowDays);
+        $query->whereRaw('COALESCE(confirmed_at, delivered_at, updated_at) >= ?', [$eligibleStartCutoff]);
+
+        if (Schema::hasTable('order_refund_requests')) {
+            $activeStatuses = ['requested', 'under_review', 'approved', 'processed'];
+            $activeWorkflowStatuses = [
+                'pending_review',
+                'under_review',
+                'awaiting_return_shipment',
+                'return_in_transit',
+                'return_received',
+                'pending_payout',
+                'approved',
+                'processed',
+            ];
+            $hasWorkflowStatus = Schema::hasColumn('order_refund_requests', 'workflow_status');
+
+            $query->whereDoesntHave('refundRequests', function ($refundQuery) use ($activeStatuses, $activeWorkflowStatuses, $hasWorkflowStatus) {
+                $refundQuery->whereIn('status', $activeStatuses);
+
+                if ($hasWorkflowStatus) {
+                    $refundQuery->orWhereIn('workflow_status', $activeWorkflowStatuses);
+                }
+            });
+        }
+
+        return $query;
     }
 }
