@@ -41,6 +41,10 @@ php artisan migrate --force --no-interaction --path=database/migrations/2026_04_
 # downpayment orders are correctly persisted and surfaced in the admin UI.
 php artisan migrate --force --no-interaction --path=database/migrations/2026_04_16_190000_add_downpayment_fields_to_orders_table.php || echo "⚠️ orders downpayment fields fallback migration failed."
 
+# Critical fallback: ensure stock audit columns exist so Before/After values are
+# captured and displayed in the Stock History table.
+php artisan migrate --force --no-interaction --path=database/migrations/2026_04_19_000001_add_stock_before_after_to_stock_logs.php || echo "⚠️ stock_logs before/after fallback migration failed."
+
 # ── 4b. Ensure Philippine address data is populated (idempotent) ─────────────
 echo "🗺️ Syncing Philippine address data..."
 php artisan db:seed --class=PhilippineSyncSeeder --force 2>/dev/null || echo "⚠️ Address sync failed, continuing..."
