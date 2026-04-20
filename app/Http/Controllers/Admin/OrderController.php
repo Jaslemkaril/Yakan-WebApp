@@ -608,6 +608,157 @@ class OrderController extends Controller
         ]);
     }
 
+    public function printPostOrderRequests(Request $request)
+    {
+        $typeFilter = strtolower((string) $request->query('type', 'all'));
+        if (!in_array($typeFilter, ['all', 'cancel', 'refund'], true)) {
+            $typeFilter = 'all';
+        }
+
+        $statusFilter = strtolower((string) $request->query('status', ''));
+        $validStatuses = ['pending', 'approved', 'rejected', 'under_review', 'refunded'];
+        if (!in_array($statusFilter, $validStatuses, true)) {
+            $statusFilter = '';
+        }
+
+        $dateFrom = $request->query('date_from', '');
+        $dateTo   = $request->query('date_to', '');
+
+        $regularCancelRows = $this->buildRegularCancelRequestRows();
+        $customCancelRows  = collect();
+        if (Schema::hasTable('custom_order_refund_requests')) {
+            $customCancelRows = \App\Models\CustomOrderRefundRequest::with(['customOrder.user', 'user'])
+                ->where('request_type', 'return')
+                ->latest('requested_at')
+                ->get()
+                ->map(function ($item) {
+                    $order = $item->customOrder;
+                    $statusMap = ['pending' => 'pending', 'approved' => 'approved', 'rejected' => 'rejected'];
+                    $statusKey = $statusMap[strtolower((string) ($item->status ?? ''))] ?? 'pending';
+                    return [
+                        'created_at'   => $item->requested_at ?? $item->created_at,
+                        'row_id'       => 'custom-cancel-' . $item->id,
+                        'display_id'   => '#C-' . ($order?->id ?? $item->id),
+                        'customer'     => (string) ($item->user?->name ?: $order?->user?->name ?: 'N/A'),
+                        'type'         => 'cancel',
+                        'order_type'   => 'custom',
+                        'amount'       => (float) ($order?->final_price ?? 0),
+                        'status_key'   => $statusKey,
+                        'status_label' => ucfirst($statusKey),
+                    ];
+                })->filter();
+        }
+
+        $cancelRows = $regularCancelRows->concat($customCancelRows)->values();
+
+        $regularRefundRows = collect();
+        if (Schema::hasTable('order_refund_requests')) {
+            $regularRefundRows = \App\Models\OrderRefundRequest::with(['order.user', 'user'])
+                ->latest('requested_at')
+                ->get()
+                ->filter(fn ($r) => !Str::contains(Str::lower((string) ($r->reason . ' ' . $r->details . ' ' . $r->comment)), 'cancel'))
+                ->map(function ($item) {
+                    $order = $item->order;
+                    $workflow = Str::lower((string) ($item->workflow_status ?: $item->status));
+                    $statusKey = match(true) {
+                        $workflow === 'rejected' || Str::upper((string) $item->final_decision) === 'REJECT' => 'rejected',
+                        in_array($workflow, ['approved', 'processed', 'refunded'], true) => 'refunded',
+                        $workflow === 'return_requested' => 'under_review',
+                        default => 'under_review',
+                    };
+                    return [
+                        'created_at'   => $item->requested_at ?? $item->created_at,
+                        'row_id'       => 'refund-' . $item->id,
+                        'display_id'   => 'RF-' . $item->id,
+                        'customer'     => (string) ($item->user?->name ?: $order?->user?->name ?: 'N/A'),
+                        'type'         => 'refund',
+                        'order_type'   => 'normal',
+                        'amount'       => (float) ($order?->final_price ?? 0),
+                        'status_key'   => $statusKey,
+                        'status_label' => ucwords(str_replace('_', ' ', $statusKey)),
+                    ];
+                })->filter()->values();
+        }
+
+        $customRefundRows = collect();
+        if (Schema::hasTable('custom_order_refund_requests')) {
+            $customRefundRows = \App\Models\CustomOrderRefundRequest::with(['customOrder.user', 'user'])
+                ->where('request_type', 'refund')
+                ->latest('requested_at')
+                ->get()
+                ->map(function ($item) {
+                    $order = $item->customOrder;
+                    $statusMap = [
+                        'pending' => 'under_review', 'approved' => 'refunded',
+                        'rejected' => 'rejected', 'return_requested' => 'under_review',
+                    ];
+                    $statusKey = $statusMap[strtolower((string) ($item->status ?? ''))] ?? 'under_review';
+                    return [
+                        'created_at'   => $item->requested_at ?? $item->created_at,
+                        'row_id'       => 'custom-refund-' . $item->id,
+                        'display_id'   => '#RF-' . $item->id,
+                        'customer'     => (string) ($item->user?->name ?: $order?->user?->name ?: 'N/A'),
+                        'type'         => 'refund',
+                        'order_type'   => 'custom',
+                        'amount'       => (float) ($order?->final_price ?? 0),
+                        'status_key'   => $statusKey,
+                        'status_label' => ucwords(str_replace('_', ' ', $statusKey)),
+                    ];
+                })->filter()->values();
+        }
+
+        $refundRows = $regularRefundRows->concat($customRefundRows)->values();
+
+        $stats = [
+            'cancel' => [
+                'pending'  => $cancelRows->where('status_key', 'pending')->count(),
+                'approved' => $cancelRows->where('status_key', 'approved')->count(),
+                'rejected' => $cancelRows->where('status_key', 'rejected')->count(),
+            ],
+            'refund' => [
+                'under_review' => $refundRows->where('status_key', 'under_review')->count(),
+                'refunded'     => $refundRows->where('status_key', 'refunded')->count(),
+                'rejected'     => $refundRows->where('status_key', 'rejected')->count(),
+            ],
+        ];
+
+        if ($typeFilter === 'cancel') {
+            $rows = $cancelRows;
+        } elseif ($typeFilter === 'refund') {
+            $rows = $refundRows;
+        } else {
+            $rows = $cancelRows->concat($refundRows)->values();
+        }
+
+        if ($statusFilter !== '') {
+            $rows = $rows->filter(fn (array $row) => ($row['status_key'] ?? '') === $statusFilter)->values();
+        }
+
+        if ($dateFrom !== '') {
+            try {
+                $from = \Carbon\Carbon::parse($dateFrom)->startOfDay();
+                $rows = $rows->filter(fn (array $row) => optional($row['created_at'])->gte($from))->values();
+            } catch (\Exception $e) {}
+        }
+        if ($dateTo !== '') {
+            try {
+                $to = \Carbon\Carbon::parse($dateTo)->endOfDay();
+                $rows = $rows->filter(fn (array $row) => optional($row['created_at'])->lte($to))->values();
+            } catch (\Exception $e) {}
+        }
+
+        $rows = $rows->sortByDesc(fn (array $row) => optional($row['created_at'])->getTimestamp() ?? 0)->values();
+
+        return view('admin.orders.post-order-requests-print', [
+            'rows'         => $rows,
+            'stats'        => $stats,
+            'typeFilter'   => $typeFilter,
+            'statusFilter' => $statusFilter,
+            'dateFrom'     => $dateFrom,
+            'dateTo'       => $dateTo,
+        ]);
+    }
+
     private function buildRegularCancelRequestRows()
     {
         $hasRefundTable = Schema::hasTable('order_refund_requests');

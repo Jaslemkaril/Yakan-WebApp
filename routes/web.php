@@ -1225,6 +1225,7 @@ Route::middleware(['admin:admin,order_staff'])->prefix('admin')->name('admin.')-
     Route::prefix('orders')->group(function () {
         Route::get('/', [AdminOrderController::class, 'index'])->name('regular.index');
         Route::get('/post-order-requests', [AdminOrderController::class, 'postOrderRequests'])->name('orders.post_order_requests.index');
+        Route::get('/post-order-requests/print', [AdminOrderController::class, 'printPostOrderRequests'])->name('orders.post_order_requests.print');
         Route::get('/cancel-requests', [AdminOrderController::class, 'cancelRequests'])->name('orders.cancel_requests.index');
         Route::get('/refund-requests', [AdminOrderController::class, 'refundRequests'])->name('orders.refund_requests.index');
         Route::get('/create', [AdminOrderController::class, 'create'])->name('orders.create');

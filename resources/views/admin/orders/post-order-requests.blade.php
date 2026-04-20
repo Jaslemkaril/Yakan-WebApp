@@ -95,7 +95,18 @@
             <h1 class="text-4xl font-bold text-gray-900 mb-2">Post-Order Request</h1>
             <p class="text-gray-600">Combined regular and custom cancel/refund requests</p>
         </div>
-        <span class="text-sm text-gray-500">{{ now()->format('M d, Y') }}</span>
+        <div class="flex items-center gap-3">
+            <span class="text-sm text-gray-500">{{ now()->format('M d, Y') }}</span>
+            <button id="printReportBtn" type="button"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-semibold text-sm hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm"
+                title="Print report">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                </svg>
+                Print
+            </button>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -825,5 +836,90 @@
             }
         });
     })();
+</script>
+
+<!-- Print Date-Range Modal -->
+<div id="printDateModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-sm p-6 space-y-4">
+        <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-900">Print Report</h3>
+            <button id="printDateModalClose" type="button" class="w-9 h-9 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-100 text-xl leading-none">×</button>
+        </div>
+        <p class="text-sm text-gray-500">Select a date range to include in the report. Leave blank to include all dates.</p>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Date From</label>
+                <input id="printDateFrom" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000] text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Date To</label>
+                <input id="printDateTo" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-[#800000] text-sm">
+            </div>
+        </div>
+        <div class="flex gap-3 pt-1">
+            <button id="printDateConfirm" type="button"
+                class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-white font-semibold text-sm transition-colors"
+                style="background:#800000;" onmouseover="this.style.background='#600000'" onmouseout="this.style.background='#800000'">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                </svg>
+                Open Print Preview
+            </button>
+            <button id="printDateCancel" type="button"
+                class="px-4 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const printBtn         = document.getElementById('printReportBtn');
+    const printModal       = document.getElementById('printDateModal');
+    const printModalClose  = document.getElementById('printDateModalClose');
+    const printDateCancel  = document.getElementById('printDateCancel');
+    const printDateConfirm = document.getElementById('printDateConfirm');
+    const dateFrom         = document.getElementById('printDateFrom');
+    const dateTo           = document.getElementById('printDateTo');
+
+    const printBaseUrl = '{{ route("orders.post_order_requests.print") }}';
+    const authToken    = new URLSearchParams(window.location.search).get('auth_token') || '';
+    const currentType  = '{{ $typeFilter }}';
+    const currentStatus = '{{ $statusFilter }}';
+
+    if (printBtn) {
+        printBtn.addEventListener('click', function () {
+            printModal.classList.remove('hidden');
+            printModal.classList.add('flex');
+        });
+    }
+
+    const closePrintModal = function () {
+        printModal.classList.add('hidden');
+        printModal.classList.remove('flex');
+    };
+
+    if (printModalClose) printModalClose.addEventListener('click', closePrintModal);
+    if (printDateCancel) printDateCancel.addEventListener('click', closePrintModal);
+    printModal.addEventListener('click', function (e) {
+        if (e.target === printModal) closePrintModal();
+    });
+
+    if (printDateConfirm) {
+        printDateConfirm.addEventListener('click', function () {
+            const params = new URLSearchParams();
+            if (authToken) params.set('auth_token', authToken);
+            if (currentType && currentType !== 'all') params.set('type', currentType);
+            if (currentStatus) params.set('status', currentStatus);
+            if (dateFrom.value) params.set('date_from', dateFrom.value);
+            if (dateTo.value) params.set('date_to', dateTo.value);
+            const url = printBaseUrl + (params.toString() ? '?' + params.toString() : '');
+            window.open(url, '_blank');
+            closePrintModal();
+        });
+    }
+})();
 </script>
 @endsection
