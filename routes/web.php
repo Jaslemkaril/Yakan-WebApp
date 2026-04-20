@@ -1671,7 +1671,35 @@ Route::get('/upload-diag', function (Request $request) {
         ->with(['bundleItems.componentProduct:id,name,stock'])
         ->get(['id', 'name', 'image', 'all_images', 'created_at']);
 
+    $recentOrders = \App\Models\Order::orderByDesc('id')
+        ->take(5)
+        ->get(['id', 'order_ref', 'customer_name', 'subtotal', 'total_amount', 'payment_method', 'payment_status', 'status', 'source', 'created_at'])
+        ->map(function ($o) {
+            $items = \App\Models\OrderItem::where('order_id', $o->id)
+                ->with('product:id,name')
+                ->get(['id', 'product_id', 'quantity', 'price']);
+            return [
+                'id' => $o->id,
+                'order_ref' => $o->order_ref,
+                'customer' => $o->customer_name,
+                'subtotal' => (float) $o->subtotal,
+                'total' => (float) ($o->total_amount ?? 0),
+                'payment_method' => $o->payment_method,
+                'payment_status' => $o->payment_status,
+                'status' => $o->status,
+                'source' => $o->source,
+                'created_at' => $o->created_at?->toDateTimeString(),
+                'items' => $items->map(fn($it) => [
+                    'product_id' => $it->product_id,
+                    'product_name' => $it->product?->name,
+                    'qty' => $it->quantity,
+                    'price' => (float) $it->price,
+                ])->toArray(),
+            ];
+        });
+
     return response()->json([
+        'recent_orders' => $recentOrders,
         'php_ini' => [
             'loaded_file' => php_ini_loaded_file(),
             'scanned_inis' => php_ini_scanned_files(),
