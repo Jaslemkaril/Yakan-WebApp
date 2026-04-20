@@ -449,11 +449,6 @@ export default function ProductDetailScreen({ route, navigation }) {
             );
           })()}
 
-          {/* TEMP DIAG STAMP — delete after bundle UI confirmed working */}
-          <Text style={{ fontSize: 10, color: '#999', marginTop: 4 }}>
-            ota=v4 is_bundle={String(Boolean(currentProduct?.is_bundle))} bi={Array.isArray(currentProduct?.bundle_items) ? currentProduct.bundle_items.length : 'nil'} variants={variantOptions.length}
-          </Text>
-
           {/* Bundle Contents */}
           {isBundleProduct && bundleItems.length > 0 && (
             <View style={styles.section}>
