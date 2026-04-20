@@ -111,13 +111,27 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date &amp; Time</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Movement</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Before</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Change</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">After</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recorded By</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Note</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         @forelse($stockLogs as $log)
+                            @php
+                                $beforeStock = $log->stock_before;
+                                $afterStock = $log->stock_after;
+
+                                if (is_null($beforeStock) && !is_null($afterStock)) {
+                                    $beforeStock = (int) $afterStock - (int) $log->quantity;
+                                }
+
+                                if (is_null($afterStock) && !is_null($beforeStock)) {
+                                    $afterStock = (int) $beforeStock + (int) $log->quantity;
+                                }
+                            @endphp
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $log->created_at?->format('M d, Y h:i A') }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $log->product?->name ?? 'Unknown Product' }}</td>
@@ -128,15 +142,21 @@
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Stock Out</span>
                                     @endif
                                 </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                    {{ is_null($beforeStock) ? '—' : number_format((int) $beforeStock) }}
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-bold {{ $log->quantity >= 0 ? 'text-green-700' : 'text-red-700' }}">
                                     {{ $log->quantity > 0 ? '+' : '' }}{{ $log->quantity }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
+                                    {{ is_null($afterStock) ? '—' : number_format((int) $afterStock) }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $log->creator?->name ?? 'System' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-600">{{ $log->note ?? '—' }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-6 py-12 text-center text-gray-500">No stock history records found for the selected filters.</td>
+                                <td colspan="8" class="px-6 py-12 text-center text-gray-500">No stock history records found for the selected filters.</td>
                             </tr>
                         @endforelse
                     </tbody>
