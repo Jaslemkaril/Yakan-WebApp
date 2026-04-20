@@ -333,23 +333,35 @@ class AdminCustomOrderController extends Controller
 
         // Fallback for old chat-generated orders with empty/invalid design_upload.
         if (empty($resolved) && !empty($order->chat_id)) {
-            $chatImageMessages = ChatMessage::query()
+            $chatImageQuery = ChatMessage::query()
                 ->where('chat_id', $order->chat_id)
                 ->where('sender_type', 'user')
                 ->whereNotNull('image_path')
-                ->where(function ($query) {
-                    $query->whereNull('message')
-                        ->orWhere('message', 'not like', '%Payment proof%');
-                })
-                ->orderBy('id')
-                ->get(['image_path', 'form_data', 'created_at']);
+                ->where('image_path', '!=', '');
+
+            // Restrict to messages created before the order + 10 min to avoid scanning a long tail.
+            if ($order->created_at) {
+                $chatImageQuery->where('created_at', '<=', $order->created_at->copy()->addMinutes(10));
+            }
+
+            // Query IDs first to minimize memory use during sorting.
+            $chatImageMessageIds = $chatImageQuery
+                ->orderByDesc('id')
+                ->limit(80)
+                ->pluck('id');
+
+            $chatImageMessages = collect();
+            if ($chatImageMessageIds->isNotEmpty()) {
+                $chatImageMessages = ChatMessage::query()
+                    ->whereIn('id', $chatImageMessageIds->all())
+                    ->get(['id', 'image_path', 'message', 'form_data'])
+                    ->sortBy('id')
+                    ->values();
+            }
 
             foreach ($chatImageMessages as $chatImageMessage) {
-                if (
-                    $order->created_at &&
-                    $chatImageMessage->created_at &&
-                    $chatImageMessage->created_at->gt($order->created_at->copy()->addMinutes(10))
-                ) {
+                $message = strtolower(trim((string) ($chatImageMessage->message ?? '')));
+                if ($message !== '' && str_contains($message, 'payment proof')) {
                     continue;
                 }
 

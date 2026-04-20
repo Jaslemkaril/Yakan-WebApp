@@ -639,23 +639,34 @@ class CustomOrderController extends Controller
                 ->where('chat_id', $order->chat_id)
                 ->where('sender_type', 'user')
                 ->whereNotNull('image_path')
-                ->where('image_path', '!=', '')
-                ->where(function ($query) {
-                    $query->whereNull('message')
-                        ->orWhere('message', 'not like', '%Payment proof%');
-                });
+                ->where('image_path', '!=', '');
 
             // Restrict to messages created before the order + 10 min to avoid huge sort
             if ($order->created_at) {
                 $chatImageQuery->where('created_at', '<=', $order->created_at->copy()->addMinutes(10));
             }
 
-            $chatImageMessages = $chatImageQuery
+            // Query IDs first to keep the sort payload tiny on large chat histories.
+            $chatImageMessageIds = $chatImageQuery
                 ->orderByDesc('id')
-                ->limit(20)
-                ->get(['image_path', 'form_data', 'created_at']);
+                ->limit(80)
+                ->pluck('id');
+
+            $chatImageMessages = collect();
+            if ($chatImageMessageIds->isNotEmpty()) {
+                $chatImageMessages = ChatMessage::query()
+                    ->whereIn('id', $chatImageMessageIds->all())
+                    ->get(['id', 'image_path', 'message', 'form_data'])
+                    ->sortBy('id')
+                    ->values();
+            }
 
             foreach ($chatImageMessages as $chatImageMessage) {
+                $message = strtolower(trim((string) ($chatImageMessage->message ?? '')));
+                if ($message !== '' && str_contains($message, 'payment proof')) {
+                    continue;
+                }
+
                 $inlineImage = data_get($chatImageMessage->form_data, 'inline_image_data');
                 if (is_string($inlineImage) && $inlineImage !== '') {
                     $appendImage($inlineImage);
