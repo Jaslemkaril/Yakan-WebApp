@@ -282,8 +282,14 @@ class ProductController extends Controller
                 ->filter()
                 ->values();
 
+            // Unset the raw eager-loaded relation so Laravel's JSON serialization
+            // uses our formatted attribute (otherwise the relation overwrites it
+            // because both serialize to the same `bundle_items` key).
+            $product->unsetRelation('bundleItems');
+
             $product->setAttribute('bundle_items', $formattedBundleItems);
         } elseif ($includeVariants) {
+            $product->unsetRelation('bundleItems');
             $product->setAttribute('bundle_items', []);
         }
 
@@ -416,8 +422,8 @@ class ProductController extends Controller
     public function show($id): JsonResponse
     {
         $productId = (int) $id;
-        // v3: adds is_bundle + bundle_items[] with component stock.
-        $cacheKey = "product:v3:{$productId}";
+        // v4: formatted bundle_items no longer shadowed by the raw relation.
+        $cacheKey = "product:v4:{$productId}";
         
         $product = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 7200), function () use ($productId) {
             $productModel = Product::query()->findOrFail($productId);
