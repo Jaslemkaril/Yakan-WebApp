@@ -884,7 +884,7 @@
     const dateFrom         = document.getElementById('printDateFrom');
     const dateTo           = document.getElementById('printDateTo');
 
-    const printBaseUrl = '{{ route("orders.post_order_requests.print") }}';
+    const printBaseUrl = '{{ route("admin.orders.post_order_requests.print") }}';
     const authToken    = new URLSearchParams(window.location.search).get('auth_token') || '';
     const currentType  = '{{ $typeFilter }}';
     const currentStatus = '{{ $statusFilter }}';
