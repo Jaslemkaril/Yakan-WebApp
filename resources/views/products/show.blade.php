@@ -188,6 +188,7 @@
                 <div class="bg-white rounded-xl border border-gray-200 p-4">
                     <h3 class="text-sm font-semibold text-gray-900 mb-2">Variants</h3>
                     <select id="variantSelector" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent">
+                        <option value="" disabled selected>— Select a variant —</option>
                         @foreach($activeVariants as $variant)
                             @php
                                 $variantBasePrice = (float) $variant->price;
@@ -206,7 +207,6 @@
                             <option
                                 value="{{ $variant->id }}"
                                 data-variant='@json($variantData)'
-                                {{ isset($defaultVariant) && (int) $defaultVariant->id === (int) $variant->id ? 'selected' : '' }}
                             >
                                 {{ $variant->display_name }} | ₱{{ number_format($variantDisplayPrice, 2) }} | Stock: {{ (int) ($variant->stock ?? 0) }}
                             </option>
@@ -290,7 +290,7 @@
                     <form id="addToCartForm" method="POST" action="{{ route('cart.add', $product) }}" class="flex-1">
                         @csrf
                         <input type="hidden" name="quantity" id="cartQty" value="1">
-                        <input type="hidden" name="variant_id" id="cartVariantId" value="{{ isset($defaultVariant) ? $defaultVariant->id : '' }}">
+                        <input type="hidden" name="variant_id" id="cartVariantId" value="">
                         <button type="submit" 
                                 class="w-full h-full text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 whitespace-nowrap"
                                 style="background: linear-gradient(135deg, #800000 0%, #600000 100%);"
@@ -326,7 +326,7 @@
                 <form id="buyNowForm" method="POST" action="{{ route('cart.add', $product) }}" class="flex-1">
                     @csrf
                     <input type="hidden" name="quantity" id="buyNowQty" value="1">
-                    <input type="hidden" name="variant_id" id="buyNowVariantId" value="{{ isset($defaultVariant) ? $defaultVariant->id : '' }}">
+                    <input type="hidden" name="variant_id" id="buyNowVariantId" value="">
                     <input type="hidden" name="buy_now" value="1">
                     <button type="submit" 
                             id="buyNowBtn"
@@ -688,6 +688,11 @@ function applyVariantFromSelector() {
         return;
     }
 
+    // No variant selected yet — keep buttons disabled
+    if (!selector.value) {
+        return;
+    }
+
     const selectedOption = selector.options[selector.selectedIndex];
     const variantDataRaw = selectedOption ? selectedOption.getAttribute('data-variant') : null;
     if (!variantDataRaw) {
@@ -850,6 +855,12 @@ function clampQty(input) {
 const addToCartForm = document.getElementById('addToCartForm');
 if (addToCartForm) {
     addToCartForm.addEventListener('submit', function(e) {
+        const varSel = document.getElementById('variantSelector');
+        if (varSel && !varSel.value) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
         if (!isQtyValid()) {
             e.preventDefault();
             e.stopPropagation();
@@ -861,6 +872,12 @@ if (addToCartForm) {
 const buyNowForm = document.getElementById('buyNowForm');
 if (buyNowForm) {
     buyNowForm.addEventListener('submit', function(e) {
+        const varSel = document.getElementById('variantSelector');
+        if (varSel && !varSel.value) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
         if (!isQtyValid()) {
             e.preventDefault();
             e.stopPropagation();
@@ -980,7 +997,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const variantSelector = document.getElementById('variantSelector');
     if (variantSelector) {
         variantSelector.addEventListener('change', applyVariantFromSelector);
-        applyVariantFromSelector();
+        // Disable Add to Cart & Buy Now until user picks a variant
+        const addToCartBtn = document.querySelector('#addToCartForm button[type="submit"]');
+        const buyNowBtn = document.getElementById('buyNowBtn');
+        const buyNowBtnText = document.getElementById('buyNowBtnText');
+        if (addToCartBtn) addToCartBtn.disabled = true;
+        if (buyNowBtn) buyNowBtn.disabled = true;
+        if (buyNowBtnText) buyNowBtnText.textContent = 'Select a Variant';
     } else {
         syncSelectedVariant('');
     }
