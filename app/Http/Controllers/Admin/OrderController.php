@@ -242,6 +242,12 @@ class OrderController extends Controller
             $typeFilter = 'all';
         }
 
+        $statusFilter = strtolower((string) $request->query('status', ''));
+        $validStatuses = ['pending', 'approved', 'rejected', 'under_review', 'refunded'];
+        if (!in_array($statusFilter, $validStatuses, true)) {
+            $statusFilter = '';
+        }
+
         $search = trim((string) $request->query('search', ''));
         $perPage = max(1, min(50, (int) $request->query('per_page', 15)));
         $page = max(1, (int) $request->query('page', 1));
@@ -561,6 +567,10 @@ class OrderController extends Controller
             $rows = $cancelRows->concat($refundRows)->values();
         }
 
+        if ($statusFilter !== '') {
+            $rows = $rows->filter(fn (array $row) => ($row['status_key'] ?? '') === $statusFilter)->values();
+        }
+
         if ($search !== '') {
             $needle = Str::lower($search);
             $rows = $rows->filter(function (array $row) use ($needle) {
@@ -593,6 +603,7 @@ class OrderController extends Controller
             'requests' => $requests,
             'stats' => $stats,
             'typeFilter' => $typeFilter,
+            'statusFilter' => $statusFilter,
             'search' => $search,
         ]);
     }

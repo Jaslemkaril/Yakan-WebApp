@@ -18,6 +18,25 @@
         box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
     }
 
+    .kpi-stat-btn {
+        cursor: pointer;
+        transition: all 0.15s ease;
+        text-decoration: none;
+        display: block;
+    }
+
+    .kpi-stat-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        border-color: #800000 !important;
+    }
+
+    .kpi-stat-btn.kpi-active {
+        border-color: #800000 !important;
+        background: #fff5f5 !important;
+        box-shadow: 0 0 0 2px rgba(128,0,0,0.2);
+    }
+
     .post-order-filter-section {
         background: #ffffff;
         border-radius: 0.75rem;
@@ -86,18 +105,23 @@
                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Cancel</span>
             </div>
             <div class="grid grid-cols-3 gap-3 text-center">
-                <div class="bg-gray-50 border border-gray-200 rounded-lg py-2">
+                @php
+                    $cancelPendingActive = $typeFilter === 'cancel' && $statusFilter === 'pending';
+                    $cancelApprovedActive = $typeFilter === 'cancel' && $statusFilter === 'approved';
+                    $cancelRejectedActive = $typeFilter === 'cancel' && $statusFilter === 'rejected';
+                @endphp
+                <a href="{{ request()->fullUrlWithQuery(['type' => 'cancel', 'status' => 'pending', 'page' => null]) }}" class="kpi-stat-btn bg-gray-50 border border-gray-200 rounded-lg py-2 {{ $cancelPendingActive ? 'kpi-active' : '' }}">
                     <div class="text-xl font-bold text-amber-600">{{ $stats['cancel']['pending'] ?? 0 }}</div>
                     <div class="text-xs text-gray-500">Pending</div>
-                </div>
-                <div class="bg-gray-50 border border-gray-200 rounded-lg py-2">
+                </a>
+                <a href="{{ request()->fullUrlWithQuery(['type' => 'cancel', 'status' => 'approved', 'page' => null]) }}" class="kpi-stat-btn bg-gray-50 border border-gray-200 rounded-lg py-2 {{ $cancelApprovedActive ? 'kpi-active' : '' }}">
                     <div class="text-xl font-bold text-green-600">{{ $stats['cancel']['approved'] ?? 0 }}</div>
                     <div class="text-xs text-gray-500">Approved</div>
-                </div>
-                <div class="bg-gray-50 border border-gray-200 rounded-lg py-2">
+                </a>
+                <a href="{{ request()->fullUrlWithQuery(['type' => 'cancel', 'status' => 'rejected', 'page' => null]) }}" class="kpi-stat-btn bg-gray-50 border border-gray-200 rounded-lg py-2 {{ $cancelRejectedActive ? 'kpi-active' : '' }}">
                     <div class="text-xl font-bold text-red-600">{{ $stats['cancel']['rejected'] ?? 0 }}</div>
                     <div class="text-xs text-gray-500">Rejected</div>
-                </div>
+                </a>
             </div>
         </div>
 
@@ -107,15 +131,20 @@
                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Refund</span>
             </div>
             <div class="grid grid-cols-3 gap-3 text-center">
-                <div class="bg-gray-50 border border-gray-200 rounded-lg py-2">
+                @php
+                    $refundReviewActive = $typeFilter === 'refund' && $statusFilter === 'under_review';
+                    $refundedActive = $typeFilter === 'refund' && $statusFilter === 'refunded';
+                    $refundRejectedActive = $typeFilter === 'refund' && $statusFilter === 'rejected';
+                @endphp
+                <a href="{{ request()->fullUrlWithQuery(['type' => 'refund', 'status' => 'under_review', 'page' => null]) }}" class="kpi-stat-btn bg-gray-50 border border-gray-200 rounded-lg py-2 {{ $refundReviewActive ? 'kpi-active' : '' }}">
                     <div class="text-xl font-bold text-blue-600">{{ $stats['refund']['under_review'] ?? 0 }}</div>
                     <div class="text-xs text-gray-500">Under review</div>
-                </div>
-                <div class="bg-gray-50 border border-gray-200 rounded-lg py-2">
+                </a>
+                <a href="{{ request()->fullUrlWithQuery(['type' => 'refund', 'status' => 'refunded', 'page' => null]) }}" class="kpi-stat-btn bg-gray-50 border border-gray-200 rounded-lg py-2 {{ $refundedActive ? 'kpi-active' : '' }}">
                     <div class="text-xl font-bold text-green-600">{{ $stats['refund']['refunded'] ?? 0 }}</div>
                     <div class="text-xs text-gray-500">Refunded</div>
-                </div>
-                <div class="bg-gray-50 border border-gray-200 rounded-lg py-2">
+                </a>
+                <a href="{{ request()->fullUrlWithQuery(['type' => 'refund', 'status' => 'rejected', 'page' => null]) }}" class="kpi-stat-btn bg-gray-50 border border-gray-200 rounded-lg py-2 {{ $refundRejectedActive ? 'kpi-active' : '' }}">
                     <div class="text-xl font-bold text-red-600">{{ $stats['refund']['rejected'] ?? 0 }}</div>
                     <div class="text-xs text-gray-500">Rejected</div>
                 </div>
@@ -125,9 +154,9 @@
 
     <div class="post-order-filter-section space-y-3">
         <div class="flex flex-wrap gap-3">
-            <a href="{{ request()->fullUrlWithQuery(['type' => 'all', 'page' => null]) }}" class="post-order-filter-chip {{ $typeFilter === 'all' ? 'post-order-filter-chip-active' : 'post-order-filter-chip-idle' }}">All</a>
-            <a href="{{ request()->fullUrlWithQuery(['type' => 'cancel', 'page' => null]) }}" class="post-order-filter-chip {{ $typeFilter === 'cancel' ? 'post-order-filter-chip-active' : 'post-order-filter-chip-idle' }}">Cancel requests</a>
-            <a href="{{ request()->fullUrlWithQuery(['type' => 'refund', 'page' => null]) }}" class="post-order-filter-chip {{ $typeFilter === 'refund' ? 'post-order-filter-chip-active' : 'post-order-filter-chip-idle' }}">Refund requests</a>
+            <a href="{{ request()->fullUrlWithQuery(['type' => 'all', 'status' => null, 'page' => null]) }}" class="post-order-filter-chip {{ $typeFilter === 'all' && $statusFilter === '' ? 'post-order-filter-chip-active' : 'post-order-filter-chip-idle' }}">All</a>
+            <a href="{{ request()->fullUrlWithQuery(['type' => 'cancel', 'status' => null, 'page' => null]) }}" class="post-order-filter-chip {{ $typeFilter === 'cancel' && $statusFilter === '' ? 'post-order-filter-chip-active' : 'post-order-filter-chip-idle' }}">Cancel requests</a>
+            <a href="{{ request()->fullUrlWithQuery(['type' => 'refund', 'status' => null, 'page' => null]) }}" class="post-order-filter-chip {{ $typeFilter === 'refund' && $statusFilter === '' ? 'post-order-filter-chip-active' : 'post-order-filter-chip-idle' }}">Refund requests</a>
         </div>
 
         <form method="GET" class="w-full">
