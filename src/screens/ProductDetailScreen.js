@@ -58,7 +58,29 @@ export default function ProductDetailScreen({ route, navigation }) {
     ? parseFloat(activeVariant.original_price ?? activeVariant.price ?? 0)
     : parseFloat(currentProduct?.original_price ?? currentProduct?.originalPrice ?? currentProduct?.price ?? 0);
   const hasActiveDiscount = effectiveOriginalPrice > effectivePrice;
-  const effectiveStock = activeVariant ? Number(activeVariant.stock || 0) : Number(currentProduct?.stock || 0);
+
+  // Bundle stock = min( floor(componentStock / componentQuantityInBundle) ) across components.
+  // Falls back to the API-reported stock when we can't compute (e.g. bundle_items missing).
+  const computeBundleStock = () => {
+    if (!isBundleProduct || bundleItems.length === 0) {
+      return null;
+    }
+    let minUnits = Infinity;
+    for (const item of bundleItems) {
+      const qtyPerBundle = Math.max(1, Number(item?.quantity || 1));
+      const componentStock = Number(item?.product?.stock ?? 0);
+      const unitsFromThis = Math.floor(componentStock / qtyPerBundle);
+      if (unitsFromThis < minUnits) {
+        minUnits = unitsFromThis;
+      }
+    }
+    return minUnits === Infinity ? null : minUnits;
+  };
+
+  const bundleStock = computeBundleStock();
+  const effectiveStock = activeVariant
+    ? Number(activeVariant.stock || 0)
+    : (bundleStock !== null ? bundleStock : Number(currentProduct?.stock || 0));
 
   const resolvePrimaryProductImage = () => {
     return getProductImageSource(currentProduct, selectedVariant || activeVariant || null);

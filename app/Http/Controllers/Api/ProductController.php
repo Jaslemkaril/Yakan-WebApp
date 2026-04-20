@@ -150,6 +150,8 @@ class ProductController extends Controller
             }
         }
 
+        $componentStock = (int) ($component->inventory?->quantity ?? $component->stock ?? 0);
+
         return [
             'id' => $bundleItem->id,
             'product_id' => $component->id,
@@ -158,6 +160,7 @@ class ProductController extends Controller
                 'id' => $component->id,
                 'name' => $component->name,
                 'price' => (float) $component->price,
+                'stock' => $componentStock,
                 'image' => $component->image,
                 'image_url' => $componentUrl,
                 'image_src' => $componentUrl,
@@ -427,7 +430,10 @@ class ProductController extends Controller
 
             if (Schema::hasTable('product_bundle_items')) {
                 $relations['bundleItems.componentProduct'] = function ($query) {
-                    $query->select(['id', 'name', 'price', 'image', 'all_images']);
+                    $query->select(['id', 'name', 'price', 'stock', 'image', 'all_images']);
+                };
+                $relations['bundleItems.componentProduct.inventory'] = function ($query) {
+                    $query->select(['product_id', 'quantity']);
                 };
             }
 
