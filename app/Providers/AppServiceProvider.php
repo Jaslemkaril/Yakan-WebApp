@@ -35,8 +35,14 @@ class AppServiceProvider extends ServiceProvider
         // Share notification counts with admin layout
         View::composer('layouts.admin', function ($view) {
             try {
-                // Pending regular orders
-                $pendingOrdersCount = Order::whereRaw('LOWER(status) = ?', ['pending'])->count();
+                // Pending regular orders - orders that need admin attention
+                $pendingOrdersCount = Order::whereIn('status', [
+                    'pending',
+                    'pending_payment',
+                    'payment_verified',
+                    'pending_confirmation',
+                    'confirmed'
+                ])->count();
                 
                 // Post-Order Requests: Pending cancellation and refund requests
                 $postOrderRequestsCount = 0;
