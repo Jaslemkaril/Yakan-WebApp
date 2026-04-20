@@ -128,10 +128,53 @@ class ProductController extends Controller
         return $this->buildPriceMeta($product, (float) $product->price)['price'];
     }
 
+    private function formatBundleItem($bundleItem): ?array
+    {
+        if (!$bundleItem) {
+            return null;
+        }
+
+        $component = $bundleItem->componentProduct ?? null;
+        if (!$component) {
+            return null;
+        }
+
+        $componentUrl = $component->image_url ?? null;
+        if ($this->isPlaceholderImage($componentUrl)) {
+            $componentUrl = null;
+        }
+        if (!$componentUrl) {
+            $componentSrc = $component->image_src ?? null;
+            if (!$this->isPlaceholderImage($componentSrc)) {
+                $componentUrl = $componentSrc;
+            }
+        }
+
+        return [
+            'id' => $bundleItem->id,
+            'product_id' => $component->id,
+            'quantity' => (int) $bundleItem->quantity,
+            'product' => [
+                'id' => $component->id,
+                'name' => $component->name,
+                'price' => (float) $component->price,
+                'image' => $component->image,
+                'image_url' => $componentUrl,
+                'image_src' => $componentUrl,
+            ],
+        ];
+    }
+
     private function decorateProduct(Product $product, bool $includeVariants = false): Product
     {
         $activeVariants = $this->getActiveVariants($product);
         $hasVariants = $activeVariants->isNotEmpty();
+        $isBundle = Schema::hasTable('product_bundle_items')
+            && (
+                $product->relationLoaded('bundleItems')
+                    ? $product->bundleItems->isNotEmpty()
+                    : $product->bundleItems()->exists()
+            );
         $basePrice = $hasVariants
             ? (float) $activeVariants->min('price')
             : (float) $product->price;
@@ -222,6 +265,23 @@ class ProductController extends Controller
             if ($includeVariants) {
                 $product->setAttribute('variants', []);
             }
+        }
+
+        $product->setAttribute('is_bundle', $isBundle);
+
+        if ($isBundle && $includeVariants) {
+            $bundleItems = $product->relationLoaded('bundleItems')
+                ? $product->bundleItems
+                : $product->bundleItems()->with('componentProduct')->get();
+
+            $formattedBundleItems = $bundleItems
+                ->map(fn($item) => $this->formatBundleItem($item))
+                ->filter()
+                ->values();
+
+            $product->setAttribute('bundle_items', $formattedBundleItems);
+        } elseif ($includeVariants) {
+            $product->setAttribute('bundle_items', []);
         }
 
         return $product;
@@ -358,12 +418,20 @@ class ProductController extends Controller
         $product = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 7200), function () use ($productId) {
             $productModel = Product::query()->findOrFail($productId);
 
-            $productModel->load([
+            $relations = [
                 'category',
                 'orderItems',
                 'inventory',
                 'variants:id,product_id,sku,size,color,image,price,stock,is_active',
-            ]);
+            ];
+
+            if (Schema::hasTable('product_bundle_items')) {
+                $relations['bundleItems.componentProduct'] = function ($query) {
+                    $query->select(['id', 'name', 'price', 'image', 'all_images']);
+                };
+            }
+
+            $productModel->load($relations);
 
             return $this->decorateProduct($productModel, true);
         });

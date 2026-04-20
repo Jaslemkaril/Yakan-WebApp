@@ -40,6 +40,9 @@ export default function ProductDetailScreen({ route, navigation }) {
   const variantOptions = Array.isArray(currentProduct?.variants)
     ? currentProduct.variants.filter(v => v && v.is_active !== false)
     : [];
+  const isBundleProduct = Boolean(currentProduct?.is_bundle)
+    || (Array.isArray(currentProduct?.bundle_items) && currentProduct.bundle_items.length > 0);
+  const bundleItems = Array.isArray(currentProduct?.bundle_items) ? currentProduct.bundle_items : [];
   const selectedVariant = variantOptions.find(v => Number(v.id) === Number(selectedVariantId)) || null;
   const fallbackVariant = variantOptions.find(v => Number(v?.stock || 0) > 0) || variantOptions[0] || null;
   const activeVariant = selectedVariant || fallbackVariant;
@@ -401,6 +404,51 @@ export default function ProductDetailScreen({ route, navigation }) {
               </View>
             );
           })()}
+
+          {/* Bundle Contents */}
+          {isBundleProduct && bundleItems.length > 0 && (
+            <View style={styles.section}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                <MaterialCommunityIcons name="package-variant-closed" size={20} color={theme.primary} style={{ marginRight: 6 }} />
+                <Text style={styles.sectionTitle}>What's in this bundle ({bundleItems.length})</Text>
+              </View>
+              {bundleItems.map((item, idx) => {
+                const itemImage = getProductImageSource(item?.product, null);
+                const itemName = item?.product?.name || 'Bundle item';
+                const itemPrice = parseFloat(item?.product?.price || 0);
+                const qty = Number(item?.quantity || 1);
+                return (
+                  <View
+                    key={item?.id || `${item?.product_id || 'item'}-${idx}`}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: 8,
+                      borderBottomWidth: idx < bundleItems.length - 1 ? 1 : 0,
+                      borderBottomColor: theme.borderLight,
+                    }}
+                  >
+                    <View style={{ width: 56, height: 56, borderRadius: 8, overflow: 'hidden', backgroundColor: '#f3f4f6', marginRight: 12 }}>
+                      {itemImage ? (
+                        <Image source={itemImage} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                      ) : (
+                        <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                          <MaterialCommunityIcons name="image-off-outline" size={22} color="#9ca3af" />
+                        </View>
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: theme.text }} numberOfLines={1}>{itemName}</Text>
+                      <Text style={{ fontSize: 12, color: theme.textMuted, marginTop: 2 }}>
+                        ₱{itemPrice.toFixed(2)} each
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: theme.primary }}>× {qty}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
 
           {/* Description */}
           <View style={styles.section}>
