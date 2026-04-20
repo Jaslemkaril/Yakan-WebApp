@@ -687,9 +687,9 @@
         <!-- Price -->
         <div>
             <label class="block font-medium text-gray-700">Price (₱)</label>
-            <input type="number" name="price" value="{{ old('price') }}"
+            <input type="number" id="basePriceInput" name="price" value="{{ old('price') }}"
                 class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#800000]" step="0.01"
-                placeholder="0.00" required>
+                placeholder="0.00">
         </div>
 
         <!-- Product-level Discount -->
@@ -765,9 +765,9 @@
         <!-- Stock -->
         <div>
             <label class="block font-medium text-gray-700">Stock</label>
-            <input type="number" name="stock" value="{{ old('stock', 0) }}"
+            <input type="number" id="baseStockInput" name="stock" value="{{ old('stock', 0) }}"
                 class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#800000]" min="0"
-                required>
+                >
         </div>
 
         <!-- Product Variants -->
@@ -1058,14 +1058,54 @@
                 }
 
                 removeBtn.closest('.variant-row')?.remove();
+                syncBaseFieldRequirements();
             });
+
+            variantRowsContainer.addEventListener('input', syncBaseFieldRequirements);
+            variantRowsContainer.addEventListener('change', syncBaseFieldRequirements);
         }
 
-        const basePriceInput = document.querySelector('input[name="price"]');
+        const basePriceInput = document.getElementById('basePriceInput');
+        const baseStockInput = document.getElementById('baseStockInput');
         const discountTypeInput = document.getElementById('discountTypeInput');
         const discountValueInput = document.getElementById('discountValueInput');
         const discountValueHelp = document.getElementById('discountValueHelp');
         const discountPreview = document.getElementById('discountPreview');
+
+        function hasCompleteVariantRows() {
+            if (!variantRowsContainer) {
+                return false;
+            }
+
+            const rows = variantRowsContainer.querySelectorAll('.variant-row');
+            if (!rows.length) {
+                return false;
+            }
+
+            return Array.from(rows).some((row) => {
+                const variantPriceInput = row.querySelector('input[name*="[price]"]');
+                const variantStockInput = row.querySelector('input[name*="[stock]"]');
+                const variantPriceValue = parseFloat(variantPriceInput?.value ?? '');
+                const variantStockValue = parseFloat(variantStockInput?.value ?? '');
+
+                return Number.isFinite(variantPriceValue)
+                    && variantPriceValue >= 0
+                    && Number.isFinite(variantStockValue)
+                    && variantStockValue >= 0;
+            });
+        }
+
+        function syncBaseFieldRequirements() {
+            const variantsReady = hasCompleteVariantRows();
+
+            if (basePriceInput) {
+                basePriceInput.required = !variantsReady;
+            }
+
+            if (baseStockInput) {
+                baseStockInput.required = !variantsReady;
+            }
+        }
 
         function formatPeso(value) {
             return '₱' + Number(value).toLocaleString('en-PH', {
@@ -1145,6 +1185,7 @@
             basePriceInput.addEventListener('input', refreshDiscountPreview);
         }
 
+        syncBaseFieldRequirements();
         refreshDiscountControlState();
 
         if (!form || !submitBtn || !overlay) {

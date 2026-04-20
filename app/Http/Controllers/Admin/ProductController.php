@@ -109,12 +109,13 @@ class ProductController extends Controller
 
         // Check if this is a bundle
         $isSubmittingBundle = $request->boolean('is_bundle');
+        $hasCompleteVariantRows = $this->requestHasCompleteVariantRows($request);
 
         // Validate input
         $request->validate([
             'name' => 'required|string|max:255',
-            'price' => 'required|numeric',
-            'stock' => $isSubmittingBundle ? 'nullable|integer|min:0' : 'required|integer|min:0',
+            'price' => ($isSubmittingBundle || $hasCompleteVariantRows) ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
+            'stock' => ($isSubmittingBundle || $hasCompleteVariantRows) ? 'nullable|integer|min:0' : 'required|integer|min:0',
             'discount_type' => 'nullable|in:percent,fixed',
             'discount_value' => 'nullable|numeric|min:0',
             'discount_starts_at' => 'nullable|date',
@@ -419,11 +420,12 @@ class ProductController extends Controller
 
         // Check if this is a bundle
         $isSubmittingBundle = $request->boolean('is_bundle');
+        $hasCompleteVariantRows = $this->requestHasCompleteVariantRows($request);
 
         // Validate input (stock is managed via Stock In button, not this form)
         $request->validate([
             'name' => 'required|string|max:255',
-            'price' => 'required|numeric',
+            'price' => ($isSubmittingBundle || $hasCompleteVariantRows) ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
             'discount_type' => 'nullable|in:percent,fixed',
             'discount_value' => 'nullable|numeric|min:0',
             'discount_starts_at' => 'nullable|date',
@@ -716,6 +718,33 @@ class ProductController extends Controller
             })
             ->values()
             ->all();
+    }
+
+    private function requestHasCompleteVariantRows(Request $request): bool
+    {
+        $variantRows = $request->input('variant_rows', []);
+        if (!is_array($variantRows)) {
+            return false;
+        }
+
+        foreach ($variantRows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $priceRaw = $row['price'] ?? null;
+            $stockRaw = $row['stock'] ?? null;
+
+            if ($priceRaw === null || $priceRaw === '' || $stockRaw === null || $stockRaw === '') {
+                continue;
+            }
+
+            if (is_numeric($priceRaw) && is_numeric($stockRaw) && (float) $priceRaw >= 0 && (int) $stockRaw >= 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function normalizeProductDiscountInput(Request $request, float $resolvedPrice): array
