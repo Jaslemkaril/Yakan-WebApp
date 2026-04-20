@@ -155,7 +155,7 @@ class DashboardController extends Controller
 
         $refundWindowDays = max(1, (int) config('orders.refund_warranty_days', 7));
         $eligibleStartCutoff = now()->subDays($refundWindowDays);
-        $query->whereRaw('COALESCE(confirmed_at, delivered_at, updated_at) >= ?', [$eligibleStartCutoff]);
+        $query->whereRaw('COALESCE(confirmed_at, delivered_at, created_at) >= ?', [$eligibleStartCutoff]);
 
         if (Schema::hasTable('order_refund_requests')) {
             $activeStatuses = ['requested', 'under_review', 'approved', 'processed'];

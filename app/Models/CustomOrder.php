@@ -299,7 +299,7 @@ class CustomOrder extends Model
      */
     public function getRefundWarrantyStartAt(): ?Carbon
     {
-        return $this->delivered_at ?? $this->updated_at;
+        return $this->delivered_at ?? $this->created_at;
     }
 
     /**

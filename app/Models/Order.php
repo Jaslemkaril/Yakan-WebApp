@@ -183,7 +183,7 @@ class Order extends Model
      */
     public function getRefundWarrantyStartAt(): ?Carbon
     {
-        return $this->confirmed_at ?? $this->delivered_at ?? $this->updated_at;
+        return $this->confirmed_at ?? $this->delivered_at ?? $this->created_at;
     }
 
     /**
