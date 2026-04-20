@@ -790,7 +790,7 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && isse
                             <input type="text" name="variant_rows[{{ $variantIndex }}][sku]" value="{{ $variantRow['sku'] ?? '' }}" placeholder="SKU" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
                         </div>
                         <div class="col-span-2">
-                            <input type="text" name="variant_rows[{{ $variantIndex }}][size]" value="{{ $variantRow['size'] ?? '' }}" placeholder="Size" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                            <input type="text" name="variant_rows[{{ $variantIndex }}][size]" value="{{ $variantRow['size'] ?? '' }}" placeholder="Style/Size" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
                         </div>
                         <div class="col-span-2">
                             <input type="text" name="variant_rows[{{ $variantIndex }}][color]" value="{{ $variantRow['color'] ?? '' }}" placeholder="Color" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
@@ -1077,7 +1077,7 @@ $isBundleForm = (bool) old('is_bundle', ($bundleFeatureEnabled ?? false) && isse
                         <input type="text" name="variant_rows[${variantIndex}][sku]" placeholder="SKU" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
                     </div>
                     <div class="col-span-2">
-                        <input type="text" name="variant_rows[${variantIndex}][size]" placeholder="Size" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
+                        <input type="text" name="variant_rows[${variantIndex}][size]" placeholder="Style/Size" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
                     </div>
                     <div class="col-span-2">
                         <input type="text" name="variant_rows[${variantIndex}][color]" placeholder="Color" class="w-full border rounded px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000]">
