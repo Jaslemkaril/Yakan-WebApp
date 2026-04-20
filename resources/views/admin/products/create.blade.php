@@ -193,12 +193,9 @@
                     <input type="hidden" name="price" id="bundlePriceInput" value="0">
                     <input type="hidden" name="bundle_items_json" id="bundleItemsJson" value="[]">
                     
-                    <div class="mt-6 space-y-2">
+                    <div class="mt-6">
                         <button id="createProductSubmitBtn" type="submit" class="w-full px-4 py-2 bg-[#800000] text-white rounded-lg font-semibold hover:bg-[#600000] transition-colors">
                             Publish bundle
-                        </button>
-                        <button type="button" class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
-                            Save as draft
                         </button>
                     </div>
                 </div>
