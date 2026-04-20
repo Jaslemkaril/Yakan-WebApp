@@ -230,7 +230,14 @@ class AdminCustomOrderController extends Controller
     private function normalizeOrderReferenceImage(string $rawValue): ?string
     {
         $candidate = trim($rawValue);
-        if ($candidate === '' || strtolower($candidate) === 'null' || $candidate === '-') {
+        $candidateLower = strtolower($candidate);
+
+        if (
+            $candidate === '' ||
+            $candidateLower === 'null' ||
+            $candidate === '-' ||
+            str_contains($candidateLower, 'no-image.svg')
+        ) {
             return null;
         }
 
@@ -239,6 +246,14 @@ class AdminCustomOrderController extends Controller
             str_starts_with($candidate, 'https://') ||
             str_starts_with($candidate, 'data:image')
         ) {
+            $parsedPath = (string) (parse_url($candidate, PHP_URL_PATH) ?? '');
+            if (preg_match('#^/chat-image/(chats|payments)/(.*)$#', $parsedPath, $matches)) {
+                $chatStoragePath = storage_path('app/public/' . $matches[1] . '/' . ltrim((string) ($matches[2] ?? ''), '/'));
+                if (!is_file($chatStoragePath)) {
+                    return null;
+                }
+            }
+
             return $candidate;
         }
 
@@ -247,16 +262,35 @@ class AdminCustomOrderController extends Controller
             return null;
         }
 
+        $publicStoragePath = storage_path('app/public/' . $candidate);
+
         if (str_starts_with($candidate, 'storage/')) {
+            if (!is_file($publicStoragePath)) {
+                return null;
+            }
             return asset($candidate);
         }
 
         if (str_starts_with($candidate, 'chat-image/')) {
+            $chatPath = preg_replace('#^chat-image/#', '', $candidate);
+            $chatStoragePath = storage_path('app/public/' . ltrim((string) $chatPath, '/'));
+
+            if (!is_file($chatStoragePath)) {
+                return null;
+            }
+
             return url('/' . $candidate);
         }
 
         if (str_starts_with($candidate, 'chats/') || str_starts_with($candidate, 'payments/')) {
+            if (!is_file($publicStoragePath)) {
+                return null;
+            }
             return url('/chat-image/' . $candidate);
+        }
+
+        if (!is_file($publicStoragePath)) {
+            return null;
         }
 
         return asset('storage/' . $candidate);
