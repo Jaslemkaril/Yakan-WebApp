@@ -32,4 +32,6 @@ cmds = [
 ]
 
 [start]
-cmd = "bash railway.sh ; php -S 0.0.0.0:${PORT:-8080} server.php"
+# -c php.ini makes PHP load the repo-root php.ini so our upload limits
+# (post_max_size, upload_max_filesize, max_file_uploads) take effect.
+cmd = "bash railway.sh ; php -c php.ini -S 0.0.0.0:${PORT:-8080} server.php"
