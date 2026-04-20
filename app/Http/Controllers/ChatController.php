@@ -1492,8 +1492,17 @@ class ChatController extends Controller
             'original_message_id' => 'required|exists:chat_messages,id',
         ]);
         
-        // Get all form fields from request (excluding _token and original_message_id)
-        $formResponses = $request->except(['_token', 'original_message_id']);
+        // Get form fields and drop transport/security fields so they are never persisted in chat.
+        $formResponses = $request->except(['_token', 'original_message_id', 'auth_token']);
+        $formResponses = collect($formResponses)
+            ->reject(function ($value, $key) {
+                $normalizedKey = strtolower((string) $key);
+
+                return in_array($normalizedKey, ['token', 'auth_token', 'x-auth-token'], true)
+                    || str_contains($normalizedKey, 'password')
+                    || str_contains($normalizedKey, 'secret');
+            })
+            ->all();
         
         // Get the original form request message
         $originalMessage = ChatMessage::find($validated['original_message_id']);

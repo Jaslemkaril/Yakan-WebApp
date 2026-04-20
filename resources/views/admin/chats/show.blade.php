@@ -355,6 +355,10 @@
                                     <div class="cs-form-data">
                                         <div class="fd-label"><i class="fas fa-check-circle"></i> Custom Order Details</div>
                                         @foreach($message->form_data['responses'] as $fieldName => $fieldValue)
+                                            @php
+                                                $normalizedFieldName = strtolower((string) $fieldName);
+                                            @endphp
+                                            @continue(in_array($normalizedFieldName, ['_token', 'auth_token', 'token', 'x-auth-token'], true))
                                             <div class="fd-item">
                                                 <span class="fd-key">{{ ucwords(str_replace('_', ' ', $fieldName)) }}:</span>
                                                 <span>{{ $fieldValue }}</span>
