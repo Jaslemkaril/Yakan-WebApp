@@ -24,6 +24,10 @@
     if (!is_array($initialVariantRows)) {
         $initialVariantRows = [];
     }
+    $bundleDiscountSelection = old('bundle_discount_type', 'percentage_10');
+    $bundleCustomDiscount = old('custom_discount', '');
+    $bundleDiscountStartsAt = old('discount_starts_at') ? str_replace(' ', 'T', old('discount_starts_at')) : '';
+    $bundleDiscountEndsAt = old('discount_ends_at') ? str_replace(' ', 'T', old('discount_ends_at')) : '';
 @endphp
 
 <div class="{{ $isBundleForm ? 'max-w-7xl mx-auto' : 'max-w-3xl mx-auto' }} p-6 bg-white shadow rounded-lg">
@@ -139,18 +143,31 @@
                         <select name="bundle_discount_type" id="bundleDiscountType" 
                             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]" 
                             onchange="calculateBundlePrice()">
-                            <option value="percentage_10">10% off total</option>
-                            <option value="percentage_15">15% off total</option>
-                            <option value="percentage_20">20% off total</option>
-                            <option value="percentage_25">25% off total</option>
-                            <option value="percentage_30">30% off total</option>
-                            <option value="custom">Custom discount</option>
+                            <option value="percentage_10" {{ $bundleDiscountSelection === 'percentage_10' ? 'selected' : '' }}>10% off total</option>
+                            <option value="percentage_15" {{ $bundleDiscountSelection === 'percentage_15' ? 'selected' : '' }}>15% off total</option>
+                            <option value="percentage_20" {{ $bundleDiscountSelection === 'percentage_20' ? 'selected' : '' }}>20% off total</option>
+                            <option value="percentage_25" {{ $bundleDiscountSelection === 'percentage_25' ? 'selected' : '' }}>25% off total</option>
+                            <option value="percentage_30" {{ $bundleDiscountSelection === 'percentage_30' ? 'selected' : '' }}>30% off total</option>
+                            <option value="custom" {{ $bundleDiscountSelection === 'custom' ? 'selected' : '' }}>Custom discount</option>
                         </select>
                         
-                        <div id="customDiscountInput" class="mt-2 hidden">
-                            <input type="number" name="custom_discount" min="0" step="0.01" placeholder="Enter discount amount" 
+                        <div id="customDiscountInput" class="mt-2 {{ $bundleDiscountSelection === 'custom' ? '' : 'hidden' }}">
+                            <input type="number" name="custom_discount" value="{{ $bundleCustomDiscount }}" min="0" step="0.01" placeholder="Enter discount amount" 
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]" 
                                 onchange="calculateBundlePrice()">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Discount starts at</label>
+                            <input type="datetime-local" name="discount_starts_at" value="{{ $bundleDiscountStartsAt }}"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Discount ends at</label>
+                            <input type="datetime-local" name="discount_ends_at" value="{{ $bundleDiscountEndsAt }}"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]">
                         </div>
                     </div>
                     
@@ -192,6 +209,8 @@
                     
                     <input type="hidden" name="price" id="bundlePriceInput" value="0">
                     <input type="hidden" name="bundle_items_json" id="bundleItemsJson" value="[]">
+                    <input type="hidden" name="discount_type" id="bundleDiscountModeInput" value="{{ old('discount_type') }}">
+                    <input type="hidden" name="discount_value" id="bundleDiscountValueInput" value="{{ old('discount_value') }}">
                     
                     <div class="mt-6">
                         <button id="createProductSubmitBtn" type="submit" class="w-full px-4 py-2 bg-[#800000] text-white rounded-lg font-semibold hover:bg-[#600000] transition-colors">
@@ -315,15 +334,25 @@
             
             let discount = 0;
             const discountType = document.getElementById('bundleDiscountType').value;
+            const customInputWrap = document.getElementById('customDiscountInput');
+            const discountModeInput = document.getElementById('bundleDiscountModeInput');
+            const discountValueInput = document.getElementById('bundleDiscountValueInput');
             
             if (discountType.startsWith('percentage_')) {
                 const percentage = parseInt(discountType.split('_')[1]);
                 discount = originalTotal * (percentage / 100);
+                customInputWrap.classList.add('hidden');
+                discountModeInput.value = 'percent';
+                discountValueInput.value = Number.isFinite(percentage) ? String(percentage) : '0';
             } else if (discountType === 'custom') {
                 discount = parseFloat(document.querySelector('input[name="custom_discount"]').value) || 0;
-                document.getElementById('customDiscountInput').classList.remove('hidden');
+                customInputWrap.classList.remove('hidden');
+                discountModeInput.value = discount > 0 ? 'fixed' : '';
+                discountValueInput.value = discount > 0 ? discount.toFixed(2) : '';
             } else {
-                document.getElementById('customDiscountInput').classList.add('hidden');
+                customInputWrap.classList.add('hidden');
+                discountModeInput.value = '';
+                discountValueInput.value = '';
             }
             
             const finalPrice = Math.max(0, originalTotal - discount);
