@@ -633,6 +633,30 @@ class OrderController extends Controller
                 'message' => $flat ?: 'Validation failed',
                 'errors' => $e->errors(),
             ], 422);
+        } catch (\RuntimeException $e) {
+            // Runtime exceptions (e.g. "Insufficient component variant stock for
+            // bundle order." from decrementBundleComponentStock) should be
+            // surfaced verbatim so the user knows what to do and so we can
+            // diagnose production issues without server logs.
+            if (\DB::transactionLevel() > 0) {
+                \DB::rollBack();
+            }
+            $this->diagLog('OrderStore.runtime_error', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ], $userId);
+            \Log::error('[OrderStore] Runtime error while creating order', [
+                'user_id' => $userId,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error' => $e->getMessage(),
+            ], 422);
         } catch (\Exception $e) {
             if (\DB::transactionLevel() > 0) {
                 \DB::rollBack();
@@ -641,10 +665,18 @@ class OrderController extends Controller
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
+                'trace' => collect(explode("\n", $e->getTraceAsString()))->take(6)->all(),
             ], $userId);
+            \Log::error('[OrderStore] Unexpected error while creating order', [
+                'user_id' => $userId,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Order could not be created. Please try again.'
+                'message' => 'Order could not be created: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
