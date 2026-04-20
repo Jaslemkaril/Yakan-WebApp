@@ -700,12 +700,12 @@ class AdminCustomOrderController extends Controller
 
         $workflowStatus = strtolower((string) ($refundRequest->workflow_status ?: $refundRequest->status));
         if (!in_array($workflowStatus, ['pending_review', 'under_review', 'requested'], true)) {
-            return redirect()->back()->with('error', 'This refund/return request is not in a reviewable state.');
+            return $this->customRefundActionErrorResponse($request, 'This refund/return request is not in a reviewable state.');
         }
 
         $order = $refundRequest->customOrder;
         if (!$order) {
-            return redirect()->back()->with('error', 'Associated custom order was not found.');
+            return $this->customRefundActionErrorResponse($request, 'Associated custom order was not found.');
         }
 
         $selectedDecision = strtoupper((string) ($validated['admin_decision'] ?? 'recommended'));
@@ -760,7 +760,7 @@ class AdminCustomOrderController extends Controller
 
         if ($selectedDecision === 'REJECT') {
             $this->notifyCustomRefundDecision($refundRequest, 'rejected');
-            return redirect()->back()->with('success', ucfirst($refundRequest->request_type) . ' request has been rejected.');
+            return $this->customRefundActionSuccessResponse($request, $refundRequest, ucfirst($refundRequest->request_type) . ' request has been rejected.');
         }
 
         if ($selectedDecision === 'RETURN_REQUIRED') {
@@ -770,7 +770,7 @@ class AdminCustomOrderController extends Controller
                 'Your request has been reviewed and approved with return required. Please send back the item and share return shipment details to continue processing your payout.'
             );
 
-            return redirect()->back()->with('success', ucfirst($refundRequest->request_type) . ' review saved. Waiting for customer return shipment details.');
+            return $this->customRefundActionSuccessResponse($request, $refundRequest, ucfirst($refundRequest->request_type) . ' review saved. Waiting for customer return shipment details.');
         }
 
         $this->notifyCustomRefundWorkflowUpdate(
@@ -779,7 +779,7 @@ class AdminCustomOrderController extends Controller
             'Your request has been reviewed and is now pending payout processing.'
         );
 
-        return redirect()->back()->with('success', ucfirst($refundRequest->request_type) . ' review saved. Request is now pending payout processing.');
+        return $this->customRefundActionSuccessResponse($request, $refundRequest, ucfirst($refundRequest->request_type) . ' review saved. Request is now pending payout processing.');
     }
 
     /**
@@ -930,6 +930,78 @@ class AdminCustomOrderController extends Controller
         $this->notifyCustomRefundDecision($refundRequest, 'approved');
 
         return redirect()->back()->with('success', 'Refund payout recorded successfully.');
+    }
+
+    private function customRefundActionSuccessResponse(Request $request, CustomOrderRefundRequest $refundRequest, string $message)
+    {
+        if ($this->isJsonLikeRequest($request)) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'refund' => $this->buildCustomRefundActionPayload($refundRequest),
+            ]);
+        }
+
+        return redirect()->back()->with('success', $message);
+    }
+
+    private function customRefundActionErrorResponse(Request $request, string $message, int $status = 422)
+    {
+        if ($this->isJsonLikeRequest($request)) {
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+            ], $status);
+        }
+
+        return redirect()->back()->with('error', $message);
+    }
+
+    private function buildCustomRefundActionPayload(CustomOrderRefundRequest $refundRequest): array
+    {
+        $refundRequest->loadMissing('customOrder');
+
+        $status = strtolower((string) $refundRequest->status);
+        $workflow = strtolower((string) ($refundRequest->workflow_status ?: $status));
+        $statusState = 'under_review';
+
+        if (in_array($workflow, ['awaiting_return_shipment', 'return_in_transit'], true)) {
+            $statusState = 'awaiting_return';
+        } elseif ($status === 'rejected' || $workflow === 'rejected') {
+            $statusState = 'rejected';
+        } elseif (in_array($workflow, ['processed'], true)
+            || strtolower((string) ($refundRequest->payout_status ?? '')) === 'completed'
+            || in_array($status, ['approved', 'processed'], true)) {
+            $statusState = 'refunded';
+        }
+
+        $statusLabel = match ($statusState) {
+            'awaiting_return' => 'Awaiting return',
+            'refunded' => 'Refunded',
+            'rejected' => 'Rejected',
+            default => 'Under review',
+        };
+
+        $order = $refundRequest->customOrder;
+        $displayAmount = (float) ($refundRequest->approved_amount
+            ?? $refundRequest->refund_amount
+            ?? $refundRequest->recommended_refund_amount
+            ?? $order?->final_price
+            ?? 0);
+
+        return [
+            'refund_id' => (string) ($refundRequest->refund_reference ?: ('RF-' . str_pad((string) $refundRequest->id, 4, '0', STR_PAD_LEFT))),
+            'refund_request_id' => $refundRequest->id,
+            'status_state' => $statusState,
+            'status_label' => $statusLabel,
+            'admin_note' => trim((string) ($refundRequest->admin_note ?? '')),
+            'amount' => number_format(max($displayAmount, 0), 2),
+        ];
+    }
+
+    private function isJsonLikeRequest(Request $request): bool
+    {
+        return $request->expectsJson() || $request->wantsJson() || $request->ajax();
     }
 
     /**

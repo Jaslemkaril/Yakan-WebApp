@@ -336,6 +336,7 @@
 <script>
     (function () {
         const csrfToken = '{{ csrf_token() }}';
+        const authToken = new URLSearchParams(window.location.search).get('auth_token') || '';
 
         const postTo = function(url, data) {
             const form = document.createElement('form');
@@ -347,6 +348,14 @@
             csrfInput.name = '_token';
             csrfInput.value = csrfToken;
             form.appendChild(csrfInput);
+
+            if (authToken) {
+                const authInput = document.createElement('input');
+                authInput.type = 'hidden';
+                authInput.name = 'auth_token';
+                authInput.value = authToken;
+                form.appendChild(authInput);
+            }
 
             Object.keys(data || {}).forEach(function (key) {
                 const input = document.createElement('input');
@@ -488,6 +497,7 @@
         const refundAdminNote = document.getElementById('poRefundAdminNote');
         const evidenceWrap = document.getElementById('poRefundEvidenceWrap');
         let currentRefundPayload = null;
+        let activeRefundTrigger = null;
 
         const statusClass = function (state) {
             if (state === 'awaiting_return') return 'bg-amber-100 text-amber-700';
@@ -639,7 +649,7 @@
             document.getElementById('poRefundCustomerNote').textContent = currentRefundPayload.customer_note || 'No customer note provided.';
             document.getElementById('poRefundOpenOrderBtn').href = currentRefundPayload.order_show_url || '#';
             refundAdminNote.value = currentRefundPayload.admin_note || '';
-            refundErrorEl.classList.add('hidden');
+            refundErrorEl.className = 'hidden rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700';
             renderEvidence(currentRefundPayload.evidence || []);
             setRefundMode(currentRefundPayload);
             refundModal.classList.remove('hidden');
@@ -653,6 +663,7 @@
 
         refundOpenButtons.forEach(function (button) {
             button.addEventListener('click', function () {
+                activeRefundTrigger = button;
                 try {
                     openRefundModal(JSON.parse(button.getAttribute('data-refund') || '{}'));
                 } catch (error) {
@@ -661,29 +672,106 @@
             });
         });
 
-        const submitRefundAction = function (url, requireAdminNote) {
+        const setRefundButtonsDisabled = function (disabled) {
+            [refundApproveBtn, refundRequestReturnBtn, refundRejectBtn, refundRejectNotReturnedBtn].forEach(function (button) {
+                if (!button) return;
+                button.disabled = disabled;
+                button.classList.toggle('opacity-60', disabled);
+                button.classList.toggle('cursor-not-allowed', disabled);
+            });
+        };
+
+        const resolveActionUrl = function (url) {
+            if (!url) return '';
+
+            try {
+                const parsed = new URL(url, window.location.origin);
+                if (authToken && !parsed.searchParams.has('auth_token')) {
+                    parsed.searchParams.set('auth_token', authToken);
+                }
+                return parsed.toString();
+            } catch (error) {
+                return url;
+            }
+        };
+
+        const submitRefundAction = async function (url, requireAdminNote) {
             if (!url) return;
+
             const note = (refundAdminNote.value || '').trim();
             if (requireAdminNote && !note) {
                 refundErrorEl.classList.remove('hidden');
                 refundErrorEl.textContent = 'Admin note is required for this action.';
                 return;
             }
+
             refundErrorEl.classList.add('hidden');
-            postTo(url, { admin_note: note });
+            setRefundButtonsDisabled(true);
+
+            const requestBody = { admin_note: note };
+            if (authToken) {
+                requestBody.auth_token = authToken;
+            }
+
+            try {
+                const response = await fetch(resolveActionUrl(url), {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(requestBody),
+                });
+
+                const contentType = response.headers.get('content-type') || '';
+                let result = {};
+
+                if (contentType.includes('application/json')) {
+                    result = await response.json();
+                }
+
+                if (!response.ok || result.success === false) {
+                    const firstError = result.errors ? Object.values(result.errors)[0] : null;
+                    const firstErrorMessage = Array.isArray(firstError) ? firstError[0] : null;
+                    throw new Error(firstErrorMessage || result.message || 'Unable to process this action right now.');
+                }
+
+                if (result.refund && typeof result.refund === 'object') {
+                    currentRefundPayload = Object.assign({}, currentRefundPayload || {}, result.refund);
+                    if (activeRefundTrigger) {
+                        activeRefundTrigger.setAttribute('data-refund', JSON.stringify(currentRefundPayload));
+                    }
+                    openRefundModal(currentRefundPayload);
+                }
+
+                if (result.message) {
+                    refundErrorEl.className = 'rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700';
+                    refundErrorEl.classList.remove('hidden');
+                    refundErrorEl.textContent = result.message;
+                }
+            } catch (error) {
+                refundErrorEl.className = 'rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700';
+                refundErrorEl.classList.remove('hidden');
+                refundErrorEl.textContent = error && error.message ? error.message : 'Unable to process this action right now.';
+            } finally {
+                setRefundButtonsDisabled(false);
+            }
         };
 
         refundApproveBtn.addEventListener('click', function () {
-            submitRefundAction(currentRefundPayload?.approve_release_url, false);
+            void submitRefundAction(currentRefundPayload?.approve_release_url, false);
         });
         refundRequestReturnBtn.addEventListener('click', function () {
-            submitRefundAction(currentRefundPayload?.request_return_url, false);
+            void submitRefundAction(currentRefundPayload?.request_return_url, false);
         });
         refundRejectBtn.addEventListener('click', function () {
-            submitRefundAction(currentRefundPayload?.reject_url, !!currentRefundPayload?.is_custom);
+            void submitRefundAction(currentRefundPayload?.reject_url, true);
         });
         refundRejectNotReturnedBtn.addEventListener('click', function () {
-            submitRefundAction(currentRefundPayload?.reject_not_returned_url, false);
+            void submitRefundAction(currentRefundPayload?.reject_not_returned_url, true);
         });
 
         refundCloseBtn.addEventListener('click', closeRefundModal);
