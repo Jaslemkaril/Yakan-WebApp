@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Coupon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class CouponController extends Controller
 {
@@ -22,10 +25,13 @@ class CouponController extends Controller
 
     public function store(Request $request)
     {
+        $this->ensureCouponColumnsExist();
+        $supportsAppliesTo = Schema::hasColumn('coupons', 'applies_to');
+
         $data = $request->validate([
             'code' => 'required|string|alpha_num:ascii|unique:coupons,code',
             'type' => 'required|in:percent,fixed',
-            'applies_to' => 'required|in:shipping,items',
+            'applies_to' => ($supportsAppliesTo ? 'required' : 'nullable') . '|in:shipping,items',
             'value' => 'required|numeric|min:0',
             'max_discount' => 'nullable|numeric|min:0',
             'min_spend' => 'nullable|numeric|min:0',
@@ -38,6 +44,11 @@ class CouponController extends Controller
         $data['created_by'] = Auth::id();
         $data['active'] = (bool)($data['active'] ?? true);
         $data['min_spend'] = $data['min_spend'] ?? 0;
+
+        if (!$supportsAppliesTo) {
+            unset($data['applies_to']);
+        }
+
         Coupon::create($data);
         $token = $request->input('auth_token') ?? $request->query('auth_token');
         $params = $token ? ['auth_token' => $token] : [];
@@ -51,10 +62,13 @@ class CouponController extends Controller
 
     public function update(Request $request, Coupon $coupon)
     {
+        $this->ensureCouponColumnsExist();
+        $supportsAppliesTo = Schema::hasColumn('coupons', 'applies_to');
+
         $data = $request->validate([
             'code' => 'required|string|alpha_num:ascii|unique:coupons,code,' . $coupon->id,
             'type' => 'required|in:percent,fixed',
-            'applies_to' => 'required|in:shipping,items',
+            'applies_to' => ($supportsAppliesTo ? 'required' : 'nullable') . '|in:shipping,items',
             'value' => 'required|numeric|min:0',
             'max_discount' => 'nullable|numeric|min:0',
             'min_spend' => 'nullable|numeric|min:0',
@@ -66,6 +80,11 @@ class CouponController extends Controller
         ]);
         $data['active'] = (bool)($data['active'] ?? $coupon->active);
         $data['min_spend'] = $data['min_spend'] ?? 0;
+
+        if (!$supportsAppliesTo) {
+            unset($data['applies_to']);
+        }
+
         $coupon->update($data);
         $token = $request->input('auth_token') ?? $request->query('auth_token');
         $params = $token ? ['auth_token' => $token] : [];
@@ -89,5 +108,26 @@ class CouponController extends Controller
             return redirect()->back()->withInput(['auth_token' => $token])->with('success', 'Coupon status updated');
         }
         return redirect()->back()->with('success', 'Coupon status updated');
+    }
+
+    private function ensureCouponColumnsExist(): void
+    {
+        if (!Schema::hasTable('coupons') || Schema::hasColumn('coupons', 'applies_to')) {
+            return;
+        }
+
+        try {
+            Schema::table('coupons', function (Blueprint $table) {
+                if (!Schema::hasColumn('coupons', 'applies_to')) {
+                    $table->enum('applies_to', ['shipping', 'items'])
+                        ->default('shipping')
+                        ->after('type');
+                }
+            });
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to auto-add applies_to column on coupons table', [
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 }

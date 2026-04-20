@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderRefundRequest;
 use App\Models\CustomOrder;
 use App\Models\CustomOrderRefundRequest;
+use App\Services\OrderKpiService;
 use App\Services\Payment\PayMongoCheckoutService;
 use App\Services\TransactionalMailService;
 use Illuminate\Http\JsonResponse;
@@ -29,7 +30,11 @@ class OrderController extends Controller
         if ($request->filled('status')) {
             $statusFilter = strtolower(trim((string) $request->status));
             if ($statusFilter === 'done') {
-                $query->whereIn('status', ['delivered', 'completed']);
+                $query->whereIn('status', OrderKpiService::DONE_ORDER_STATUSES);
+            } elseif ($statusFilter === 'pending') {
+                $query->whereIn('status', OrderKpiService::PENDING_CONFIRMATION_STATUSES);
+            } elseif ($statusFilter === 'processing') {
+                $query->whereIn('status', OrderKpiService::PROCESSING_SHIPPING_STATUSES);
             } else {
                 $query->where('status', $request->status);
             }
@@ -76,30 +81,7 @@ class OrderController extends Controller
         $perPage = $request->get('per_page', 20);
         $orders = $query->paginate($perPage)->appends($request->all());
 
-        $supportsDownpayment = Schema::hasColumn('orders', 'payment_option')
-            && Schema::hasColumn('orders', 'downpayment_amount')
-            && Schema::hasColumn('orders', 'remaining_balance')
-            && Schema::hasColumn('orders', 'total_amount');
-        $paidRevenueExpr = $supportsDownpayment
-            ? "CASE WHEN payment_option = 'downpayment' AND COALESCE(remaining_balance, 0) > 0 THEN downpayment_amount ELSE total_amount END"
-            : 'total_amount';
-
-        // Calculate statistics
-        $stats = [
-            'total_orders' => Order::count(),
-            'pending_orders' => Order::whereRaw('LOWER(status) = ?', ['pending'])->count(),
-            'processing_orders' => Order::whereRaw('LOWER(status) = ?', ['processing'])->count(),
-            'shipped_orders' => Order::whereRaw('LOWER(status) = ?', ['shipped'])->count(),
-            'delivered_orders' => Order::whereRaw('LOWER(status) = ?', ['delivered'])->count(),
-            'total_revenue' => Order::whereIn('payment_status', ['paid', 'completed', 'verified'])
-                ->sum(DB::raw($paidRevenueExpr)),
-            'pending_revenue' => Order::where('payment_status', 'pending')
-                ->sum(DB::raw($paidRevenueExpr)),
-            'today_orders' => Order::whereDate('created_at', today())->count(),
-            'today_revenue' => Order::whereDate('created_at', today())
-                ->whereIn('payment_status', ['paid', 'completed', 'verified'])
-                ->sum(DB::raw($paidRevenueExpr)),
-        ];
+        $stats = app(OrderKpiService::class)->getAdminOrdersManagementStats();
 
         if ($request->ajax()) {
             return view('admin.orders.partials.orders-rows', compact('orders'))->render();

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CustomOrderRefundRequest;
 use App\Models\Order;
 use App\Models\OrderRefundRequest;
+use App\Services\OrderKpiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
@@ -27,33 +28,28 @@ class DashboardController extends Controller
             $activeScope = 'recent';
         }
 
+        $sharedOrderStats = app(OrderKpiService::class)->getStaffDashboardStats();
         $refundEligibleOrdersQuery = $this->refundEligibleOrdersQuery();
         $refundWorkloadCount = $this->refundWorkloadUnderReviewCount();
 
-        $pendingConfirmationCount = Order::whereIn('status', ['pending_confirmation', 'pending'])->count();
-        $processingCount = Order::whereIn('status', ['confirmed', 'processing', 'shipped'])->count();
+        $pendingConfirmationCount = (int) $sharedOrderStats['pending_confirmation'];
+        $processingCount = (int) $sharedOrderStats['processing_shipping'];
         $readyForRefundCount = $refundWorkloadCount;
-
-        $refundedDateColumn = Schema::hasColumn('orders', 'refunded_at') ? 'refunded_at' : 'updated_at';
-        $refundedTodayCount = Order::where(function ($query) {
-            $query->where('status', 'refunded')
-                ->orWhereRaw('LOWER(COALESCE(payment_status, "")) = ?', ['refunded']);
-        })->whereDate($refundedDateColumn, today())->count();
-
-        $doneOrdersCount = Order::whereIn('status', ['delivered', 'completed'])->count();
+        $refundedTodayCount = (int) $sharedOrderStats['refunded_today'];
+        $doneOrdersCount = (int) $sharedOrderStats['done_orders'];
 
         $ordersQuery = Order::with('user');
         $ordersTitle = 'Recent Orders';
 
         switch ($activeScope) {
             case 'pending_confirmation':
-                $ordersQuery->whereIn('status', ['pending_confirmation', 'pending'])
+                $ordersQuery->whereIn('status', OrderKpiService::PENDING_CONFIRMATION_STATUSES)
                     ->orderByDesc('created_at');
                 $ordersTitle = 'Pending Confirmation Orders';
                 break;
 
             case 'processing_shipping':
-                $ordersQuery->whereIn('status', ['confirmed', 'processing', 'shipped'])
+                $ordersQuery->whereIn('status', OrderKpiService::PROCESSING_SHIPPING_STATUSES)
                     ->orderByDesc('updated_at')
                     ->orderByDesc('created_at');
                 $ordersTitle = 'Processing / Shipping Orders';
@@ -67,15 +63,18 @@ class DashboardController extends Controller
                 break;
 
             case 'refunded_today':
-                $ordersQuery->where('status', 'refunded')
-                    ->whereDate('updated_at', today())
+                $refundedDateColumn = Schema::hasColumn('orders', 'refunded_at') ? 'refunded_at' : 'updated_at';
+                $ordersQuery->where(function ($query) {
+                    $query->where('status', 'refunded')
+                        ->orWhereRaw('LOWER(COALESCE(payment_status, "")) = ?', ['refunded']);
+                })->whereDate($refundedDateColumn, today())
                     ->orderByDesc('updated_at')
                     ->orderByDesc('created_at');
                 $ordersTitle = 'Refunded Today';
                 break;
 
             case 'done_orders':
-                $ordersQuery->whereIn('status', ['delivered', 'completed'])
+                $ordersQuery->whereIn('status', OrderKpiService::DONE_ORDER_STATUSES)
                     ->orderByDesc('updated_at')
                     ->orderByDesc('created_at');
                 $ordersTitle = 'Done Orders';
@@ -153,8 +152,8 @@ class DashboardController extends Controller
     private function refundEligibleOrdersQuery()
     {
         $query = Order::query()
-            ->whereIn('status', ['delivered', 'completed'])
-            ->whereRaw('LOWER(COALESCE(payment_status, "")) IN (?, ?, ?)', ['paid', 'verified', 'completed']);
+            ->whereIn('status', OrderKpiService::DONE_ORDER_STATUSES)
+            ->whereRaw('LOWER(COALESCE(payment_status, "")) IN (?, ?, ?)', OrderKpiService::PAID_PAYMENT_STATUSES);
 
         $refundWindowDays = max(1, (int) config('orders.refund_warranty_days', 7));
         $eligibleStartCutoff = now()->subDays($refundWindowDays);
