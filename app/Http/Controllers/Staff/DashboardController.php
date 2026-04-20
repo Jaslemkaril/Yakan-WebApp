@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Staff;
 
 use App\Http\Controllers\Controller;
+use App\Models\CustomOrderRefundRequest;
 use App\Models\Order;
+use App\Models\OrderRefundRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
@@ -26,10 +28,11 @@ class DashboardController extends Controller
         }
 
         $refundEligibleOrdersQuery = $this->refundEligibleOrdersQuery();
+        $refundWorkloadCount = $this->refundWorkloadUnderReviewCount();
 
         $pendingConfirmationCount = Order::whereIn('status', ['pending_confirmation', 'pending'])->count();
         $processingCount = Order::whereIn('status', ['confirmed', 'processing', 'shipped'])->count();
-        $readyForRefundCount = (clone $refundEligibleOrdersQuery)->count();
+        $readyForRefundCount = $refundWorkloadCount;
 
         $refundedDateColumn = Schema::hasColumn('orders', 'refunded_at') ? 'refunded_at' : 'updated_at';
         $refundedTodayCount = Order::where(function ($query) {
@@ -181,5 +184,40 @@ class DashboardController extends Controller
         }
 
         return $query;
+    }
+
+    private function refundWorkloadUnderReviewCount(): int
+    {
+        $total = 0;
+
+        if (Schema::hasTable('order_refund_requests')) {
+            $regularQuery = OrderRefundRequest::query()
+                ->whereHas('order')
+                ->where(function ($query) {
+                    $query->whereRaw('LOWER(COALESCE(reason, "")) NOT LIKE ?', ['%cancel%'])
+                        ->whereRaw('LOWER(COALESCE(comment, "")) NOT LIKE ?', ['%cancel%'])
+                        ->whereRaw('LOWER(COALESCE(details, "")) NOT LIKE ?', ['%cancel%']);
+                });
+
+            if (Schema::hasColumn('order_refund_requests', 'workflow_status')) {
+                $regularQuery->where(function ($query) {
+                    $query->whereIn('status', ['requested', 'pending_review', 'under_review'])
+                        ->orWhereIn('workflow_status', ['requested', 'pending_review', 'under_review']);
+                });
+            } else {
+                $regularQuery->whereIn('status', ['requested', 'pending_review', 'under_review']);
+            }
+
+            $total += $regularQuery->count();
+        }
+
+        if (Schema::hasTable('custom_order_refund_requests')) {
+            $total += CustomOrderRefundRequest::query()
+                ->where('request_type', 'refund')
+                ->whereNotIn('status', ['approved', 'processed', 'rejected'])
+                ->count();
+        }
+
+        return $total;
     }
 }

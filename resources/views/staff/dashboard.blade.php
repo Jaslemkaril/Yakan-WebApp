@@ -25,6 +25,10 @@
         $customDashboardUrl = route('admin.orders.index') . ($authToken ? ('?auth_token=' . $authToken) : '');
         $customOrdersUrl = route('admin.custom-orders.index') . ($authToken ? ('?auth_token=' . $authToken) : '');
         $chatInboxUrl = route('admin.chats.index') . ($authToken ? ('?auth_token=' . $authToken) : '');
+        $postOrderRefundUrl = route('staff.orders.post_order_requests') . '?' . http_build_query(array_filter([
+            'type' => 'refund',
+            'auth_token' => $authToken,
+        ]));
     @endphp
 
     <div class="bg-[#8b1d1d] rounded-2xl p-8 text-white shadow-xl">
@@ -45,10 +49,10 @@
             <p class="text-xs text-gray-400 mt-3 group-hover:text-[#8b1d1d]">Click to view matching orders</p>
         </a>
 
-        <a href="{{ $dashboardUrl('refund_eligible') }}" class="group bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:border-[#8b1d1d] hover:shadow-xl transition-all duration-200">
-            <p class="text-sm text-gray-600 font-medium">Refund-Eligible Orders</p>
+        <a href="{{ $postOrderRefundUrl }}" class="group bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:border-[#8b1d1d] hover:shadow-xl transition-all duration-200">
+            <p class="text-sm text-gray-600 font-medium">Refund Requests (Under Review)</p>
             <p class="text-3xl font-bold text-[#8b1d1d] mt-2">{{ $readyForRefundCount }}</p>
-            <p class="text-xs text-gray-400 mt-3 group-hover:text-[#8b1d1d]">Click to view matching orders</p>
+            <p class="text-xs text-gray-400 mt-3 group-hover:text-[#8b1d1d]">Click to open post-order refunds</p>
         </a>
 
         <a href="{{ $dashboardUrl('refunded_today') }}" class="group bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:border-[#8b1d1d] hover:shadow-xl transition-all duration-200">
@@ -75,8 +79,8 @@
             <a href="{{ $dashboardUrl('processing_shipping') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ $activeScope === 'processing_shipping' ? 'bg-[#8b1d1d] text-white' : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-[#8b1d1d]' }}">
                 Processing / Shipping
             </a>
-            <a href="{{ $dashboardUrl('refund_eligible') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ $activeScope === 'refund_eligible' ? 'bg-[#8b1d1d] text-white' : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-[#8b1d1d]' }}">
-                Refund-Eligible
+            <a href="{{ $postOrderRefundUrl }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-[#8b1d1d]">
+                Refund Requests
             </a>
             <a href="{{ $dashboardUrl('refunded_today') }}" class="px-3 py-2 rounded-lg text-sm font-medium transition-colors {{ $activeScope === 'refunded_today' ? 'bg-[#8b1d1d] text-white' : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-[#8b1d1d]' }}">
                 Refunded Today
