@@ -1658,11 +1658,17 @@ Route::get('/upload-diag', function (Request $request) {
         abort(404);
     }
 
+    // Optional: clear all Laravel caches (use ?flush=1)
+    if ($request->get('flush') === '1') {
+        \Illuminate\Support\Facades\Cache::flush();
+    }
+
     $cloudinary = new \App\Services\CloudinaryService();
 
     // Latest few products to inspect what was actually saved
     $recentProducts = \App\Models\Product::orderByDesc('id')
         ->take(5)
+        ->with(['bundleItems.componentProduct:id,name,stock'])
         ->get(['id', 'name', 'image', 'all_images', 'created_at']);
 
     return response()->json([
@@ -1687,6 +1693,12 @@ Route::get('/upload-diag', function (Request $request) {
                 'name' => $p->name,
                 'image' => $p->image,
                 'all_images_count' => is_array($p->all_images) ? count($p->all_images) : 0,
+                'bundle_items' => $p->bundleItems->map(fn($bi) => [
+                    'qty' => $bi->quantity,
+                    'component_id' => $bi->componentProduct?->id,
+                    'component_name' => $bi->componentProduct?->name,
+                    'component_stock' => $bi->componentProduct?->stock,
+                ])->toArray(),
                 'variants' => \App\Models\ProductVariant::where('product_id', $p->id)
                     ->get(['id', 'size', 'color', 'image', 'is_active'])
                     ->toArray(),

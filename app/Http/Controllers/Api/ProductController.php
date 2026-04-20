@@ -416,7 +416,8 @@ class ProductController extends Controller
     public function show($id): JsonResponse
     {
         $productId = (int) $id;
-        $cacheKey = "product:v2:{$productId}";
+        // v3: adds is_bundle + bundle_items[] with component stock.
+        $cacheKey = "product:v3:{$productId}";
         
         $product = Cache::remember($cacheKey, env('PRODUCT_CACHE_TTL', 7200), function () use ($productId) {
             $productModel = Product::query()->findOrFail($productId);
