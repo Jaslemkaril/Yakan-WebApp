@@ -72,7 +72,7 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Maximum Discount (optional)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Maximum Discount</label>
                         <input type="number" step="0.01" min="0" name="max_discount" value="{{ old('max_discount', $coupon->max_discount) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent" />
                         @error('max_discount')<span class="text-red-600 text-sm mt-1">{{ $message }}</span>@enderror
                     </div>
@@ -84,13 +84,13 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Usage Limit (optional)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Usage Limit</label>
                         <input type="number" min="1" name="usage_limit" value="{{ old('usage_limit', $coupon->usage_limit) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent" />
                         @error('usage_limit')<span class="text-red-600 text-sm mt-1">{{ $message }}</span>@enderror
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Per-User Limit (optional)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Per-User Limit</label>
                         <input type="number" min="1" name="usage_limit_per_user" value="{{ old('usage_limit_per_user', $coupon->usage_limit_per_user) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent" />
                         @error('usage_limit_per_user')<span class="text-red-600 text-sm mt-1">{{ $message }}</span>@enderror
                     </div>
@@ -111,13 +111,13 @@
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Validity Period</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Starts At (optional)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Starts At</label>
                         <input type="datetime-local" name="starts_at" value="{{ old('starts_at', optional($coupon->starts_at)->format('Y-m-d\TH:i')) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent" />
                         @error('starts_at')<span class="text-red-600 text-sm mt-1">{{ $message }}</span>@enderror
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Ends At (optional)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Ends At</label>
                         <input type="datetime-local" name="ends_at" value="{{ old('ends_at', optional($coupon->ends_at)->format('Y-m-d\TH:i')) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent" />
                         @error('ends_at')<span class="text-red-600 text-sm mt-1">{{ $message }}</span>@enderror
                     </div>
