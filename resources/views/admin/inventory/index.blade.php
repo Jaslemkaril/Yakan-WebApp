@@ -99,7 +99,15 @@
             </h2>
             <span class="text-xs text-gray-400 italic">Auto-calculated from stock logs</span>
         </div>
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        @if(!empty($isDateFilterActive))
+            <div class="mb-3 text-xs font-medium text-gray-500">
+                Active range:
+                <span class="text-gray-700">{{ $dateFromInput ?: 'Any' }}</span>
+                to
+                <span class="text-gray-700">{{ $dateToInput ?: 'Any' }}</span>
+            </div>
+        @endif
+        <div class="grid grid-cols-2 lg:grid-cols-{{ !empty($isDateFilterActive) ? '5' : '4' }} gap-3">
             <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
                 <p class="text-xs text-blue-500 font-semibold uppercase tracking-wider mb-1">Today</p>
                 <p class="text-2xl font-bold text-blue-700">+{{ $stockInToday ?? 0 }}</p>
@@ -116,6 +124,12 @@
                 <p class="text-xs text-amber-500 font-semibold uppercase tracking-wider mb-1">Overall</p>
                 <p class="text-2xl font-bold text-amber-700">+{{ $stockInOverall ?? 0 }}</p>
             </div>
+            @if(!empty($isDateFilterActive))
+                <div class="bg-rose-50 border border-rose-100 rounded-xl p-4 text-center">
+                    <p class="text-xs text-rose-500 font-semibold uppercase tracking-wider mb-1">Selected Range</p>
+                    <p class="text-2xl font-bold text-rose-700">+{{ $stockInRange ?? 0 }}</p>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -142,11 +156,21 @@
                         <option value="overstock"  {{ request('status') == 'overstock'  ? 'selected' : '' }}>Overstock</option>
                     </select>
                 </div>
+                <div class="sm:w-44">
+                    <input type="date" name="date_from" value="{{ request('date_from') }}"
+                           class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                           title="Date from">
+                </div>
+                <div class="sm:w-44">
+                    <input type="date" name="date_to" value="{{ request('date_to') }}"
+                           class="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                           title="Date to">
+                </div>
                 <button type="submit"
                         class="inline-flex items-center gap-2 px-5 py-2.5 text-white text-sm font-medium rounded-lg transition-colors" style="background-color: #800000">
                     <i class="fas fa-search"></i> Search
                 </button>
-                @if(request('search') || request('status'))
+                @if(request('search') || request('status') || request('date_from') || request('date_to'))
                     <a href="{{ route('admin.inventory.index') . $authQ }}"
                        class="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors">
                         <i class="fas fa-times"></i> Clear

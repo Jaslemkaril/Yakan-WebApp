@@ -31,6 +31,30 @@ class InventoryController extends Controller
      */
     public function index(Request $request): View
     {
+        $dateFromInput = trim((string) $request->query('date_from', ''));
+        $dateToInput = trim((string) $request->query('date_to', ''));
+
+        $rangeStart = null;
+        $rangeEnd = null;
+
+        try {
+            if ($dateFromInput !== '') {
+                $rangeStart = \Carbon\Carbon::parse($dateFromInput)->startOfDay();
+            }
+            if ($dateToInput !== '') {
+                $rangeEnd = \Carbon\Carbon::parse($dateToInput)->endOfDay();
+            }
+        } catch (\Exception $e) {
+            $rangeStart = null;
+            $rangeEnd = null;
+        }
+
+        if ($rangeStart && $rangeEnd && $rangeStart->gt($rangeEnd)) {
+            [$rangeStart, $rangeEnd] = [$rangeEnd->copy()->startOfDay(), $rangeStart->copy()->endOfDay()];
+        }
+
+        $isDateFilterActive = (bool) ($rangeStart || $rangeEnd);
+
         // Get all products with their inventory (one inventory per product)
         $query = Product::with(['inventory', 'category'])
             ->when($request->search, function ($q) use ($request) {
@@ -50,9 +74,28 @@ class InventoryController extends Controller
                         $inv->whereRaw('quantity > min_stock_level AND quantity < max_stock_level');
                     });
                 }
+            })
+            ->when($isDateFilterActive, function ($q) use ($rangeStart, $rangeEnd) {
+                $q->whereHas('inventory', function ($inv) use ($rangeStart, $rangeEnd) {
+                    $inv->where(function ($dateQ) use ($rangeStart, $rangeEnd) {
+                        if ($rangeStart && $rangeEnd) {
+                            $dateQ->whereBetween('last_restocked_at', [$rangeStart, $rangeEnd])
+                                ->orWhereBetween('last_sale_at', [$rangeStart, $rangeEnd])
+                                ->orWhereBetween('updated_at', [$rangeStart, $rangeEnd]);
+                        } elseif ($rangeStart) {
+                            $dateQ->where('last_restocked_at', '>=', $rangeStart)
+                                ->orWhere('last_sale_at', '>=', $rangeStart)
+                                ->orWhere('updated_at', '>=', $rangeStart);
+                        } elseif ($rangeEnd) {
+                            $dateQ->where('last_restocked_at', '<=', $rangeEnd)
+                                ->orWhere('last_sale_at', '<=', $rangeEnd)
+                                ->orWhere('updated_at', '<=', $rangeEnd);
+                        }
+                    });
+                });
             });
 
-        $products = $query->paginate(15);
+        $products = $query->paginate(15)->withQueryString();
         
         $lowStockCount = Inventory::whereRaw('quantity <= min_stock_level AND quantity >= ?', [Inventory::LOW_STOCK_MIN_ALERT_QUANTITY])->count();
         $totalProducts = Product::count();
@@ -62,6 +105,7 @@ class InventoryController extends Controller
         $stockInWeek = 0;
         $stockInYear = 0;
         $stockInOverall = 0;
+        $stockInRange = null;
 
         $this->ensureStockLogsTable();
 
@@ -79,6 +123,20 @@ class InventoryController extends Controller
                 ->whereYear('created_at', now()->year)
                 ->sum('quantity');
             $stockInOverall = \App\Models\StockLog::where('quantity', '>', 0)->sum('quantity');
+
+            if ($isDateFilterActive) {
+                $rangeQuery = \App\Models\StockLog::where('quantity', '>', 0);
+
+                if ($rangeStart && $rangeEnd) {
+                    $rangeQuery->whereBetween('created_at', [$rangeStart, $rangeEnd]);
+                } elseif ($rangeStart) {
+                    $rangeQuery->where('created_at', '>=', $rangeStart);
+                } elseif ($rangeEnd) {
+                    $rangeQuery->where('created_at', '<=', $rangeEnd);
+                }
+
+                $stockInRange = (int) $rangeQuery->sum('quantity');
+            }
         } catch (\Exception $e) {
             // table still unavailable — leave at 0
         }
@@ -91,7 +149,11 @@ class InventoryController extends Controller
             'stockInToday',
             'stockInWeek',
             'stockInYear',
-            'stockInOverall'
+            'stockInOverall',
+            'stockInRange',
+            'isDateFilterActive',
+            'dateFromInput',
+            'dateToInput'
         ));
     }
 
