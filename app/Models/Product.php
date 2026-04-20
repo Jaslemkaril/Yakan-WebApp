@@ -526,14 +526,40 @@ class Product extends Model
             $candidates[] = 'product-variants/' . $path;
         }
 
-        foreach (array_values(array_unique($candidates)) as $candidate) {
+        $uniqueCandidates = array_values(array_unique($candidates));
+
+        foreach ($uniqueCandidates as $candidate) {
             $publicCandidate = ltrim($candidate, '/');
             if (file_exists(public_path($publicCandidate))) {
                 return asset($publicCandidate);
             }
         }
 
-        return null;
+        // Last-resort fallback: return the most likely URL even if the file
+        // isn't on the local filesystem (e.g. Railway ephemeral storage after
+        // a redeploy). Cloudinary uploads are already returned earlier as full
+        // URLs; this makes sure we don't unnecessarily hide images that the
+        // browser/app can still fetch from the reverse proxy or CDN. Clients
+        // already handle 404s via their onerror handler to show a placeholder.
+        $preferred = $uniqueCandidates[0] ?? null;
+        if ($preferred === null) {
+            return null;
+        }
+
+        $publicPreferred = ltrim($preferred, '/');
+        if ($publicPreferred === '') {
+            return null;
+        }
+
+        // Prefer an `uploads/...` URL when the stored path looks like a bare
+        // product/variant filename, matching `storageAsset()` semantics.
+        if (!str_starts_with($publicPreferred, 'uploads/')
+            && !str_starts_with($publicPreferred, 'storage/')
+            && !str_contains($publicPreferred, '://')) {
+            return asset('uploads/' . $publicPreferred);
+        }
+
+        return asset($publicPreferred);
     }
 
     private function normalizeImageGalleryValue($value): array
