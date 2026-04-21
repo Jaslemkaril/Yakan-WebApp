@@ -81,6 +81,13 @@ const OrderDetailsScreen = ({ navigation, route }) => {
   const [refundComment, setRefundComment] = useState('');
   const [refundEvidence, setRefundEvidence] = useState([]);
   const [isRequestingRefund, setIsRequestingRefund] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewTargetItem, setReviewTargetItem] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewedProductIds, setReviewedProductIds] = useState([]);
   const scaleAnim = new Animated.Value(0);
   const slideAnim = new Animated.Value(100);
 
@@ -493,6 +500,115 @@ const OrderDetailsScreen = ({ navigation, route }) => {
     }
   };
 
+  const resolveItemProductId = (item) => {
+    const value = item?.product?.id ?? item?.product_id ?? item?.productId ?? null;
+    return value ? String(value) : null;
+  };
+
+  const resolveOrderItemId = (item) => {
+    const value = item?.id ?? item?.order_item_id ?? item?.orderItemId ?? null;
+    return value ? String(value) : null;
+  };
+
+  const canReviewCurrentOrder = ['delivered', 'completed'].includes(String(order?.status || '').toLowerCase());
+
+  const openReviewModal = (item) => {
+    const productId = resolveItemProductId(item);
+    if (!productId) {
+      Alert.alert('Review Unavailable', 'This item cannot be reviewed right now.');
+      return;
+    }
+
+    if (!canReviewCurrentOrder) {
+      Alert.alert('Not Yet Available', 'You can add a review after receiving your order.');
+      return;
+    }
+
+    if (reviewedProductIds.includes(productId)) {
+      Alert.alert('Already Reviewed', 'You already submitted a review for this product.');
+      return;
+    }
+
+    setReviewTargetItem(item);
+    setReviewRating(5);
+    setReviewTitle('');
+    setReviewComment('');
+    setShowReviewModal(true);
+  };
+
+  const closeReviewModal = () => {
+    setShowReviewModal(false);
+    setReviewTargetItem(null);
+    setReviewRating(5);
+    setReviewTitle('');
+    setReviewComment('');
+  };
+
+  const submitProductReview = async () => {
+    if (!reviewTargetItem) {
+      return;
+    }
+
+    const productId = resolveItemProductId(reviewTargetItem);
+    if (!productId) {
+      Alert.alert('Review Unavailable', 'Product information is missing for this item.');
+      return;
+    }
+
+    const normalizedComment = reviewComment.trim();
+    if (normalizedComment.length < 10) {
+      Alert.alert('Review Too Short', 'Please enter at least 10 characters for your review.');
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      const backendOrderId = order?.backendOrderId || order?.id || order?.order_id || null;
+      const orderItemId = resolveOrderItemId(reviewTargetItem);
+
+      const payload = {
+        rating: Number(reviewRating) || 5,
+        comment: normalizedComment,
+      };
+
+      const trimmedTitle = reviewTitle.trim();
+      if (trimmedTitle) {
+        payload.title = trimmedTitle;
+      }
+
+      if (backendOrderId) {
+        payload.order_id = backendOrderId;
+      }
+
+      if (orderItemId) {
+        payload.order_item_id = orderItemId;
+      }
+
+      const response = await ApiService.request('POST', `/products/${productId}/reviews`, payload);
+      if (response?.success) {
+        setReviewedProductIds((prev) => (
+          prev.includes(productId) ? prev : [...prev, productId]
+        ));
+        closeReviewModal();
+        Alert.alert('Review Submitted', 'Thank you! Your review has been posted.');
+        return;
+      }
+
+      const errorMessage = response?.error || response?.message || 'Unable to submit review right now.';
+      if (/already reviewed/i.test(errorMessage)) {
+        setReviewedProductIds((prev) => (
+          prev.includes(productId) ? prev : [...prev, productId]
+        ));
+      }
+      Alert.alert('Review Not Submitted', errorMessage);
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      Alert.alert('Error', 'Failed to submit your review. Please try again.');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
   // Show loading state
   if (loading) {
     return (
@@ -791,6 +907,40 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                       )}
                     </View>
                   </View>
+
+                  {(() => {
+                    const itemProductId = resolveItemProductId(item);
+                    const itemAlreadyReviewed = itemProductId ? reviewedProductIds.includes(itemProductId) : false;
+
+                    if (!canReviewCurrentOrder || !itemProductId) {
+                      return null;
+                    }
+
+                    return (
+                      <TouchableOpacity
+                        style={[
+                          styles.reviewProductButton,
+                          itemAlreadyReviewed && styles.reviewProductButtonDone,
+                        ]}
+                        onPress={() => openReviewModal(item)}
+                        disabled={itemAlreadyReviewed}
+                      >
+                        <Ionicons
+                          name={itemAlreadyReviewed ? 'checkmark-circle' : 'star-outline'}
+                          size={16}
+                          color={itemAlreadyReviewed ? '#047857' : colors.primary}
+                        />
+                        <Text
+                          style={[
+                            styles.reviewProductButtonText,
+                            itemAlreadyReviewed && styles.reviewProductButtonTextDone,
+                          ]}
+                        >
+                          {itemAlreadyReviewed ? 'Review Submitted' : 'Add Review'}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })()}
                 </View>
               );
             })
@@ -1125,6 +1275,84 @@ const OrderDetailsScreen = ({ navigation, route }) => {
                 disabled={isRequestingRefund || !canSubmitRefund}
               >
                 <Text style={styles.cancelModalPrimaryText}>{isRequestingRefund ? 'Submitting...' : 'Submit'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showReviewModal}
+        transparent
+        animationType="fade"
+        onRequestClose={closeReviewModal}
+      >
+        <View style={styles.cancelModalOverlay}>
+          <View style={styles.cancelModalCard}>
+            <Text style={styles.cancelModalTitle}>Add Product Review</Text>
+            <Text style={styles.cancelModalSubtitle}>
+              {reviewTargetItem?.product?.name || reviewTargetItem?.name || reviewTargetItem?.product_name || 'Product'}
+            </Text>
+
+            <Text style={styles.reviewFormLabel}>Rating</Text>
+            <View style={styles.reviewStarsRow}>
+              {[1, 2, 3, 4, 5].map((star) => {
+                const active = reviewRating >= star;
+                return (
+                  <TouchableOpacity
+                    key={star}
+                    style={[styles.reviewStarButton, active && styles.reviewStarButtonActive]}
+                    onPress={() => setReviewRating(star)}
+                    disabled={isSubmittingReview}
+                  >
+                    <Ionicons
+                      name={active ? 'star' : 'star-outline'}
+                      size={18}
+                      color={active ? '#F59E0B' : '#9CA3AF'}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={styles.reviewFormLabel}>Title (Optional)</Text>
+            <TextInput
+              value={reviewTitle}
+              onChangeText={setReviewTitle}
+              style={styles.cancelReasonInput}
+              placeholder="Short title for your review"
+              placeholderTextColor="#9CA3AF"
+              editable={!isSubmittingReview}
+              maxLength={120}
+            />
+
+            <Text style={styles.reviewFormLabel}>Your Review</Text>
+            <TextInput
+              value={reviewComment}
+              onChangeText={setReviewComment}
+              style={[styles.cancelReasonInput, styles.reviewCommentInput]}
+              placeholder="Share your experience with this product"
+              placeholderTextColor="#9CA3AF"
+              multiline
+              editable={!isSubmittingReview}
+              maxLength={600}
+            />
+            <Text style={styles.reviewFormHint}>Minimum 10 characters required.</Text>
+
+            <View style={styles.cancelModalActions}>
+              <TouchableOpacity
+                style={styles.cancelModalSecondaryButton}
+                onPress={closeReviewModal}
+                disabled={isSubmittingReview}
+              >
+                <Text style={styles.cancelModalSecondaryText}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.reviewModalPrimaryButton, isSubmittingReview && styles.cancelOrderButtonDisabled]}
+                onPress={submitProductReview}
+                disabled={isSubmittingReview}
+              >
+                <Text style={styles.cancelModalPrimaryText}>{isSubmittingReview ? 'Submitting...' : 'Submit Review'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1579,6 +1807,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
+  },
+  reviewProductButton: {
+    marginTop: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: '#FFF5F5',
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  reviewProductButtonDone: {
+    borderColor: '#10B981',
+    backgroundColor: '#ECFDF5',
+  },
+  reviewProductButtonText: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  reviewProductButtonTextDone: {
+    color: '#047857',
   },
   cancelOrderButtonDisabled: {
     opacity: 0.7,
@@ -2072,6 +2325,47 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
+  },
+  reviewModalPrimaryButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  reviewFormLabel: {
+    marginTop: 8,
+    marginBottom: 6,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  reviewStarsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  reviewStarButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  reviewStarButtonActive: {
+    borderColor: '#F59E0B',
+    backgroundColor: '#FFFBEB',
+  },
+  reviewCommentInput: {
+    minHeight: 96,
+    textAlignVertical: 'top',
+  },
+  reviewFormHint: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
   },
   cancelModalPrimaryText: {
     fontSize: 13,
